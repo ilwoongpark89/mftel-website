@@ -119,7 +119,7 @@ export default function Home() {
       </section>
 
       {/* About Section */}
-      <section id="about" className="py-24 bg-white">
+      <section id="about" className="py-12 md:py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-12">
@@ -146,9 +146,9 @@ export default function Home() {
       </section>
 
       {/* Professor Section */}
-      <section id="professor" className="py-24 bg-gradient-to-b from-gray-50 to-white">
+      <section id="professor" className="py-12 md:py-24 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-8 md:mb-16">
             <h2 className="text-xs font-semibold text-[#DC143C] tracking-widest uppercase mb-2">Leadership</h2>
             <h3 className="text-4xl md:text-5xl font-light text-gray-900">Prof. Il Woong Park</h3>
           </div>
@@ -184,13 +184,13 @@ export default function Home() {
       </section>
 
       {/* Team Section */}
-      <section id="team" className="py-24 bg-white">
+      <section id="team" className="py-12 md:py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-8 md:mb-16">
             <h2 className="text-xs font-semibold text-[#DC143C] tracking-widest uppercase mb-2">People</h2>
             <h3 className="text-4xl md:text-5xl font-light text-gray-900">Our Team</h3>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             {teamMembers.map((member, i) => (
               <div key={i} className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all">
                 <div className="relative w-full aspect-[3/4] bg-gray-100">
@@ -226,28 +226,28 @@ export default function Home() {
       </section>
 
       {/* Research Section */}
-      <section id="research" className="py-24 bg-gradient-to-b from-gray-50 to-white">
+      <section id="research" className="py-12 md:py-24 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-8 md:mb-16">
             <h2 className="text-xs font-semibold text-[#DC143C] tracking-widest uppercase mb-2">What We Do</h2>
             <h3 className="text-4xl md:text-5xl font-light text-gray-900">Research Areas</h3>
           </div>
 
           {/* Research Areas - 2 per row (Research Network 포함) */}
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-2 gap-4 md:gap-8">
             {/* Research Areas */}
             {researchAreas.map((area, i) => (
               <div key={i} className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
-                <div className="relative h-96">
-                  <Image src={`/images/${area.image}`} alt={area.title} fill className="object-contain p-8 group-hover:scale-105 transition-transform duration-300" />
+                <div className="relative h-48 md:h-96">
+                  <Image src={`/images/${area.image}`} alt={area.title} fill className="object-contain p-4 md:p-8 group-hover:scale-105 transition-transform duration-300" />
                 </div>
               </div>
             ))}
 
             {/* Research Network - 마지막 */}
             <div className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
-              <div className="relative h-96">
-                <Image src="/images/Research Network.png" alt="Research Network" fill className="object-contain p-8 group-hover:scale-105 transition-transform duration-300" />
+              <div className="relative h-48 md:h-96">
+                <Image src="/images/Research Network.png" alt="Research Network" fill className="object-contain p-4 md:p-8 group-hover:scale-105 transition-transform duration-300" />
               </div>
             </div>
           </div>
@@ -255,9 +255,9 @@ export default function Home() {
       </section>
 
       {/* Publications Section */}
-      <section id="publications" className="py-24 bg-white">
+      <section id="publications" className="py-12 md:py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-8 md:mb-16">
             <h2 className="text-xs font-semibold text-[#DC143C] tracking-widest uppercase mb-2">Our Work</h2>
             <h3 className="text-4xl md:text-5xl font-light text-gray-900 mb-4">Publications</h3>
             <p className="text-gray-500">23 publications in top-tier journals</p>
@@ -292,13 +292,13 @@ export default function Home() {
       </section>
 
       {/* Patents Section */}
-      <section id="patents" className="py-24 bg-gradient-to-b from-gray-50 to-white">
+      <section id="patents" className="py-12 md:py-24 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-8 md:mb-16">
             <h2 className="text-xs font-semibold text-[#DC143C] tracking-widest uppercase mb-2">Innovation</h2>
             <h3 className="text-4xl md:text-5xl font-light text-gray-900">Patents</h3>
           </div>
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 gap-4 md:gap-6">
             {patents.map((patent, i) => (
               <div key={i} className="bg-white border border-gray-200 rounded-xl p-8 hover:shadow-md transition-shadow">
                 <h4 className="text-xl font-medium text-gray-900 mb-3">{patent.title}</h4>
@@ -310,13 +310,13 @@ export default function Home() {
       </section>
 
       {/* Projects Section */}
-      <section id="projects" className="py-24 bg-white">
+      <section id="projects" className="py-12 md:py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-8 md:mb-16">
             <h2 className="text-xs font-semibold text-[#DC143C] tracking-widest uppercase mb-2">Funding</h2>
             <h3 className="text-4xl md:text-5xl font-light text-gray-900">Projects</h3>
           </div>
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 gap-4 md:gap-6">
             {(showAllProjects ? projects : projects.slice(0, 4)).map((proj, i) => (
               <div key={i} className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-8 hover:shadow-md transition-shadow">
                 <div className="text-sm font-medium text-gray-600 mb-3">{proj.year}</div>
@@ -339,16 +339,16 @@ export default function Home() {
       </section>
 
       {/* Gallery Section */}
-      <section id="gallery" className="py-24 bg-gradient-to-b from-gray-50 to-white">
+      <section id="gallery" className="py-12 md:py-24 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-8 md:mb-16">
             <h2 className="text-xs font-semibold text-[#DC143C] tracking-widest uppercase mb-2">Moments</h2>
             <h3 className="text-4xl md:text-5xl font-light text-gray-900">Gallery</h3>
           </div>
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-2 gap-4 md:gap-8">
             {galleryImages.map((item, i) => (
               <div key={i} className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow">
-                <div className="relative h-96 bg-gray-100">
+                <div className="relative h-64 md:h-96 bg-gray-100">
                   <Image src={`/images/${item.image}`} alt={item.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
                 </div>
                 <div className="p-6">
@@ -362,14 +362,14 @@ export default function Home() {
       </section>
 
       {/* Contact Section */}
-      <section id="contact" className="py-24 bg-white">
+      <section id="contact" className="py-12 md:py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-8 md:mb-16">
             <h2 className="text-xs font-semibold text-[#DC143C] tracking-widest uppercase mb-2">Get in Touch</h2>
             <h3 className="text-4xl md:text-5xl font-light text-gray-900">Contact</h3>
           </div>
           <div className="max-w-4xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="grid md:grid-cols-2 gap-4 md:gap-8">
               <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-8">
                 <h4 className="text-xl font-medium text-gray-900 mb-4">Location</h4>
                 <p className="text-gray-600 mb-2">Inha University</p>
