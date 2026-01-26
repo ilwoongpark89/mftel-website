@@ -32,32 +32,34 @@ export default function Professor() {
                   <h3 className="text-xl font-semibold text-gray-900 mb-4 border-b-2 border-blue-900 pb-2">
                     Education & Career
                   </h3>
-                  <ul className="space-y-2 text-gray-700">
-                    <li className="flex items-start">
-                      <span className="text-blue-900 mr-2">•</span>
-                      <span>Assistant professor, Inha University (2022-)</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-blue-900 mr-2">•</span>
-                      <span>Research Assistant Professor, Seoul National University (2022)</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-blue-900 mr-2">•</span>
-                      <span>Research Professor, Jeju National University (2018-2021)</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-blue-900 mr-2">•</span>
-                      <span>Ph. D. Norwegian University of Science and Technology (2014-2018)</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-blue-900 mr-2">•</span>
-                      <span>M. S. Seoul National University (2011-2013)</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-blue-900 mr-2">•</span>
-                      <span>B. S. Seoul National University (2008-2011)</span>
-                    </li>
-                  </ul>
+                  <table className="w-full text-gray-700 text-sm sm:text-base">
+                    <tbody>
+                      <tr>
+                        <td className="text-blue-900 font-medium align-top py-1 pr-3 whitespace-nowrap">2022 -</td>
+                        <td className="align-top py-1">Assistant Professor, Inha University</td>
+                      </tr>
+                      <tr>
+                        <td className="text-blue-900 font-medium align-top py-1 pr-3 whitespace-nowrap">2022</td>
+                        <td className="align-top py-1">Research Assistant Professor, Seoul National University</td>
+                      </tr>
+                      <tr>
+                        <td className="text-blue-900 font-medium align-top py-1 pr-3 whitespace-nowrap">2018 ~ 2021</td>
+                        <td className="align-top py-1">Research Professor, Jeju National University</td>
+                      </tr>
+                      <tr>
+                        <td className="text-blue-900 font-medium align-top py-1 pr-3 whitespace-nowrap">2014 ~ 2018</td>
+                        <td className="align-top py-1">Ph.D., Norwegian University of Science and Technology</td>
+                      </tr>
+                      <tr>
+                        <td className="text-blue-900 font-medium align-top py-1 pr-3 whitespace-nowrap">2011 ~ 2013</td>
+                        <td className="align-top py-1">M.S., Seoul National University</td>
+                      </tr>
+                      <tr>
+                        <td className="text-blue-900 font-medium align-top py-1 pr-3 whitespace-nowrap">2008 ~ 2011</td>
+                        <td className="align-top py-1">B.S., Seoul National University</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
 
                 {/* Professional Activities */}
@@ -65,20 +67,22 @@ export default function Professor() {
                   <h3 className="text-xl font-semibold text-gray-900 mb-4 border-b-2 border-blue-900 pb-2">
                     Professional Activities
                   </h3>
-                  <ul className="space-y-2 text-gray-700">
-                    <li className="flex items-start">
-                      <span className="text-blue-900 mr-2">•</span>
-                      <span>Editor, The Korean Hydrogen and New Energy Society (2024-)</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-blue-900 mr-2">•</span>
-                      <span>Editor, The Korean Society for New and Renewable Energy (2025-)</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-blue-900 mr-2">•</span>
-                      <span>Chief Technology Officer, PIOST (2025-)</span>
-                    </li>
-                  </ul>
+                  <table className="w-full text-gray-700 text-sm sm:text-base">
+                    <tbody>
+                      <tr>
+                        <td className="text-blue-900 font-medium align-top py-1 pr-3 whitespace-nowrap">2024 -</td>
+                        <td className="align-top py-1">Editor, The Korean Hydrogen and New Energy Society</td>
+                      </tr>
+                      <tr>
+                        <td className="text-blue-900 font-medium align-top py-1 pr-3 whitespace-nowrap">2025 -</td>
+                        <td className="align-top py-1">Editor, The Korean Society for New and Renewable Energy</td>
+                      </tr>
+                      <tr>
+                        <td className="text-blue-900 font-medium align-top py-1 pr-3 whitespace-nowrap">2025 -</td>
+                        <td className="align-top py-1">Chief Technology Officer, PIOST</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>

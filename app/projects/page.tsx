@@ -16,12 +16,12 @@ export default function Projects() {
       sponsor: "Inha University"
     },
     {
-      year: "2025-2028",
+      year: "2025 ~ 2028",
       title: "Synergy for Safe and Sustainable Ocean in Norway and Korea (SONoKo)",
       sponsor: "UTFORSK, Direktoratet for høyere utdanning og kompetanse (HK-dir), Norway"
     },
     {
-      year: "2024-2025",
+      year: "2024 ~ 2025",
       title: "Global human resources training project to secure major design technologies for next-generation SMR safety enhancement",
       sponsor: "KETEP"
     },
@@ -31,17 +31,17 @@ export default function Projects() {
       sponsor: "HD Hyundai Heavy Industry"
     },
     {
-      year: "2023-2027",
+      year: "2023 ~ 2027",
       title: "Digital-Based Sustainable Energy Process Innovation Convergence Graduate School",
       sponsor: "KETEP"
     },
     {
-      year: "2023-2025",
+      year: "2023 ~ 2025",
       title: "Development of direct contact latent heat storage system",
       sponsor: "National Research Foundation of Korea"
     },
     {
-      year: "2023-2025",
+      year: "2023 ~ 2025",
       title: "Identification of two-phase flow instabilities in a multi-channel system",
       sponsor: "National Research Foundation of Korea"
     },
@@ -51,12 +51,12 @@ export default function Projects() {
       sponsor: "ROK-Nordic R&D Cooperation Program, National Research Foundation of Korea"
     },
     {
-      year: "2022-2029",
+      year: "2022 ~ 2029",
       title: "Validation of core safety issues in response to strengthening technical criteria and development of technology to improve core safety in multiple failure accident",
       sponsor: "National Research Foundation of Korea"
     },
     {
-      year: "2018-2021",
+      year: "2018 ~ 2021",
       title: "Improvement of wall boiling model based on boiling experiment with a controlled surface in microscale",
       sponsor: "National Research Foundation of Korea"
     }
