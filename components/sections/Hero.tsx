@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import { useLanguage } from "@/lib/LanguageContext";
 
 // 한 글자씩 흐린 상태에서 오른쪽 아래 → 원래 위치로 툭툭 올라오는 컴포넌트
 // 왼쪽 글자부터 순서대로
@@ -43,6 +44,7 @@ function AnimatedText({ text, delay, onComplete }: { text: string; delay: number
 export default function Hero() {
     const [showContent, setShowContent] = useState(false);
     const [showGradient, setShowGradient] = useState(false);
+    const { t, language } = useLanguage();
 
     useEffect(() => {
         // 원이 화면 채우면 바로 글씨 시작
@@ -54,6 +56,12 @@ export default function Hero() {
             clearTimeout(timer);
         };
     }, []);
+
+    // 언어에 따른 텍스트
+    const line1 = t("hero.line1");
+    const line2a = t("hero.line2a");
+    const line2b = t("hero.line2b");
+    const line3 = t("hero.line3");
 
     return (
         <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-white">
@@ -85,42 +93,42 @@ export default function Hero() {
             <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 z-10">
                 <div className="max-w-4xl mx-auto text-center">
                     {showContent && (
-                        <>
+                        <div key={language}>
                             {/* Title Line 1 */}
                             <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-2 leading-[1.1]">
-                                <AnimatedText text="Engineering" delay={0} />
+                                <AnimatedText text={line1} delay={0} />
                             </h1>
 
                             {/* Title Line 2 */}
                             <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-2 leading-[1.1] relative">
                                 {/* 그라데이션 텍스트 (항상 존재, 나중에 보임) - 레이아웃 기준 */}
                                 <span className="invisible">
-                                    {"Sustainable".split("").map((char, index) => (
+                                    {line2a.split("").map((char, index) => (
                                         <span key={index} style={{ display: "inline-block" }}>{char}</span>
                                     ))}
                                     <br className="md:hidden" />
                                     <span className="hidden md:inline" style={{ display: "inline-block" }}>{"\u00A0"}</span>
-                                    {"Energy".split("").map((char, index) => (
+                                    {line2b.split("").map((char, index) => (
                                         <span key={`e-${index}`} style={{ display: "inline-block" }}>{char}</span>
                                     ))}
                                 </span>
                                 {/* 흰색 텍스트 (기본) */}
                                 <span className={`absolute inset-0 text-white transition-opacity duration-700 ${showGradient ? "opacity-0" : "opacity-100"}`}>
-                                    <AnimatedText text="Sustainable" delay={0.35} />
+                                    <AnimatedText text={line2a} delay={0.35} />
                                     <br className="md:hidden" />
                                     <span className="hidden md:inline">{"\u00A0"}</span>
-                                    <AnimatedText text="Energy" delay={0.65} />
+                                    <AnimatedText text={line2b} delay={0.65} />
                                 </span>
                                 {/* 그라데이션 텍스트 (나중에 나타남) */}
                                 <span
                                     className={`absolute inset-0 text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-indigo-500 transition-opacity duration-700 ${showGradient ? "opacity-100" : "opacity-0"}`}
                                 >
-                                    {"Sustainable".split("").map((char, index) => (
+                                    {line2a.split("").map((char, index) => (
                                         <span key={index} style={{ display: "inline-block" }}>{char}</span>
                                     ))}
                                     <br className="md:hidden" />
                                     <span className="hidden md:inline" style={{ display: "inline-block" }}>{"\u00A0"}</span>
-                                    {"Energy".split("").map((char, index) => (
+                                    {line2b.split("").map((char, index) => (
                                         <span key={`e-${index}`} style={{ display: "inline-block" }}>{char}</span>
                                     ))}
                                 </span>
@@ -128,7 +136,7 @@ export default function Hero() {
 
                             {/* Title Line 3 */}
                             <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-8 leading-[1.1]">
-                                <AnimatedText text="Future" delay={0.95} onComplete={() => setShowGradient(true)} />
+                                <AnimatedText text={line3} delay={0.95} onComplete={() => setShowGradient(true)} />
                             </h1>
 
                             {/* Description */}
@@ -138,7 +146,7 @@ export default function Hero() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.6, delay: 1.19, ease: "easeOut" }}
                             >
-                                Multiphase Flow and Thermal Engineering Laboratory (MFTEL) at Inha University advances thermal science through thermal energy storage, electronics cooling, and reactor safety research.
+                                {t("hero.description")}
                             </motion.p>
 
                             {/* Buttons */}
@@ -149,13 +157,13 @@ export default function Hero() {
                                 transition={{ duration: 0.6, delay: 1.27, ease: "easeOut" }}
                             >
                                 <Button size="lg" variant="outline" className="rounded-full text-base border-white/30 text-white hover:bg-white/10 w-[200px] justify-center" asChild>
-                                    <a href="#publications">Latest Publications</a>
+                                    <a href="#publications">{t("hero.publications")}</a>
                                 </Button>
                                 <Button size="lg" variant="outline" className="rounded-full text-base border-white/30 text-white hover:bg-white/10 w-[200px] justify-center" asChild>
-                                    <a href="#projects">Latest Projects</a>
+                                    <a href="#projects">{t("hero.projects")}</a>
                                 </Button>
                             </motion.div>
-                        </>
+                        </div>
                     )}
                 </div>
             </div>

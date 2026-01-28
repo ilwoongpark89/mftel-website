@@ -3,29 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Mail, GraduationCap, Rocket, Users, Globe } from "lucide-react";
-
-const benefits = [
-    {
-        icon: GraduationCap,
-        title: "World-Class Research",
-        description: "Publish in top-tier journals and present at international conferences"
-    },
-    {
-        icon: Globe,
-        title: "Global Network",
-        description: "Collaborate with NTNU (Norway), HZDR (Germany), UPC (Spain), and more"
-    },
-    {
-        icon: Rocket,
-        title: "Promising Career",
-        description: "Our alumni are building careers at leading institutions like KHNP and beyond"
-    },
-    {
-        icon: Users,
-        title: "Grow Your Way",
-        description: "We trust you to lead your research and planning"
-    },
-];
+import { useLanguage } from "@/lib/LanguageContext";
 
 function StarField() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -128,6 +106,30 @@ function StarField() {
 
 export default function Contact() {
     const [showEmail, setShowEmail] = useState(false);
+    const { t } = useLanguage();
+
+    const benefits = [
+        {
+            icon: GraduationCap,
+            title: t("contact.benefit1.title"),
+            description: t("contact.benefit1.description")
+        },
+        {
+            icon: Globe,
+            title: t("contact.benefit2.title"),
+            description: t("contact.benefit2.description")
+        },
+        {
+            icon: Rocket,
+            title: t("contact.benefit3.title"),
+            description: t("contact.benefit3.description")
+        },
+        {
+            icon: Users,
+            title: t("contact.benefit4.title"),
+            description: t("contact.benefit4.description")
+        },
+    ];
 
     return (
         <section id="contact" className="relative overflow-hidden">
@@ -140,15 +142,15 @@ export default function Contact() {
 
                 <div className="container mx-auto px-4 relative z-10">
                     <div className="max-w-4xl mx-auto text-center mb-16">
-                        <h2 className="text-sm font-semibold text-rose-400 tracking-widest uppercase mb-4">Join Us</h2>
+                        <h2 className="text-sm font-semibold text-rose-400 tracking-widest uppercase mb-4">{t("contact.label")}</h2>
                         <h3 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-                            Shape the Future of<br />
+                            {t("contact.title1")}<br />
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-300">
-                                Thermal Engineering
+                                {t("contact.title2")}
                             </span>
                         </h3>
                         <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-                            We are actively recruiting passionate M.S./Ph.D. students, postdocs, and researchers who want to push the boundaries of multiphase flow and heat transfer research.
+                            {t("contact.description")}
                         </p>
                     </div>
 
@@ -165,12 +167,12 @@ export default function Contact() {
 
                     {/* CTA */}
                     <div className="text-center">
-                        <p className="text-gray-400 mb-6">Ready to start your research journey?</p>
+                        <p className="text-gray-400 mb-6">{t("contact.cta")}</p>
                         {showEmail ? (
                             <motion.button
                                 onClick={() => {
                                     navigator.clipboard.writeText("ilwoongpark@inha.ac.kr");
-                                    alert("Email copied to clipboard!");
+                                    alert(t("contact.emailCopied"));
                                 }}
                                 className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-rose-500 to-orange-400 px-10 py-4 text-lg font-semibold text-white shadow-lg hover:from-rose-600 hover:to-orange-500 transition-all cursor-pointer"
                                 initial={{ scale: 0.9, opacity: 0 }}
@@ -214,7 +216,7 @@ export default function Contact() {
                                         ease: "easeOut"
                                     }}
                                 />
-                                <span className="relative z-10">Apply Now</span>
+                                <span className="relative z-10">{t("contact.apply")}</span>
                             </motion.button>
                         )}
                     </div>

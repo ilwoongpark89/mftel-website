@@ -6,17 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { projects, patents } from "@/app/data";
 import { Rocket, Lightbulb } from "lucide-react";
+import { useLanguage } from "@/lib/LanguageContext";
 
 export default function Projects() {
     const [showAllProjects, setShowAllProjects] = useState(false);
     const displayedProjects = showAllProjects ? projects : projects.slice(0, 4);
+    const { t } = useLanguage();
 
     return (
         <Section id="projects">
             {/* Projects */}
             <div className="text-center max-w-3xl mx-auto mb-16">
-                <h2 className="text-sm font-semibold text-rose-600 tracking-widest uppercase mb-3">Funding & Patents</h2>
-                <h3 className="text-3xl md:text-4xl font-bold text-gray-900">Research Projects</h3>
+                <h2 className="text-sm font-semibold text-rose-600 tracking-widest uppercase mb-3">{t("projects.label")}</h2>
+                <h3 className="text-3xl md:text-4xl font-bold text-gray-900">{t("projects.title")}</h3>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 mb-12">
@@ -43,13 +45,13 @@ export default function Projects() {
                     onClick={() => setShowAllProjects(!showAllProjects)}
                     variant="outline"
                 >
-                    {showAllProjects ? "Show Less" : `View All Projects (${projects.length})`}
+                    {showAllProjects ? t("projects.showLess") : t("projects.viewAll").replace("{count}", String(projects.length))}
                 </Button>
             </div>
 
             {/* Patents */}
             <div className="text-center max-w-3xl mx-auto mb-12">
-                <h3 className="text-2xl font-bold text-gray-900">Patents</h3>
+                <h3 className="text-2xl font-bold text-gray-900">{t("projects.patents")}</h3>
             </div>
             <div className="grid md:grid-cols-2 gap-6">
                 {patents.map((patent, i) => (

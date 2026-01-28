@@ -3,18 +3,7 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Menu, X } from "lucide-react";
-
-const navItems = [
-    { name: "About", href: "#about" },
-    { name: "News", href: "#news" },
-    { name: "Team", href: "#team" },
-    { name: "Join Us", href: "#contact", highlight: true },
-    { name: "Research", href: "#research" },
-    { name: "Publications", href: "#publications" },
-    { name: "Projects", href: "#projects" },
-    { name: "Gallery", href: "#gallery" },
-    { name: "Contact", href: "#footer" },
-];
+import { useLanguage } from "@/lib/LanguageContext";
 
 // Sections with dark backgrounds
 const darkSections = ["home", "gallery", "contact", "footer"];
@@ -23,6 +12,24 @@ export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [onDarkSection, setOnDarkSection] = useState(true); // Start on Hero (dark)
+    const { language, setLanguage, t } = useLanguage();
+
+    const navItems = [
+        { name: t("nav.about"), href: "#about" },
+        { name: t("nav.news"), href: "#news" },
+        { name: t("nav.team"), href: "#team" },
+        { name: t("nav.joinUs"), href: "#contact", highlight: true },
+        { name: t("nav.research"), href: "#research" },
+        { name: t("nav.publications"), href: "#publications" },
+        { name: t("nav.projects"), href: "#projects" },
+        { name: t("nav.gallery"), href: "#gallery" },
+        { name: t("nav.contact"), href: "#footer" },
+    ];
+
+    const toggleLanguage = () => {
+        setLanguage(language === "KR" ? "EN" : "KR");
+    };
+
     useEffect(() => {
         const handleScroll = () => {
             setScrolled(window.scrollY > 50);
@@ -77,7 +84,7 @@ export default function Navbar() {
                     <div className="flex items-center space-x-8">
                         {navItems.map((item) => (
                             <a
-                                key={item.name}
+                                key={item.href}
                                 href={item.href}
                                 className={cn(
                                     "text-base font-medium transition-colors",
@@ -101,8 +108,32 @@ export default function Navbar() {
                         ))}
                     </div>
 
-                    {/* Right: empty for balance */}
-                    <div className="w-[60px]"></div>
+                    {/* Right: Language Toggle */}
+                    <button
+                        onClick={toggleLanguage}
+                        className={cn(
+                            "flex items-center text-sm font-medium transition-colors",
+                            useDarkText ? "text-muted-foreground" : "text-white/80"
+                        )}
+                    >
+                        <span className={cn(
+                            "transition-colors",
+                            language === "EN"
+                                ? useDarkText ? "text-foreground font-semibold" : "text-white font-semibold"
+                                : ""
+                        )}>
+                            EN
+                        </span>
+                        <span className="mx-1.5">|</span>
+                        <span className={cn(
+                            "transition-colors",
+                            language === "KR"
+                                ? useDarkText ? "text-foreground font-semibold" : "text-white font-semibold"
+                                : ""
+                        )}>
+                            KR
+                        </span>
+                    </button>
                 </div>
 
                 <div className="lg:hidden flex justify-between items-center w-full">
@@ -131,7 +162,7 @@ export default function Navbar() {
                     <div className="container mx-auto px-4 py-8 space-y-4">
                         {navItems.map((item) => (
                             <a
-                                key={item.name}
+                                key={item.href}
                                 href={item.href}
                                 className={cn(
                                     "block text-lg font-medium",
@@ -144,6 +175,16 @@ export default function Navbar() {
                                 {item.name}
                             </a>
                         ))}
+                        <div className="pt-4 border-t">
+                            <button
+                                onClick={toggleLanguage}
+                                className="flex items-center text-base font-medium text-muted-foreground"
+                            >
+                                <span className={language === "EN" ? "text-foreground font-semibold" : ""}>EN</span>
+                                <span className="mx-2">|</span>
+                                <span className={language === "KR" ? "text-foreground font-semibold" : ""}>KR</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

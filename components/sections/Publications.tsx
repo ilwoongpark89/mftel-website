@@ -6,19 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { publications } from "@/app/data";
 import { ExternalLink } from "lucide-react";
+import { useLanguage } from "@/lib/LanguageContext";
 
 export default function Publications() {
     const [showAll, setShowAll] = useState(false);
     const displayedPubs = showAll ? publications : publications.slice(0, 6);
     const totalPubs = publications.length;
+    const { t } = useLanguage();
 
     return (
         <Section id="publications" className="bg-slate-50/50">
             <div className="text-center max-w-3xl mx-auto mb-16">
-                <h2 className="text-sm font-semibold text-rose-600 tracking-widest uppercase mb-3">Our Work</h2>
-                <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Publications</h3>
+                <h2 className="text-sm font-semibold text-rose-600 tracking-widest uppercase mb-3">{t("publications.label")}</h2>
+                <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{t("publications.title")}</h3>
                 <p className="text-gray-500">
-                    We have published {publications.length} papers in top-tier journals.
+                    {t("publications.count").replace("{count}", String(publications.length))}
                 </p>
             </div>
 
@@ -60,7 +62,7 @@ export default function Publications() {
                     onClick={() => setShowAll(!showAll)}
                     variant="outline"
                 >
-                    {showAll ? "Show Less" : `View All Publications (${publications.length})`}
+                    {showAll ? t("publications.showLess") : t("publications.viewAll").replace("{count}", String(publications.length))}
                 </Button>
             </div>
         </Section>

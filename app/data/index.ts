@@ -47,22 +47,22 @@ export const projects = [
 ];
 
 export const teamMembers = [
-  { name: "Hyun Jin Yong", degree: "Ph.D. student", research: "Boiling heat transfer" },
-  { name: "Jun Beom Song", degree: "Ph.D. student", research: "Thermal energy storage" },
-  { name: "Sang Min Song", degree: "Ph.D. student", research: "Condensation" },
-  { name: "Jae Hyeok Yang", degree: "Ph.D. student", research: "Thermal-hydraulic system code" },
-  { name: "Hyeon Geun Shin", degree: "Ph.D. student", research: "Two-phase flow instability" },
-  { name: "Sung Jin Kim", degree: "Ph.D. student", research: "Boiling, Dielectric fluid" },
-  { name: "Kyeong Ju Ko", degree: "M.S. student", research: "Computational fluid dynamics" },
-  { name: "Chaeyeon Kim", degree: "M.S. student", research: "Phase-change heat transfer" },
-  { name: "Eunbin Park", degree: "M.S. student", research: "Two-phase flow instability" },
-  { name: "Manho Kim", degree: "M.S. student", research: "Computational fluid dynamics" },
-  { name: "Joonhwan Hyun", degree: "M.S. student", research: "Thermal energy storage" },
-  { name: "Yeongjun Jung", degree: "M.S. student", research: "Boiling heat transfer" }
+  { name: "Hyun Jin Yong", nameKR: "용현진", degree: "Ph.D. student", degreeKR: "박사과정", research: "Boiling heat transfer", researchKR: "비등 열전달" },
+  { name: "Jun Beom Song", nameKR: "송준범", degree: "Ph.D. student", degreeKR: "박사과정", research: "Thermal energy storage", researchKR: "열에너지 저장" },
+  { name: "Sang Min Song", nameKR: "송상민", degree: "Ph.D. student", degreeKR: "박사과정", research: "Condensation", researchKR: "응축" },
+  { name: "Jae Hyeok Yang", nameKR: "양재혁", degree: "Ph.D. student", degreeKR: "박사과정", research: "Thermal-hydraulic system code", researchKR: "열수력 시스템 코드" },
+  { name: "Hyeon Geun Shin", nameKR: "신현근", degree: "Ph.D. student", degreeKR: "박사과정", research: "Two-phase flow instability", researchKR: "이상유동 불안정성" },
+  { name: "Sung Jin Kim", nameKR: "김성진", degree: "Ph.D. student", degreeKR: "박사과정", research: "Boiling, Dielectric fluid", researchKR: "비등, 절연유체" },
+  { name: "Kyeong Ju Ko", nameKR: "고경주", degree: "M.S. student", degreeKR: "석사과정", research: "Computational fluid dynamics", researchKR: "전산유체역학" },
+  { name: "Chaeyeon Kim", nameKR: "김채연", degree: "M.S. student", degreeKR: "석사과정", research: "Phase-change heat transfer", researchKR: "상변화 열전달" },
+  { name: "Eunbin Park", nameKR: "박은빈", degree: "M.S. student", degreeKR: "석사과정", research: "Two-phase flow instability", researchKR: "이상유동 불안정성" },
+  { name: "Manho Kim", nameKR: "김만호", degree: "M.S. student", degreeKR: "석사과정", research: "Computational fluid dynamics", researchKR: "전산유체역학" },
+  { name: "Joonhwan Hyun", nameKR: "현준환", degree: "M.S. student", degreeKR: "석사과정", research: "Thermal energy storage", researchKR: "열에너지 저장" },
+  { name: "Yeongjun Jung", nameKR: "정영준", degree: "M.S. student", degreeKR: "석사과정", research: "Boiling heat transfer", researchKR: "비등 열전달" }
 ];
 
 export const alumni = [
-  { name: "Yun Seok Choi", year: "2025 M.S.", position: "Korea Hydro and Nuclear Power (KHNP) Central Research Institute" }
+  { name: "Yun Seok Choi", nameKR: "최윤석", year: "2025 M.S.", yearKR: "2025 석사", position: "Korea Hydro and Nuclear Power (KHNP) Central Research Institute", positionKR: "한국수력원자력 중앙연구원" }
 ];
 
 export const researchAreas = [

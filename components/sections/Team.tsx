@@ -7,6 +7,7 @@ import Section from "@/components/ui/section";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { teamMembers, alumni, publications } from "@/app/data";
+import { useLanguage } from "@/lib/LanguageContext";
 
 // 학생 이름과 논문 저자 매칭 (띄어쓰기/스펠링 변형 처리)
 const getStudentPublications = (studentName: string) => {
@@ -22,20 +23,27 @@ const getStudentPublications = (studentName: string) => {
         .sort((a, b) => a - b);
 };
 
+type TeamMember = typeof teamMembers[0];
+
 // 플립 카드 컴포넌트
 function FlipCard({ member, index, isVisible }: {
-    member: { name: string; degree: string; research: string };
+    member: TeamMember;
     index: number;
     isVisible: boolean;
 }) {
     const [isFlipped, setIsFlipped] = useState(false);
     const pubs = getStudentPublications(member.name);
+    const { language } = useLanguage();
+
+    const displayName = language === "KR" ? member.nameKR : member.name;
+    const displayDegree = language === "KR" ? member.degreeKR : member.degree;
+    const displayResearch = language === "KR" ? member.researchKR : member.research;
 
     useEffect(() => {
         if (isVisible) {
             const timer = setTimeout(() => {
                 setIsFlipped(true);
-            }, index * 200); // 순차적으로 플립
+            }, index * 200);
             return () => clearTimeout(timer);
         }
     }, [isVisible, index]);
@@ -86,45 +94,43 @@ function FlipCard({ member, index, isVisible }: {
                         <div className="relative aspect-[3/4] overflow-hidden bg-gray-100">
                             <Image
                                 src={`/images/${member.name}.jpg`}
-                                alt={member.name}
+                                alt={displayName}
                                 fill
                                 className="object-cover transition-transform duration-500 group-hover:scale-105"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                             <div className="absolute bottom-0 left-0 p-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-2 group-hover:translate-y-0">
-                                <p className="text-xs font-medium uppercase tracking-wider text-rose-200">{member.degree}</p>
+                                <p className="text-xs font-medium uppercase tracking-wider text-rose-200">{displayDegree}</p>
                             </div>
                         </div>
                         <CardContent className="text-center pt-3 pb-3">
-                            <h4 className="text-xl font-bold text-gray-900 mb-1">{member.name}</h4>
-                            <p className="text-base text-gray-500">{member.degree}</p>
-                            <p className="text-sm text-rose-600 mt-2 font-medium">{member.research.split(',').map(r => `#${r.trim()}`).join(' ')}</p>
-                            {pubs.length > 0 && (
-                                <p className="text-xs text-gray-400 mt-1">
-                                    {pubs.map((n, idx) => (
-                                        <a
-                                            key={idx}
-                                            href={`#pub-${n}`}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                const pubElement = document.getElementById(`pub-${n}`);
-                                                if (!pubElement) {
-                                                    const viewAllBtn = document.querySelector('#publications button');
-                                                    if (viewAllBtn) (viewAllBtn as HTMLButtonElement).click();
-                                                    setTimeout(() => {
-                                                        document.getElementById(`pub-${n}`)?.scrollIntoView({ behavior: 'smooth' });
-                                                    }, 100);
-                                                } else {
-                                                    pubElement.scrollIntoView({ behavior: 'smooth' });
-                                                }
-                                            }}
-                                            className="hover:text-rose-600 transition-colors mr-1"
-                                        >
-                                            #{n}
-                                        </a>
-                                    ))}
-                                </p>
-                            )}
+                            <h4 className="text-xl font-bold text-gray-900 mb-1">{displayName}</h4>
+                            <p className="text-base text-gray-500">{displayDegree}</p>
+                            <p className="text-sm text-rose-600 mt-2 font-medium">{displayResearch.split(',').map(r => `#${r.trim()}`).join(' ')}</p>
+                            <p className="text-xs text-gray-400 mt-1 min-h-[1rem]">
+                                {pubs.length > 0 ? pubs.map((n, idx) => (
+                                    <a
+                                        key={idx}
+                                        href={`#pub-${n}`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            const pubElement = document.getElementById(`pub-${n}`);
+                                            if (!pubElement) {
+                                                const viewAllBtn = document.querySelector('#publications button');
+                                                if (viewAllBtn) (viewAllBtn as HTMLButtonElement).click();
+                                                setTimeout(() => {
+                                                    document.getElementById(`pub-${n}`)?.scrollIntoView({ behavior: 'smooth' });
+                                                }, 100);
+                                            } else {
+                                                pubElement.scrollIntoView({ behavior: 'smooth' });
+                                            }
+                                        }}
+                                        className="hover:text-rose-600 transition-colors mr-1"
+                                    >
+                                        #{n}
+                                    </a>
+                                )) : <span className="invisible">-</span>}
+                            </p>
                         </CardContent>
                     </Card>
                 </div>
@@ -133,10 +139,10 @@ function FlipCard({ member, index, isVisible }: {
     );
 }
 
-// 플립 카드 그리드 (IntersectionObserver로 뷰에 들어오면 애니메이션)
-function FlipCardGrid() {
+// 한 줄 (4장) 단위 플립 카드 Row
+function FlipCardRow({ members, rowIndex }: { members: TeamMember[]; rowIndex: number }) {
     const [isVisible, setIsVisible] = useState(false);
-    const gridRef = useRef<HTMLDivElement>(null);
+    const rowRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -146,28 +152,42 @@ function FlipCardGrid() {
                     observer.disconnect();
                 }
             },
-            { threshold: 0.2 }
+            { threshold: 0.3 }
         );
 
-        if (gridRef.current) {
-            observer.observe(gridRef.current);
+        if (rowRef.current) {
+            observer.observe(rowRef.current);
         }
 
         return () => observer.disconnect();
     }, []);
 
     return (
-        <div ref={gridRef} className="hidden sm:block max-w-[93%] mx-auto">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-20">
-                {teamMembers.map((member, i) => (
-                    <FlipCard key={i} member={member} index={i} isVisible={isVisible} />
-                ))}
-            </div>
+        <div ref={rowRef} className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            {members.map((member, i) => (
+                <FlipCard key={i} member={member} index={i} isVisible={isVisible} />
+            ))}
         </div>
     );
 }
 
-const educationCareer = [
+// 플립 카드 그리드 (한 줄씩 IntersectionObserver)
+function FlipCardGrid() {
+    const rows: TeamMember[][] = [];
+    for (let i = 0; i < teamMembers.length; i += 4) {
+        rows.push(teamMembers.slice(i, i + 4));
+    }
+
+    return (
+        <div className="hidden sm:block max-w-[93%] mx-auto mb-14">
+            {rows.map((rowMembers, rowIndex) => (
+                <FlipCardRow key={rowIndex} members={rowMembers} rowIndex={rowIndex} />
+            ))}
+        </div>
+    );
+}
+
+const educationCareerEN = [
     "Assistant Professor, Inha University (2022 ~)",
     "Research Professor, Seoul National University (2022)",
     "Research Professor, Jeju National University (2018 ~ 2021)",
@@ -176,16 +196,37 @@ const educationCareer = [
     "B.S., Seoul National University (2008 ~ 2011)",
 ];
 
-const professionalActivities = [
+const educationCareerKR = [
+    "인하대학교 기계공학과 조교수 (2022 ~)",
+    "서울대학교 연구교수 (2022)",
+    "제주대학교 연구교수 (2018 ~ 2021)",
+    "노르웨이과학기술대학교 공학박사 (2014 ~ 2018)",
+    "서울대학교 공학석사 (2011 ~ 2013)",
+    "서울대학교 공학사 (2008 ~ 2011)",
+];
+
+const professionalActivitiesEN = [
     "Visiting Professor, Norwegian University of Science and Technology (2026)",
     "Editor, The Korean Hydrogen and New Energy Society (2024 ~)",
     "Editor, The Korean Society for New and Renewable Energy (2025 ~)",
     "Chief Technology Officer, PIOST (2025 ~)",
 ];
 
-function MobileMemberCard({ member }: { member: { name: string; degree: string; research: string } }) {
+const professionalActivitiesKR = [
+    "노르웨이과학기술대학교 방문교수 (2026)",
+    "한국수소및신에너지학회 편집위원 (2024 ~)",
+    "한국신재생에너지학회 편집위원 (2025 ~)",
+    "PIOST CTO (2025 ~)",
+];
+
+function MobileMemberCard({ member }: { member: TeamMember }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const pubs = getStudentPublications(member.name);
+    const { language, t } = useLanguage();
+
+    const displayName = language === "KR" ? member.nameKR : member.name;
+    const displayDegree = language === "KR" ? member.degreeKR : member.degree;
+    const displayResearch = language === "KR" ? member.researchKR : member.research;
 
     return (
         <Card
@@ -195,10 +236,10 @@ function MobileMemberCard({ member }: { member: { name: string; degree: string; 
             <div className="p-4">
                 <div className="flex items-center justify-between">
                     <div className="flex-1">
-                        <h4 className="text-lg font-bold text-gray-900">{member.name}</h4>
-                        <p className="text-sm text-gray-500">{member.degree}</p>
+                        <h4 className="text-lg font-bold text-gray-900">{displayName}</h4>
+                        <p className="text-sm text-gray-500">{displayDegree}</p>
                         <p className="text-xs text-rose-600 mt-1 font-medium">
-                            {member.research.split(',').map(r => `#${r.trim()}`).join(' ')}
+                            {displayResearch.split(',').map(r => `#${r.trim()}`).join(' ')}
                         </p>
                     </div>
                     <div className="text-gray-400 ml-2">
@@ -211,14 +252,14 @@ function MobileMemberCard({ member }: { member: { name: string; degree: string; 
                         <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100">
                             <Image
                                 src={`/images/${member.name}.jpg`}
-                                alt={member.name}
+                                alt={displayName}
                                 fill
                                 className="object-cover"
                             />
                         </div>
                         {pubs.length > 0 && (
                             <p className="text-xs text-gray-400 mt-3 text-center">
-                                Publications: {pubs.map((n, idx) => (
+                                {t("team.publications")}: {pubs.map((n, idx) => (
                                     <a
                                         key={idx}
                                         href={`#pub-${n}`}
@@ -250,14 +291,20 @@ function MobileMemberCard({ member }: { member: { name: string; degree: string; 
 }
 
 export default function Team() {
+    const { language, t } = useLanguage();
+
+    const educationCareer = language === "KR" ? educationCareerKR : educationCareerEN;
+    const professionalActivities = language === "KR" ? professionalActivitiesKR : professionalActivitiesEN;
+    const professorName = language === "KR" ? "박일웅 교수" : "Prof. Il Woong Park";
+
     return (
         <Section id="team" className="bg-slate-50/50">
             <div className="text-center max-w-3xl mx-auto mb-16">
-                <h2 className="text-sm font-semibold text-rose-600 tracking-widest uppercase mb-3">Our People</h2>
-                <h3 className="text-3xl md:text-4xl font-bold text-gray-900">Meet the Team</h3>
+                <h2 className="text-sm font-semibold text-rose-600 tracking-widest uppercase mb-3">{t("team.label")}</h2>
+                <h3 className="text-3xl md:text-4xl font-bold text-gray-900">{t("team.title")}</h3>
             </div>
 
-            <h3 className="text-2xl font-bold text-gray-900 text-center mb-8">Principal Investigator</h3>
+            <h3 className="text-2xl font-bold text-gray-900 text-center mb-8">{t("team.pi")}</h3>
 
             {/* Professor Section */}
             <div className="max-w-5xl mx-auto mb-20">
@@ -266,18 +313,18 @@ export default function Team() {
                         <div className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-xl flex-1">
                             <Image
                                 src="/images/Professor_Il Woong Park.png"
-                                alt="Prof. Il Woong Park"
+                                alt={professorName}
                                 fill
                                 className="object-cover"
                             />
                         </div>
                         <div className="text-center mt-4">
-                            <h4 className="text-2xl font-bold text-gray-900">Prof. Il Woong Park</h4>
+                            <h4 className="text-2xl font-bold text-gray-900">{professorName}</h4>
                         </div>
                     </div>
                     <div className="w-full md:w-2/3 flex flex-col justify-between">
                         <div>
-                            <h5 className="text-lg font-bold text-gray-900 mb-4 border-b border-rose-200 pb-2">Education & Career</h5>
+                            <h5 className="text-lg font-bold text-gray-900 mb-4 border-b border-rose-200 pb-2">{t("team.education")}</h5>
                             <ul className="space-y-2">
                                 {educationCareer.map((item, i) => (
                                     <li key={i} className="text-gray-600 flex items-start">
@@ -288,7 +335,7 @@ export default function Team() {
                             </ul>
                         </div>
                         <div className="mt-6">
-                            <h5 className="text-lg font-bold text-gray-900 mb-4 border-b border-rose-200 pb-2">Professional Activities</h5>
+                            <h5 className="text-lg font-bold text-gray-900 mb-4 border-b border-rose-200 pb-2">{t("team.activities")}</h5>
                             <ul className="space-y-2">
                                 {professionalActivities.map((item, i) => (
                                     <li key={i} className="text-gray-600 flex items-start">
@@ -303,7 +350,7 @@ export default function Team() {
             </div>
 
             {/* Current Members */}
-            <h3 className="text-2xl font-bold text-gray-900 text-center mb-8">Graduate Students</h3>
+            <h3 className="text-2xl font-bold text-gray-900 text-center mb-8">{t("team.students")}</h3>
 
             {/* Mobile: Expandable List */}
             <div className="sm:hidden space-y-3 mb-20">
@@ -317,16 +364,16 @@ export default function Team() {
 
             {/* Alumni */}
             <div>
-                <h3 className="text-2xl font-bold text-gray-900 text-center mb-8">Alumni</h3>
+                <h3 className="text-2xl font-bold text-gray-900 text-center mb-8">{t("team.alumni")}</h3>
                 <div className="grid md:grid-cols-2 gap-6">
                     {alumni.map((alum, i) => (
                         <Card key={i} className="flex items-center p-4 hover:shadow-md transition-shadow">
                             <div className="flex-1">
                                 <div className="flex items-baseline gap-2 mb-1">
-                                    <h4 className="font-bold text-gray-900">{alum.name}</h4>
-                                    <span className="text-sm text-gray-500">{alum.year}</span>
+                                    <h4 className="font-bold text-gray-900">{language === "KR" ? alum.nameKR : alum.name}</h4>
+                                    <span className="text-sm text-gray-500">{language === "KR" ? alum.yearKR : alum.year}</span>
                                 </div>
-                                <p className="text-sm text-gray-600">{alum.position}</p>
+                                <p className="text-sm text-gray-600">{language === "KR" ? alum.positionKR : alum.position}</p>
                             </div>
                         </Card>
                     ))}

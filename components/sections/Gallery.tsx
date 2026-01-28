@@ -4,13 +4,16 @@ import Image from "next/image";
 import Section from "@/components/ui/section";
 import { galleryImages } from "@/app/data";
 import { Card } from "@/components/ui/card";
+import { useLanguage } from "@/lib/LanguageContext";
 
 export default function Gallery() {
+    const { t } = useLanguage();
+
     return (
         <Section id="gallery" className="bg-slate-900 text-white">
             <div className="text-center max-w-3xl mx-auto mb-16">
-                <h2 className="text-sm font-semibold text-rose-400 tracking-widest uppercase mb-3">Moments</h2>
-                <h3 className="text-3xl md:text-4xl font-bold text-white">Lab Life</h3>
+                <h2 className="text-sm font-semibold text-rose-400 tracking-widest uppercase mb-3">{t("gallery.label")}</h2>
+                <h3 className="text-3xl md:text-4xl font-bold text-white">{t("gallery.title")}</h3>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">

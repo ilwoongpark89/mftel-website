@@ -4,13 +4,16 @@ import Image from "next/image";
 import Section from "@/components/ui/section";
 import { Card, CardContent } from "@/components/ui/card";
 import { researchAreas } from "@/app/data";
+import { useLanguage } from "@/lib/LanguageContext";
 
 export default function Research() {
+    const { t } = useLanguage();
+
     return (
         <Section id="research">
             <div className="text-center max-w-3xl mx-auto mb-16">
-                <h2 className="text-sm font-semibold text-rose-600 tracking-widest uppercase mb-3">Focus Areas</h2>
-                <h3 className="text-3xl md:text-4xl font-bold text-gray-900">Research Fields</h3>
+                <h2 className="text-sm font-semibold text-rose-600 tracking-widest uppercase mb-3">{t("research.label")}</h2>
+                <h3 className="text-3xl md:text-4xl font-bold text-gray-900">{t("research.title")}</h3>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">

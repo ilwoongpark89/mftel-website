@@ -1,17 +1,20 @@
 "use client";
 
 import { MapPin, Mail, Phone } from "lucide-react";
+import { useLanguage } from "@/lib/LanguageContext";
 
 export default function Footer() {
+    const { t } = useLanguage();
+
     return (
         <footer id="footer" className="bg-slate-950 text-white py-16">
             <div className="container mx-auto px-4">
                 {/* Contact Info */}
                 <div className="text-center mb-12">
-                    <h2 className="text-sm font-semibold text-rose-400 tracking-widest uppercase mb-3">Contact</h2>
-                    <h3 className="text-2xl font-bold mb-4">Let's Collaborate</h3>
+                    <h2 className="text-sm font-semibold text-rose-400 tracking-widest uppercase mb-3">{t("footer.label")}</h2>
+                    <h3 className="text-2xl font-bold mb-4">{t("footer.title")}</h3>
                     <p className="text-gray-400 mb-8 max-w-xl mx-auto">
-                        We are always open to new research opportunities, collaborations, and talented students.
+                        {t("footer.description")}
                     </p>
                     <div className="flex flex-col md:flex-row justify-center items-center gap-6 text-gray-300">
                         <div className="flex items-center gap-2">
@@ -37,7 +40,7 @@ export default function Footer() {
                 <div className="border-t border-gray-800 pt-8">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                         <span className="text-2xl font-bold tracking-tighter">MFTEL</span>
-                        <span className="text-sm text-gray-500">© {new Date().getFullYear()} MFTEL, Inha University. All rights reserved.</span>
+                        <span className="text-sm text-gray-500">{t("footer.copyright").replace("{year}", String(new Date().getFullYear()))}</span>
                     </div>
                 </div>
             </div>

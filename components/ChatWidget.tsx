@@ -1,6 +1,48 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useLanguage } from "@/lib/LanguageContext";
+
+const chatTexts = {
+  EN: {
+    replyTime: "Usually replies in a day",
+    leaveMessage: "Leave us a message and",
+    getBack: "we'll get back to you.",
+    nameLabel: "Name",
+    nameOptional: "(optional)",
+    namePlaceholder: "Your name",
+    emailLabel: "Email",
+    emailOptional: "(optional)",
+    emailPlaceholder: "your@email.com",
+    startChat: "Start Chat",
+    anonymousNote: "You can send messages anonymously",
+    welcomeMessage: "Hello! Thank you for your interest in MFTEL. You can leave your message in this chat, and we will respond to your email. Thanks!",
+    sentWithEmail: "Your message has been sent. We'll get back to you via email soon.",
+    sentWithoutEmail: "Your message has been sent. Please check back later for updates.",
+    sendFailed: "Failed to send message. Please try again.",
+    typePlaceholder: "Type your message...",
+    newConversation: "New conversation",
+  },
+  KR: {
+    replyTime: "보통 하루 내 답변드립니다",
+    leaveMessage: "메시지를 남겨주시면",
+    getBack: "빠르게 연락드리겠습니다.",
+    nameLabel: "이름",
+    nameOptional: "(선택)",
+    namePlaceholder: "이름을 입력하세요",
+    emailLabel: "이메일",
+    emailOptional: "(선택)",
+    emailPlaceholder: "your@email.com",
+    startChat: "대화 시작",
+    anonymousNote: "익명으로도 메시지를 보낼 수 있습니다",
+    welcomeMessage: "안녕하세요! MFTEL에 관심 가져주셔서 감사합니다. 이 채팅으로 메시지를 남겨주시면 이메일로 답변드리겠습니다!",
+    sentWithEmail: "메시지가 전송되었습니다. 이메일로 답변드리겠습니다.",
+    sentWithoutEmail: "메시지가 전송되었습니다. 나중에 다시 확인해주세요.",
+    sendFailed: "메시지 전송에 실패했습니다. 다시 시도해주세요.",
+    typePlaceholder: "메시지를 입력하세요...",
+    newConversation: "새 대화",
+  }
+};
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,6 +54,9 @@ export default function ChatWidget() {
   const [step, setStep] = useState<"info" | "chat">("info");
   const [shouldBounce, setShouldBounce] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { language } = useLanguage();
+
+  const t = chatTexts[language];
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -45,9 +90,9 @@ export default function ChatWidget() {
     e.preventDefault();
     setStep("chat");
     setMessages([{
-      text: "Hello! Thank you for your interest in MFTEL. You can leave your message in this chat, and we will respond to your email. Thanks!",
+      text: t.welcomeMessage,
       isUser: false,
-      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      time: new Date().toLocaleTimeString(language === "KR" ? 'ko-KR' : 'en-US', { hour: '2-digit', minute: '2-digit' })
     }]);
   };
 
@@ -55,7 +100,7 @@ export default function ChatWidget() {
     if (!message.trim()) return;
 
     const userMessage = message.trim();
-    const currentTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const currentTime = new Date().toLocaleTimeString(language === "KR" ? 'ko-KR' : 'en-US', { hour: '2-digit', minute: '2-digit' });
 
     setMessages(prev => [...prev, { text: userMessage, isUser: true, time: currentTime }]);
     setMessage("");
@@ -74,19 +119,17 @@ export default function ChatWidget() {
 
       setTimeout(() => {
         setMessages(prev => [...prev, {
-          text: email.trim()
-            ? "Your message has been sent. We'll get back to you via email soon."
-            : "Your message has been sent. Please check back later for updates.",
+          text: email.trim() ? t.sentWithEmail : t.sentWithoutEmail,
           isUser: false,
-          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+          time: new Date().toLocaleTimeString(language === "KR" ? 'ko-KR' : 'en-US', { hour: '2-digit', minute: '2-digit' })
         }]);
         setIsSending(false);
       }, 800);
     } catch {
       setMessages(prev => [...prev, {
-        text: "Failed to send message. Please try again.",
+        text: t.sendFailed,
         isUser: false,
-        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+        time: new Date().toLocaleTimeString(language === "KR" ? 'ko-KR' : 'en-US', { hour: '2-digit', minute: '2-digit' })
       }]);
       setIsSending(false);
     }
@@ -131,7 +174,7 @@ export default function ChatWidget() {
                 <h3 className="font-semibold text-lg tracking-tight">MFTEL</h3>
                 <div className="flex items-center gap-1.5">
                   <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
-                  <p className="text-slate-400 text-xs">Usually replies in a day</p>
+                  <p className="text-slate-400 text-xs">{t.replyTime}</p>
                 </div>
               </div>
             </div>
@@ -150,30 +193,30 @@ export default function ChatWidget() {
           /* Info Form */
           <form onSubmit={handleStartChat} className="p-5 space-y-4 bg-gradient-to-b from-gray-50 to-white">
             <div className="text-center mb-2">
-              <p className="text-gray-600 text-sm">Leave us a message and<br/>we&apos;ll get back to you.</p>
+              <p className="text-gray-600 text-sm">{t.leaveMessage}<br/>{t.getBack}</p>
             </div>
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 ml-1">
-                  Name <span className="text-gray-400">(optional)</span>
+                  {t.nameLabel} <span className="text-gray-400">{t.nameOptional}</span>
                 </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
+                  placeholder={t.namePlaceholder}
                   className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition-all placeholder:text-gray-300"
                 />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 ml-1">
-                  Email <span className="text-gray-400">(optional)</span>
+                  {t.emailLabel} <span className="text-gray-400">{t.emailOptional}</span>
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com"
+                  placeholder={t.emailPlaceholder}
                   className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition-all placeholder:text-gray-300"
                 />
               </div>
@@ -182,10 +225,10 @@ export default function ChatWidget() {
               type="submit"
               className="w-full py-3 bg-rose-500 text-white rounded-xl font-medium text-sm hover:bg-rose-600 transition-all shadow-lg shadow-rose-500/20 active:scale-[0.98]"
             >
-              Start Chat
+              {t.startChat}
             </button>
             <p className="text-center text-xs text-gray-400">
-              You can send messages anonymously
+              {t.anonymousNote}
             </p>
           </form>
         ) : (
@@ -245,7 +288,7 @@ export default function ChatWidget() {
                 <button
                   onClick={handleReset}
                   className="p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all"
-                  title="New conversation"
+                  title={t.newConversation}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -261,7 +304,7 @@ export default function ChatWidget() {
                         handleSend();
                       }
                     }}
-                    placeholder="Type your message..."
+                    placeholder={t.typePlaceholder}
                     rows={1}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 focus:bg-white transition-all resize-none placeholder:text-gray-400"
                   />
