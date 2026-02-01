@@ -24,6 +24,7 @@ const translations: Record<Language, Record<string, string>> = {
         "nav.publications": "Publications",
         "nav.projects": "Projects",
         "nav.gallery": "Gallery",
+        "nav.lecture": "Lecture",
         "nav.contact": "Contact",
 
         // Hero
@@ -116,6 +117,7 @@ const translations: Record<Language, Record<string, string>> = {
         "nav.publications": "논문",
         "nav.projects": "과제",
         "nav.gallery": "갤러리",
+        "nav.lecture": "강의",
         "nav.contact": "오시는 길",
 
         // Hero

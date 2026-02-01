@@ -23,6 +23,7 @@ export default function Navbar() {
         { name: t("nav.publications"), href: "#publications" },
         { name: t("nav.projects"), href: "#projects" },
         { name: t("nav.gallery"), href: "#gallery" },
+        { name: t("nav.lecture"), href: "#lecture" },
         { name: t("nav.contact"), href: "#footer" },
     ];
 

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import Section from "@/components/ui/section";
 import { useLanguage } from "@/lib/LanguageContext";
-import { Cpu, Zap, Server, ArrowRight, ArrowDown, Atom, Battery, Droplets, Flame, Snowflake, ThermometerSun, Wind, Factory, Sun, ChevronRight, FlaskConical, Microscope, Shield, Waves, Beaker, Target } from "lucide-react";
+import { Cpu, Zap, Server, ArrowRight, ArrowDown, Atom, Battery, Droplets, Flame, Snowflake, ThermometerSun, Wind, Factory, Sun, ChevronRight, FlaskConical, Microscope, Shield, Waves, Beaker, Target, Handshake } from "lucide-react";
 
 // ─── Pillar Data ───
 
@@ -645,7 +645,7 @@ export default function Research() {
             <ResearchIntro />
 
             {/* Experiments & Computational Analysis */}
-            <div className="grid md:grid-cols-2 gap-5 mb-16">
+            <div className="grid md:grid-cols-2 gap-5 mb-5">
                 <div className="rounded-2xl border border-gray-200 bg-white p-6">
                     <div className="flex items-center gap-3 mb-4">
                         <div className="w-9 h-9 rounded-lg bg-rose-50 flex items-center justify-center">
@@ -676,6 +676,35 @@ export default function Research() {
                             <span key={i} className="text-xs font-medium bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full">{kw}</span>
                         ))}
                     </div>
+                </div>
+            </div>
+
+            {/* Research Collaborators */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-6">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-9 h-9 rounded-lg bg-violet-50 flex items-center justify-center">
+                        <Handshake className="w-4.5 h-4.5 text-violet-500" />
+                    </div>
+                    <h4 className="text-base font-bold text-gray-900">{language === "KR" ? "공동 연구 기관" : "Research Collaborators"}</h4>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    {/* International - violet */}
+                    <a href="https://fernandi.folk.ntnu.no/index.html" target="_blank" rel="noopener noreferrer" className="text-xs font-medium bg-violet-50 text-violet-600 px-3 py-1.5 rounded-full hover:bg-violet-100 transition-colors inline-flex items-center gap-1">NTNU <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a>
+                    {["HZDR", "UPC", "Kyushu Univ."].map((name, i) => (
+                        <span key={i} className="text-xs font-medium bg-violet-50 text-violet-600 px-3 py-1.5 rounded-full">{name}</span>
+                    ))}
+                    {/* Research Institutes - sky */}
+                    {["KAERI", "KIER"].map((name, i) => (
+                        <span key={i} className="text-xs font-medium bg-sky-50 text-sky-600 px-3 py-1.5 rounded-full">{name}</span>
+                    ))}
+                    {/* Industry - amber */}
+                    {["HD Hyundai Heavy Industries", "Hyundai E&C", "LG Electronics"].map((name, i) => (
+                        <span key={i} className="text-xs font-medium bg-amber-50 text-amber-600 px-3 py-1.5 rounded-full">{name}</span>
+                    ))}
+                    {/* Universities - emerald */}
+                    {["Seoul Nat'l Univ.", "Kyung Hee Univ."].map((name, i) => (
+                        <span key={i} className="text-xs font-medium bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-full">{name}</span>
+                    ))}
                 </div>
             </div>
 
