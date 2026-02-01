@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import Section from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,43 +25,48 @@ export default function Publications() {
                 </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-5">
                 {displayedPubs.map((pub, i) => (
-                    <a
+                    <motion.a
                         key={i}
                         id={`pub-${totalPubs - pub.number + 1}`}
                         href={pub.link}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="block group h-full scroll-mt-24"
+                        initial={{ opacity: 0, y: 12 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: i * 0.05 }}
                     >
-                        <Card className="hover:border-rose-200 transition-colors duration-300 h-full">
+                        <Card className="hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 h-full border-transparent hover:border-rose-200 bg-white">
                             <CardContent className="p-6 flex gap-4 items-start h-full">
-                                <div className="hidden sm:flex flex-shrink-0 w-12 h-12 bg-rose-100 text-rose-600 rounded-xl items-center justify-center font-bold text-lg">
+                                <div className="hidden sm:flex flex-shrink-0 w-10 h-10 rounded-lg bg-slate-100 text-slate-500 items-center justify-center font-semibold text-sm">
                                     {totalPubs - pub.number + 1}
                                 </div>
                                 <div className="flex-1 flex flex-col">
-                                    <h4 className="text-lg font-bold text-gray-900 group-hover:text-rose-600 transition-colors mb-2 leading-snug line-clamp-2">
+                                    <h4 className="text-base font-semibold text-gray-900 group-hover:text-rose-600 transition-colors mb-2 leading-snug line-clamp-2">
                                         {pub.title}
                                     </h4>
-                                    <p className="text-sm text-gray-600 mb-2 line-clamp-1">{pub.authors}</p>
-                                    <div className="flex items-center text-xs text-muted-foreground gap-3 mt-auto">
-                                        <span className="font-semibold text-gray-700">{pub.journal}</span>
-                                        <span className="w-1 h-1 bg-gray-300 rounded-full" />
+                                    <p className="text-sm text-gray-500 mb-2 line-clamp-1">{pub.authors}</p>
+                                    <div className="flex items-center text-xs text-gray-400 gap-2 mt-auto">
+                                        <span className="font-medium text-gray-600">{pub.journal}</span>
+                                        <span className="text-gray-300">·</span>
                                         <span>{pub.year}</span>
-                                        <ExternalLink className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <ExternalLink className="w-3.5 h-3.5 ml-auto opacity-0 group-hover:opacity-100 transition-opacity text-rose-400" />
                                     </div>
                                 </div>
                             </CardContent>
                         </Card>
-                    </a>
+                    </motion.a>
                 ))}
             </div>
 
-            <div className="text-center mt-8">
+            <div className="text-center mt-10">
                 <Button
                     onClick={() => setShowAll(!showAll)}
                     variant="outline"
+                    className="rounded-full px-8"
                 >
                     {showAll ? t("publications.showLess") : t("publications.viewAll").replace("{count}", String(publications.length))}
                 </Button>

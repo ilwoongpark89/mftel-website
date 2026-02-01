@@ -4,6 +4,7 @@ import { useState } from "react";
 import Section from "@/components/ui/section";
 import { Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/lib/LanguageContext";
 
 interface NewsItem {
@@ -164,32 +165,37 @@ const newsItems: NewsItem[] = [
     },
 ];
 
-function NewsCard({ item, isFirst = false }: { item: NewsItem; isFirst?: boolean }) {
+function NewsCard({ item, index }: { item: NewsItem; index: number }) {
     const [isExpanded, setIsExpanded] = useState(false);
-    const [hasClicked, setHasClicked] = useState(false);
     const hasImages = item.images && item.images.length > 0;
     const { language } = useLanguage();
 
-    const handleClick = () => {
-        setIsExpanded(!isExpanded);
-        if (isFirst) setHasClicked(true);
-    };
-
     return (
         <div
-            className="border-b border-gray-200 last:border-b-0 cursor-pointer"
-            onClick={handleClick}
+            className="border-b border-gray-100 last:border-b-0 cursor-pointer group"
+            onClick={() => setIsExpanded(!isExpanded)}
         >
-            <div className="py-3 px-4 hover:bg-gray-50 transition-colors">
+            <div className="py-4 px-5 hover:bg-gray-50/80 transition-colors">
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4 flex-1 min-w-0">
+                        {/* Thumbnail preview */}
+                        {hasImages && (
+                            <div className="hidden sm:block relative w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-gray-100">
+                                <Image
+                                    src={item.images![0]}
+                                    alt=""
+                                    fill
+                                    className="object-cover"
+                                />
+                            </div>
+                        )}
                         <div className="flex items-center gap-1.5 text-sm text-rose-600 w-[130px] shrink-0">
                             <Calendar className="h-3.5 w-3.5" />
                             <span className="font-medium">{item.date}</span>
                         </div>
                         <h4 className="text-sm md:text-base font-medium text-gray-900 truncate">{item.title[language]}</h4>
                     </div>
-                    <div className={`shrink-0 ${isFirst && !hasClicked && !isExpanded ? 'text-rose-500 animate-bounce-arrow' : 'text-gray-400'}`}>
+                    <div className="shrink-0 text-gray-300 group-hover:text-gray-500 transition-colors">
                         {isExpanded ? (
                             <ChevronUp className="h-4 w-4" />
                         ) : (
@@ -199,25 +205,35 @@ function NewsCard({ item, isFirst = false }: { item: NewsItem; isFirst?: boolean
                 </div>
             </div>
 
-            {isExpanded && (
-                <div className="px-4 pb-4">
-                    <p className="text-gray-600 text-sm mb-4 md:ml-[146px]">{item.description[language]}</p>
-                    {hasImages && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:ml-[146px]">
-                            {item.images!.map((src, idx) => (
-                                <div key={idx} className="relative aspect-[4/3] rounded-lg overflow-hidden bg-gray-100">
-                                    <Image
-                                        src={src}
-                                        alt={`${item.title[language]} - Image ${idx + 1}`}
-                                        fill
-                                        className="object-contain"
-                                    />
+            <AnimatePresence>
+                {isExpanded && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="overflow-hidden"
+                    >
+                        <div className="px-5 pb-5">
+                            <p className="text-gray-600 text-sm mb-4 sm:ml-[154px]">{item.description[language]}</p>
+                            {hasImages && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:ml-[154px]">
+                                    {item.images!.map((src, idx) => (
+                                        <div key={idx} className="relative aspect-[4/3] rounded-xl overflow-hidden bg-gray-100">
+                                            <Image
+                                                src={src}
+                                                alt={`${item.title[language]} - Image ${idx + 1}`}
+                                                fill
+                                                className="object-cover"
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
+                            )}
                         </div>
-                    )}
-                </div>
-            )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
@@ -235,18 +251,9 @@ export default function News() {
                 </p>
             </div>
 
-            <style jsx global>{`
-                @keyframes bounce-arrow {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(4px); }
-                }
-                .animate-bounce-arrow {
-                    animation: bounce-arrow 0.8s ease-in-out infinite;
-                }
-            `}</style>
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+            <div className="bg-white rounded-2xl border border-gray-200/80 overflow-hidden shadow-sm">
                 {newsItems.map((item, index) => (
-                    <NewsCard key={index} item={item} isFirst={index === 0} />
+                    <NewsCard key={index} item={item} index={index} />
                 ))}
             </div>
         </Section>

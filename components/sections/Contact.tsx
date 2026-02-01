@@ -5,17 +5,15 @@ import { motion } from "framer-motion";
 import { Mail, GraduationCap, Rocket, Users, Globe } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
 
-function StarField() {
+function FloatingParticles() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
-        // 캔버스 크기 설정
         const resize = () => {
             canvas.width = canvas.offsetWidth;
             canvas.height = canvas.offsetHeight;
@@ -23,72 +21,64 @@ function StarField() {
         resize();
         window.addEventListener("resize", resize);
 
-        // 소실점 (중앙 약간 위)
-        const getCenterX = () => canvas!.width / 2;
-        const getCenterY = () => canvas!.height * 0.4;
-
-        // 별 클래스
-        class Star {
+        class Particle {
             x: number;
             y: number;
-            z: number;
-            pz: number;
+            vx: number;
+            vy: number;
+            radius: number;
+            opacity: number;
 
             constructor() {
-                this.x = (Math.random() - 0.5) * canvas!.width;
-                this.y = (Math.random() - 0.5) * canvas!.height;
-                this.z = Math.random() * canvas!.width;
-                this.pz = this.z;
+                this.x = Math.random() * canvas!.width;
+                this.y = Math.random() * canvas!.height;
+                this.vx = (Math.random() - 0.5) * 0.3;
+                this.vy = (Math.random() - 0.5) * 0.3;
+                this.radius = Math.random() * 1.5 + 0.5;
+                this.opacity = Math.random() * 0.5 + 0.1;
             }
 
-            update(speed: number) {
-                this.pz = this.z;
-                this.z -= speed;
-                if (this.z < 1) {
-                    this.x = (Math.random() - 0.5) * canvas!.width;
-                    this.y = (Math.random() - 0.5) * canvas!.height;
-                    this.z = canvas!.width;
-                    this.pz = this.z;
-                }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < 0 || this.x > canvas!.width) this.vx *= -1;
+                if (this.y < 0 || this.y > canvas!.height) this.vy *= -1;
             }
 
             draw() {
-                const centerX = getCenterX();
-                const centerY = getCenterY();
-
-                // 현재 위치 (원근 투영)
-                const sx = (this.x / this.z) * canvas!.width + centerX;
-                const sy = (this.y / this.z) * canvas!.height * 0.5 + centerY;
-
-                // 이전 위치 (꼬리)
-                const px = (this.x / this.pz) * canvas!.width + centerX;
-                const py = (this.y / this.pz) * canvas!.height * 0.5 + centerY;
-
-                // 밝기 (가까울수록 밝게)
-                const brightness = 1 - this.z / canvas!.width;
-
                 ctx!.beginPath();
-                ctx!.moveTo(px, py);
-                ctx!.lineTo(sx, sy);
-                // 롤백: ctx!.strokeStyle = `rgba(255, 255, 255, ${brightness})`;
-                ctx!.strokeStyle = `rgba(255, 250, 220, ${brightness})`; // 크림/연노랑
-                ctx!.lineWidth = brightness * 4;
-                ctx!.stroke();
+                ctx!.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx!.fillStyle = `rgba(251, 113, 133, ${this.opacity})`;
+                ctx!.fill();
             }
         }
 
-        // 별 150개 생성
-        const stars = Array.from({ length: 600 }, () => new Star());
-        const speed = 4;
+        const particles = Array.from({ length: 80 }, () => new Particle());
 
-        // 애니메이션 루프
         let animationId: number;
         const animate = () => {
-            ctx!.clearRect(0, 0, canvas!.width, canvas!.height); // 투명하게 클리어
+            ctx!.clearRect(0, 0, canvas!.width, canvas!.height);
 
-            stars.forEach((star) => {
-                star.update(speed);
-                star.draw();
+            // Draw connections
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 120) {
+                        ctx!.beginPath();
+                        ctx!.moveTo(particles[i].x, particles[i].y);
+                        ctx!.lineTo(particles[j].x, particles[j].y);
+                        ctx!.strokeStyle = `rgba(251, 113, 133, ${0.06 * (1 - dist / 120)})`;
+                        ctx!.lineWidth = 0.5;
+                        ctx!.stroke();
+                    }
+                }
+            }
+
+            particles.forEach((p) => {
+                p.update();
+                p.draw();
             });
 
             animationId = requestAnimationFrame(animate);
@@ -133,11 +123,9 @@ export default function Contact() {
 
     return (
         <section id="contact" className="relative overflow-hidden">
-            {/* Hero Section */}
             <div className="bg-slate-900 text-white py-24 relative">
-                {/* Starfield Warp Effect - 별이 중앙에서 앞으로 날아오는 효과 */}
-                <div className="absolute inset-0 overflow-hidden" style={{ perspective: "500px" }}>
-                    <StarField />
+                <div className="absolute inset-0 overflow-hidden">
+                    <FloatingParticles />
                 </div>
 
                 <div className="container mx-auto px-4 relative z-10">
@@ -145,7 +133,7 @@ export default function Contact() {
                         <h2 className="text-sm font-semibold text-rose-400 tracking-widest uppercase mb-4">{t("contact.label")}</h2>
                         <h3 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
                             {t("contact.title1")}<br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-300">
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-rose-300">
                                 {t("contact.title2")}
                             </span>
                         </h3>
@@ -157,11 +145,18 @@ export default function Contact() {
                     {/* Benefits Grid */}
                     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
                         {benefits.map((benefit, i) => (
-                            <div key={i} className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:bg-white/10 transition-colors">
+                            <motion.div
+                                key={i}
+                                className="rounded-2xl p-6 border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] transition-all duration-300 hover:-translate-y-1"
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ delay: i * 0.1 }}
+                            >
                                 <benefit.icon className="w-10 h-10 text-rose-400 mb-4" />
                                 <h4 className="text-lg font-semibold mb-2">{benefit.title}</h4>
                                 <p className="text-sm text-gray-400">{benefit.description}</p>
-                            </div>
+                            </motion.div>
                         ))}
                     </div>
 
@@ -174,11 +169,11 @@ export default function Contact() {
                                     navigator.clipboard.writeText("ilwoongpark@inha.ac.kr");
                                     alert(t("contact.emailCopied"));
                                 }}
-                                className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-rose-500 to-orange-400 px-10 py-4 text-lg font-semibold text-white shadow-lg hover:from-rose-600 hover:to-orange-500 transition-all cursor-pointer"
+                                className="inline-flex items-center justify-center gap-2 rounded-full bg-rose-500 px-10 py-4 text-lg font-semibold text-white shadow-lg shadow-rose-500/25 hover:bg-rose-600 transition-all cursor-pointer"
                                 initial={{ scale: 0.9, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
+                                whileHover={{ scale: 1.03 }}
+                                whileTap={{ scale: 0.97 }}
                             >
                                 <Mail className="w-5 h-5" />
                                 ilwoongpark@inha.ac.kr
@@ -186,36 +181,10 @@ export default function Contact() {
                         ) : (
                             <motion.button
                                 onClick={() => setShowEmail(true)}
-                                className="relative inline-flex items-center justify-center rounded-full bg-gradient-to-r from-rose-500 to-orange-400 px-10 py-4 text-lg font-semibold text-white shadow-lg cursor-pointer overflow-hidden"
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
+                                className="relative inline-flex items-center justify-center rounded-full bg-rose-500 px-10 py-4 text-lg font-semibold text-white shadow-lg shadow-rose-500/25 cursor-pointer hover:bg-rose-600 transition-all"
+                                whileHover={{ scale: 1.03 }}
+                                whileTap={{ scale: 0.97 }}
                             >
-                                {/* Shimmer effect */}
-                                <motion.div
-                                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                                    animate={{
-                                        x: ["-100%", "100%"],
-                                    }}
-                                    transition={{
-                                        duration: 2,
-                                        repeat: Infinity,
-                                        repeatDelay: 1,
-                                        ease: "easeInOut"
-                                    }}
-                                />
-                                {/* Pulse ring */}
-                                <motion.div
-                                    className="absolute inset-0 rounded-full border-2 border-white/50"
-                                    animate={{
-                                        scale: [1, 1.2],
-                                        opacity: [0.5, 0],
-                                    }}
-                                    transition={{
-                                        duration: 1.5,
-                                        repeat: Infinity,
-                                        ease: "easeOut"
-                                    }}
-                                />
                                 <span className="relative z-10">{t("contact.apply")}</span>
                             </motion.button>
                         )}

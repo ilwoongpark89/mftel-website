@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/lib/LanguageContext";
 
-// 한 글자씩 흐린 상태에서 오른쪽 아래 → 원래 위치로 툭툭 올라오는 컴포넌트
-// 왼쪽 글자부터 순서대로
 function AnimatedText({ text, delay, onComplete }: { text: string; delay: number; onComplete?: () => void }) {
     const lastIndex = text.length - 1;
     return (
@@ -47,7 +45,6 @@ export default function Hero() {
     const { t, language } = useLanguage();
 
     useEffect(() => {
-        // 원이 화면 채우면 바로 글씨 시작
         const timer = setTimeout(() => {
             setShowContent(true);
         }, 800);
@@ -57,7 +54,6 @@ export default function Hero() {
         };
     }, []);
 
-    // 언어에 따른 텍스트
     const line1 = t("hero.line1");
     const line2a = t("hero.line2a");
     const line2b = t("hero.line2b");
@@ -65,7 +61,7 @@ export default function Hero() {
 
     return (
         <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-white">
-            {/* 흰 배경 위에 slate-900 원이 가운데서 커지면서 배경색 전환 */}
+            {/* Expanding circle */}
             <motion.div
                 className="absolute rounded-full z-0 bg-slate-900"
                 style={{
@@ -83,25 +79,21 @@ export default function Hero() {
                 }}
             />
 
-            {/* Background Elements - Dark Mode */}
+            {/* Subtle gradient accent */}
             <div className="absolute inset-0 z-[1]">
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-rose-600/20 rounded-full blur-3xl opacity-50 translate-x-1/3 -translate-y-1/3" />
-                <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-3xl opacity-50 -translate-x-1/3 translate-y-1/3" />
-                <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.05]" />
+                <div className="absolute top-1/4 right-1/4 w-[600px] h-[600px] bg-rose-600/10 rounded-full blur-[120px]" />
+                <div className="absolute bottom-1/4 left-1/4 w-[600px] h-[600px] bg-slate-600/10 rounded-full blur-[120px]" />
             </div>
 
             <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 z-10">
                 <div className="max-w-4xl mx-auto text-center">
                     {showContent && (
                         <div key={language}>
-                            {/* Title Line 1 */}
                             <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-2 leading-[1.1]">
                                 <AnimatedText text={line1} delay={0} />
                             </h1>
 
-                            {/* Title Line 2 */}
                             <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-2 leading-[1.1] relative">
-                                {/* 그라데이션 텍스트 (항상 존재, 나중에 보임) - 레이아웃 기준 */}
                                 <span className="invisible">
                                     {line2a.split("").map((char, index) => (
                                         <span key={index} style={{ display: "inline-block" }}>{char}</span>
@@ -112,16 +104,14 @@ export default function Hero() {
                                         <span key={`e-${index}`} style={{ display: "inline-block" }}>{char}</span>
                                     ))}
                                 </span>
-                                {/* 흰색 텍스트 (기본) */}
                                 <span className={`absolute inset-0 text-white transition-opacity duration-700 ${showGradient ? "opacity-0" : "opacity-100"}`}>
                                     <AnimatedText text={line2a} delay={0.35} />
                                     <br className="md:hidden" />
                                     <span className="hidden md:inline">{"\u00A0"}</span>
                                     <AnimatedText text={line2b} delay={0.65} />
                                 </span>
-                                {/* 그라데이션 텍스트 (나중에 나타남) */}
                                 <span
-                                    className={`absolute inset-0 text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-indigo-500 transition-opacity duration-700 ${showGradient ? "opacity-100" : "opacity-0"}`}
+                                    className={`absolute inset-0 text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-rose-300 transition-opacity duration-700 ${showGradient ? "opacity-100" : "opacity-0"}`}
                                 >
                                     {line2a.split("").map((char, index) => (
                                         <span key={index} style={{ display: "inline-block" }}>{char}</span>
@@ -134,12 +124,10 @@ export default function Hero() {
                                 </span>
                             </h1>
 
-                            {/* Title Line 3 */}
                             <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-8 leading-[1.1]">
                                 <AnimatedText text={line3} delay={0.95} onComplete={() => setShowGradient(true)} />
                             </h1>
 
-                            {/* Description */}
                             <motion.p
                                 className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed"
                                 initial={{ opacity: 0, y: 20 }}
@@ -149,17 +137,16 @@ export default function Hero() {
                                 {t("hero.description")}
                             </motion.p>
 
-                            {/* Buttons */}
                             <motion.div
                                 className="flex flex-col sm:flex-row gap-4 justify-center"
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.6, delay: 1.27, ease: "easeOut" }}
                             >
-                                <Button size="lg" variant="outline" className="rounded-full text-base border-white/30 text-white hover:bg-white/10 w-[200px] justify-center" asChild>
+                                <Button size="lg" className="rounded-full text-base bg-white text-slate-900 hover:bg-gray-100 shadow-lg shadow-white/10 w-[200px] justify-center" asChild>
                                     <a href="#publications">{t("hero.publications")}</a>
                                 </Button>
-                                <Button size="lg" variant="outline" className="rounded-full text-base border-white/30 text-white hover:bg-white/10 w-[200px] justify-center" asChild>
+                                <Button size="lg" variant="outline" className="rounded-full text-base border-white/20 text-white hover:bg-white/10 backdrop-blur-sm w-[200px] justify-center" asChild>
                                     <a href="#projects">{t("hero.projects")}</a>
                                 </Button>
                             </motion.div>

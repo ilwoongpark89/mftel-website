@@ -54,33 +54,20 @@ function FlipCard({ member, index, isVisible }: {
                 className="relative w-full"
                 style={{ transformStyle: "preserve-3d" }}
                 animate={{ rotateY: isFlipped ? 180 : 0 }}
-                transition={{ duration: 1, ease: "easeInOut" }}
+                transition={{ duration: 0.6, ease: "easeInOut" }}
             >
-                {/* 뒷면 (처음에 보이는 면) - 포커카드 느낌 */}
+                {/* 뒷면 (처음에 보이는 면) */}
                 <div
                     className="absolute inset-0 backface-hidden"
                     style={{ backfaceVisibility: "hidden" }}
                 >
                     <Card className="overflow-hidden border-none shadow-md h-full">
-                        <div
-                            className="relative aspect-[3/4] bg-slate-800"
-                            style={{
-                                backgroundImage: `
-                                    linear-gradient(45deg, rgba(255,255,255,0.03) 25%, transparent 25%),
-                                    linear-gradient(-45deg, rgba(255,255,255,0.03) 25%, transparent 25%),
-                                    linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.03) 75%),
-                                    linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.03) 75%)
-                                `,
-                                backgroundSize: "20px 20px",
-                                backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px"
-                            }}
-                        >
-                            <div className="absolute inset-3 border border-rose-400/30 rounded-lg" />
-                            <div className="absolute inset-6 border border-rose-400/20 rounded" />
+                        <div className="relative aspect-[3/4] bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+                            <div className="text-4xl font-bold text-white/10 tracking-tighter">MFTEL</div>
                         </div>
                         <CardContent className="text-center pt-3 pb-3 bg-slate-800">
-                            <div className="h-6 w-24 bg-slate-700 rounded mx-auto mb-2" />
-                            <div className="h-4 w-16 bg-slate-700 rounded mx-auto" />
+                            <div className="h-5 w-20 bg-slate-700/50 rounded-full mx-auto mb-2" />
+                            <div className="h-3 w-14 bg-slate-700/30 rounded-full mx-auto" />
                         </CardContent>
                     </Card>
                 </div>
