@@ -175,7 +175,7 @@ function NewsCard({ item, index }: { item: NewsItem; index: number }) {
             className="border-b border-gray-100 last:border-b-0 cursor-pointer group"
             onClick={() => setIsExpanded(!isExpanded)}
         >
-            <div className="py-4 px-5 hover:bg-gray-50/80 transition-colors">
+            <div className="py-3 px-5 hover:bg-gray-50/80 transition-colors">
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4 flex-1 min-w-0">
                         {/* Thumbnail preview */}

@@ -25,6 +25,28 @@ const getStudentPublications = (studentName: string) => {
 
 type TeamMember = typeof teamMembers[0];
 
+// 학생별 필라 색상 매핑 (연구 분야 기준)
+const pillarColorMap: Record<string, "rose" | "sky" | "amber"> = {
+    "Hyun Jin Yong": "sky",       // Boiling → Immersion
+    "Jun Beom Song": "rose",      // TES
+    "Sang Min Song": "rose",      // Condensation → TES
+    "Jae Hyeok Yang": "amber",    // Thermal-hydraulic → SMR
+    "Hyeon Geun Shin": "rose",    // TES
+    "Sung Jin Kim": "sky",        // Boiling, Dielectric fluid → Immersion
+    "Kyeong Ju Ko": "amber",     // CFD → SMR
+    "Chaeyeon Kim": "sky",        // Immersion
+    "Eunbin Park": "amber",       // Two-phase flow instability → SMR
+    "Manho Kim": "amber",         // CFD → SMR
+    "Joonhwan Hyun": "rose",     // TES
+    "Yeongjun Jung": "sky",       // Boiling → Immersion
+};
+
+const checkerColors: Record<string, [string, string]> = {
+    rose:  ["rgba(120,30,50,0.3)", "rgba(100,25,42,0.2)"],
+    sky:   ["rgba(20,100,160,0.4)", "rgba(15,82,135,0.3)"],
+    amber: ["rgba(160,90,20,0.35)", "rgba(135,75,15,0.25)"],
+};
+
 // 플립 카드 컴포넌트
 function FlipCard({ member, index, isVisible }: {
     member: TeamMember;
@@ -38,6 +60,8 @@ function FlipCard({ member, index, isVisible }: {
     const displayName = language === "KR" ? member.nameKR : member.name;
     const displayDegree = language === "KR" ? member.degreeKR : member.degree;
     const displayResearch = language === "KR" ? member.researchKR : member.research;
+    const pColor = pillarColorMap[member.name] || "rose";
+    const [c1, c2] = checkerColors[pColor];
 
     useEffect(() => {
         if (isVisible) {
@@ -49,7 +73,7 @@ function FlipCard({ member, index, isVisible }: {
     }, [isVisible, index]);
 
     return (
-        <div className="perspective-1000" style={{ perspective: "1000px" }}>
+        <div className="perspective-1000 cursor-pointer" style={{ perspective: "1000px" }} onClick={() => setIsFlipped(!isFlipped)}>
             <motion.div
                 className="relative w-full"
                 style={{ transformStyle: "preserve-3d" }}
@@ -61,15 +85,15 @@ function FlipCard({ member, index, isVisible }: {
                     className="absolute inset-0 backface-hidden"
                     style={{ backfaceVisibility: "hidden" }}
                 >
-                    <Card className="overflow-hidden border-none shadow-md h-full">
-                        <div className="relative aspect-[3/4] bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
-                            <div className="text-4xl font-bold text-white/10 tracking-tighter">MFTEL</div>
-                        </div>
-                        <CardContent className="text-center pt-3 pb-3 bg-slate-800">
-                            <div className="h-5 w-20 bg-slate-700/50 rounded-full mx-auto mb-2" />
-                            <div className="h-3 w-14 bg-slate-700/30 rounded-full mx-auto" />
-                        </CardContent>
-                    </Card>
+                    <div className="rounded-xl overflow-hidden shadow-md h-full"
+                        style={{
+                            backgroundImage: `repeating-conic-gradient(${c1} 0% 25%, ${c2} 0% 50%)`,
+                            backgroundSize: "20px 20px",
+                        }}
+                    >
+                        <div className="aspect-[3/4]" />
+                        <div className="py-3 px-4" />
+                    </div>
                 </div>
 
                 {/* 앞면 (플립 후 보이는 면) */}
@@ -93,7 +117,7 @@ function FlipCard({ member, index, isVisible }: {
                         <CardContent className="text-center pt-3 pb-3">
                             <h4 className="text-xl font-bold text-gray-900 mb-1">{displayName}</h4>
                             <p className="text-base text-gray-500">{displayDegree}</p>
-                            <p className="text-sm text-rose-600 mt-2 font-medium">{displayResearch.split(',').map(r => `#${r.trim()}`).join(' ')}</p>
+                            <p className="text-sm text-gray-500 mt-2 font-medium">{displayResearch.split(',').map(r => `#${r.trim()}`).join(' ')}</p>
                             <p className="text-xs text-gray-400 mt-1 min-h-[1rem]">
                                 {pubs.length > 0 ? pubs.map((n, idx) => (
                                     <a
@@ -225,7 +249,7 @@ function MobileMemberCard({ member }: { member: TeamMember }) {
                     <div className="flex-1">
                         <h4 className="text-lg font-bold text-gray-900">{displayName}</h4>
                         <p className="text-sm text-gray-500">{displayDegree}</p>
-                        <p className="text-xs text-rose-600 mt-1 font-medium">
+                        <p className="text-xs text-gray-500 mt-1 font-medium">
                             {displayResearch.split(',').map(r => `#${r.trim()}`).join(' ')}
                         </p>
                     </div>

@@ -10,6 +10,7 @@ import Research from "@/components/sections/Research";
 import Publications from "@/components/sections/Publications";
 import Projects from "@/components/sections/Projects";
 import Gallery from "@/components/sections/Gallery";
+import Lecture from "@/components/sections/Lecture";
 import Contact from "@/components/sections/Contact";
 import Footer from "@/components/sections/Footer";
 
@@ -27,6 +28,7 @@ export default function Home() {
       <Publications />
       <Projects />
       <Gallery />
+      <Lecture />
       <Footer />
     </main>
   );

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import Section from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardTitle, CardContent } from "@/components/ui/card";
 import { projects, patents } from "@/app/data";
 import { Rocket, Lightbulb } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
@@ -31,22 +31,20 @@ export default function Projects() {
                         viewport={{ once: true }}
                         transition={{ delay: i * 0.08 }}
                     >
-                        <Card className="bg-white border-none shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 h-full">
-                            <CardHeader>
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className="w-9 h-9 rounded-lg bg-rose-50 flex items-center justify-center">
-                                        <Rocket className="w-4.5 h-4.5 text-rose-500" />
-                                    </div>
-                                    <span className="text-xs font-medium bg-slate-100 px-2.5 py-1 rounded-full text-slate-500">
+                        <div className="bg-white rounded-xl shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 h-full p-5 flex gap-4 items-start">
+                            <div className="w-9 h-9 rounded-lg bg-rose-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <Rocket className="w-4.5 h-4.5 text-rose-500" />
+                            </div>
+                            <div className="flex-1">
+                                <div className="flex items-center justify-between gap-2 mb-1">
+                                    <h4 className="text-base font-semibold leading-tight">{proj.title}</h4>
+                                    <span className="text-xs font-medium bg-slate-100 px-2.5 py-1 rounded-full text-slate-500 flex-shrink-0">
                                         {proj.year}
                                     </span>
                                 </div>
-                                <CardTitle className="text-lg leading-tight">{proj.title}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-sm text-muted-foreground">{proj.sponsor}</p>
-                            </CardContent>
-                        </Card>
+                                <p className="text-sm text-gray-500">{proj.sponsor}</p>
+                            </div>
+                        </div>
                     </motion.div>
                 ))}
             </div>
@@ -74,18 +72,16 @@ export default function Projects() {
                         viewport={{ once: true }}
                         transition={{ delay: i * 0.08 }}
                     >
-                        <Card className="bg-white border-none shadow-sm hover:shadow-md transition-all duration-300">
-                            <CardHeader>
-                                <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center mb-2">
-                                    <Lightbulb className="w-4.5 h-4.5 text-amber-500" />
-                                </div>
-                                <CardTitle className="text-lg">{patent.title}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
+                        <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-5 flex gap-4 items-start">
+                            <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <Lightbulb className="w-4.5 h-4.5 text-amber-500" />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="text-base font-semibold leading-tight mb-1">{patent.title}</h4>
                                 <p className="text-sm text-gray-500">{patent.number}</p>
                                 {patent.date && <p className="text-xs text-gray-400 mt-1">{patent.date}</p>}
-                            </CardContent>
-                        </Card>
+                            </div>
+                        </div>
                     </motion.div>
                 ))}
             </div>

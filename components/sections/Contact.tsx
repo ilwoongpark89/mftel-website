@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Mail, GraduationCap, Rocket, Users, Globe } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
 
-function FloatingParticles() {
+function StarField() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
@@ -21,66 +21,61 @@ function FloatingParticles() {
         resize();
         window.addEventListener("resize", resize);
 
-        class Particle {
+        const getCenterX = () => canvas!.width / 2;
+        const getCenterY = () => canvas!.height * 0.4;
+
+        class Star {
             x: number;
             y: number;
-            vx: number;
-            vy: number;
-            radius: number;
-            opacity: number;
+            z: number;
+            pz: number;
 
             constructor() {
-                this.x = Math.random() * canvas!.width;
-                this.y = Math.random() * canvas!.height;
-                this.vx = (Math.random() - 0.5) * 0.3;
-                this.vy = (Math.random() - 0.5) * 0.3;
-                this.radius = Math.random() * 1.5 + 0.5;
-                this.opacity = Math.random() * 0.5 + 0.1;
+                this.x = (Math.random() - 0.5) * canvas!.width;
+                this.y = (Math.random() - 0.5) * canvas!.height;
+                this.z = Math.random() * canvas!.width;
+                this.pz = this.z;
             }
 
-            update() {
-                this.x += this.vx;
-                this.y += this.vy;
-                if (this.x < 0 || this.x > canvas!.width) this.vx *= -1;
-                if (this.y < 0 || this.y > canvas!.height) this.vy *= -1;
+            update(speed: number) {
+                this.pz = this.z;
+                this.z -= speed;
+                if (this.z < 1) {
+                    this.x = (Math.random() - 0.5) * canvas!.width;
+                    this.y = (Math.random() - 0.5) * canvas!.height;
+                    this.z = canvas!.width;
+                    this.pz = this.z;
+                }
             }
 
             draw() {
+                const centerX = getCenterX();
+                const centerY = getCenterY();
+                const sx = (this.x / this.z) * canvas!.width + centerX;
+                const sy = (this.y / this.z) * canvas!.height * 0.5 + centerY;
+                const px = (this.x / this.pz) * canvas!.width + centerX;
+                const py = (this.y / this.pz) * canvas!.height * 0.5 + centerY;
+                const brightness = 1 - this.z / canvas!.width;
+
                 ctx!.beginPath();
-                ctx!.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx!.fillStyle = `rgba(251, 113, 133, ${this.opacity})`;
-                ctx!.fill();
+                ctx!.moveTo(px, py);
+                ctx!.lineTo(sx, sy);
+                ctx!.strokeStyle = `rgba(255, 250, 220, ${brightness})`;
+                ctx!.lineWidth = brightness * 4;
+                ctx!.stroke();
             }
         }
 
-        const particles = Array.from({ length: 80 }, () => new Particle());
+        const stars = Array.from({ length: 600 }, () => new Star());
+        const speed = 4;
 
         let animationId: number;
         const animate = () => {
             ctx!.clearRect(0, 0, canvas!.width, canvas!.height);
-
-            // Draw connections
-            for (let i = 0; i < particles.length; i++) {
-                for (let j = i + 1; j < particles.length; j++) {
-                    const dx = particles[i].x - particles[j].x;
-                    const dy = particles[i].y - particles[j].y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < 120) {
-                        ctx!.beginPath();
-                        ctx!.moveTo(particles[i].x, particles[i].y);
-                        ctx!.lineTo(particles[j].x, particles[j].y);
-                        ctx!.strokeStyle = `rgba(251, 113, 133, ${0.06 * (1 - dist / 120)})`;
-                        ctx!.lineWidth = 0.5;
-                        ctx!.stroke();
-                    }
-                }
-            }
-
-            particles.forEach((p) => {
-                p.update();
-                p.draw();
+            stars.forEach((star) => {
+                star.update(speed);
+                star.draw();
             });
-
             animationId = requestAnimationFrame(animate);
         };
         animate();
@@ -125,7 +120,7 @@ export default function Contact() {
         <section id="contact" className="relative overflow-hidden">
             <div className="bg-slate-900 text-white py-24 relative">
                 <div className="absolute inset-0 overflow-hidden">
-                    <FloatingParticles />
+                    <StarField />
                 </div>
 
                 <div className="container mx-auto px-4 relative z-10">

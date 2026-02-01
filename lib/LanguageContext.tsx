@@ -41,8 +41,8 @@ const translations: Record<Language, Record<string, string>> = {
         "about.description": "MFTEL focuses on solving critical energy challenges through advanced research in multiphase flow and heat transfer.",
         "about.tes.title": "TES and Carnot Battery",
         "about.tes.description": "Developing high-efficiency thermal energy storage systems and Carnot batteries for sustainable grid stability.",
-        "about.thermal.title": "Thermal Management",
-        "about.thermal.description": "Advanced cooling solutions for electronic devices, batteries, and high-performance computing systems.",
+        "about.thermal.title": "Immersion Cooling",
+        "about.thermal.description": "Two-phase immersion cooling technology that reduces cooling energy by up to 90% for data centers and high-performance computing systems.",
         "about.smr.title": "Small Modular Reactor",
         "about.smr.description": "Enhancing the safety and efficiency of Small Modular Reactors through advanced thermal-hydraulic analysis.",
 
@@ -133,8 +133,8 @@ const translations: Record<Language, Record<string, string>> = {
         "about.description": "MFTEL은 다상유동과 열전달 연구를 통해 에너지 분야의 핵심 문제를 해결합니다.",
         "about.tes.title": "열에너지 저장",
         "about.tes.description": "고효율 열에너지 저장 시스템과 카르노 배터리로 안정적인 전력망 구축에 기여합니다.",
-        "about.thermal.title": "열관리",
-        "about.thermal.description": "전자기기, 배터리, 고성능 컴퓨팅 시스템을 위한 차세대 냉각 기술을 개발합니다.",
+        "about.thermal.title": "이머전 쿨링",
+        "about.thermal.description": "이상(二相) 이머전 쿨링 기술로 데이터센터 및 고성능 컴퓨팅 시스템의 냉각 에너지를 최대 90% 절감합니다.",
         "about.smr.title": "소형모듈원자로",
         "about.smr.description": "열수력 해석을 통해 소형모듈원자로(SMR)의 안전성과 효율을 높입니다.",
 
