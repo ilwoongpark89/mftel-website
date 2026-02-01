@@ -235,7 +235,7 @@ export default function Hero() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.6, delay: 1.27, ease: "easeOut" }}
                             >
-                                <Button size="lg" className="rounded-full text-base bg-white text-slate-900 hover:bg-gray-100 shadow-lg shadow-white/10 w-[200px] justify-center" asChild>
+                                <Button size="lg" variant="outline" className="rounded-full text-base border-white/20 text-white hover:bg-white/10 backdrop-blur-sm w-[200px] justify-center" asChild>
                                     <a href="#publications">{t("hero.publications")}</a>
                                 </Button>
                                 <Button size="lg" variant="outline" className="rounded-full text-base border-white/20 text-white hover:bg-white/10 backdrop-blur-sm w-[200px] justify-center" asChild>

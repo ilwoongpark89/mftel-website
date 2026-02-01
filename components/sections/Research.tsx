@@ -193,7 +193,7 @@ function CarnotDetail({ language }: { language: string }) {
                 <h5 className="text-sm font-semibold text-rose-600 uppercase tracking-wider mb-3">
                     {isKR ? "연구 시각 자료" : "Research Visuals"}
                 </h5>
-                <div className="rounded-xl overflow-hidden bg-black">
+                <div className="rounded-xl overflow-hidden">
                     <div className="relative w-full" style={{ paddingBottom: "33.4%" }}>
                         <Image
                             src="/images/tes_summary_new.png"
@@ -334,7 +334,7 @@ function ImmersionDetail({ language }: { language: string }) {
                 <h5 className="text-sm font-semibold text-sky-600 uppercase tracking-wider mb-3">
                     {isKR ? "연구 시각 자료" : "Research Visuals"}
                 </h5>
-                <div className="rounded-xl overflow-hidden bg-black">
+                <div className="rounded-xl overflow-hidden">
                     <div className="relative w-full" style={{ paddingBottom: "30.4%" }}>
                         <Image
                             src="/images/immersion_summary.png"
@@ -490,7 +490,7 @@ function SMRDetail({ language }: { language: string }) {
                 <h5 className="text-sm font-semibold text-amber-600 uppercase tracking-wider mb-3">
                     {isKR ? "연구 시각 자료" : "Research Visuals"}
                 </h5>
-                <div className="rounded-xl overflow-hidden bg-black">
+                <div className="rounded-xl overflow-hidden">
                     <div className="relative w-full" style={{ paddingBottom: "20%" }}>
                         <Image
                             src="/images/smr_summary.png"
