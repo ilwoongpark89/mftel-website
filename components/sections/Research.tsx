@@ -578,17 +578,17 @@ function ResearchIntro() {
                     return (
                         <motion.div
                             key={i}
-                            className={`relative rounded-2xl border-2 p-5 cursor-pointer transition-all duration-300 origin-top ${
+                            className={`relative rounded-2xl border-2 p-5 cursor-pointer transition-all duration-300 ${
                                 isActive
                                     ? `${c.bg} ${c.border} shadow-lg`
                                     : "bg-white border-gray-100 hover:border-gray-200 hover:shadow-md"
                             }`}
                             onMouseEnter={() => setActivePillar(i)}
                             onClick={() => setActivePillar(i)}
-                            initial={{ opacity: 0, y: -40, scale: 0.1, borderRadius: "9999px" }}
-                            whileInView={{ opacity: 1, y: 0, scale: 1, borderRadius: "16px" }}
+                            initial={{ opacity: 0, x: -30 }}
+                            whileInView={{ opacity: 1, x: 0 }}
                             viewport={{ once: true }}
-                            transition={{ delay: 0.3 + i * 0.2, duration: 0.7, type: "spring", stiffness: 180, damping: 18 }}
+                            transition={{ delay: 0.2 + i * 0.15, duration: 0.5, ease: "easeOut" }}
                         >
                             <div className="flex items-start gap-3">
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${isActive ? c.badge : "bg-gray-100 text-gray-500"} transition-colors`}>
