@@ -689,7 +689,7 @@ export default function Research() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                     {/* International - violet */}
-                    <a href="https://fernandi.folk.ntnu.no/index.html" target="_blank" rel="noopener noreferrer" className="text-xs font-medium bg-violet-50 text-violet-600 px-3 py-1.5 rounded-full hover:bg-violet-100 transition-colors inline-flex items-center gap-1">NTNU <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a>
+                    <a href="https://thermaltwophaseflowlab.org/" target="_blank" rel="noopener noreferrer" className="text-xs font-medium bg-violet-50 text-violet-600 px-3 py-1.5 rounded-full hover:bg-violet-100 transition-colors inline-flex items-center gap-1">NTNU <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a>
                     {["HZDR", "UPC", "Kyushu Univ."].map((name, i) => (
                         <span key={i} className="text-xs font-medium bg-violet-50 text-violet-600 px-3 py-1.5 rounded-full">{name}</span>
                     ))}
