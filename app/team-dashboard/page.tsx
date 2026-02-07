@@ -23,12 +23,7 @@ const MEMBER_NAMES = Object.keys(MEMBERS).filter(k => k !== "박일웅");
 
 type TeamData = { lead: string; members: string[]; color: string };
 
-const DEFAULT_TEAMS: Record<string, TeamData> = {
-    "이상유동": { lead: "신현근", members: ["신현근", "박은빈"], color: "#3b82f6" },
-    "액침냉각": { lead: "용현진", members: ["용현진", "양재혁", "김성진", "김채연", "정영준", "송상민", "김만호"], color: "#ef4444" },
-    "TES": { lead: "송준범", members: ["송준범", "고경주", "현준환"], color: "#f59e0b" },
-    "시스템코드": { lead: "양재혁", members: ["양재혁", "고경주", "김만호"], color: "#8b5cf6" },
-};
+const DEFAULT_TEAMS: Record<string, TeamData> = {};
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
     planning: { label: "기획", color: "#94a3b8" },
@@ -96,7 +91,7 @@ type Report = { id: number; title: string; assignees: string[]; creator: string;
 type DailyTarget = { name: string; date: string; text: string };
 type Resource = { id: number; title: string; link: string; nasPath: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean };
 type IdeaPost = { id: number; title: string; body: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean };
-type Memo = { id: number; title: string; content: string; color: string; updatedAt: string };
+type Memo = { id: number; title: string; content: string; color: string; updatedAt: string; needsDiscussion?: boolean };
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
 
@@ -125,25 +120,8 @@ type Patent = { id: number; title: string; deadline: string; status: string; ass
 type AnalysisLog = { id: number; date: string; author: string; text: string };
 type Analysis = { id: number; title: string; tool: string; status: string; assignees: string[]; goal: string; startDate: string; endDate: string; logs: AnalysisLog[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean };
 
-const DEFAULT_PATENTS: Patent[] = [
-    { id: 1, title: "액침냉각 30도 각도 CHF 증진 활용", deadline: "12/31", status: "writing", assignees: [] },
-    { id: 2, title: "메탈폼 + 배향각 활용", deadline: "12/31", status: "writing", assignees: [] },
-    { id: 3, title: "카르노배터리 ORC 적용 열에너지 저장시스템", deadline: "12/31", status: "writing", assignees: [] },
-    { id: 4, title: "TES + 그라파이트", deadline: "TBD", status: "planning", assignees: ["송준범"] },
-];
-const DEFAULT_TIMETABLE: TimetableBlock[] = [
-    { id: 1, day: 0, startSlot: 9, endSlot: 12, name: "수치해석", students: [], color: "#3b82f6" },
-    { id: 2, day: 1, startSlot: 9, endSlot: 12, name: "수치해석", students: [], color: "#3b82f6" },
-    { id: 3, day: 0, startSlot: 12, endSlot: 15, name: "열전달", students: [], color: "#ef4444" },
-    { id: 4, day: 1, startSlot: 12, endSlot: 15, name: "열전달", students: [], color: "#ef4444" },
-    { id: 5, day: 0, startSlot: 15, endSlot: 18, name: "열전달", students: [], color: "#f59e0b" },
-    { id: 6, day: 1, startSlot: 15, endSlot: 18, name: "열전달", students: [], color: "#f59e0b" },
-    { id: 7, day: 0, startSlot: 18, endSlot: 24, name: "카르노배터리설계", students: ["고경주", "송준범", "용현진", "신현근"], color: "#8b5cf6" },
-    { id: 8, day: 1, startSlot: 1, endSlot: 7, name: "저탄소플랜트", students: MEMBER_NAMES.filter(n => n !== "고경주"), color: "#10b981" },
-    { id: 9, day: 1, startSlot: 18, endSlot: 24, name: "기계공학종합설계", students: [], color: "#f97316" },
-    { id: 10, day: 2, startSlot: 0, endSlot: 6, name: "지능재료 및 MEMS", students: ["송상민"], color: "#14b8a6" },
-    { id: 11, day: 4, startSlot: 8, endSlot: 13, name: "파워트레인공학", students: ["고경주", "김채연"], color: "#6366f1" },
-];
+const DEFAULT_PATENTS: Patent[] = [];
+const DEFAULT_TIMETABLE: TimetableBlock[] = [];
 
 // ─── Shared: Multi-select pill helper ────────────────────────────────────────
 
@@ -1038,6 +1016,8 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
     const [adding, setAdding] = useState(false);
     const [showEqMgr, setShowEqMgr] = useState(false);
     const [newEq, setNewEq] = useState("");
+    const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+    const dragItem = useRef<Experiment | null>(null);
     return (
         <div>
             <div className="mb-3 flex items-center gap-2">
@@ -1069,16 +1049,19 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                     const col = experiments.filter(e => e.status === status);
                     const cfg = EXP_STATUS_CONFIG[status];
                     return (
-                        <div key={status} className="flex-1 min-w-0">
+                        <div key={status} className="flex-1 min-w-0"
+                            onDragOver={e => { e.preventDefault(); setDragOverCol(status); }}
+                            onDragLeave={() => setDragOverCol(null)}
+                            onDrop={() => { if (dragItem.current && dragItem.current.status !== status) { onSave({ ...dragItem.current, status }); } dragItem.current = null; setDragOverCol(null); }}>
                             <div className="flex items-center gap-2 mb-3 pb-1.5" style={{ borderBottom: `2px solid ${cfg.color}` }}>
                                 <span className="w-2 h-2 rounded-full inline-block" style={{ background: cfg.color }} />
                                 <span className="text-[13px] font-bold text-slate-800">{cfg.label}</span>
                                 <span className="text-[11px] text-slate-400">{col.length}</span>
                             </div>
-                            <div className="min-h-[80px] space-y-2">
+                            <div className={`min-h-[80px] space-y-2 rounded-lg transition-colors ${dragOverCol === status ? "bg-blue-50" : ""}`}>
                                 {col.map(exp => (
-                                    <div key={exp.id} onClick={() => setEditing(exp)}
-                                        className={`bg-white rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow overflow-hidden ${exp.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
+                                    <div key={exp.id} draggable onDragStart={() => { dragItem.current = exp; }} onClick={() => setEditing(exp)}
+                                        className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-shadow overflow-hidden ${exp.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
                                         style={{ borderLeft: `3px solid ${cfg.color}` }}>
                                         <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
                                             <input type="checkbox" checked={!!exp.needsDiscussion} onChange={() => onToggleDiscussion(exp)} className="w-3 h-3 accent-orange-500" />
@@ -1244,6 +1227,8 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
     const [adding, setAdding] = useState(false);
     const [showToolMgr, setShowToolMgr] = useState(false);
     const [newTool, setNewTool] = useState("");
+    const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+    const dragItem = useRef<Analysis | null>(null);
     return (
         <div>
             <div className="mb-3 flex items-center gap-2">
@@ -1275,16 +1260,19 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                     const col = analyses.filter(a => a.status === status);
                     const cfg = ANALYSIS_STATUS_CONFIG[status];
                     return (
-                        <div key={status} className="flex-1 min-w-0">
+                        <div key={status} className="flex-1 min-w-0"
+                            onDragOver={e => { e.preventDefault(); setDragOverCol(status); }}
+                            onDragLeave={() => setDragOverCol(null)}
+                            onDrop={() => { if (dragItem.current && dragItem.current.status !== status) { onSave({ ...dragItem.current, status }); } dragItem.current = null; setDragOverCol(null); }}>
                             <div className="flex items-center gap-2 mb-3 pb-1.5" style={{ borderBottom: `2px solid ${cfg.color}` }}>
                                 <span className="w-2 h-2 rounded-full inline-block" style={{ background: cfg.color }} />
                                 <span className="text-[13px] font-bold text-slate-800">{cfg.label}</span>
                                 <span className="text-[11px] text-slate-400">{col.length}</span>
                             </div>
-                            <div className="min-h-[80px] space-y-2">
+                            <div className={`min-h-[80px] space-y-2 rounded-lg transition-colors ${dragOverCol === status ? "bg-blue-50" : ""}`}>
                                 {col.map(a => (
-                                    <div key={a.id} onClick={() => setEditing(a)}
-                                        className={`bg-white rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow overflow-hidden ${a.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
+                                    <div key={a.id} draggable onDragStart={() => { dragItem.current = a; }} onClick={() => setEditing(a)}
+                                        className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-shadow overflow-hidden ${a.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
                                         style={{ borderLeft: `3px solid ${cfg.color}` }}>
                                         <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
                                             <input type="checkbox" checked={!!a.needsDiscussion} onChange={() => onToggleDiscussion(a)} className="w-3 h-3 accent-orange-500" />
@@ -1333,6 +1321,8 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, currentUser }: {
     const [newDeadline, setNewDeadline] = useState("");
     const [newProgress, setNewProgress] = useState(0);
     const [filterPeople, setFilterPeople] = useState<string[]>([currentUser]);
+    const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+    const dragItem = useRef<Todo | null>(null);
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const filtered = filterPeople.length === 0 ? todos : todos.filter(t => t.assignees.some(a => filterPeople.includes(a)));
@@ -1408,13 +1398,16 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, currentUser }: {
             {/* Left-Right layout: Active | Completed */}
             <div className="flex gap-4">
                 {/* Left: Active */}
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0"
+                    onDragOver={e => { e.preventDefault(); setDragOverCol("active"); }}
+                    onDragLeave={() => setDragOverCol(null)}
+                    onDrop={() => { if (dragItem.current && dragItem.current.done) { onToggle(dragItem.current.id); } dragItem.current = null; setDragOverCol(null); }}>
                     <div className="flex items-center gap-2 mb-2 pb-1.5 border-b-2 border-blue-500">
                         <span className="text-[13px] font-bold text-slate-800">할 일</span>
                         <span className="text-[11px] text-slate-400">{activeTodos.length}</span>
                     </div>
-                    <div className="space-y-1">{activeTodos.map(todo => (
-                        <div key={todo.id} className={`flex items-start gap-2.5 p-2.5 rounded-md border transition-all bg-white hover:bg-slate-50 group ${todo.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border-slate-100"}`}>
+                    <div className={`space-y-1 min-h-[80px] rounded-lg transition-colors ${dragOverCol === "active" ? "bg-blue-50" : ""}`}>{activeTodos.map(todo => (
+                        <div key={todo.id} draggable onDragStart={() => { dragItem.current = todo; }} className={`flex items-start gap-2.5 p-2.5 rounded-md border transition-all bg-white hover:bg-slate-50 group cursor-grab ${todo.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border-slate-100"}`}>
                             <div onClick={() => onToggle(todo.id)} className="w-[18px] h-[18px] rounded flex-shrink-0 mt-0.5 flex items-center justify-center transition-all cursor-pointer border-2 border-slate-300 hover:border-blue-400" />
                             <div className="flex-1 cursor-pointer" onClick={() => { setEditingTodo(todo); setNewText(todo.text); setNewAssignees(todo.assignees); setNewPriority(todo.priority); setNewDeadline(todo.deadline); setNewProgress(todo.progress ?? 0); }}>
                                 <label className="flex items-center gap-1.5 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
@@ -1439,13 +1432,16 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, currentUser }: {
                     {activeTodos.length === 0 && <div className="text-center py-8 text-slate-300 text-[12px]">할 일 없음</div>}
                 </div>
                 {/* Right: Completed */}
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0"
+                    onDragOver={e => { e.preventDefault(); setDragOverCol("completed"); }}
+                    onDragLeave={() => setDragOverCol(null)}
+                    onDrop={() => { if (dragItem.current && !dragItem.current.done) { onToggle(dragItem.current.id); } dragItem.current = null; setDragOverCol(null); }}>
                     <div className="flex items-center gap-2 mb-2 pb-1.5 border-b-2 border-emerald-500">
                         <span className="text-[13px] font-bold text-slate-800">완료</span>
                         <span className="text-[11px] text-slate-400">{completedTodos.length}</span>
                     </div>
-                    <div className="space-y-1">{completedTodos.map(todo => (
-                        <div key={todo.id} className="flex items-start gap-2.5 p-2.5 rounded-md border transition-all bg-slate-50 border-slate-100 opacity-70 group">
+                    <div className={`space-y-1 min-h-[80px] rounded-lg transition-colors ${dragOverCol === "completed" ? "bg-emerald-50" : ""}`}>{completedTodos.map(todo => (
+                        <div key={todo.id} draggable onDragStart={() => { dragItem.current = todo; }} className="flex items-start gap-2.5 p-2.5 rounded-md border transition-all bg-slate-50 border-slate-100 opacity-70 group cursor-grab">
                             <div onClick={() => onToggle(todo.id)} className="w-[18px] h-[18px] rounded flex-shrink-0 mt-0.5 flex items-center justify-center transition-all cursor-pointer bg-emerald-500"><span className="text-white text-[12px]">✓</span></div>
                             <div className="flex-1 cursor-pointer" onClick={() => { setEditingTodo(todo); setNewText(todo.text); setNewAssignees(todo.assignees); setNewPriority(todo.priority); setNewDeadline(todo.deadline); setNewProgress(todo.progress ?? 0); }}>
                                 <div className="text-[13px] text-slate-500 leading-relaxed">{PRIORITY_ICON[todo.priority] || ""} {todo.text}</div>
@@ -1685,6 +1681,8 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser }: { paten
 function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion }: { patents: Patent[]; onSave: (p: Patent) => void; onDelete: (id: number) => void; currentUser: string; onToggleDiscussion: (p: Patent) => void }) {
     const [editing, setEditing] = useState<Patent | null>(null);
     const [adding, setAdding] = useState(false);
+    const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+    const dragItem = useRef<Patent | null>(null);
     return (
         <div>
             <div className="mb-3">
@@ -1695,16 +1693,19 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion }: 
                     const col = patents.filter(p => p.status === status);
                     const cfg = IP_STATUS_CONFIG[status];
                     return (
-                        <div key={status} className="flex-1 min-w-0">
+                        <div key={status} className="flex-1 min-w-0"
+                            onDragOver={e => { e.preventDefault(); setDragOverCol(status); }}
+                            onDragLeave={() => setDragOverCol(null)}
+                            onDrop={() => { if (dragItem.current && dragItem.current.status !== status) { onSave({ ...dragItem.current, status }); } dragItem.current = null; setDragOverCol(null); }}>
                             <div className="flex items-center gap-2 mb-3 pb-1.5" style={{ borderBottom: `2px solid ${cfg.color}` }}>
                                 <span className="w-2 h-2 rounded-full inline-block" style={{ background: cfg.color }} />
                                 <span className="text-[13px] font-bold text-slate-800">{cfg.label}</span>
                                 <span className="text-[11px] text-slate-400">{col.length}</span>
                             </div>
-                            <div className="min-h-[80px] space-y-2">
+                            <div className={`min-h-[80px] space-y-2 rounded-lg transition-colors ${dragOverCol === status ? "bg-blue-50" : ""}`}>
                                 {col.map(p => (
-                                    <div key={p.id} onClick={() => setEditing(p)}
-                                        className={`bg-white rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow overflow-hidden ${p.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
+                                    <div key={p.id} draggable onDragStart={() => { dragItem.current = p; }} onClick={() => setEditing(p)}
+                                        className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-shadow overflow-hidden ${p.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
                                         style={{ borderLeft: `3px solid ${cfg.color}` }}>
                                         <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
                                             <input type="checkbox" checked={!!p.needsDiscussion} onChange={() => onToggleDiscussion(p)} className="w-3 h-3 accent-orange-500" />
@@ -1865,7 +1866,7 @@ function DailyTargetView({ targets, onSave, currentUser }: { targets: DailyTarge
     );
 }
 
-function ResourceView({ resources, onSave, onDelete, currentUser }: { resources: Resource[]; onSave: (r: Resource) => void; onDelete: (id: number) => void; currentUser: string }) {
+function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: { resources: Resource[]; onSave: (r: Resource) => void; onDelete: (id: number) => void; onReorder: (list: Resource[]) => void; currentUser: string }) {
     const [editing, setEditing] = useState<Resource | null>(null);
     const [adding, setAdding] = useState(false);
     const [title, setTitle] = useState("");
@@ -1873,6 +1874,9 @@ function ResourceView({ resources, onSave, onDelete, currentUser }: { resources:
     const [nasPath, setNasPath] = useState("");
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState("");
+
+    const dragRes = useRef<number | null>(null);
+    const [dragOverRes, setDragOverRes] = useState<number | null>(null);
 
     const openAdd = () => { setAdding(true); setEditing(null); setTitle(""); setLink(""); setNasPath(""); setComments([]); setNewComment(""); };
     const openEdit = (r: Resource) => { setEditing(r); setAdding(false); setTitle(r.title); setLink(r.link); setNasPath(r.nasPath); setComments(r.comments || []); setNewComment(""); };
@@ -1895,10 +1899,15 @@ function ResourceView({ resources, onSave, onDelete, currentUser }: { resources:
         <div>
             <button onClick={openAdd} className="mb-3 px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 자료 추가</button>
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
-                {resources.map(r => {
+                {resources.map((r, idx) => {
                     const cmt = r.comments || [];
                     return (
-                        <div key={r.id} onClick={() => openEdit(r)} className={`bg-white rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow ${r.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}>
+                        <div key={r.id} draggable
+                            onDragStart={() => { dragRes.current = idx; }}
+                            onDragOver={e => { e.preventDefault(); setDragOverRes(idx); }}
+                            onDragLeave={() => setDragOverRes(null)}
+                            onDrop={() => { if (dragRes.current !== null && dragRes.current !== idx) { const reordered = [...resources]; const [moved] = reordered.splice(dragRes.current, 1); reordered.splice(idx, 0, moved); onReorder(reordered); } dragRes.current = null; setDragOverRes(null); }}
+                            onClick={() => openEdit(r)} className={`bg-white rounded-lg p-4 cursor-grab hover:shadow-md transition-shadow ${dragOverRes === idx ? "ring-2 ring-blue-300" : ""} ${r.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}>
                             <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
                                 <input type="checkbox" checked={!!r.needsDiscussion} onChange={() => onSave({ ...r, needsDiscussion: !r.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
                                 <span className={`text-[10px] font-medium ${r.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
@@ -1987,12 +1996,14 @@ function ResourceView({ resources, onSave, onDelete, currentUser }: { resources:
 
 // ─── Ideas / Chat View ──────────────────────────────────────────────────────
 
-function IdeasView({ ideas, onSave, onDelete, currentUser }: { ideas: IdeaPost[]; onSave: (i: IdeaPost) => void; onDelete: (id: number) => void; currentUser: string }) {
+function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas: IdeaPost[]; onSave: (i: IdeaPost) => void; onDelete: (id: number) => void; onReorder: (list: IdeaPost[]) => void; currentUser: string }) {
     const [selected, setSelected] = useState<IdeaPost | null>(null);
     const [adding, setAdding] = useState(false);
     const [title, setTitle] = useState("");
     const [body, setBody] = useState("");
     const [newComment, setNewComment] = useState("");
+    const dragIdea = useRef<number | null>(null);
+    const [dragOverIdea, setDragOverIdea] = useState<number | null>(null);
 
     const openDetail = (idea: IdeaPost) => { setSelected(idea); setNewComment(""); };
     const closeDetail = () => setSelected(null);
@@ -2024,9 +2035,14 @@ function IdeasView({ ideas, onSave, onDelete, currentUser }: { ideas: IdeaPost[]
         <div>
             <button onClick={openAdd} className="mb-4 px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 새 글 작성</button>
             <div className="grid gap-4 sm:grid-cols-2">
-                {ideas.map(idea => (
-                    <div key={idea.id} onClick={() => openDetail(idea)}
-                        className={`bg-white rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow flex flex-col ${idea.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}>
+                {ideas.map((idea, idx) => (
+                    <div key={idea.id} draggable
+                        onDragStart={() => { dragIdea.current = idx; }}
+                        onDragOver={e => { e.preventDefault(); setDragOverIdea(idx); }}
+                        onDragLeave={() => setDragOverIdea(null)}
+                        onDrop={() => { if (dragIdea.current !== null && dragIdea.current !== idx) { const reordered = [...ideas]; const [moved] = reordered.splice(dragIdea.current, 1); reordered.splice(idx, 0, moved); onReorder(reordered); } dragIdea.current = null; setDragOverIdea(null); }}
+                        onClick={() => openDetail(idea)}
+                        className={`bg-white rounded-lg p-4 cursor-grab hover:shadow-md transition-shadow flex flex-col ${dragOverIdea === idx ? "ring-2 ring-blue-300" : ""} ${idea.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}>
                         <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
                             <input type="checkbox" checked={!!idea.needsDiscussion} onChange={() => onSave({ ...idea, needsDiscussion: !idea.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
                             <span className={`text-[10px] font-medium ${idea.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
@@ -2134,8 +2150,8 @@ function IdeasView({ ideas, onSave, onDelete, currentUser }: { ideas: IdeaPost[]
     );
 }
 
-function AnnouncementView({ announcements, onAdd, onDelete, philosophy, onAddPhilosophy, onDeletePhilosophy, currentUser }: {
-    announcements: Announcement[]; onAdd: (text: string) => void; onDelete: (id: number) => void;
+function AnnouncementView({ announcements, onAdd, onDelete, onReorder, philosophy, onAddPhilosophy, onDeletePhilosophy, currentUser }: {
+    announcements: Announcement[]; onAdd: (text: string) => void; onDelete: (id: number) => void; onReorder: (list: Announcement[]) => void;
     philosophy: Announcement[]; onAddPhilosophy: (text: string) => void; onDeletePhilosophy: (id: number) => void;
     currentUser: string;
 }) {
@@ -2143,6 +2159,9 @@ function AnnouncementView({ announcements, onAdd, onDelete, philosophy, onAddPhi
     const [newPhil, setNewPhil] = useState("");
     const isLeader = currentUser === "박일웅" || Object.values(DEFAULT_TEAMS).some(t => t.lead === currentUser);
     const isPI = currentUser === "박일웅";
+    const dragAnn = useRef<number | null>(null);
+    const [dragOverAnn, setDragOverAnn] = useState<number | null>(null);
+    const sorted = [...announcements].sort((a, b) => { if (a.pinned !== b.pinned) return a.pinned ? -1 : 1; return new Date(b.date).getTime() - new Date(a.date).getTime(); });
     return (
         <div className="space-y-8">
             {/* 공지사항 */}
@@ -2158,8 +2177,13 @@ function AnnouncementView({ announcements, onAdd, onDelete, philosophy, onAddPhi
                     </div>
                 )}
                 {announcements.length === 0 && <div className="text-center py-8 text-slate-400 text-[13px]">공지사항이 없습니다</div>}
-                <div className="space-y-2">{[...announcements].sort((a, b) => { if (a.pinned !== b.pinned) return a.pinned ? -1 : 1; return new Date(b.date).getTime() - new Date(a.date).getTime(); }).map(ann => (
-                    <div key={ann.id} className={`bg-white border rounded-lg p-4 ${ann.pinned ? "border-amber-300 bg-amber-50/50" : "border-slate-200"}`}>
+                <div className="space-y-2">{sorted.map((ann, idx) => (
+                    <div key={ann.id} draggable
+                        onDragStart={() => { dragAnn.current = idx; }}
+                        onDragOver={e => { e.preventDefault(); setDragOverAnn(idx); }}
+                        onDragLeave={() => setDragOverAnn(null)}
+                        onDrop={() => { if (dragAnn.current !== null && dragAnn.current !== idx) { const reordered = [...sorted]; const [moved] = reordered.splice(dragAnn.current, 1); reordered.splice(idx, 0, moved); onReorder(reordered); } dragAnn.current = null; setDragOverAnn(null); }}
+                        className={`bg-white border rounded-lg p-4 cursor-grab transition-colors ${ann.pinned ? "border-amber-300 bg-amber-50/50" : "border-slate-200"} ${dragOverAnn === idx ? "bg-blue-50" : ""}`}>
                         <div className="flex items-start justify-between">
                             <div className="flex-1">{ann.pinned && <span className="text-[10px] font-semibold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mr-2">📌</span>}<span className="text-[13px] text-slate-800 whitespace-pre-wrap">{ann.text}</span></div>
                             {(currentUser === ann.author || isPI) && <button onClick={() => onDelete(ann.id)} className="text-slate-400 hover:text-red-500 text-[12px] ml-2">✕</button>}
@@ -2290,11 +2314,15 @@ function PersonalMemoView({ memos, onSave, onDelete }: {
             {memos.length === 0 && !showForm && <div className="text-center py-12 text-slate-400 text-[13px]">메모가 없습니다</div>}
             <div className="grid grid-cols-3 gap-3">
                 {[...memos].sort((a, b) => b.id - a.id).map(m => (
-                    <div key={m.id} className="rounded-lg border border-slate-200 p-4 cursor-pointer hover:shadow-md transition-shadow group relative"
+                    <div key={m.id} className={`rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow group relative ${m.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
                         style={{ background: m.color }}
                         onClick={() => { openEdit(m); setShowForm(true); }}>
                         <button onClick={e => { e.stopPropagation(); onDelete(m.id); }}
                             className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                        <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
+                            <input type="checkbox" checked={!!m.needsDiscussion} onChange={() => onSave({ ...m, needsDiscussion: !m.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
+                            <span className={`text-[10px] font-medium ${m.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                        </label>
                         <h4 className="text-[13px] font-bold text-slate-800 mb-1 truncate">{m.title}</h4>
                         <p className="text-[12px] text-slate-600 whitespace-pre-wrap line-clamp-4">{m.content}</p>
                         <div className="mt-2 text-[10px] text-slate-400">{m.updatedAt}</div>
@@ -2580,6 +2608,7 @@ export default function DashboardPage() {
         resources: resources.filter(r => r.needsDiscussion).length,
         ideas: ideas.filter(i => i.needsDiscussion).length,
         chat: chatPosts.filter(c => c.needsDiscussion).length,
+        ...Object.fromEntries(MEMBER_NAMES.map(name => [`memo_${name}`, (personalMemos[name] || []).filter(m => m.needsDiscussion).length])),
     };
 
     return (
@@ -2619,7 +2648,7 @@ export default function DashboardPage() {
                             </div>
                         ))}
                     </div>
-                    {(activeTab === "papers" || activeTab === "todos") && (
+                    {activeTab === "papers" && (
                         <div className="hidden md:block px-3 mt-4">
                             <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-3 mb-2">필터</div>
                             <div className="max-h-[360px] overflow-y-auto space-y-0.5">
@@ -2642,11 +2671,11 @@ export default function DashboardPage() {
                     <div className="mb-4">
                         <h2 className="text-[18px] font-bold text-slate-900">
                             {tabs.find(t => t.id === activeTab)?.icon} {tabs.find(t => t.id === activeTab)?.label}
-                            {(activeTab === "papers" || activeTab === "todos") && selectedPerson !== "전체" && <span className="text-[14px] font-normal text-slate-500 ml-2">— {MEMBERS[selectedPerson]?.emoji} {selectedPerson}</span>}
+                            {activeTab === "papers" && selectedPerson !== "전체" && <span className="text-[14px] font-normal text-slate-500 ml-2">— {MEMBERS[selectedPerson]?.emoji} {selectedPerson}</span>}
                         </h2>
                     </div>
 
-                    {activeTab === "announcements" && <AnnouncementView announcements={announcements} onAdd={handleAddAnn} onDelete={handleDelAnn} philosophy={philosophy} onAddPhilosophy={handleAddPhil} onDeletePhilosophy={handleDelPhil} currentUser={userName} />}
+                    {activeTab === "announcements" && <AnnouncementView announcements={announcements} onAdd={handleAddAnn} onDelete={handleDelAnn} onReorder={list => { setAnnouncements(list); saveSection("announcements", list); }} philosophy={philosophy} onAddPhilosophy={handleAddPhil} onDeletePhilosophy={handleDelPhil} currentUser={userName} />}
                     {activeTab === "daily" && <DailyTargetView targets={dailyTargets} onSave={handleSaveDailyTargets} currentUser={userName} />}
                     {activeTab === "papers" && <KanbanView papers={papers} filter={selectedPerson} onClickPaper={p => setPaperModal({ paper: p, mode: "edit" })} onAddPaper={() => setPaperModal({ paper: null, mode: "add" })} onSavePaper={handleSavePaper} tagList={paperTagList} onSaveTags={handleSavePaperTags} />}
                     {activeTab === "reports" && <ReportView reports={reports} currentUser={userName} onSave={handleSaveReport} onDelete={handleDeleteReport} onToggleDiscussion={r => handleSaveReport({ ...r, needsDiscussion: !r.needsDiscussion })} />}
@@ -2657,9 +2686,9 @@ export default function DashboardPage() {
                     {activeTab === "calendar" && <CalendarGrid data={[...vacations.map(v => ({ ...v, description: undefined })), ...schedule]} currentUser={userName} types={CALENDAR_TYPES} onToggle={handleCalendarToggle} showYearTotal />}
                     {activeTab === "lectures" && <TimetableView blocks={timetable} onSave={handleTimetableSave} onDelete={handleTimetableDelete} />}
                     {activeTab === "ip" && <IPView patents={ipPatents} onSave={handleSavePatent} onDelete={handleDeletePatent} currentUser={userName} onToggleDiscussion={p => handleSavePatent({ ...p, needsDiscussion: !p.needsDiscussion })} />}
-                    {activeTab === "resources" && <ResourceView resources={resources} onSave={handleSaveResource} onDelete={handleDeleteResource} currentUser={userName} />}
-                    {activeTab === "ideas" && <IdeasView ideas={ideas} onSave={handleSaveIdea} onDelete={handleDeleteIdea} currentUser={userName} />}
-                    {activeTab === "chat" && <IdeasView ideas={chatPosts} onSave={handleSaveChat} onDelete={handleDeleteChat} currentUser={userName} />}
+                    {activeTab === "resources" && <ResourceView resources={resources} onSave={handleSaveResource} onDelete={handleDeleteResource} onReorder={list => { setResources(list); saveSection("resources", list); }} currentUser={userName} />}
+                    {activeTab === "ideas" && <IdeasView ideas={ideas} onSave={handleSaveIdea} onDelete={handleDeleteIdea} onReorder={list => { setIdeas(list); saveSection("ideas", list); }} currentUser={userName} />}
+                    {activeTab === "chat" && <IdeasView ideas={chatPosts} onSave={handleSaveChat} onDelete={handleDeleteChat} onReorder={list => { setChatPosts(list); saveSection("chatPosts", list); }} currentUser={userName} />}
                     {activeTab === "settings" && <SettingsView currentUser={userName} customEmojis={customEmojis} onSaveEmoji={handleSaveEmoji} />}
                     {activeTab.startsWith("memo_") && (() => {
                         const name = activeTab.replace("memo_", "");
