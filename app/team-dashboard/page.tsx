@@ -3103,6 +3103,32 @@ export default function DashboardPage() {
         try { await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "online", action: "join", userName: name }) }); } catch {}
     };
 
+    // Fetch members + customEmojis before login so LoginScreen shows correct emojis
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await fetch("/api/dashboard?section=members");
+                const d = await res.json();
+                if (d.data && Object.keys(d.data).length > 0) setMembers(d.data);
+            } catch {}
+            try {
+                const res = await fetch("/api/dashboard?section=customEmojis");
+                const d = await res.json();
+                if (d.data) {
+                    setCustomEmojis(d.data);
+                    // Merge custom emojis into members for LoginScreen
+                    setMembers(prev => {
+                        const merged = { ...prev };
+                        Object.entries(d.data as Record<string, string>).forEach(([name, emoji]) => {
+                            if (merged[name]) merged[name] = { ...merged[name], emoji };
+                        });
+                        return merged;
+                    });
+                }
+            } catch {}
+        })();
+    }, []);
+
     useEffect(() => {
         if (!loggedIn) return;
         // Use intervals starting at 0 for initial fetch to avoid lint warning about setState in effect body
