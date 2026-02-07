@@ -58,8 +58,6 @@ export default function ChatWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { language } = useLanguage();
 
-  if (pathname === "/team-dashboard") return null;
-
   const t = chatTexts[language];
 
   const scrollToBottom = () => {
@@ -89,6 +87,8 @@ export default function ChatWidget() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isOpen, shouldBounce]);
+
+  if (pathname === "/team-dashboard") return null;
 
   const handleStartChat = (e: React.FormEvent) => {
     e.preventDefault();
