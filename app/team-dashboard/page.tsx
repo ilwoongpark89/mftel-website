@@ -3022,6 +3022,14 @@ export default function DashboardPage() {
     const [chatPosts, setChatPosts] = useState<IdeaPost[]>([]);
     const [customEmojis, setCustomEmojis] = useState<Record<string, string>>({});
     const [statusMessages, setStatusMessages] = useState<Record<string, string>>({});
+    // Always merge customEmojis on top of members — single source of truth for display
+    const displayMembers = useMemo(() => {
+        const merged = { ...members };
+        Object.entries(customEmojis).forEach(([name, emoji]) => {
+            if (merged[name]) merged[name] = { ...merged[name], emoji };
+        });
+        return merged;
+    }, [members, customEmojis]);
     const [equipmentList, setEquipmentList] = useState<string[]>(DEFAULT_EQUIPMENT);
     const [analysisToolList, setAnalysisToolList] = useState<string[]>(ANALYSIS_TOOLS);
     const [paperTagList, setPaperTagList] = useState<string[]>(PAPER_TAGS);
@@ -3103,28 +3111,14 @@ export default function DashboardPage() {
         try { await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "online", action: "join", userName: name }) }); } catch {}
     };
 
-    // Fetch members + customEmojis before login so LoginScreen shows correct emojis
+    // Pre-login: fetch members + customEmojis so LoginScreen shows correct emojis
     useEffect(() => {
         (async () => {
             try {
-                const res = await fetch("/api/dashboard?section=members");
+                const res = await fetch("/api/dashboard?section=all");
                 const d = await res.json();
-                if (d.data && Object.keys(d.data).length > 0) setMembers(d.data);
-            } catch {}
-            try {
-                const res = await fetch("/api/dashboard?section=customEmojis");
-                const d = await res.json();
-                if (d.data) {
-                    setCustomEmojis(d.data);
-                    // Merge custom emojis into members for LoginScreen
-                    setMembers(prev => {
-                        const merged = { ...prev };
-                        Object.entries(d.data as Record<string, string>).forEach(([name, emoji]) => {
-                            if (merged[name]) merged[name] = { ...merged[name], emoji };
-                        });
-                        return merged;
-                    });
-                }
+                if (d.members && Object.keys(d.members).length > 0) setMembers(d.members);
+                if (d.customEmojis) setCustomEmojis(d.customEmojis);
             } catch {}
         })();
     }, []);
@@ -3239,11 +3233,6 @@ export default function DashboardPage() {
     const handleSaveEmoji = (name: string, emoji: string) => {
         const u = { ...customEmojis, [name]: emoji };
         setCustomEmojis(u); saveSection("customEmojis", u);
-        // Also update members so LoginScreen reflects the change
-        if (members[name]) {
-            const m = { ...members, [name]: { ...members[name], emoji } };
-            setMembers(m); saveSection("members", m);
-        }
     };
     const handleSaveStatusMsg = (name: string, msg: string) => {
         const u = { ...statusMessages, [name]: msg };
@@ -3265,7 +3254,7 @@ export default function DashboardPage() {
         setPersonalMemos(u); saveSection("personalMemos", u);
     };
 
-    if (!loggedIn) return <LoginScreen onLogin={handleLogin} members={members} />;
+    if (!loggedIn) return <LoginScreen onLogin={handleLogin} members={displayMembers} />;
 
     const stats = [
         { label: "논문 작성중", value: papers.filter(p => p.status === "writing").length, color: "#3b82f6" },
@@ -3375,8 +3364,8 @@ export default function DashboardPage() {
                         </>
                     )}
 
-                    {activeTab === "overview" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="team" statusMessages={statusMessages} members={members} teams={teams} />}
-                    {activeTab === "overview_me" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="personal" statusMessages={statusMessages} members={members} teams={teams} />}
+                    {activeTab === "overview" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="team" statusMessages={statusMessages} members={displayMembers} teams={teams} />}
+                    {activeTab === "overview_me" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="personal" statusMessages={statusMessages} members={displayMembers} teams={teams} />}
                     {activeTab === "announcements" && <AnnouncementView announcements={announcements} onAdd={handleAddAnn} onDelete={handleDelAnn} onReorder={list => { setAnnouncements(list); saveSection("announcements", list); }} philosophy={philosophy} onAddPhilosophy={handleAddPhil} onDeletePhilosophy={handleDelPhil} currentUser={userName} />}
                     {activeTab === "daily" && <DailyTargetView targets={dailyTargets} onSave={handleSaveDailyTargets} currentUser={userName} />}
                     {activeTab === "papers" && <KanbanView papers={papers} filter={selectedPerson} onClickPaper={p => setPaperModal({ paper: p, mode: "edit" })} onAddPaper={() => setPaperModal({ paper: null, mode: "add" })} onSavePaper={handleSavePaper} onReorder={list => { setPapers(list); saveSection("papers", list); }} tagList={paperTagList} onSaveTags={handleSavePaperTags} teamNames={teamNames} />}
