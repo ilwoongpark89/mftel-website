@@ -32,6 +32,15 @@ const DASHBOARD_PREFIX = 'mftel:dashboard:';
 const LOG_PREFIX = 'mftel:log:';
 const MAX_LOG_ENTRIES = 5000;
 
+const ALLOWED_SECTIONS = new Set([
+    "announcements", "papers", "experiments", "todos", "conferences",
+    "lectures", "patents", "vacations", "schedule", "timetable",
+    "reports", "teams", "dailyTargets", "philosophy", "resources",
+    "ideas", "analyses", "chatPosts", "customEmojis", "statusMessages",
+    "equipmentList", "personalMemos", "analysisToolList", "paperTagList",
+    "members", "online",
+]);
+
 async function appendLog(logKey: string, entry: Record<string, unknown>) {
     const raw = await getKey(logKey);
     let logs: Record<string, unknown>[] = raw ? JSON.parse(raw) : [];
@@ -87,6 +96,10 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Section required' }, { status: 400 });
         }
 
+        if (!ALLOWED_SECTIONS.has(section)) {
+            return NextResponse.json({ error: 'Invalid section' }, { status: 400 });
+        }
+
         // Handle online presence
         if (section === 'online') {
             const raw = await getKey(`${DASHBOARD_PREFIX}online`);
@@ -98,16 +111,17 @@ export async function POST(request: NextRequest) {
 
             if (action === 'join') {
                 users = users.filter((u: { name: string }) => u.name !== userName);
-                users.push({ name: userName, timestamp: Date.now() });
+                const now = Date.now();
+                users.push({ name: userName, timestamp: now, joinedAt: now });
                 await appendLog(`${LOG_PREFIX}access`, { userName, action: 'login', ip });
             } else if (action === 'leave') {
                 const found = users.find((u: { name: string }) => u.name === userName);
-                const duration = found ? Date.now() - found.timestamp : undefined;
+                const duration = found?.joinedAt ? Date.now() - found.joinedAt : (found ? Date.now() - found.timestamp : undefined);
                 users = users.filter((u: { name: string }) => u.name !== userName);
                 await appendLog(`${LOG_PREFIX}access`, { userName, action: 'logout', duration, ip });
             } else {
-                // heartbeat
-                users = users.map((u: { name: string; timestamp: number }) =>
+                // heartbeat — only update timestamp (for freshness check), preserve joinedAt
+                users = users.map((u: { name: string; timestamp: number; joinedAt?: number }) =>
                     u.name === userName ? { ...u, timestamp: Date.now() } : u
                 );
             }

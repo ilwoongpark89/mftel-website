@@ -94,6 +94,7 @@ type DailyTarget = { name: string; date: string; text: string };
 type Resource = { id: number; title: string; link: string; nasPath: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean };
 type IdeaPost = { id: number; title: string; body: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean };
 type Memo = { id: number; title: string; content: string; color: string; updatedAt: string; needsDiscussion?: boolean };
+type ConferenceTrip = { id: number; title: string; startDate: string; endDate: string; homepage: string; fee: string; participants: string[]; creator: string; createdAt: string };
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
 
@@ -2059,6 +2060,132 @@ function DailyTargetView({ targets, onSave, currentUser }: { targets: DailyTarge
     );
 }
 
+// ─── Conference / Trip View ──────────────────────────────────────────────────
+
+function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }: { items: ConferenceTrip[]; onSave: (c: ConferenceTrip) => void; onDelete: (id: number) => void; onReorder: (list: ConferenceTrip[]) => void; currentUser: string }) {
+    const [editing, setEditing] = useState<ConferenceTrip | null>(null);
+    const [adding, setAdding] = useState(false);
+    const [title, setTitle] = useState("");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
+    const [homepage, setHomepage] = useState("");
+    const [fee, setFee] = useState("");
+    const [participants, setParticipants] = useState<string[]>([]);
+    const dragRef = useRef<number | null>(null);
+    const [dragOver, setDragOver] = useState<number | null>(null);
+
+    const modal = adding || editing !== null;
+    const isEdit = !!editing;
+
+    const openAdd = () => { setAdding(true); setEditing(null); setTitle(""); setStartDate(""); setEndDate(""); setHomepage(""); setFee(""); setParticipants([]); };
+    const openEdit = (c: ConferenceTrip) => { setEditing(c); setAdding(false); setTitle(c.title); setStartDate(c.startDate); setEndDate(c.endDate); setHomepage(c.homepage); setFee(c.fee); setParticipants(c.participants); };
+    const closeModal = () => { setAdding(false); setEditing(null); };
+
+    const handleSave = () => {
+        if (!title.trim()) return false;
+        onSave({ id: editing?.id ?? Date.now(), title: title.trim(), startDate, endDate, homepage: homepage.trim(), fee: fee.trim(), participants, creator: editing?.creator || currentUser, createdAt: editing?.createdAt || new Date().toISOString() });
+        return true;
+    };
+
+    const toggleParticipant = (name: string) => {
+        setParticipants(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]);
+    };
+
+    // Date formatting helper
+    const formatPeriod = (s: string, e: string) => {
+        if (!s && !e) return "";
+        if (s && !e) return s;
+        if (!s && e) return `~ ${e}`;
+        return `${s} ~ ${e}`;
+    };
+
+    return (
+        <div>
+            <button onClick={openAdd} className="mb-3 px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 학회/출장 추가</button>
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2"
+                onDragOver={e => e.preventDefault()}
+                onDrop={() => { if (dragRef.current !== null && dragOver !== null && dragRef.current !== dragOver) { const reordered = [...items]; const [moved] = reordered.splice(dragRef.current, 1); reordered.splice(dragOver, 0, moved); onReorder(reordered); } dragRef.current = null; setDragOver(null); }}>
+                {items.map((c, idx) => (
+                    <div key={c.id} draggable
+                        onDragStart={() => { dragRef.current = idx; }}
+                        onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDragOver(idx); }}
+                        onDragEnd={() => { dragRef.current = null; setDragOver(null); }}
+                        onDrop={e => { e.stopPropagation(); if (dragRef.current !== null && dragRef.current !== idx) { const reordered = [...items]; const [moved] = reordered.splice(dragRef.current, 1); reordered.splice(idx, 0, moved); onReorder(reordered); } dragRef.current = null; setDragOver(null); }}
+                        onClick={() => openEdit(c)}
+                        className={`bg-white rounded-lg p-4 cursor-grab hover:shadow-md transition-shadow border border-slate-200 ${dragOver === idx ? "ring-2 ring-blue-300" : ""}`}>
+                        <div className="text-[14px] font-semibold text-slate-800 mb-1.5">{c.title}</div>
+                        {(c.startDate || c.endDate) && <div className="text-[12px] text-slate-600 mb-1">📅 {formatPeriod(c.startDate, c.endDate)}</div>}
+                        {c.homepage && <div className="text-[11px] text-blue-500 mb-1 truncate" onClick={e => { e.stopPropagation(); try { const u = new URL(c.homepage); if (["http:", "https:"].includes(u.protocol)) window.open(c.homepage, "_blank", "noopener"); } catch {} }}>🔗 {c.homepage}</div>}
+                        {c.fee && <div className="text-[12px] text-slate-600 mb-1">💰 {c.fee}</div>}
+                        {c.participants.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                                {c.participants.map(p => <span key={p} className="text-[10px] px-1.5 py-0.5 rounded-lg bg-blue-50 text-blue-600">{MEMBERS[p]?.emoji || "👤"}{p}</span>)}
+                            </div>
+                        )}
+                        <div className="mt-2 text-[10px] text-slate-400">{MEMBERS[c.creator]?.emoji || ""} {c.creator}</div>
+                    </div>
+                ))}
+                {items.length === 0 && <div className="text-center py-12 text-slate-400 text-[13px] col-span-full">등록된 학회/출장이 없습니다</div>}
+            </div>
+
+            {modal && (
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={closeModal}>
+                    <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-4 border-b border-slate-200">
+                            <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "학회/출장 수정" : "학회/출장 추가"}</h3>
+                            <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            <div>
+                                <label className="text-[11px] font-semibold text-slate-500 block mb-1">학회/출장 이름 *</label>
+                                <input value={title} onChange={e => setTitle(e.target.value)} placeholder="예: NURETH-21" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-[11px] font-semibold text-slate-500 block mb-1">시작일</label>
+                                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                </div>
+                                <div>
+                                    <label className="text-[11px] font-semibold text-slate-500 block mb-1">종료일</label>
+                                    <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[11px] font-semibold text-slate-500 block mb-1">홈페이지</label>
+                                <input value={homepage} onChange={e => setHomepage(e.target.value)} placeholder="https://..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                            </div>
+                            <div>
+                                <label className="text-[11px] font-semibold text-slate-500 block mb-1">등록비</label>
+                                <input value={fee} onChange={e => setFee(e.target.value)} placeholder="예: Early bird $500 / Regular $700" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                            </div>
+                            <div>
+                                <label className="text-[11px] font-semibold text-slate-500 block mb-1">참가자</label>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {MEMBER_NAMES.map(name => (
+                                        <button key={name} onClick={() => toggleParticipant(name)}
+                                            className={`px-2 py-1 rounded-lg text-[12px] transition-colors ${participants.includes(name) ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+                                            {MEMBERS[name]?.emoji || "👤"} {name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-between p-4 border-t border-slate-200">
+                            <div>{isEdit && <button onClick={() => { onDelete(editing!.id); closeModal(); }} className="text-[12px] text-red-500 hover:text-red-600">삭제</button>}</div>
+                            <div className="flex gap-2">
+                                <button onClick={closeModal} className="px-4 py-2 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                                <button onClick={() => { if (handleSave()) closeModal(); }} className="px-4 py-2 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Resource View ──────────────────────────────────────────────────────────
+
 function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: { resources: Resource[]; onSave: (r: Resource) => void; onDelete: (id: number) => void; onReorder: (list: Resource[]) => void; currentUser: string }) {
     const [editing, setEditing] = useState<Resource | null>(null);
     const [adding, setAdding] = useState(false);
@@ -2091,15 +2218,17 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
     return (
         <div>
             <button onClick={openAdd} className="mb-3 px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 자료 추가</button>
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2"
+                onDragOver={e => e.preventDefault()}
+                onDrop={() => { if (dragRes.current !== null && dragOverRes !== null && dragRes.current !== dragOverRes) { const reordered = [...resources]; const [moved] = reordered.splice(dragRes.current, 1); reordered.splice(dragOverRes, 0, moved); onReorder(reordered); } dragRes.current = null; setDragOverRes(null); }}>
                 {resources.map((r, idx) => {
                     const cmt = r.comments || [];
                     return (
                         <div key={r.id} draggable
                             onDragStart={() => { dragRes.current = idx; }}
-                            onDragOver={e => { e.preventDefault(); setDragOverRes(idx); }}
-                            onDragLeave={() => setDragOverRes(null)}
-                            onDrop={() => { if (dragRes.current !== null && dragRes.current !== idx) { const reordered = [...resources]; const [moved] = reordered.splice(dragRes.current, 1); reordered.splice(idx, 0, moved); onReorder(reordered); } dragRes.current = null; setDragOverRes(null); }}
+                            onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDragOverRes(idx); }}
+                            onDragEnd={() => { dragRes.current = null; setDragOverRes(null); }}
+                            onDrop={e => { e.stopPropagation(); if (dragRes.current !== null && dragRes.current !== idx) { const reordered = [...resources]; const [moved] = reordered.splice(dragRes.current, 1); reordered.splice(idx, 0, moved); onReorder(reordered); } dragRes.current = null; setDragOverRes(null); }}
                             onClick={() => openEdit(r)} className={`bg-white rounded-lg p-4 cursor-grab hover:shadow-md transition-shadow ${dragOverRes === idx ? "ring-2 ring-blue-300" : ""} ${r.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}>
                             <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
                                 <input type="checkbox" checked={!!r.needsDiscussion} onChange={() => onSave({ ...r, needsDiscussion: !r.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
@@ -2107,7 +2236,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
                             </label>
                             <div className="text-[14px] font-semibold text-slate-800 mb-2 break-words">{r.title}</div>
                             {r.link && (
-                                <div className="text-[11px] text-blue-500 mb-1 truncate" onClick={e => { e.stopPropagation(); window.open(r.link, "_blank"); }}>
+                                <div className="text-[11px] text-blue-500 mb-1 truncate" onClick={e => { e.stopPropagation(); try { const u = new URL(r.link); if (["http:", "https:"].includes(u.protocol)) window.open(r.link, "_blank", "noopener"); } catch {} }}>
                                     🔗 {r.link}
                                 </div>
                             )}
@@ -2227,13 +2356,15 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
     return (
         <div>
             <button onClick={openAdd} className="mb-4 px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 새 글 작성</button>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2"
+                onDragOver={e => e.preventDefault()}
+                onDrop={() => { if (dragIdea.current !== null && dragOverIdea !== null && dragIdea.current !== dragOverIdea) { const reordered = [...ideas]; const [moved] = reordered.splice(dragIdea.current, 1); reordered.splice(dragOverIdea, 0, moved); onReorder(reordered); } dragIdea.current = null; setDragOverIdea(null); }}>
                 {ideas.map((idea, idx) => (
                     <div key={idea.id} draggable
                         onDragStart={() => { dragIdea.current = idx; }}
-                        onDragOver={e => { e.preventDefault(); setDragOverIdea(idx); }}
-                        onDragLeave={() => setDragOverIdea(null)}
-                        onDrop={() => { if (dragIdea.current !== null && dragIdea.current !== idx) { const reordered = [...ideas]; const [moved] = reordered.splice(dragIdea.current, 1); reordered.splice(idx, 0, moved); onReorder(reordered); } dragIdea.current = null; setDragOverIdea(null); }}
+                        onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDragOverIdea(idx); }}
+                        onDragEnd={() => { dragIdea.current = null; setDragOverIdea(null); }}
+                        onDrop={e => { e.stopPropagation(); if (dragIdea.current !== null && dragIdea.current !== idx) { const reordered = [...ideas]; const [moved] = reordered.splice(dragIdea.current, 1); reordered.splice(idx, 0, moved); onReorder(reordered); } dragIdea.current = null; setDragOverIdea(null); }}
                         onClick={() => openDetail(idea)}
                         className={`bg-white rounded-lg p-4 cursor-grab hover:shadow-md transition-shadow flex flex-col ${dragOverIdea === idx ? "ring-2 ring-blue-300" : ""} ${idea.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}>
                         <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
@@ -2343,18 +2474,31 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
     );
 }
 
-function AnnouncementView({ announcements, onAdd, onDelete, onReorder, philosophy, onAddPhilosophy, onDeletePhilosophy, currentUser }: {
-    announcements: Announcement[]; onAdd: (text: string) => void; onDelete: (id: number) => void; onReorder: (list: Announcement[]) => void;
-    philosophy: Announcement[]; onAddPhilosophy: (text: string) => void; onDeletePhilosophy: (id: number) => void;
+function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder, philosophy, onAddPhilosophy, onDeletePhilosophy, onUpdatePhilosophy, currentUser }: {
+    announcements: Announcement[]; onAdd: (text: string) => void; onDelete: (id: number) => void; onUpdate: (ann: Announcement) => void; onReorder: (list: Announcement[]) => void;
+    philosophy: Announcement[]; onAddPhilosophy: (text: string) => void; onDeletePhilosophy: (id: number) => void; onUpdatePhilosophy: (p: Announcement) => void;
     currentUser: string;
 }) {
     const [newText, setNewText] = useState("");
     const [newPhil, setNewPhil] = useState("");
+    const [editingAnn, setEditingAnn] = useState<Announcement | null>(null);
+    const [editText, setEditText] = useState("");
+    const [editPinned, setEditPinned] = useState(false);
+    const [editingPhil, setEditingPhil] = useState<Announcement | null>(null);
+    const [editPhilText, setEditPhilText] = useState("");
     const isLeader = currentUser === "박일웅" || Object.values(DEFAULT_TEAMS).some(t => t.lead === currentUser);
     const isPI = currentUser === "박일웅";
     const dragAnn = useRef<number | null>(null);
     const [dragOverAnn, setDragOverAnn] = useState<number | null>(null);
-    const sorted = [...announcements].sort((a, b) => { if (a.pinned !== b.pinned) return a.pinned ? -1 : 1; return new Date(b.date).getTime() - new Date(a.date).getTime(); });
+    const pinned = announcements.filter(a => a.pinned);
+    const unpinned = announcements.filter(a => !a.pinned);
+    const sorted = [...pinned, ...unpinned];
+
+    const openEditAnn = (ann: Announcement) => { setEditingAnn(ann); setEditText(ann.text); setEditPinned(ann.pinned); };
+    const saveEditAnn = () => { if (!editingAnn || !editText.trim()) return; onUpdate({ ...editingAnn, text: editText.trim(), pinned: editPinned }); setEditingAnn(null); };
+    const openEditPhil = (p: Announcement) => { setEditingPhil(p); setEditPhilText(p.text); };
+    const saveEditPhil = () => { if (!editingPhil || !editPhilText.trim()) return; onUpdatePhilosophy({ ...editingPhil, text: editPhilText.trim() }); setEditingPhil(null); };
+
     return (
         <div className="space-y-8">
             {/* 공지사항 */}
@@ -2374,17 +2518,46 @@ function AnnouncementView({ announcements, onAdd, onDelete, onReorder, philosoph
                     <div key={ann.id} draggable
                         onDragStart={() => { dragAnn.current = idx; }}
                         onDragOver={e => { e.preventDefault(); setDragOverAnn(idx); }}
-                        onDragLeave={() => setDragOverAnn(null)}
+                        onDragEnd={() => { dragAnn.current = null; setDragOverAnn(null); }}
                         onDrop={() => { if (dragAnn.current !== null && dragAnn.current !== idx) { const reordered = [...sorted]; const [moved] = reordered.splice(dragAnn.current, 1); reordered.splice(idx, 0, moved); onReorder(reordered); } dragAnn.current = null; setDragOverAnn(null); }}
-                        className={`bg-white border rounded-lg p-4 cursor-grab transition-colors ${ann.pinned ? "border-amber-300 bg-amber-50/50" : "border-slate-200"} ${dragOverAnn === idx ? "bg-blue-50" : ""}`}>
+                        onClick={() => { if ((currentUser === ann.author || isPI) && !dragAnn.current) openEditAnn(ann); }}
+                        className={`bg-white border rounded-lg p-4 cursor-grab transition-colors ${ann.pinned ? "border-amber-300 bg-amber-50/50" : "border-slate-200"} ${dragOverAnn === idx ? "bg-blue-50" : ""} ${(currentUser === ann.author || isPI) ? "hover:shadow-md" : ""}`}>
                         <div className="flex items-start justify-between">
                             <div className="flex-1">{ann.pinned && <span className="text-[10px] font-semibold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mr-2">📌</span>}<span className="text-[13px] text-slate-800 whitespace-pre-wrap">{ann.text}</span></div>
-                            {(currentUser === ann.author || isPI) && <button onClick={() => onDelete(ann.id)} className="text-slate-400 hover:text-red-500 text-[12px] ml-2">✕</button>}
+                            {(currentUser === ann.author || isPI) && <button onClick={e => { e.stopPropagation(); onDelete(ann.id); }} className="text-slate-400 hover:text-red-500 text-[12px] ml-2">✕</button>}
                         </div>
                         <div className="mt-2 text-[11px] text-slate-400">{ann.author} · {ann.date}</div>
                     </div>
                 ))}</div>
             </div>
+
+            {/* 공지사항 수정 모달 */}
+            {editingAnn && (
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditingAnn(null)}>
+                    <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-4 border-b border-slate-200">
+                            <h3 className="text-[15px] font-bold text-slate-800">공지사항 수정</h3>
+                            <button onClick={() => setEditingAnn(null)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            <textarea value={editText} onChange={e => setEditText(e.target.value)} rows={4}
+                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" autoFocus />
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" checked={editPinned} onChange={e => setEditPinned(e.target.checked)} className="w-4 h-4 accent-amber-500" />
+                                <span className="text-[13px] text-slate-700">📌 상단 고정</span>
+                            </label>
+                        </div>
+                        <div className="flex items-center justify-between p-4 border-t border-slate-200">
+                            <button onClick={() => { onDelete(editingAnn.id); setEditingAnn(null); }} className="text-[12px] text-red-500 hover:text-red-600">삭제</button>
+                            <div className="flex gap-2">
+                                <button onClick={() => setEditingAnn(null)} className="px-4 py-2 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                                <button onClick={saveEditAnn} className="px-4 py-2 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* 문화 */}
             <div>
                 <h3 className="text-[15px] font-bold text-slate-800 mb-1">🧭 문화</h3>
@@ -2399,16 +2572,40 @@ function AnnouncementView({ announcements, onAdd, onDelete, onReorder, philosoph
                     </div>
                 )}
                 {philosophy.length === 0 && <div className="text-center py-8 text-slate-400 text-[13px]">등록된 내용이 없습니다</div>}
-                <div className="space-y-2">{[...philosophy].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(p => (
-                    <div key={p.id} className="bg-violet-50/50 border border-violet-200 rounded-lg p-4">
+                <div className="space-y-2">{philosophy.map(p => (
+                    <div key={p.id} className={`bg-violet-50/50 border border-violet-200 rounded-lg p-4 ${isPI ? "cursor-pointer hover:shadow-md" : ""}`}
+                        onClick={() => { if (isPI) openEditPhil(p); }}>
                         <div className="flex items-start justify-between">
                             <div className="flex-1"><span className="text-[13px] text-slate-800 whitespace-pre-wrap">{p.text}</span></div>
-                            {isPI && <button onClick={() => onDeletePhilosophy(p.id)} className="text-slate-400 hover:text-red-500 text-[12px] ml-2">✕</button>}
+                            {isPI && <button onClick={e => { e.stopPropagation(); onDeletePhilosophy(p.id); }} className="text-slate-400 hover:text-red-500 text-[12px] ml-2">✕</button>}
                         </div>
                         <div className="mt-2 text-[11px] text-slate-400">{p.author} · {p.date}</div>
                     </div>
                 ))}</div>
             </div>
+
+            {/* 문화 수정 모달 */}
+            {editingPhil && (
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditingPhil(null)}>
+                    <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-4 border-b border-slate-200">
+                            <h3 className="text-[15px] font-bold text-slate-800">문화 수정</h3>
+                            <button onClick={() => setEditingPhil(null)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                        </div>
+                        <div className="p-4">
+                            <textarea value={editPhilText} onChange={e => setEditPhilText(e.target.value)} rows={4}
+                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-violet-500/20 resize-none" autoFocus />
+                        </div>
+                        <div className="flex items-center justify-between p-4 border-t border-slate-200">
+                            <button onClick={() => { onDeletePhilosophy(editingPhil.id); setEditingPhil(null); }} className="text-[12px] text-red-500 hover:text-red-600">삭제</button>
+                            <div className="flex gap-2">
+                                <button onClick={() => setEditingPhil(null)} className="px-4 py-2 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                                <button onClick={saveEditPhil} className="px-4 py-2 text-[13px] bg-violet-500 text-white rounded-lg hover:bg-violet-600 font-medium">저장</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -2880,28 +3077,32 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                             <h3 className="text-[14px] font-bold text-slate-800 mb-3">팀별 연구 현황</h3>
                             <div className="space-y-3">
                                 {teamEntries.map(team => {
-                                    const tPapers = papers.filter(p => p.assignees.some(a => team.members.includes(a))).length;
-                                    const tExp = experiments.filter(e => e.assignees.some(a => team.members.includes(a))).length;
-                                    const tAnalysis = analyses.filter(a => a.assignees.some(aa => team.members.includes(aa))).length;
-                                    const tTodos = todos.filter(t => !t.done && t.assignees.some(a => team.members.includes(a))).length;
-                                    const total = tPapers + tExp + tAnalysis + tTodos;
+                                    const tPapers = papers.filter(p => p.team === team.name).length;
+                                    const tReports = reports.filter(r => r.team === team.name).length;
+                                    const tPatents = ipPatents.filter(p => p.team === team.name).length;
+                                    const tExp = experiments.filter(e => e.team === team.name).length;
+                                    const tAnalysis = analyses.filter(a => a.team === team.name).length;
+                                    const total = tPapers + tReports + tPatents + tExp + tAnalysis;
                                     return (
                                         <div key={team.name}>
                                             <div className="flex items-center justify-between mb-1.5">
                                                 <span className="text-[12px] font-semibold text-slate-700" style={hasTeams ? { color: team.color } : undefined}>{team.name}</span>
-                                                <span className="text-[10px] text-slate-400">{team.members.length}명</span>
+                                                <span className="text-[10px] text-slate-400">{total}건</span>
                                             </div>
                                             <div className="flex gap-1 h-[6px] rounded-full overflow-hidden bg-slate-100">
                                                 {tPapers > 0 && <div className="bg-blue-500 rounded-full" style={{ width: `${(tPapers / Math.max(total, 1)) * 100}%` }} />}
+                                                {tReports > 0 && <div className="bg-amber-500 rounded-full" style={{ width: `${(tReports / Math.max(total, 1)) * 100}%` }} />}
+                                                {tPatents > 0 && <div className="bg-teal-500 rounded-full" style={{ width: `${(tPatents / Math.max(total, 1)) * 100}%` }} />}
                                                 {tExp > 0 && <div className="bg-emerald-500 rounded-full" style={{ width: `${(tExp / Math.max(total, 1)) * 100}%` }} />}
                                                 {tAnalysis > 0 && <div className="bg-violet-500 rounded-full" style={{ width: `${(tAnalysis / Math.max(total, 1)) * 100}%` }} />}
-                                                {tTodos > 0 && <div className="bg-red-400 rounded-full" style={{ width: `${(tTodos / Math.max(total, 1)) * 100}%` }} />}
                                             </div>
-                                            <div className="flex gap-3 mt-1">
-                                                <span className="text-[10px] text-blue-600">논문 {tPapers}</span>
-                                                <span className="text-[10px] text-emerald-600">실험 {tExp}</span>
-                                                <span className="text-[10px] text-violet-600">해석 {tAnalysis}</span>
-                                                <span className="text-[10px] text-red-500">To-do {tTodos}</span>
+                                            <div className="flex gap-2 mt-1 flex-wrap">
+                                                {tPapers > 0 && <span className="text-[10px] text-blue-600">논문 {tPapers}</span>}
+                                                {tReports > 0 && <span className="text-[10px] text-amber-600">보고서 {tReports}</span>}
+                                                {tPatents > 0 && <span className="text-[10px] text-teal-600">지재권 {tPatents}</span>}
+                                                {tExp > 0 && <span className="text-[10px] text-emerald-600">실험 {tExp}</span>}
+                                                {tAnalysis > 0 && <span className="text-[10px] text-violet-600">해석 {tAnalysis}</span>}
+                                                {total === 0 && <span className="text-[10px] text-slate-300">항목 없음</span>}
                                             </div>
                                         </div>
                                     );
@@ -3016,6 +3217,7 @@ export default function DashboardPage() {
     const teamNames = useMemo(() => Object.keys(teams), [teams]);
     const [dailyTargets, setDailyTargets] = useState<DailyTarget[]>([]);
     const [resources, setResources] = useState<Resource[]>([]);
+    const [conferenceTrips, setConferenceTrips] = useState<ConferenceTrip[]>([]);
     const [philosophy, setPhilosophy] = useState<Announcement[]>([]);
     const [ideas, setIdeas] = useState<IdeaPost[]>([]);
     const [analyses, setAnalyses] = useState<Analysis[]>([]);
@@ -3047,6 +3249,7 @@ export default function DashboardPage() {
         { id: "ip", label: "지재권", icon: "💡" },
         { id: "experiments", label: "실험 현황", icon: "🧪" },
         { id: "analysis", label: "해석 현황", icon: "🖥️" },
+        { id: "conferenceTrips", label: "학회/출장", icon: "✈️" },
         { id: "resources", label: "자료", icon: "📁" },
         { id: "ideas", label: "아이디어", icon: "💡" },
         { id: "chat", label: "잡담", icon: "💬" },
@@ -3079,6 +3282,7 @@ export default function DashboardPage() {
             if (d.dailyTargets) setDailyTargets(d.dailyTargets);
             if (d.philosophy) setPhilosophy(d.philosophy);
             if (d.resources) setResources(d.resources);
+            if (d.conferences) setConferenceTrips(d.conferences);
             if (d.ideas) setIdeas(d.ideas);
             if (d.analyses) setAnalyses(d.analyses);
             if (d.chatPosts) setChatPosts(d.chatPosts);
@@ -3147,8 +3351,10 @@ export default function DashboardPage() {
     const handleUpdateTodo = (t: Todo) => { const u = todos.map(x => x.id === t.id ? t : x); setTodos(u); saveSection("todos", u); };
     const handleAddAnn = (text: string) => { const u = [{ id: Date.now(), text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned: false }, ...announcements]; setAnnouncements(u); saveSection("announcements", u); };
     const handleDelAnn = (id: number) => { const u = announcements.filter(a => a.id !== id); setAnnouncements(u); saveSection("announcements", u); };
+    const handleUpdateAnn = (ann: Announcement) => { const u = announcements.map(a => a.id === ann.id ? ann : a); setAnnouncements(u); saveSection("announcements", u); };
     const handleAddPhil = (text: string) => { const u = [{ id: Date.now(), text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned: false }, ...philosophy]; setPhilosophy(u); saveSection("philosophy", u); };
     const handleDelPhil = (id: number) => { const u = philosophy.filter(p => p.id !== id); setPhilosophy(u); saveSection("philosophy", u); };
+    const handleUpdatePhil = (p: Announcement) => { const u = philosophy.map(x => x.id === p.id ? p : x); setPhilosophy(u); saveSection("philosophy", u); };
 
     const handleSavePaper = (p: Paper) => {
         const exists = papers.find(x => x.id === p.id);
@@ -3211,6 +3417,12 @@ export default function DashboardPage() {
         setResources(u); saveSection("resources", u);
     };
     const handleDeleteResource = (id: number) => { const u = resources.filter(r => r.id !== id); setResources(u); saveSection("resources", u); };
+    const handleSaveConference = (c: ConferenceTrip) => {
+        const exists = conferenceTrips.find(x => x.id === c.id);
+        const u = exists ? conferenceTrips.map(x => x.id === c.id ? c : x) : [...conferenceTrips, c];
+        setConferenceTrips(u); saveSection("conferences", u);
+    };
+    const handleDeleteConference = (id: number) => { const u = conferenceTrips.filter(c => c.id !== id); setConferenceTrips(u); saveSection("conferences", u); };
     const handleSaveDailyTargets = (t: DailyTarget[]) => { setDailyTargets(t); saveSection("dailyTargets", t); };
     const handleSaveIdea = (idea: IdeaPost) => {
         const exists = ideas.find(x => x.id === idea.id);
@@ -3309,7 +3521,7 @@ export default function DashboardPage() {
                 <div className="md:w-[210px] bg-white md:border-r border-b md:border-b-0 border-slate-200 md:min-h-[calc(100vh-56px)] flex-shrink-0">
                     <div className="flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto md:max-h-[calc(100vh-56px)] p-3 md:p-0 md:pt-3 md:pb-8 gap-0.5">
                         {tabs.map((tab, i) => {
-                            const sectionBreaks: Record<string, string> = { announcements: "관리", papers: "연구", resources: "커뮤니케이션", teams: "기타" };
+                            const sectionBreaks: Record<string, string> = { announcements: "관리", papers: "연구", conferenceTrips: "커뮤니케이션", teams: "기타" };
                             const showBreak = !tab.id.startsWith("memo_") && sectionBreaks[tab.id];
                             const showMemoBreak = tab.id.startsWith("memo_") && i > 0 && !tabs[i - 1].id.startsWith("memo_");
                             return (
@@ -3366,7 +3578,7 @@ export default function DashboardPage() {
 
                     {activeTab === "overview" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="team" statusMessages={statusMessages} members={displayMembers} teams={teams} />}
                     {activeTab === "overview_me" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="personal" statusMessages={statusMessages} members={displayMembers} teams={teams} />}
-                    {activeTab === "announcements" && <AnnouncementView announcements={announcements} onAdd={handleAddAnn} onDelete={handleDelAnn} onReorder={list => { setAnnouncements(list); saveSection("announcements", list); }} philosophy={philosophy} onAddPhilosophy={handleAddPhil} onDeletePhilosophy={handleDelPhil} currentUser={userName} />}
+                    {activeTab === "announcements" && <AnnouncementView announcements={announcements} onAdd={handleAddAnn} onDelete={handleDelAnn} onUpdate={handleUpdateAnn} onReorder={list => { setAnnouncements(list); saveSection("announcements", list); }} philosophy={philosophy} onAddPhilosophy={handleAddPhil} onDeletePhilosophy={handleDelPhil} onUpdatePhilosophy={handleUpdatePhil} currentUser={userName} />}
                     {activeTab === "daily" && <DailyTargetView targets={dailyTargets} onSave={handleSaveDailyTargets} currentUser={userName} />}
                     {activeTab === "papers" && <KanbanView papers={papers} filter={selectedPerson} onClickPaper={p => setPaperModal({ paper: p, mode: "edit" })} onAddPaper={() => setPaperModal({ paper: null, mode: "add" })} onSavePaper={handleSavePaper} onReorder={list => { setPapers(list); saveSection("papers", list); }} tagList={paperTagList} onSaveTags={handleSavePaperTags} teamNames={teamNames} />}
                     {activeTab === "reports" && <ReportView reports={reports} currentUser={userName} onSave={handleSaveReport} onDelete={handleDeleteReport} onToggleDiscussion={r => handleSaveReport({ ...r, needsDiscussion: !r.needsDiscussion })} onReorder={list => { setReports(list); saveSection("reports", list); }} teamNames={teamNames} />}
@@ -3377,6 +3589,7 @@ export default function DashboardPage() {
                     {activeTab === "calendar" && <CalendarGrid data={[...vacations.map(v => ({ ...v, description: undefined })), ...schedule]} currentUser={userName} types={CALENDAR_TYPES} onToggle={handleCalendarToggle} showYearTotal />}
                     {activeTab === "lectures" && <TimetableView blocks={timetable} onSave={handleTimetableSave} onDelete={handleTimetableDelete} />}
                     {activeTab === "ip" && <IPView patents={ipPatents} onSave={handleSavePatent} onDelete={handleDeletePatent} currentUser={userName} onToggleDiscussion={p => handleSavePatent({ ...p, needsDiscussion: !p.needsDiscussion })} onReorder={list => { setIpPatents(list); saveSection("patents", list); }} teamNames={teamNames} />}
+                    {activeTab === "conferenceTrips" && <ConferenceTripView items={conferenceTrips} onSave={handleSaveConference} onDelete={handleDeleteConference} onReorder={list => { setConferenceTrips(list); saveSection("conferences", list); }} currentUser={userName} />}
                     {activeTab === "resources" && <ResourceView resources={resources} onSave={handleSaveResource} onDelete={handleDeleteResource} onReorder={list => { setResources(list); saveSection("resources", list); }} currentUser={userName} />}
                     {activeTab === "ideas" && <IdeasView ideas={ideas} onSave={handleSaveIdea} onDelete={handleDeleteIdea} onReorder={list => { setIdeas(list); saveSection("ideas", list); }} currentUser={userName} />}
                     {activeTab === "chat" && <IdeasView ideas={chatPosts} onSave={handleSaveChat} onDelete={handleDeleteChat} onReorder={list => { setChatPosts(list); saveSection("chatPosts", list); }} currentUser={userName} />}

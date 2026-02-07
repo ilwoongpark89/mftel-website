@@ -111,7 +111,7 @@ export default function AdminPage() {
         if (!confirm(`${date} 백업으로 복원하시겠습니까? 현재 데이터가 덮어씌워집니다.`)) return;
         setLoading(true);
         try {
-            const res = await fetch(`/api/dashboard-admin?action=restore&date=${date}`);
+            const res = await fetch('/api/dashboard-admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'restore', date }) });
             const data = await res.json();
             if (data.success) alert("복원 완료");
             else alert(`복원 실패: ${data.error || "알 수 없는 오류"}`);
@@ -243,39 +243,64 @@ export default function AdminPage() {
                                 <button onClick={fetchLogs} className="px-3 py-1 bg-slate-100 rounded-lg text-[12px] hover:bg-slate-200">새로고침</button>
                             </div>
                         </div>
-                        {/* Summary cards */}
+                        {/* Summary cards + session table */}
                         {(() => {
-                            const uniqueUsers = [...new Set(accessLogs.filter(l => l.action === "login").map(l => l.userName))];
-                            const totalLogins = accessLogs.filter(l => l.action === "login").length;
-                            const avgDuration = (() => {
-                                const durations = accessLogs.filter(l => l.duration && l.duration > 0).map(l => l.duration!);
-                                return durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
-                            })();
-                            return (
-                                <div className="grid grid-cols-3 gap-3 mb-4">
+                            // Build sessions by matching login→logout pairs per user
+                            // Logs are newest-first; scan to pair logout (has duration) with preceding login
+                            type Session = { userName: string; loginTime: number; logoutTime?: number; duration?: number; ip?: string };
+                            const sessions: Session[] = [];
+
+                            // Process in chronological order (oldest first)
+                            const chronoLogs = [...accessLogs].reverse();
+                            for (const log of chronoLogs) {
+                                if (log.action === "login") {
+                                    sessions.push({ userName: log.userName, loginTime: log.timestamp, ip: log.ip });
+                                } else {
+                                    // Find the last unmatched session for this user
+                                    for (let j = sessions.length - 1; j >= 0; j--) {
+                                        if (sessions[j].userName === log.userName && !sessions[j].logoutTime) {
+                                            sessions[j].logoutTime = log.timestamp;
+                                            sessions[j].duration = log.duration || (log.timestamp - sessions[j].loginTime);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            // Sort newest first for display
+                            sessions.reverse();
+
+                            const uniqueUsers = [...new Set(sessions.map(s => s.userName))];
+                            const totalLogins = sessions.length;
+                            const durations = sessions.filter(s => s.duration && s.duration > 0).map(s => s.duration!);
+                            const avgDuration = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+                            const totalTime = durations.reduce((a, b) => a + b, 0);
+
+                            return (<>
+                                <div className="grid grid-cols-4 gap-3 mb-4">
                                     <div className="bg-white border border-slate-200 rounded-lg p-3"><div className="text-[20px] font-bold text-blue-600">{uniqueUsers.length}</div><div className="text-[11px] text-slate-400">접속 인원</div></div>
-                                    <div className="bg-white border border-slate-200 rounded-lg p-3"><div className="text-[20px] font-bold text-green-600">{totalLogins}</div><div className="text-[11px] text-slate-400">총 로그인</div></div>
+                                    <div className="bg-white border border-slate-200 rounded-lg p-3"><div className="text-[20px] font-bold text-green-600">{totalLogins}</div><div className="text-[11px] text-slate-400">총 세션</div></div>
                                     <div className="bg-white border border-slate-200 rounded-lg p-3"><div className="text-[20px] font-bold text-purple-600">{fmtDuration(avgDuration)}</div><div className="text-[11px] text-slate-400">평균 접속시간</div></div>
+                                    <div className="bg-white border border-slate-200 rounded-lg p-3"><div className="text-[20px] font-bold text-amber-600">{fmtDuration(totalTime)}</div><div className="text-[11px] text-slate-400">총 접속시간</div></div>
                                 </div>
-                            );
+                                <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                                    <table className="w-full text-[12px]">
+                                        <thead><tr className="bg-slate-50 border-b border-slate-200"><th className="px-4 py-2 text-left font-semibold text-slate-500">이름</th><th className="px-4 py-2 text-left font-semibold text-slate-500">로그인</th><th className="px-4 py-2 text-left font-semibold text-slate-500">로그아웃</th><th className="px-4 py-2 text-left font-semibold text-slate-500">접속시간</th><th className="px-4 py-2 text-left font-semibold text-slate-500">IP</th></tr></thead>
+                                        <tbody>
+                                            {sessions.slice(0, 200).map((s, i) => (
+                                                <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
+                                                    <td className="px-4 py-2 font-medium">{s.userName}</td>
+                                                    <td className="px-4 py-2 text-slate-500">{fmtTime(s.loginTime)}</td>
+                                                    <td className="px-4 py-2 text-slate-500">{s.logoutTime ? fmtTime(s.logoutTime) : <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">접속중</span>}</td>
+                                                    <td className="px-4 py-2 text-slate-600 font-medium">{s.duration ? fmtDuration(s.duration) : "-"}</td>
+                                                    <td className="px-4 py-2 text-slate-400 text-[11px] font-mono">{s.ip || "-"}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    {sessions.length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">접속 로그가 없습니다</div>}
+                                </div>
+                            </>);
                         })()}
-                        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-                            <table className="w-full text-[12px]">
-                                <thead><tr className="bg-slate-50 border-b border-slate-200"><th className="px-4 py-2 text-left font-semibold text-slate-500">이름</th><th className="px-4 py-2 text-left font-semibold text-slate-500">상태</th><th className="px-4 py-2 text-left font-semibold text-slate-500">시간</th><th className="px-4 py-2 text-left font-semibold text-slate-500">접속시간</th><th className="px-4 py-2 text-left font-semibold text-slate-500">IP</th></tr></thead>
-                                <tbody>
-                                    {accessLogs.slice(0, 200).map((log, i) => (
-                                        <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
-                                            <td className="px-4 py-2 font-medium">{log.userName}</td>
-                                            <td className="px-4 py-2"><span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${log.action === "login" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{log.action === "login" ? "로그인" : "로그아웃"}</span></td>
-                                            <td className="px-4 py-2 text-slate-500">{fmtTime(log.timestamp)}</td>
-                                            <td className="px-4 py-2 text-slate-500">{fmtDuration(log.duration)}</td>
-                                            <td className="px-4 py-2 text-slate-400 text-[11px] font-mono">{log.ip || "-"}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {accessLogs.length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">접속 로그가 없습니다</div>}
-                        </div>
                     </div>
                 )}
 

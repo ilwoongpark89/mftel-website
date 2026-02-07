@@ -95,31 +95,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ members });
         }
 
-        // 5. Restore backup
-        if (action === 'restore') {
-            const date = searchParams.get('date');
-            if (!date) {
-                return NextResponse.json({ error: 'Date parameter required for restore' }, { status: 400 });
-            }
-
-            const backupRaw = await getKey(`${BACKUP_PREFIX}${date}`);
-            if (!backupRaw) {
-                return NextResponse.json({ error: `Backup not found for date: ${date}` }, { status: 404 });
-            }
-
-            const backupData: Record<string, unknown> = JSON.parse(backupRaw);
-
-            // Restore all sections from the backup
-            await Promise.all(
-                Object.entries(backupData).map(([section, data]) =>
-                    setKey(`${PREFIX}${section}`, JSON.stringify(data))
-                )
-            );
-
-            return NextResponse.json({ success: true, message: `Backup from ${date} restored successfully` });
-        }
-
-        return NextResponse.json({ error: 'Invalid action parameter. Use: accessLogs, modLogs, backups, members, restore' }, { status: 400 });
+        return NextResponse.json({ error: 'Invalid action parameter. Use: accessLogs, modLogs, backups, members' }, { status: 400 });
     } catch (error) {
         console.error('Dashboard Admin GET error:', error);
         return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 });
@@ -214,7 +190,8 @@ export async function POST(request: NextRequest) {
             });
 
             const now = new Date();
-            const dateStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
+            const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+            const dateStr = kst.toISOString().slice(0, 10); // YYYY-MM-DD (KST)
 
             // Store the backup data
             const backupJson = JSON.stringify(backupData);
@@ -274,7 +251,31 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: true });
         }
 
-        // 5. Save members
+        // 5. Restore backup (destructive - must be POST)
+        if (action === 'restore') {
+            const { date } = body as { date: string; action: string };
+            if (!date) {
+                return NextResponse.json({ error: 'Date parameter required for restore' }, { status: 400 });
+            }
+
+            const backupRaw = await getKey(`${BACKUP_PREFIX}${date}`);
+            if (!backupRaw) {
+                return NextResponse.json({ error: `Backup not found for date: ${date}` }, { status: 404 });
+            }
+
+            const backupData: Record<string, unknown> = JSON.parse(backupRaw);
+
+            // Only restore known sections
+            await Promise.all(
+                ALL_SECTIONS.filter(section => section in backupData).map(section =>
+                    setKey(`${PREFIX}${section}`, JSON.stringify(backupData[section]))
+                )
+            );
+
+            return NextResponse.json({ success: true, message: `Backup from ${date} restored successfully` });
+        }
+
+        // 6. Save members
         if (action === 'saveMembers') {
             const { members } = body as {
                 members: Record<string, { team: string; role: string; emoji: string }>;
