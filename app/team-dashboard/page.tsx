@@ -2428,8 +2428,10 @@ const EMOJI_OPTIONS = [
 ];
 
 function SettingsView({ currentUser, customEmojis, onSaveEmoji, statusMessages, onSaveStatusMsg }: { currentUser: string; customEmojis: Record<string, string>; onSaveEmoji: (name: string, emoji: string) => void; statusMessages: Record<string, string>; onSaveStatusMsg: (name: string, msg: string) => void }) {
-    const currentEmoji = customEmojis[currentUser] || MEMBERS[currentUser]?.emoji || "👤";
+    const savedEmoji = customEmojis[currentUser] || MEMBERS[currentUser]?.emoji || "👤";
+    const [selectedEmoji, setSelectedEmoji] = useState(savedEmoji);
     const [msg, setMsg] = useState(statusMessages[currentUser] || "");
+    const emojiChanged = selectedEmoji !== savedEmoji;
     return (
         <div className="space-y-4">
             {/* 한마디 */}
@@ -2448,15 +2450,23 @@ function SettingsView({ currentUser, customEmojis, onSaveEmoji, statusMessages, 
             {/* 이모지 */}
             <div className="bg-white border border-slate-200 rounded-lg p-5">
                 <h3 className="text-[14px] font-bold text-slate-800 mb-4">내 이모지 설정</h3>
-                <div className="mb-3">
-                    <span className="text-[12px] text-slate-500">현재: </span>
-                    <span className="text-[20px]">{currentEmoji}</span>
-                    <span className="text-[13px] text-slate-700 ml-2 font-medium">{currentUser}</span>
+                <div className="flex items-center gap-3 mb-3">
+                    <div>
+                        <span className="text-[12px] text-slate-500">현재: </span>
+                        <span className="text-[20px]">{selectedEmoji}</span>
+                        <span className="text-[13px] text-slate-700 ml-2 font-medium">{currentUser}</span>
+                    </div>
+                    <button onClick={() => { onSaveEmoji(currentUser, selectedEmoji); }}
+                        disabled={!emojiChanged}
+                        className={`px-4 py-2 rounded-lg text-[12px] font-medium transition-all ${emojiChanged ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-slate-100 text-slate-300 cursor-not-allowed"}`}>
+                        저장
+                    </button>
+                    {emojiChanged && <span className="text-[11px] text-amber-500 font-medium">변경됨 — 저장을 눌러주세요</span>}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                     {EMOJI_OPTIONS.map(e => (
-                        <button key={e} onClick={() => onSaveEmoji(currentUser, e)}
-                            className={`w-9 h-9 rounded-lg text-[18px] flex items-center justify-center transition-all ${currentEmoji === e ? "bg-blue-100 ring-2 ring-blue-500 scale-110" : "bg-slate-50 hover:bg-slate-100 hover:scale-105"}`}>
+                        <button key={e} onClick={() => setSelectedEmoji(e)}
+                            className={`w-9 h-9 rounded-lg text-[18px] flex items-center justify-center transition-all ${selectedEmoji === e ? "bg-blue-100 ring-2 ring-blue-500 scale-110" : "bg-slate-50 hover:bg-slate-100 hover:scale-105"}`}>
                             {e}
                         </button>
                     ))}
@@ -3203,6 +3213,11 @@ export default function DashboardPage() {
     const handleSaveEmoji = (name: string, emoji: string) => {
         const u = { ...customEmojis, [name]: emoji };
         setCustomEmojis(u); saveSection("customEmojis", u);
+        // Also update members so LoginScreen reflects the change
+        if (members[name]) {
+            const m = { ...members, [name]: { ...members[name], emoji } };
+            setMembers(m); saveSection("members", m);
+        }
     };
     const handleSaveStatusMsg = (name: string, msg: string) => {
         const u = { ...statusMessages, [name]: msg };
