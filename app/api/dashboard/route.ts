@@ -13,7 +13,9 @@ const localStore: Record<string, string> = {};
 
 async function getKey(key: string): Promise<string | null> {
     if (redis) {
-        return await redis.get(key);
+        const val = await redis.get(key);
+        if (val === null || val === undefined) return null;
+        return typeof val === 'string' ? val : JSON.stringify(val);
     }
     return localStore[key] || null;
 }
