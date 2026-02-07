@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, createContext, useContext } from "react";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -19,9 +19,12 @@ const DEFAULT_MEMBERS: Record<string, { team: string; role: string; emoji: strin
     "정영준": { team: "액침냉각", role: "", emoji: "📊" },
     "현준환": { team: "TES", role: "", emoji: "🌡️" },
 };
-// Module-level aliases for components that don't need dynamic member data
+// Module-level aliases (fallback only — prefer MembersContext for emoji display)
 const MEMBERS = DEFAULT_MEMBERS;
 const MEMBER_NAMES = Object.keys(MEMBERS).filter(k => k !== "박일웅");
+
+// Context for dynamic member data (customEmojis merged)
+const MembersContext = createContext<Record<string, { team: string; role: string; emoji: string }>>(DEFAULT_MEMBERS);
 
 type TeamData = { lead: string; members: string[]; color: string };
 
@@ -336,6 +339,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
 }
 
 function KanbanView({ papers, filter, onClickPaper, onAddPaper, onSavePaper, onReorder, tagList, onSaveTags, teamNames }: { papers: Paper[]; filter: string; onClickPaper: (p: Paper) => void; onAddPaper: () => void; onSavePaper: (p: Paper) => void; onReorder: (list: Paper[]) => void; tagList: string[]; onSaveTags: (list: string[]) => void; teamNames?: string[] }) {
+    const MEMBERS = useContext(MembersContext);
     const [filterTeam, setFilterTeam] = useState("전체");
     const personFiltered = filter === "전체" ? papers : papers.filter(p => p.assignees.includes(filter) || p.tags.some(t => t === filter));
     const filtered = filterTeam === "전체" ? personFiltered : personFiltered.filter(p => p.team === filterTeam);
@@ -580,6 +584,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
 }
 
 function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion, onReorder, teamNames }: { reports: Report[]; currentUser: string; onSave: (r: Report) => void; onDelete: (id: number) => void; onToggleDiscussion: (r: Report) => void; onReorder: (list: Report[]) => void; teamNames?: string[] }) {
+    const MEMBERS = useContext(MembersContext);
     const [editing, setEditing] = useState<Report | null>(null);
     const [addCategory, setAddCategory] = useState<string | null>(null);
     const [filterTeam, setFilterTeam] = useState("전체");
@@ -686,6 +691,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, showYearTotal }: {
     onToggle: (name: string, date: string, type: string | null, desc?: string) => void;
     showYearTotal?: boolean;
 }) {
+    const MEMBERS = useContext(MembersContext);
     const [month, setMonth] = useState(() => { const n = new Date(); return { y: n.getFullYear(), m: n.getMonth() }; });
     const [selType, setSelType] = useState(Object.keys(types)[0]);
     const [editCell, setEditCell] = useState<{ name: string; date: string } | null>(null);
@@ -1137,6 +1143,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
 }
 
 function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentList, onSaveEquipment, onToggleDiscussion, onReorder, teamNames }: { experiments: Experiment[]; onSave: (e: Experiment) => void; onDelete: (id: number) => void; currentUser: string; equipmentList: string[]; onSaveEquipment: (list: string[]) => void; onToggleDiscussion: (e: Experiment) => void; onReorder: (list: Experiment[]) => void; teamNames?: string[] }) {
+    const MEMBERS = useContext(MembersContext);
     const [editing, setEditing] = useState<Experiment | null>(null);
     const [adding, setAdding] = useState(false);
     const [showEqMgr, setShowEqMgr] = useState(false);
@@ -1365,6 +1372,7 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
 }
 
 function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSaveTools, onToggleDiscussion, onReorder, teamNames }: { analyses: Analysis[]; onSave: (a: Analysis) => void; onDelete: (id: number) => void; currentUser: string; toolList: string[]; onSaveTools: (list: string[]) => void; onToggleDiscussion: (a: Analysis) => void; onReorder: (list: Analysis[]) => void; teamNames?: string[] }) {
+    const MEMBERS = useContext(MembersContext);
     const [editing, setEditing] = useState<Analysis | null>(null);
     const [adding, setAdding] = useState(false);
     const [showToolMgr, setShowToolMgr] = useState(false);
@@ -1469,6 +1477,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
 }
 
 function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, currentUser }: { todos: Todo[]; onToggle: (id: number) => void; onAdd: (t: Todo) => void; onUpdate: (t: Todo) => void; onDelete: (id: number) => void; onReorder: (list: Todo[]) => void; currentUser: string }) {
+    const MEMBERS = useContext(MembersContext);
     const [showForm, setShowForm] = useState(false);
     const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
     const [newText, setNewText] = useState("");
@@ -1713,6 +1722,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
 const TEAM_COLORS = ["#3b82f6", "#ef4444", "#f59e0b", "#8b5cf6", "#10b981", "#ec4899", "#f97316", "#14b8a6"];
 
 function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams }: { papers: Paper[]; todos: Todo[]; experiments: Experiment[]; analyses: Analysis[]; teams: Record<string, TeamData>; onSaveTeams: (t: Record<string, TeamData>) => void }) {
+    const MEMBERS = useContext(MembersContext);
     const [editingTeam, setEditingTeam] = useState<string | null>(null);
     const [addingTeam, setAddingTeam] = useState(false);
     const [formName, setFormName] = useState("");
@@ -1880,6 +1890,7 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
 }
 
 function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, onReorder, teamNames }: { patents: Patent[]; onSave: (p: Patent) => void; onDelete: (id: number) => void; currentUser: string; onToggleDiscussion: (p: Patent) => void; onReorder: (list: Patent[]) => void; teamNames?: string[] }) {
+    const MEMBERS = useContext(MembersContext);
     const [editing, setEditing] = useState<Patent | null>(null);
     const [adding, setAdding] = useState(false);
     const [filterTeam, setFilterTeam] = useState("전체");
@@ -1949,6 +1960,7 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
 // ─── Daily Target View ──────────────────────────────────────────────────────
 
 function DailyTargetView({ targets, onSave, currentUser }: { targets: DailyTarget[]; onSave: (t: DailyTarget[]) => void; currentUser: string }) {
+    const MEMBERS = useContext(MembersContext);
     const [endDate, setEndDate] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; });
     const [editCell, setEditCell] = useState<{ name: string; date: string } | null>(null);
     const [editText, setEditText] = useState("");
@@ -2063,6 +2075,7 @@ function DailyTargetView({ targets, onSave, currentUser }: { targets: DailyTarge
 // ─── Conference / Trip View ──────────────────────────────────────────────────
 
 function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }: { items: ConferenceTrip[]; onSave: (c: ConferenceTrip) => void; onDelete: (id: number) => void; onReorder: (list: ConferenceTrip[]) => void; currentUser: string }) {
+    const MEMBERS = useContext(MembersContext);
     const [editing, setEditing] = useState<ConferenceTrip | null>(null);
     const [adding, setAdding] = useState(false);
     const [title, setTitle] = useState("");
@@ -2187,6 +2200,7 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
 // ─── Resource View ──────────────────────────────────────────────────────────
 
 function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: { resources: Resource[]; onSave: (r: Resource) => void; onDelete: (id: number) => void; onReorder: (list: Resource[]) => void; currentUser: string }) {
+    const MEMBERS = useContext(MembersContext);
     const [editing, setEditing] = useState<Resource | null>(null);
     const [adding, setAdding] = useState(false);
     const [title, setTitle] = useState("");
@@ -2319,6 +2333,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
 // ─── Ideas / Chat View ──────────────────────────────────────────────────────
 
 function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas: IdeaPost[]; onSave: (i: IdeaPost) => void; onDelete: (id: number) => void; onReorder: (list: IdeaPost[]) => void; currentUser: string }) {
+    const MEMBERS = useContext(MembersContext);
     const [selected, setSelected] = useState<IdeaPost | null>(null);
     const [adding, setAdding] = useState(false);
     const [title, setTitle] = useState("");
@@ -2625,6 +2640,7 @@ const EMOJI_OPTIONS = [
 ];
 
 function SettingsView({ currentUser, customEmojis, onSaveEmoji, statusMessages, onSaveStatusMsg }: { currentUser: string; customEmojis: Record<string, string>; onSaveEmoji: (name: string, emoji: string) => void; statusMessages: Record<string, string>; onSaveStatusMsg: (name: string, msg: string) => void }) {
+    const MEMBERS = useContext(MembersContext);
     const savedEmoji = customEmojis[currentUser] || MEMBERS[currentUser]?.emoji || "👤";
     const [selectedEmoji, setSelectedEmoji] = useState(savedEmoji);
     const [msg, setMsg] = useState(statusMessages[currentUser] || "");
@@ -2797,6 +2813,7 @@ function MiniBar({ items, maxVal }: { items: Array<{ label: string; count: numbe
 function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPatents, announcements, dailyTargets, ideas, resources, onlineUsers, currentUser, onNavigate, mode, statusMessages, members, teams }: {
     papers: Paper[]; reports: Report[]; experiments: Experiment[]; analyses: Analysis[]; todos: Todo[]; ipPatents: Patent[]; announcements: Announcement[]; dailyTargets: DailyTarget[]; ideas: IdeaPost[]; resources: Resource[]; onlineUsers: Array<{ name: string; timestamp: number }>; currentUser: string; onNavigate: (tab: string) => void; mode: "team" | "personal"; statusMessages: Record<string, string>; members: Record<string, { team: string; role: string; emoji: string }>; teams: Record<string, TeamData>;
 }) {
+    const MEMBERS = useContext(MembersContext);
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     const isPersonal = mode === "personal";
@@ -3124,7 +3141,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                             {recentAnn.map(ann => (
                                 <div key={ann.id} className="p-2.5 bg-slate-50 rounded-lg">
                                     <div className="text-[12px] text-slate-700 leading-relaxed">{ann.text.length > 60 ? ann.text.slice(0, 60) + "..." : ann.text}</div>
-                                    <div className="text-[10px] text-slate-400 mt-1">{MEMBERS[ann.author]?.emoji} {ann.author} · {ann.date}</div>
+                                    <div className="text-[10px] text-slate-400 mt-1">{members[ann.author]?.emoji} {ann.author} · {ann.date}</div>
                                 </div>
                             ))}
                         </div>
@@ -3489,6 +3506,7 @@ export default function DashboardPage() {
     };
 
     return (
+        <MembersContext.Provider value={displayMembers}>
         <div className="min-h-screen bg-slate-50 text-slate-800" style={{ fontFamily: "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
             {/* Header */}
             <div className="bg-slate-900 px-4 md:px-7 py-3.5 flex items-center justify-between border-b border-slate-800">
@@ -3552,7 +3570,7 @@ export default function DashboardPage() {
                                 {allPeople.map(person => (
                                     <button key={person} onClick={() => setSelectedPerson(person)}
                                         className={`flex items-center gap-1.5 w-full px-3 py-1.5 rounded-md text-[12px] transition-all ${selectedPerson === person ? "font-semibold text-slate-800 bg-blue-50" : "text-slate-500 hover:bg-slate-50"}`}>
-                                        {person !== "전체" && <span>{MEMBERS[person]?.emoji}</span>}{person}
+                                        {person !== "전체" && <span>{displayMembers[person]?.emoji}</span>}{person}
                                     </button>
                                 ))}
                             </div>
@@ -3570,7 +3588,7 @@ export default function DashboardPage() {
                             <div className="mb-4">
                                 <h2 className="text-[18px] font-bold text-slate-900">
                                     {tabs.find(t => t.id === activeTab)?.icon} {tabs.find(t => t.id === activeTab)?.label}
-                                    {activeTab === "papers" && selectedPerson !== "전체" && <span className="text-[14px] font-normal text-slate-500 ml-2">— {MEMBERS[selectedPerson]?.emoji} {selectedPerson}</span>}
+                                    {activeTab === "papers" && selectedPerson !== "전체" && <span className="text-[14px] font-normal text-slate-500 ml-2">— {displayMembers[selectedPerson]?.emoji} {selectedPerson}</span>}
                                 </h2>
                             </div>
                         </>
@@ -3604,5 +3622,6 @@ export default function DashboardPage() {
             {/* Paper Modal */}
             {paperModal && <PaperFormModal paper={paperModal.paper} onSave={handleSavePaper} onDelete={handleDeletePaper} onClose={() => setPaperModal(null)} currentUser={userName} tagList={paperTagList} teamNames={teamNames} />}
         </div>
+        </MembersContext.Provider>
     );
 }
