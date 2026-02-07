@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 type AccessLog = { userName: string; action: "login" | "logout"; timestamp: number; duration?: number; ip?: string };
 type ModLog = { userName: string; section: string; action: string; timestamp: number; detail?: string };
@@ -36,6 +36,8 @@ export default function AdminPage() {
     const [members, setMembers] = useState<Record<string, Member>>({});
     const [days, setDays] = useState(7);
     const [loading, setLoading] = useState(false);
+    const [ipLocations, setIpLocations] = useState<Record<string, string>>({});
+    const ipLookupDone = useRef<Set<string>>(new Set());
 
     // Member editing state
     const [editName, setEditName] = useState("");
@@ -89,6 +91,23 @@ export default function AdminPage() {
         }, 0);
         return () => clearTimeout(t);
     }, [auth, fetchLogs, fetchBackups, fetchMembers]);
+
+    // IP geolocation lookup
+    useEffect(() => {
+        if (accessLogs.length === 0) return;
+        const ips = [...new Set(accessLogs.map(l => l.ip).filter((ip): ip is string => !!ip && ip !== 'unknown'))];
+        const newIps = ips.filter(ip => !ipLookupDone.current.has(ip));
+        if (newIps.length === 0) return;
+        newIps.forEach(ip => ipLookupDone.current.add(ip));
+        fetch('/api/ip-location', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ips: newIps }),
+        })
+            .then(r => r.json())
+            .then(d => { if (d.locations) setIpLocations(prev => ({ ...prev, ...d.locations })); })
+            .catch(() => {});
+    }, [accessLogs]);
 
     const handleBackup = async () => {
         setLoading(true);
@@ -284,7 +303,7 @@ export default function AdminPage() {
                                 </div>
                                 <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
                                     <table className="w-full text-[12px]">
-                                        <thead><tr className="bg-slate-50 border-b border-slate-200"><th className="px-4 py-2 text-left font-semibold text-slate-500">이름</th><th className="px-4 py-2 text-left font-semibold text-slate-500">로그인</th><th className="px-4 py-2 text-left font-semibold text-slate-500">로그아웃</th><th className="px-4 py-2 text-left font-semibold text-slate-500">접속시간</th><th className="px-4 py-2 text-left font-semibold text-slate-500">IP</th></tr></thead>
+                                        <thead><tr className="bg-slate-50 border-b border-slate-200"><th className="px-4 py-2 text-left font-semibold text-slate-500">이름</th><th className="px-4 py-2 text-left font-semibold text-slate-500">로그인</th><th className="px-4 py-2 text-left font-semibold text-slate-500">로그아웃</th><th className="px-4 py-2 text-left font-semibold text-slate-500">접속시간</th><th className="px-4 py-2 text-left font-semibold text-slate-500">IP</th><th className="px-4 py-2 text-left font-semibold text-slate-500">위치</th></tr></thead>
                                         <tbody>
                                             {sessions.slice(0, 200).map((s, i) => (
                                                 <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
@@ -293,6 +312,7 @@ export default function AdminPage() {
                                                     <td className="px-4 py-2 text-slate-500">{s.logoutTime ? fmtTime(s.logoutTime) : <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">접속중</span>}</td>
                                                     <td className="px-4 py-2 text-slate-600 font-medium">{s.duration ? fmtDuration(s.duration) : "-"}</td>
                                                     <td className="px-4 py-2 text-slate-400 text-[11px] font-mono">{s.ip || "-"}</td>
+                                                    <td className="px-4 py-2 text-slate-500 text-[11px]">{s.ip && ipLocations[s.ip] ? <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{ipLocations[s.ip]}</span> : <span className="text-slate-300">-</span>}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
