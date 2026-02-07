@@ -14,6 +14,21 @@ export const metadata: Metadata = {
   title: "MFTEL | Inha University",
   description: "Multiphase Flow and Thermal Engineering Laboratory at Inha University. Advancing thermal science through thermal energy storage, electronics cooling, and reactor safety research.",
   metadataBase: new URL('https://mftel.vercel.app'),
+  keywords: [
+    "MFTEL", "Inha University", "multiphase flow", "thermal engineering",
+    "boiling heat transfer", "immersion cooling", "thermal energy storage",
+    "Carnot battery", "SMR", "small modular reactor", "condensation",
+    "two-phase flow", "Il Woong Park", "인하대학교", "다상유동열공학연구실",
+  ],
+  authors: [{ name: "Il Woong Park", url: "https://mftel.vercel.app" }],
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
+  alternates: {
+    canonical: "https://mftel.vercel.app",
+  },
   openGraph: {
     title: "MFTEL - Engineering a Sustainable Energy Future",
     description: "Multiphase Flow and Thermal Engineering Laboratory at Inha University. Advancing thermal science through thermal energy storage, electronics cooling, and reactor safety research.",
@@ -29,6 +44,44 @@ export const metadata: Metadata = {
   },
 };
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "ResearchOrganization",
+  name: "MFTEL - Multiphase Flow and Thermal Engineering Laboratory",
+  alternateName: "다상유동열공학연구실",
+  url: "https://mftel.vercel.app",
+  parentOrganization: {
+    "@type": "CollegeOrUniversity",
+    name: "Inha University",
+    alternateName: "인하대학교",
+    url: "https://www.inha.ac.kr",
+  },
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "100 Inha-ro, Michuhol-gu, Room 2N687",
+    addressLocality: "Incheon",
+    postalCode: "22212",
+    addressCountry: "KR",
+  },
+  telephone: "+82-32-860-7335",
+  email: "ilwoongpark@inha.ac.kr",
+  foundingDate: "2022",
+  member: {
+    "@type": "Person",
+    name: "Il Woong Park",
+    jobTitle: "Assistant Professor",
+    affiliation: "Inha University",
+  },
+  knowsAbout: [
+    "Thermal Energy Storage",
+    "Immersion Cooling",
+    "Small Modular Reactors",
+    "Boiling Heat Transfer",
+    "Multiphase Flow",
+    "Condensation",
+  ],
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -38,6 +91,10 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth">
       <head>
         <meta name="format-detection" content="telephone=no" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
       </head>
       <body
         className={`${plusJakartaSans.variable} font-sans antialiased selection:bg-rose-500/20 selection:text-rose-600`}

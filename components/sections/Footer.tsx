@@ -36,6 +36,22 @@ export default function Footer() {
                     </div>
                 </div>
 
+                {/* Map */}
+                <div className="max-w-2xl mx-auto mb-12">
+                    <div className="rounded-xl overflow-hidden border border-gray-800" style={{ height: 250 }}>
+                        <iframe
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3166.5!2d126.6544!3d37.4507!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x357b78a27fba4c35%3A0x6e1b9e7b2e8b1c2a!2sInha%20University!5e0!3m2!1sen!2skr!4v1700000000000!5m2!1sen!2skr"
+                            width="100%"
+                            height="250"
+                            style={{ border: 0, filter: "invert(90%) hue-rotate(180deg) brightness(0.95) contrast(0.9)" }}
+                            allowFullScreen
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                            title="MFTEL Location - Inha University"
+                        />
+                    </div>
+                </div>
+
                 {/* Divider & Copyright */}
                 <div className="border-t border-gray-800 pt-8">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { useLanguage } from "@/lib/LanguageContext";
 
 const chatTexts = {
@@ -45,6 +46,7 @@ const chatTexts = {
 };
 
 export default function ChatWidget() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -55,6 +57,8 @@ export default function ChatWidget() {
   const [shouldBounce, setShouldBounce] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { language } = useLanguage();
+
+  if (pathname === "/team-dashboard") return null;
 
   const t = chatTexts[language];
 
