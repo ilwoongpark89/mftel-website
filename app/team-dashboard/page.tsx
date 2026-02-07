@@ -3280,7 +3280,7 @@ export default function DashboardPage() {
         <div className="min-h-screen bg-slate-50 text-slate-800" style={{ fontFamily: "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
             {/* Header */}
             <div className="bg-slate-900 px-4 md:px-7 py-3.5 flex items-center justify-between border-b border-slate-800">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab("overview")}>
                     <div className="w-9 h-9 rounded-lg flex items-center justify-center text-[18px] font-extrabold text-white shadow-lg" style={{ background: "linear-gradient(135deg, #3b82f6, #6366f1)" }}>M</div>
                     <div>
                         <div className="text-[16px] font-bold text-white tracking-tight">MFTEL Dashboard</div>
@@ -3293,13 +3293,13 @@ export default function DashboardPage() {
                         <span className="text-[11px] text-emerald-400 font-medium">{onlineUsers.length}</span>
                         <div className="flex items-center gap-1 ml-1">
                             {onlineUsers.filter(u => u.name !== userName).slice(0, 5).map(u => (
-                                <span key={u.name} className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300">{MEMBERS[u.name]?.emoji || "👤"}{u.name}</span>
+                                <span key={u.name} className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300">{displayMembers[u.name]?.emoji || "👤"}{u.name}</span>
                             ))}
                             {onlineUsers.filter(u => u.name !== userName).length > 5 && <span className="text-[10px] text-slate-500">+{onlineUsers.filter(u => u.name !== userName).length - 5}</span>}
                         </div>
                     </div>
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800">
-                        <span className="text-[12px] text-white font-medium">{MEMBERS[userName]?.emoji || "👤"} {userName}</span>
+                        <span className="text-[12px] text-white font-medium">{displayMembers[userName]?.emoji || "👤"} {userName}</span>
                     </div>
                 </div>
             </div>
