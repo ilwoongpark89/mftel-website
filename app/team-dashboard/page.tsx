@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const MEMBERS: Record<string, { team: string; role: string; emoji: string }> = {
+const DEFAULT_MEMBERS: Record<string, { team: string; role: string; emoji: string }> = {
     "박일웅": { team: "PI", role: "교수", emoji: "👨‍🏫" },
     "용현진": { team: "액침냉각", role: "팀장", emoji: "💧" },
     "양재혁": { team: "시스템코드", role: "", emoji: "⚙️" },
@@ -19,6 +19,8 @@ const MEMBERS: Record<string, { team: string; role: string; emoji: string }> = {
     "정영준": { team: "액침냉각", role: "", emoji: "📊" },
     "현준환": { team: "TES", role: "", emoji: "🌡️" },
 };
+// Module-level aliases for components that don't need dynamic member data
+const MEMBERS = DEFAULT_MEMBERS;
 const MEMBER_NAMES = Object.keys(MEMBERS).filter(k => k !== "박일웅");
 
 type TeamData = { lead: string; members: string[]; color: string };
@@ -78,16 +80,16 @@ function slotToTime(slot: number) {
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type Comment = { id: number; author: string; text: string; date: string };
-type Paper = { id: number; title: string; journal: string; status: string; assignees: string[]; tags: string[]; deadline: string; progress: number; comments: Comment[]; creator?: string; createdAt?: string; needsDiscussion?: boolean };
+type Paper = { id: number; title: string; journal: string; status: string; assignees: string[]; tags: string[]; deadline: string; progress: number; comments: Comment[]; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string };
 type Todo = { id: number; text: string; assignees: string[]; done: boolean; priority: string; deadline: string; progress?: number; needsDiscussion?: boolean };
 type ExperimentLog = { id: number; date: string; author: string; text: string };
-type Experiment = { id: number; title: string; equipment: string; status: string; assignees: string[]; goal: string; startDate: string; endDate: string; logs: ExperimentLog[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean };
+type Experiment = { id: number; title: string; equipment: string; status: string; assignees: string[]; goal: string; startDate: string; endDate: string; logs: ExperimentLog[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string };
 type Announcement = { id: number; text: string; author: string; date: string; pinned: boolean };
 type VacationEntry = { name: string; date: string; type: string };
 type ScheduleEvent = { name: string; date: string; type: string; description: string };
 type TimetableBlock = { id: number; day: number; startSlot: number; endSlot: number; name: string; students: string[]; color: string };
 type ChecklistItem = { id: number; text: string; done: boolean };
-type Report = { id: number; title: string; assignees: string[]; creator: string; deadline: string; progress: number; comments: Comment[]; status: string; createdAt: string; checklist: ChecklistItem[]; category?: string; needsDiscussion?: boolean };
+type Report = { id: number; title: string; assignees: string[]; creator: string; deadline: string; progress: number; comments: Comment[]; status: string; createdAt: string; checklist: ChecklistItem[]; category?: string; needsDiscussion?: boolean; team?: string };
 type DailyTarget = { name: string; date: string; text: string };
 type Resource = { id: number; title: string; link: string; nasPath: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean };
 type IdeaPost = { id: number; title: string; body: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean };
@@ -116,9 +118,9 @@ const ANALYSIS_STATUS_CONFIG: Record<string, { label: string; color: string }> =
 const ANALYSIS_STATUS_KEYS = ["planning", "preparing", "running", "paused", "completed"];
 const ANALYSIS_TOOLS = ["OpenFOAM", "ANSYS Fluent", "STAR-CCM+", "MARS-K", "CUPID", "GAMMA+", "Python/MATLAB", "기타"];
 
-type Patent = { id: number; title: string; deadline: string; status: string; assignees: string[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean };
+type Patent = { id: number; title: string; deadline: string; status: string; assignees: string[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string };
 type AnalysisLog = { id: number; date: string; author: string; text: string };
-type Analysis = { id: number; title: string; tool: string; status: string; assignees: string[]; goal: string; startDate: string; endDate: string; logs: AnalysisLog[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean };
+type Analysis = { id: number; title: string; tool: string; status: string; assignees: string[]; goal: string; startDate: string; endDate: string; logs: AnalysisLog[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string };
 
 const DEFAULT_PATENTS: Patent[] = [];
 const DEFAULT_TIMETABLE: TimetableBlock[] = [];
@@ -138,10 +140,87 @@ function PillSelect({ options, selected, onToggle, emojis }: { options: string[]
     );
 }
 
+// ─── Shared: Drop indicator & kanban reorder helper ─────────────────────────
+
+function calcDropIdx(e: React.DragEvent<HTMLDivElement>, col: string) {
+    const cards = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[draggable]'));
+    let idx = cards.length;
+    for (let i = 0; i < cards.length; i++) {
+        const rect = cards[i].getBoundingClientRect();
+        if (e.clientY < rect.top + rect.height / 2) { idx = i; break; }
+    }
+    return { col, idx };
+}
+
+function DropLine() {
+    return <div className="h-[3px] bg-blue-500 rounded-full mx-1 my-0.5 transition-all" style={{ animation: "dropPulse 1s ease-in-out infinite" }} />;
+}
+
+function reorderKanbanItems<T extends { id: number }>(
+    allItems: T[],
+    draggedItem: T,
+    targetStatus: string,
+    targetIdx: number,
+    getStatus: (item: T) => string,
+    setStatus: (item: T, status: string) => T
+): T[] {
+    const without = allItems.filter(i => i.id !== draggedItem.id);
+    const updated = getStatus(draggedItem) !== targetStatus ? setStatus(draggedItem, targetStatus) : draggedItem;
+    const colItems = without.filter(i => getStatus(i) === targetStatus);
+    // When dragging downward within the same column, the visual index is off by 1
+    // because onDragOver sees the column WITH the dragged item still in place
+    const origCol = allItems.filter(i => getStatus(i) === targetStatus);
+    const origIdx = origCol.findIndex(i => i.id === draggedItem.id);
+    let adjusted = targetIdx;
+    if (origIdx >= 0 && origIdx < targetIdx) adjusted = targetIdx - 1;
+    const clamped = Math.min(adjusted, colItems.length);
+    if (colItems.length === 0) return [...without, updated];
+    if (clamped >= colItems.length) {
+        const pos = without.indexOf(colItems[colItems.length - 1]);
+        const result = [...without]; result.splice(pos + 1, 0, updated); return result;
+    }
+    const pos = without.indexOf(colItems[clamped]);
+    const result = [...without]; result.splice(pos, 0, updated); return result;
+}
+
+// ─── Shared: Team Filter Bar ─────────────────────────────────────────────────
+
+function TeamFilterBar({ teamNames, selected, onSelect }: { teamNames: string[]; selected: string; onSelect: (team: string) => void }) {
+    if (teamNames.length === 0) return null;
+    return (
+        <div className="flex items-center gap-1.5 mb-3">
+            <span className="text-[11px] font-semibold text-slate-400 mr-1">팀:</span>
+            {["전체", ...teamNames].map(t => (
+                <button key={t} onClick={() => onSelect(t)}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${selected === t ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
+                    {t}
+                </button>
+            ))}
+        </div>
+    );
+}
+
+function TeamSelect({ teamNames, selected, onSelect }: { teamNames: string[]; selected: string; onSelect: (v: string) => void }) {
+    if (teamNames.length === 0) return null;
+    return (
+        <div>
+            <label className="text-[11px] font-semibold text-slate-500 block mb-1">소속 팀</label>
+            <div className="flex flex-wrap gap-1">
+                {teamNames.map(t => (
+                    <button key={t} type="button" onClick={() => onSelect(selected === t ? "" : t)}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${selected === t ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
+                        {t}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 // ─── Paper Components ────────────────────────────────────────────────────────
 
-function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList }: {
-    paper: Paper | null; onSave: (p: Paper) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; tagList: string[];
+function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList, teamNames }: {
+    paper: Paper | null; onSave: (p: Paper) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; tagList: string[]; teamNames?: string[];
 }) {
     const isEdit = !!paper;
     const [title, setTitle] = useState(paper?.title || "");
@@ -153,12 +232,14 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
     const [progress, setProgress] = useState(paper?.progress || 0);
     const [comments, setComments] = useState<Comment[]>(paper?.comments || []);
     const [newComment, setNewComment] = useState("");
+    const [team, setTeam] = useState(paper?.team || "");
 
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const handleSave = () => {
-        if (!title.trim()) return;
-        onSave({ id: paper?.id || Date.now(), title, journal, status, assignees, tags, deadline, progress, comments, creator: paper?.creator || currentUser, createdAt: paper?.createdAt || new Date().toLocaleString("ko-KR") });
+        if (!title.trim()) return false;
+        onSave({ id: paper?.id ?? Date.now(), title, journal, status, assignees, tags, deadline, progress, comments, creator: paper?.creator || currentUser, createdAt: paper?.createdAt || new Date().toLocaleString("ko-KR"), team });
+        return true;
     };
     const addComment = () => {
         if (!newComment.trim()) return;
@@ -209,6 +290,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
                         <label className="text-[11px] font-semibold text-slate-500 block mb-1">태그</label>
                         <PillSelect options={tagList} selected={tags} onToggle={v => setTags(toggleArr(tags, v))} />
                     </div>
+                    {teamNames && <TeamSelect teamNames={teamNames} selected={team} onSelect={setTeam} />}
                     <div>
                         <label className="text-[11px] font-semibold text-slate-500 block mb-1">진행도 {progress}%</label>
                         <input type="range" min={0} max={100} value={progress} onChange={e => setProgress(Number(e.target.value))}
@@ -244,7 +326,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
                     </div>
                     <div className="flex gap-2">
                         <button onClick={onClose} className="px-4 py-2 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                        <button onClick={() => { handleSave(); onClose(); }} className="px-4 py-2 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
+                        <button onClick={() => { if (handleSave()) onClose(); }} className="px-4 py-2 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
                 </div>
             </div>
@@ -252,11 +334,14 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
     );
 }
 
-function KanbanView({ papers, filter, onClickPaper, onAddPaper, onSavePaper, tagList, onSaveTags }: { papers: Paper[]; filter: string; onClickPaper: (p: Paper) => void; onAddPaper: () => void; onSavePaper: (p: Paper) => void; tagList: string[]; onSaveTags: (list: string[]) => void }) {
-    const filtered = filter === "전체" ? papers : papers.filter(p => p.assignees.includes(filter) || p.tags.some(t => t === filter));
+function KanbanView({ papers, filter, onClickPaper, onAddPaper, onSavePaper, onReorder, tagList, onSaveTags, teamNames }: { papers: Paper[]; filter: string; onClickPaper: (p: Paper) => void; onAddPaper: () => void; onSavePaper: (p: Paper) => void; onReorder: (list: Paper[]) => void; tagList: string[]; onSaveTags: (list: string[]) => void; teamNames?: string[] }) {
+    const [filterTeam, setFilterTeam] = useState("전체");
+    const personFiltered = filter === "전체" ? papers : papers.filter(p => p.assignees.includes(filter) || p.tags.some(t => t === filter));
+    const filtered = filterTeam === "전체" ? personFiltered : personFiltered.filter(p => p.team === filterTeam);
     const [showTagMgr, setShowTagMgr] = useState(false);
     const [newTag, setNewTag] = useState("");
-    const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+    const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
+    const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Paper | null>(null);
     return (
         <div>
@@ -264,6 +349,7 @@ function KanbanView({ papers, filter, onClickPaper, onAddPaper, onSavePaper, tag
                 <button onClick={onAddPaper} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 논문 등록</button>
                 <button onClick={() => setShowTagMgr(!showTagMgr)} className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200">🏷️ 논문 태그 관리</button>
             </div>
+            {teamNames && teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
             {showTagMgr && (
                 <div className="mb-4 p-3 bg-white border border-slate-200 rounded-lg">
                     <div className="text-[12px] font-semibold text-slate-600 mb-2">논문 태그 목록</div>
@@ -290,24 +376,30 @@ function KanbanView({ papers, filter, onClickPaper, onAddPaper, onSavePaper, tag
                     const st = STATUS_CONFIG[status];
                     return (
                         <div key={status} className="flex-1 min-w-0"
-                            onDragOver={e => { e.preventDefault(); setDragOverCol(status); }}
-                            onDragLeave={() => setDragOverCol(null)}
-                            onDrop={() => { if (dragItem.current && dragItem.current.status !== status) { onSavePaper({ ...dragItem.current, status }); } dragItem.current = null; setDragOverCol(null); }}>
+                            onDragOver={e => { e.preventDefault(); setDropTarget(calcDropIdx(e, status)); }}
+                            onDragLeave={() => {}}
+                            onDrop={() => { if (dragItem.current && dropTarget) { const reordered = reorderKanbanItems(papers, dragItem.current, status, dropTarget.idx, p => p.status, (p, s) => ({ ...p, status: s })); onReorder(reordered); } dragItem.current = null; setDraggedId(null); setDropTarget(null); }}>
                             <div className="flex items-center gap-2 mb-3 pb-1.5" style={{ borderBottom: `2px solid ${st.color}` }}>
                                 <span className="w-2 h-2 rounded-full inline-block" style={{ background: st.color }} />
                                 <span className="text-[13px] font-bold text-slate-800">{st.label}</span>
                                 <span className="text-[11px] text-slate-400">{col.length}</span>
                             </div>
-                            <div className={`min-h-[80px] space-y-2 rounded-lg transition-colors ${dragOverCol === status ? "bg-blue-50" : ""}`}>
-                                {col.map(p => (
-                                    <div key={p.id} draggable onDragStart={() => { dragItem.current = p; }} onClick={() => onClickPaper(p)}
-                                        className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-shadow overflow-hidden ${p.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
+                            <div className={`min-h-[80px] space-y-2 rounded-lg transition-colors ${dropTarget?.col === status ? "bg-blue-50/50" : ""}`}>
+                                {col.map((p, cardIdx) => (
+                                    <div key={p.id}>
+                                    {dropTarget?.col === status && dropTarget?.idx === cardIdx && <DropLine />}
+                                    <div draggable onDragStart={() => { dragItem.current = p; setDraggedId(p.id); }}
+                                        onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
+                                        onDragOver={e => { e.preventDefault(); if (draggedId === p.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
+                                        onClick={() => onClickPaper(p)}
+                                        className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-all overflow-hidden ${draggedId === p.id ? "opacity-40 scale-95" : ""} ${p.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
                                         style={{ borderLeft: `3px solid ${st.color}` }}>
                                         <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
                                             <input type="checkbox" checked={!!p.needsDiscussion} onChange={() => onSavePaper({ ...p, needsDiscussion: !p.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
                                             <span className={`text-[10px] font-medium ${p.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
                                         </label>
                                         <div className="text-[13px] font-semibold text-slate-800 mb-1 leading-snug break-words overflow-hidden">{p.title}</div>
+                                        {p.team && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{p.team}</span>}
                                         {p.journal !== "TBD" && <div className="text-[11px] text-slate-500 italic mb-1 truncate">{p.journal}</div>}
                                         {p.progress > 0 && (
                                             <div className="w-full bg-slate-100 rounded-full h-1.5 mb-2">
@@ -329,7 +421,9 @@ function KanbanView({ papers, filter, onClickPaper, onAddPaper, onSavePaper, tag
                                         </div>
                                         {p.creator && <div className="text-[9px] text-slate-400 text-right mt-1">by {MEMBERS[p.creator]?.emoji || ""}{p.creator}{p.createdAt ? ` · ${p.createdAt}` : ""}</div>}
                                     </div>
+                                    </div>
                                 ))}
+                                {dropTarget?.col === status && dropTarget?.idx === col.length && <DropLine />}
                                 {col.length === 0 && <div className="text-[11px] text-slate-300 text-center py-6">—</div>}
                             </div>
                         </div>
@@ -342,8 +436,8 @@ function KanbanView({ papers, filter, onClickPaper, onAddPaper, onSavePaper, tag
 
 // ─── Report Components ───────────────────────────────────────────────────────
 
-function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, currentUser }: {
-    report: Report | null; initialCategory?: string; onSave: (r: Report) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string;
+function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, currentUser, teamNames }: {
+    report: Report | null; initialCategory?: string; onSave: (r: Report) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; teamNames?: string[];
 }) {
     const isEdit = !!report;
     const [title, setTitle] = useState(report?.title || "");
@@ -354,15 +448,17 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
     const [newItem, setNewItem] = useState("");
     const [comments, setComments] = useState<Comment[]>(report?.comments || []);
     const [newComment, setNewComment] = useState("");
-    const [category, setCategory] = useState(report?.category || initialCategory || "계획서");
+    const [category] = useState(report?.category || initialCategory || "계획서");
+    const [team, setTeam] = useState(report?.team || "");
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const doneCount = checklist.filter(c => c.done).length;
     const autoProgress = checklist.length > 0 ? Math.round((doneCount / checklist.length) * 100) : 0;
 
     const handleSave = () => {
-        if (!title.trim()) return;
-        onSave({ id: report?.id || Date.now(), title, assignees, creator: report?.creator || currentUser, deadline, progress: autoProgress, comments, status, createdAt: report?.createdAt || new Date().toLocaleDateString("ko-KR"), checklist, category });
+        if (!title.trim()) return false;
+        onSave({ id: report?.id ?? Date.now(), title, assignees, creator: report?.creator || currentUser, deadline, progress: autoProgress, comments, status, createdAt: report?.createdAt || new Date().toLocaleDateString("ko-KR"), checklist, category, team });
+        return true;
     };
     const addChecklistItem = () => {
         if (!newItem.trim()) return;
@@ -416,6 +512,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                         <PillSelect options={MEMBER_NAMES} selected={assignees} onToggle={v => setAssignees(toggleArr(assignees, v))}
                             emojis={Object.fromEntries(Object.entries(MEMBERS).map(([k, v]) => [k, v.emoji]))} />
                     </div>
+                    {teamNames && <TeamSelect teamNames={teamNames} selected={team} onSelect={setTeam} />}
                     {/* Checklist */}
                     <div>
                         <div className="flex items-center justify-between mb-1">
@@ -473,7 +570,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                     <div>{isEdit && onDelete && <button onClick={() => { onDelete(report!.id); onClose(); }} className="text-[12px] text-red-500 hover:text-red-600">삭제</button>}</div>
                     <div className="flex gap-2">
                         <button onClick={onClose} className="px-4 py-2 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                        <button onClick={() => { handleSave(); onClose(); }} className="px-4 py-2 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
+                        <button onClick={() => { if (handleSave()) onClose(); }} className="px-4 py-2 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
                 </div>
             </div>
@@ -481,38 +578,47 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
     );
 }
 
-function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion }: { reports: Report[]; currentUser: string; onSave: (r: Report) => void; onDelete: (id: number) => void; onToggleDiscussion: (r: Report) => void }) {
+function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion, onReorder, teamNames }: { reports: Report[]; currentUser: string; onSave: (r: Report) => void; onDelete: (id: number) => void; onToggleDiscussion: (r: Report) => void; onReorder: (list: Report[]) => void; teamNames?: string[] }) {
     const [editing, setEditing] = useState<Report | null>(null);
     const [addCategory, setAddCategory] = useState<string | null>(null);
-    const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+    const [filterTeam, setFilterTeam] = useState("전체");
+    const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
+    const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Report | null>(null);
+    const filteredReports = filterTeam === "전체" ? reports : reports.filter(r => r.team === filterTeam);
     return (
         <div>
             <div className="mb-3 flex gap-2">
                 <button onClick={() => setAddCategory("계획서")} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 계획서 등록</button>
                 <button onClick={() => setAddCategory("보고서")} className="px-4 py-2 bg-violet-500 text-white rounded-lg text-[13px] font-medium hover:bg-violet-600">+ 보고서 등록</button>
             </div>
+            {teamNames && teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
             <div className="flex gap-3 pb-2">
                 {REPORT_STATUS_KEYS.map(status => {
-                    const col = reports.filter(r => r.status === status);
+                    const col = filteredReports.filter(r => r.status === status);
                     const cfg = REPORT_STATUS_CONFIG[status];
                     return (
                         <div key={status} className="flex-1 min-w-0"
-                            onDragOver={e => { e.preventDefault(); setDragOverCol(status); }}
-                            onDragLeave={() => setDragOverCol(null)}
-                            onDrop={() => { if (dragItem.current && dragItem.current.status !== status) { onSave({ ...dragItem.current, status }); } dragItem.current = null; setDragOverCol(null); }}>
+                            onDragOver={e => { e.preventDefault(); setDropTarget(calcDropIdx(e, status)); }}
+                            onDragLeave={() => {}}
+                            onDrop={() => { if (dragItem.current && dropTarget) { const reordered = reorderKanbanItems(reports, dragItem.current, status, dropTarget.idx, r => r.status, (r, s) => ({ ...r, status: s })); onReorder(reordered); } dragItem.current = null; setDraggedId(null); setDropTarget(null); }}>
                             <div className="flex items-center gap-2 mb-3 pb-1.5" style={{ borderBottom: `2px solid ${cfg.color}` }}>
                                 <span className="w-2 h-2 rounded-full inline-block" style={{ background: cfg.color }} />
                                 <span className="text-[13px] font-bold text-slate-800">{cfg.label}</span>
                                 <span className="text-[11px] text-slate-400">{col.length}</span>
                             </div>
-                            <div className={`min-h-[80px] space-y-2 rounded-lg transition-colors ${dragOverCol === status ? "bg-blue-50" : ""}`}>
-                                {col.map(r => {
+                            <div className={`min-h-[80px] space-y-2 rounded-lg transition-colors ${dropTarget?.col === status ? "bg-blue-50/50" : ""}`}>
+                                {col.map((r, cardIdx) => {
                                     const cl = r.checklist || [];
                                     const done = cl.filter(c => c.done).length;
                                     return (
-                                        <div key={r.id} draggable onDragStart={() => { dragItem.current = r; }} onClick={() => setEditing(r)}
-                                            className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-shadow overflow-hidden ${r.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
+                                        <div key={r.id}>
+                                        {dropTarget?.col === status && dropTarget?.idx === cardIdx && <DropLine />}
+                                        <div draggable onDragStart={() => { dragItem.current = r; setDraggedId(r.id); }}
+                                            onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
+                                            onDragOver={e => { e.preventDefault(); if (draggedId === r.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
+                                            onClick={() => setEditing(r)}
+                                            className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-all overflow-hidden ${draggedId === r.id ? "opacity-40 scale-95" : ""} ${r.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
                                             style={{ borderLeft: `3px solid ${cfg.color}` }}>
                                             <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
                                                 <input type="checkbox" checked={!!r.needsDiscussion} onChange={() => onToggleDiscussion(r)} className="w-3 h-3 accent-orange-500" />
@@ -520,6 +626,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                                             </label>
                                             <div className="flex items-center gap-1.5 mb-1">
                                                 {r.category && <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${r.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`}>{r.category}</span>}
+                                                {r.team && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{r.team}</span>}
                                                 <span className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{r.title}</span>
                                             </div>
                                             {cl.length > 0 && (
@@ -553,16 +660,18 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                                             </div>
                                             {r.creator && <div className="text-[9px] text-slate-400 text-right mt-1">by {MEMBERS[r.creator]?.emoji || ""}{r.creator}{r.createdAt ? ` · ${r.createdAt}` : ""}</div>}
                                         </div>
+                                        </div>
                                     );
                                 })}
+                                {dropTarget?.col === status && dropTarget?.idx === col.length && <DropLine />}
                                 {col.length === 0 && <div className="text-[11px] text-slate-300 text-center py-6">—</div>}
                             </div>
                         </div>
                     );
                 })}
             </div>
-            {addCategory && <ReportFormModal report={null} initialCategory={addCategory} onSave={r => { onSave(r); setAddCategory(null); }} onClose={() => setAddCategory(null)} currentUser={currentUser} />}
-            {editing && <ReportFormModal report={editing} onSave={r => { onSave(r); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} />}
+            {addCategory && <ReportFormModal report={null} initialCategory={addCategory} onSave={r => { onSave(r); setAddCategory(null); }} onClose={() => setAddCategory(null)} currentUser={currentUser} teamNames={teamNames} />}
+            {editing && <ReportFormModal report={editing} onSave={r => { onSave(r); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} teamNames={teamNames} />}
         </div>
     );
 }
@@ -586,6 +695,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, showYearTotal }: {
     const [dragStart, setDragStart] = useState<number | null>(null);
     const isDragging = useRef(false);
 
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
     const daysInMonth = new Date(month.y, month.m + 1, 0).getDate();
     const days = Array.from({ length: daysInMonth }, (_, i) => {
         const d = new Date(month.y, month.m, i + 1);
@@ -595,8 +705,8 @@ function CalendarGrid({ data, currentUser, types, onToggle, showYearTotal }: {
     const todayStr = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; })();
     const monthDates = new Set(days.map(d => d.str));
     const getEntry = (name: string, dateStr: string) => data.find(v => v.name === name && v.date === dateStr);
-    const countMonth = (name: string) => data.filter(v => v.name === name && monthDates.has(v.date)).length;
-    const countYear = (name: string) => data.filter(v => v.name === name && v.date.startsWith(String(month.y))).length;
+    const countMonth = (name: string) => data.filter(v => v.name === name && monthDates.has(v.date) && (v.type === "vacation" || v.type === "wfh")).length;
+    const countYear = (name: string) => data.filter(v => v.name === name && v.date.startsWith(String(month.y)) && (v.type === "vacation" || v.type === "wfh")).length;
 
     const scheduleTypeKeys = Object.keys(types).filter(k => k !== "vacation" && k !== "wfh");
 
@@ -634,22 +744,24 @@ function CalendarGrid({ data, currentUser, types, onToggle, showYearTotal }: {
                 ))}
             </div>
             <div className="overflow-x-auto border border-slate-200 rounded-lg bg-white" onMouseLeave={() => { if (isDragging.current) { isDragging.current = false; setDragName(null); setDragDates([]); setDragStart(null); } }}>
-                <table className="w-full border-collapse" style={{ minWidth: daysInMonth * 36 + 180 }}>
+                <table className="w-full border-collapse">
                     <thead>
                         <tr>
-                            <th className="sticky left-0 z-10 bg-slate-50 border-b border-r border-slate-200 px-3 py-2 text-left text-[12px] font-semibold text-slate-600 min-w-[100px]">이름</th>
+                            <th className="sticky left-0 z-10 bg-slate-50 border-b border-r border-slate-200 px-2 py-2 text-left text-[12px] font-semibold text-slate-600 whitespace-nowrap">이름</th>
                             {days.map(d => {
                                 const we = d.dow === 0 || d.dow === 6;
                                 const td = d.str === todayStr;
+                                const sel = d.str === selectedDate;
                                 return (
-                                    <th key={d.date} className={`border-b border-slate-200 px-0 py-1.5 text-center min-w-[36px] ${td ? "bg-blue-50" : we ? "bg-slate-50/80" : "bg-white"}`}>
+                                    <th key={d.date} className={`border-b border-slate-200 px-0 py-1.5 text-center cursor-pointer hover:bg-blue-50 transition-colors ${sel ? "bg-amber-50 ring-1 ring-inset ring-amber-300" : td ? "bg-blue-50" : we ? "bg-slate-50/80" : "bg-white"}`}
+                                        onClick={() => setSelectedDate(sel ? null : d.str)}>
                                         <div className={`text-[10px] ${we ? (d.dow === 0 ? "text-red-400" : "text-blue-400") : "text-slate-400"}`}>{dayL[d.dow]}</div>
-                                        <div className={`text-[12px] font-semibold ${td ? "text-blue-600" : we ? (d.dow === 0 ? "text-red-500" : "text-blue-500") : "text-slate-700"}`}>{d.date}</div>
+                                        <div className={`text-[12px] font-semibold ${sel ? "text-amber-700" : td ? "text-blue-600" : we ? (d.dow === 0 ? "text-red-500" : "text-blue-500") : "text-slate-700"}`}>{d.date}</div>
                                     </th>
                                 );
                             })}
-                            <th className="border-b border-l border-slate-200 px-2 py-1.5 text-center bg-slate-50 min-w-[36px]"><div className="text-[10px] text-slate-400">월</div></th>
-                            {showYearTotal && <th className="border-b border-l border-slate-200 px-2 py-1.5 text-center bg-slate-50 min-w-[36px]"><div className="text-[10px] text-slate-400">연</div></th>}
+                            <th className="border-b border-l border-slate-200 px-2 py-1.5 text-center bg-slate-50 min-w-[36px]"><div className="text-[10px] text-slate-400">월</div><div className="text-[8px] text-slate-300">휴가</div></th>
+                            {showYearTotal && <th className="border-b border-l border-slate-200 px-2 py-1.5 text-center bg-slate-50 min-w-[36px]"><div className="text-[10px] text-slate-400">연</div><div className="text-[8px] text-slate-300">휴가</div></th>}
                         </tr>
                     </thead>
                     <tbody>
@@ -657,7 +769,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, showYearTotal }: {
                             const isMe = name === currentUser;
                             return (
                                 <tr key={name} className={`${isMe ? "bg-blue-50/30" : ""} hover:bg-slate-50/50`}>
-                                    <td className={`sticky left-0 z-10 border-r border-b border-slate-100 px-3 py-1.5 text-[12px] whitespace-nowrap ${isMe ? "bg-blue-50 font-semibold text-slate-800" : "bg-white text-slate-600"}`}>
+                                    <td className={`sticky left-0 z-10 border-r border-b border-slate-100 px-2 py-1.5 text-[12px] whitespace-nowrap ${isMe ? "bg-blue-50 font-semibold text-slate-800" : "bg-white text-slate-600"}`}>
                                         {MEMBERS[name]?.emoji} {name}
                                     </td>
                                     {days.map((d, di) => {
@@ -746,19 +858,29 @@ function CalendarGrid({ data, currentUser, types, onToggle, showYearTotal }: {
                     </div>
                 </div>
             )}
-            {/* Today summary */}
+            {/* Selected date or today summary */}
             {(() => {
-                const today = data.filter(v => v.date === todayStr);
-                if (today.length === 0) return null;
+                const showDate = selectedDate || todayStr;
+                const items = data.filter(v => v.date === showDate);
+                const d = new Date(showDate);
+                const dateLabel = selectedDate
+                    ? `${d.getMonth() + 1}월 ${d.getDate()}일 (${dayL[d.getDay()]})`
+                    : "오늘";
+                const isSelected = !!selectedDate;
+                if (items.length === 0 && !isSelected) return null;
                 return (
-                    <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                        <div className="text-[12px] font-semibold text-amber-700 mb-1">📋 오늘</div>
-                        <div className="flex gap-2 flex-wrap">
-                            {today.map(v => {
-                                const vt = types[v.type];
-                                return <span key={v.name} className="text-[12px] px-2 py-0.5 rounded-full bg-white border border-amber-200 text-amber-800">{MEMBERS[v.name]?.emoji}{v.name} ({vt?.label}{v.description ? `: ${v.description}` : ""})</span>;
-                            })}
-                        </div>
+                    <div className={`mt-4 p-3 rounded-lg ${isSelected ? "bg-blue-50 border border-blue-200" : "bg-amber-50 border border-amber-200"}`}>
+                        <div className={`text-[12px] font-semibold mb-1 ${isSelected ? "text-blue-700" : "text-amber-700"}`}>📋 {dateLabel}</div>
+                        {items.length > 0 ? (
+                            <div className="flex gap-2 flex-wrap">
+                                {items.map(v => {
+                                    const vt = types[v.type];
+                                    return <span key={`${v.name}-${v.type}`} className={`text-[12px] px-2 py-0.5 rounded-full bg-white border ${isSelected ? "border-blue-200 text-blue-800" : "border-amber-200 text-amber-800"}`}>{MEMBERS[v.name]?.emoji}{v.name} ({vt?.label}{v.description ? `: ${v.description}` : ""})</span>;
+                                })}
+                            </div>
+                        ) : (
+                            <div className="text-[11px] text-slate-400">이 날의 일정이 없습니다</div>
+                        )}
                     </div>
                 );
             })()}
@@ -803,8 +925,7 @@ function TimetableView({ blocks, onSave, onDelete }: {
         if (showForm) {
             onSave({ id: Date.now(), day: showForm.day, startSlot: showForm.start, endSlot: showForm.end, name: formName, students: formStudents, color });
             setShowForm(null);
-        }
-        if (editBlock) {
+        } else if (editBlock) {
             onSave({ ...editBlock, name: formName, students: formStudents });
             setEditBlock(null);
         }
@@ -891,8 +1012,8 @@ function TimetableView({ blocks, onSave, onDelete }: {
 
 // ─── Experiment Components ───────────────────────────────────────────────────
 
-function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUser, equipmentList }: {
-    experiment: Experiment | null; onSave: (e: Experiment) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; equipmentList: string[];
+function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUser, equipmentList, teamNames }: {
+    experiment: Experiment | null; onSave: (e: Experiment) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; equipmentList: string[]; teamNames?: string[];
 }) {
     const isEdit = !!experiment;
     const [title, setTitle] = useState(experiment?.title || "");
@@ -905,11 +1026,13 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
     const [logs, setLogs] = useState<ExperimentLog[]>(experiment?.logs || []);
     const [newLog, setNewLog] = useState("");
     const [progress, setProgress] = useState(experiment?.progress ?? 0);
+    const [team, setTeam] = useState(experiment?.team || "");
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const handleSave = () => {
-        if (!title.trim()) return;
-        onSave({ id: experiment?.id || Date.now(), title, equipment, status, assignees, goal, startDate, endDate, logs, progress, creator: experiment?.creator || currentUser, createdAt: experiment?.createdAt || new Date().toLocaleString("ko-KR") });
+        if (!title.trim()) return false;
+        onSave({ id: experiment?.id ?? Date.now(), title, equipment, status, assignees, goal, startDate, endDate, logs, progress, creator: experiment?.creator || currentUser, createdAt: experiment?.createdAt || new Date().toLocaleString("ko-KR"), team });
+        return true;
     };
     const addLog = () => {
         if (!newLog.trim()) return;
@@ -965,6 +1088,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
                         <PillSelect options={MEMBER_NAMES} selected={assignees} onToggle={v => setAssignees(toggleArr(assignees, v))}
                             emojis={Object.fromEntries(Object.entries(MEMBERS).map(([k, v]) => [k, v.emoji]))} />
                     </div>
+                    {teamNames && <TeamSelect teamNames={teamNames} selected={team} onSelect={setTeam} />}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="text-[11px] font-semibold text-slate-500 block mb-1">시작일</label>
@@ -1003,7 +1127,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
                     <div>{isEdit && onDelete && <button onClick={() => { onDelete(experiment!.id); onClose(); }} className="text-[12px] text-red-500 hover:text-red-600">삭제</button>}</div>
                     <div className="flex gap-2">
                         <button onClick={onClose} className="px-4 py-2 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                        <button onClick={() => { handleSave(); onClose(); }} className="px-4 py-2 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
+                        <button onClick={() => { if (handleSave()) onClose(); }} className="px-4 py-2 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
                 </div>
             </div>
@@ -1011,13 +1135,16 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
     );
 }
 
-function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentList, onSaveEquipment, onToggleDiscussion }: { experiments: Experiment[]; onSave: (e: Experiment) => void; onDelete: (id: number) => void; currentUser: string; equipmentList: string[]; onSaveEquipment: (list: string[]) => void; onToggleDiscussion: (e: Experiment) => void }) {
+function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentList, onSaveEquipment, onToggleDiscussion, onReorder, teamNames }: { experiments: Experiment[]; onSave: (e: Experiment) => void; onDelete: (id: number) => void; currentUser: string; equipmentList: string[]; onSaveEquipment: (list: string[]) => void; onToggleDiscussion: (e: Experiment) => void; onReorder: (list: Experiment[]) => void; teamNames?: string[] }) {
     const [editing, setEditing] = useState<Experiment | null>(null);
     const [adding, setAdding] = useState(false);
     const [showEqMgr, setShowEqMgr] = useState(false);
     const [newEq, setNewEq] = useState("");
-    const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+    const [filterTeam, setFilterTeam] = useState("전체");
+    const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
+    const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Experiment | null>(null);
+    const filteredExperiments = filterTeam === "전체" ? experiments : experiments.filter(e => e.team === filterTeam);
     return (
         <div>
             <div className="mb-3 flex items-center gap-2">
@@ -1044,31 +1171,40 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                     </div>
                 </div>
             )}
+            {teamNames && teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
             <div className="flex gap-3 pb-2">
                 {EXP_STATUS_KEYS.map(status => {
-                    const col = experiments.filter(e => e.status === status);
+                    const col = filteredExperiments.filter(e => e.status === status);
                     const cfg = EXP_STATUS_CONFIG[status];
                     return (
                         <div key={status} className="flex-1 min-w-0"
-                            onDragOver={e => { e.preventDefault(); setDragOverCol(status); }}
-                            onDragLeave={() => setDragOverCol(null)}
-                            onDrop={() => { if (dragItem.current && dragItem.current.status !== status) { onSave({ ...dragItem.current, status }); } dragItem.current = null; setDragOverCol(null); }}>
+                            onDragOver={e => { e.preventDefault(); setDropTarget(calcDropIdx(e, status)); }}
+                            onDragLeave={() => {}}
+                            onDrop={() => { if (dragItem.current && dropTarget) { const reordered = reorderKanbanItems(experiments, dragItem.current, status, dropTarget.idx, e => e.status, (e, s) => ({ ...e, status: s })); onReorder(reordered); } dragItem.current = null; setDraggedId(null); setDropTarget(null); }}>
                             <div className="flex items-center gap-2 mb-3 pb-1.5" style={{ borderBottom: `2px solid ${cfg.color}` }}>
                                 <span className="w-2 h-2 rounded-full inline-block" style={{ background: cfg.color }} />
                                 <span className="text-[13px] font-bold text-slate-800">{cfg.label}</span>
                                 <span className="text-[11px] text-slate-400">{col.length}</span>
                             </div>
-                            <div className={`min-h-[80px] space-y-2 rounded-lg transition-colors ${dragOverCol === status ? "bg-blue-50" : ""}`}>
-                                {col.map(exp => (
-                                    <div key={exp.id} draggable onDragStart={() => { dragItem.current = exp; }} onClick={() => setEditing(exp)}
-                                        className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-shadow overflow-hidden ${exp.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
+                            <div className={`min-h-[80px] space-y-2 rounded-lg transition-colors ${dropTarget?.col === status ? "bg-blue-50/50" : ""}`}>
+                                {col.map((exp, cardIdx) => (
+                                    <div key={exp.id}>
+                                    {dropTarget?.col === status && dropTarget?.idx === cardIdx && <DropLine />}
+                                    <div draggable onDragStart={() => { dragItem.current = exp; setDraggedId(exp.id); }}
+                                        onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
+                                        onDragOver={e => { e.preventDefault(); if (draggedId === exp.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
+                                        onClick={() => setEditing(exp)}
+                                        className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-all overflow-hidden ${draggedId === exp.id ? "opacity-40 scale-95" : ""} ${exp.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
                                         style={{ borderLeft: `3px solid ${cfg.color}` }}>
                                         <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
                                             <input type="checkbox" checked={!!exp.needsDiscussion} onChange={() => onToggleDiscussion(exp)} className="w-3 h-3 accent-orange-500" />
                                             <span className={`text-[10px] font-medium ${exp.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
                                         </label>
                                         <div className="text-[13px] font-semibold text-slate-800 mb-1 leading-snug break-words">{exp.title}</div>
-                                        <div className="text-[10px] text-slate-500 mb-1">🔧 {exp.equipment}</div>
+                                        <div className="flex items-center gap-1.5 mb-1">
+                                            <span className="text-[10px] text-slate-500">🔧 {exp.equipment}</span>
+                                            {exp.team && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{exp.team}</span>}
+                                        </div>
                                         {(exp.progress ?? 0) > 0 && (
                                             <div className="flex items-center gap-2 mb-1">
                                                 <div className="flex-1 bg-slate-100 rounded-full h-1.5"><div className="h-1.5 rounded-full bg-blue-500 transition-all" style={{ width: `${exp.progress}%` }} /></div>
@@ -1088,23 +1224,25 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                                         </div>
                                         {exp.creator && <div className="text-[9px] text-slate-400 text-right mt-1">by {MEMBERS[exp.creator]?.emoji || ""}{exp.creator}{exp.createdAt ? ` · ${exp.createdAt}` : ""}</div>}
                                     </div>
+                                    </div>
                                 ))}
+                                {dropTarget?.col === status && dropTarget?.idx === col.length && <DropLine />}
                                 {col.length === 0 && <div className="text-[11px] text-slate-300 text-center py-6">—</div>}
                             </div>
                         </div>
                     );
                 })}
             </div>
-            {adding && <ExperimentFormModal experiment={null} onSave={e => { onSave(e); setAdding(false); }} onClose={() => setAdding(false)} currentUser={currentUser} equipmentList={equipmentList} />}
-            {editing && <ExperimentFormModal experiment={editing} onSave={e => { onSave(e); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} equipmentList={equipmentList} />}
+            {adding && <ExperimentFormModal experiment={null} onSave={e => { onSave(e); setAdding(false); }} onClose={() => setAdding(false)} currentUser={currentUser} equipmentList={equipmentList} teamNames={teamNames} />}
+            {editing && <ExperimentFormModal experiment={editing} onSave={e => { onSave(e); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} equipmentList={equipmentList} teamNames={teamNames} />}
         </div>
     );
 }
 
 // ─── Analysis Components ────────────────────────────────────────────────────
 
-function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, toolList }: {
-    analysis: Analysis | null; onSave: (a: Analysis) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; toolList: string[];
+function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, toolList, teamNames }: {
+    analysis: Analysis | null; onSave: (a: Analysis) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; toolList: string[]; teamNames?: string[];
 }) {
     const isEdit = !!analysis;
     const [title, setTitle] = useState(analysis?.title || "");
@@ -1117,11 +1255,13 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
     const [logs, setLogs] = useState<AnalysisLog[]>(analysis?.logs || []);
     const [newLog, setNewLog] = useState("");
     const [progress, setProgress] = useState(analysis?.progress ?? 0);
+    const [team, setTeam] = useState(analysis?.team || "");
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const handleSave = () => {
-        if (!title.trim()) return;
-        onSave({ id: analysis?.id || Date.now(), title, tool, status, assignees, goal, startDate, endDate, logs, progress, creator: analysis?.creator || currentUser, createdAt: analysis?.createdAt || new Date().toLocaleString("ko-KR") });
+        if (!title.trim()) return false;
+        onSave({ id: analysis?.id ?? Date.now(), title, tool, status, assignees, goal, startDate, endDate, logs, progress, creator: analysis?.creator || currentUser, createdAt: analysis?.createdAt || new Date().toLocaleString("ko-KR"), team });
+        return true;
     };
     const addLog = () => {
         if (!newLog.trim()) return;
@@ -1177,6 +1317,7 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
                         <PillSelect options={MEMBER_NAMES} selected={assignees} onToggle={v => setAssignees(toggleArr(assignees, v))}
                             emojis={Object.fromEntries(Object.entries(MEMBERS).map(([k, v]) => [k, v.emoji]))} />
                     </div>
+                    {teamNames && <TeamSelect teamNames={teamNames} selected={team} onSelect={setTeam} />}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="text-[11px] font-semibold text-slate-500 block mb-1">시작일</label>
@@ -1214,7 +1355,7 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
                     <div>{isEdit && onDelete && <button onClick={() => { onDelete(analysis!.id); onClose(); }} className="text-[12px] text-red-500 hover:text-red-600">삭제</button>}</div>
                     <div className="flex gap-2">
                         <button onClick={onClose} className="px-4 py-2 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                        <button onClick={() => { handleSave(); onClose(); }} className="px-4 py-2 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
+                        <button onClick={() => { if (handleSave()) onClose(); }} className="px-4 py-2 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
                 </div>
             </div>
@@ -1222,13 +1363,16 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
     );
 }
 
-function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSaveTools, onToggleDiscussion }: { analyses: Analysis[]; onSave: (a: Analysis) => void; onDelete: (id: number) => void; currentUser: string; toolList: string[]; onSaveTools: (list: string[]) => void; onToggleDiscussion: (a: Analysis) => void }) {
+function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSaveTools, onToggleDiscussion, onReorder, teamNames }: { analyses: Analysis[]; onSave: (a: Analysis) => void; onDelete: (id: number) => void; currentUser: string; toolList: string[]; onSaveTools: (list: string[]) => void; onToggleDiscussion: (a: Analysis) => void; onReorder: (list: Analysis[]) => void; teamNames?: string[] }) {
     const [editing, setEditing] = useState<Analysis | null>(null);
     const [adding, setAdding] = useState(false);
     const [showToolMgr, setShowToolMgr] = useState(false);
     const [newTool, setNewTool] = useState("");
-    const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+    const [filterTeam, setFilterTeam] = useState("전체");
+    const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
+    const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Analysis | null>(null);
+    const filteredAnalyses = filterTeam === "전체" ? analyses : analyses.filter(a => a.team === filterTeam);
     return (
         <div>
             <div className="mb-3 flex items-center gap-2">
@@ -1255,31 +1399,40 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                     </div>
                 </div>
             )}
+            {teamNames && teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
             <div className="flex gap-3 pb-2">
                 {ANALYSIS_STATUS_KEYS.map(status => {
-                    const col = analyses.filter(a => a.status === status);
+                    const col = filteredAnalyses.filter(a => a.status === status);
                     const cfg = ANALYSIS_STATUS_CONFIG[status];
                     return (
                         <div key={status} className="flex-1 min-w-0"
-                            onDragOver={e => { e.preventDefault(); setDragOverCol(status); }}
-                            onDragLeave={() => setDragOverCol(null)}
-                            onDrop={() => { if (dragItem.current && dragItem.current.status !== status) { onSave({ ...dragItem.current, status }); } dragItem.current = null; setDragOverCol(null); }}>
+                            onDragOver={e => { e.preventDefault(); setDropTarget(calcDropIdx(e, status)); }}
+                            onDragLeave={() => {}}
+                            onDrop={() => { if (dragItem.current && dropTarget) { const reordered = reorderKanbanItems(analyses, dragItem.current, status, dropTarget.idx, a => a.status, (a, s) => ({ ...a, status: s })); onReorder(reordered); } dragItem.current = null; setDraggedId(null); setDropTarget(null); }}>
                             <div className="flex items-center gap-2 mb-3 pb-1.5" style={{ borderBottom: `2px solid ${cfg.color}` }}>
                                 <span className="w-2 h-2 rounded-full inline-block" style={{ background: cfg.color }} />
                                 <span className="text-[13px] font-bold text-slate-800">{cfg.label}</span>
                                 <span className="text-[11px] text-slate-400">{col.length}</span>
                             </div>
-                            <div className={`min-h-[80px] space-y-2 rounded-lg transition-colors ${dragOverCol === status ? "bg-blue-50" : ""}`}>
-                                {col.map(a => (
-                                    <div key={a.id} draggable onDragStart={() => { dragItem.current = a; }} onClick={() => setEditing(a)}
-                                        className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-shadow overflow-hidden ${a.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
+                            <div className={`min-h-[80px] space-y-2 rounded-lg transition-colors ${dropTarget?.col === status ? "bg-blue-50/50" : ""}`}>
+                                {col.map((a, cardIdx) => (
+                                    <div key={a.id}>
+                                    {dropTarget?.col === status && dropTarget?.idx === cardIdx && <DropLine />}
+                                    <div draggable onDragStart={() => { dragItem.current = a; setDraggedId(a.id); }}
+                                        onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
+                                        onDragOver={e => { e.preventDefault(); if (draggedId === a.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
+                                        onClick={() => setEditing(a)}
+                                        className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-all overflow-hidden ${draggedId === a.id ? "opacity-40 scale-95" : ""} ${a.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
                                         style={{ borderLeft: `3px solid ${cfg.color}` }}>
                                         <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
                                             <input type="checkbox" checked={!!a.needsDiscussion} onChange={() => onToggleDiscussion(a)} className="w-3 h-3 accent-orange-500" />
                                             <span className={`text-[10px] font-medium ${a.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
                                         </label>
                                         <div className="text-[13px] font-semibold text-slate-800 mb-1 leading-snug break-words">{a.title}</div>
-                                        <div className="text-[10px] text-slate-500 mb-1">🖥️ {a.tool}</div>
+                                        <div className="flex items-center gap-1.5 mb-1">
+                                            <span className="text-[10px] text-slate-500">🖥️ {a.tool}</span>
+                                            {a.team && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{a.team}</span>}
+                                        </div>
                                         {(a.progress ?? 0) > 0 && (
                                             <div className="flex items-center gap-2 mb-1">
                                                 <div className="flex-1 bg-slate-100 rounded-full h-1.5"><div className="h-1.5 rounded-full bg-blue-500 transition-all" style={{ width: `${a.progress}%` }} /></div>
@@ -1299,20 +1452,22 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                                         </div>
                                         {a.creator && <div className="text-[9px] text-slate-400 text-right mt-1">by {MEMBERS[a.creator]?.emoji || ""}{a.creator}{a.createdAt ? ` · ${a.createdAt}` : ""}</div>}
                                     </div>
+                                    </div>
                                 ))}
+                                {dropTarget?.col === status && dropTarget?.idx === col.length && <DropLine />}
                                 {col.length === 0 && <div className="text-[11px] text-slate-300 text-center py-6">—</div>}
                             </div>
                         </div>
                     );
                 })}
             </div>
-            {adding && <AnalysisFormModal analysis={null} onSave={a => { onSave(a); setAdding(false); }} onClose={() => setAdding(false)} currentUser={currentUser} toolList={toolList} />}
-            {editing && <AnalysisFormModal analysis={editing} onSave={a => { onSave(a); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} toolList={toolList} />}
+            {adding && <AnalysisFormModal analysis={null} onSave={a => { onSave(a); setAdding(false); }} onClose={() => setAdding(false)} currentUser={currentUser} toolList={toolList} teamNames={teamNames} />}
+            {editing && <AnalysisFormModal analysis={editing} onSave={a => { onSave(a); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} toolList={toolList} teamNames={teamNames} />}
         </div>
     );
 }
 
-function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, currentUser }: { todos: Todo[]; onToggle: (id: number) => void; onAdd: (t: Todo) => void; onUpdate: (t: Todo) => void; onDelete: (id: number) => void; currentUser: string }) {
+function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, currentUser }: { todos: Todo[]; onToggle: (id: number) => void; onAdd: (t: Todo) => void; onUpdate: (t: Todo) => void; onDelete: (id: number) => void; onReorder: (list: Todo[]) => void; currentUser: string }) {
     const [showForm, setShowForm] = useState(false);
     const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
     const [newText, setNewText] = useState("");
@@ -1321,12 +1476,16 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, currentUser }: {
     const [newDeadline, setNewDeadline] = useState("");
     const [newProgress, setNewProgress] = useState(0);
     const [filterPeople, setFilterPeople] = useState<string[]>([currentUser]);
-    const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+    const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
+    const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Todo | null>(null);
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const filtered = filterPeople.length === 0 ? todos : todos.filter(t => t.assignees.some(a => filterPeople.includes(a)));
-    const activeTodos = [...filtered].filter(t => !t.done).sort((a, b) => { const pr: Record<string, number> = { highest: 0, high: 1, mid: 2, low: 3, lowest: 4 }; return (pr[a.priority] ?? 2) - (pr[b.priority] ?? 2); });
+    const activeRaw = filtered.filter(t => !t.done);
+    const pinnedTodos = activeRaw.filter(t => t.priority === "highest");
+    const unpinnedTodos = activeRaw.filter(t => t.priority !== "highest");
+    const activeTodos = [...pinnedTodos, ...unpinnedTodos];
     const completedTodos = filtered.filter(t => t.done);
 
     const handleAdd = () => {
@@ -1399,22 +1558,36 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, currentUser }: {
             <div className="flex gap-4">
                 {/* Left: Active */}
                 <div className="flex-1 min-w-0"
-                    onDragOver={e => { e.preventDefault(); setDragOverCol("active"); }}
-                    onDragLeave={() => setDragOverCol(null)}
-                    onDrop={() => { if (dragItem.current && dragItem.current.done) { onToggle(dragItem.current.id); } dragItem.current = null; setDragOverCol(null); }}>
+                    onDragOver={e => { e.preventDefault(); setDropTarget(calcDropIdx(e, "active")); }}
+                    onDragLeave={() => {}}
+                    onDrop={() => {
+                        if (dragItem.current && dropTarget) {
+                            if (dragItem.current.done) { onToggle(dragItem.current.id); }
+                            else { const reordered = reorderKanbanItems(todos, dragItem.current, "active", dropTarget.idx, t => t.done ? "completed" : "active", (t, s) => s === "active" ? { ...t, done: false } : { ...t, done: true }); onReorder(reordered); }
+                        } dragItem.current = null; setDraggedId(null); setDropTarget(null);
+                    }}>
                     <div className="flex items-center gap-2 mb-2 pb-1.5 border-b-2 border-blue-500">
                         <span className="text-[13px] font-bold text-slate-800">할 일</span>
                         <span className="text-[11px] text-slate-400">{activeTodos.length}</span>
                     </div>
-                    <div className={`space-y-1 min-h-[80px] rounded-lg transition-colors ${dragOverCol === "active" ? "bg-blue-50" : ""}`}>{activeTodos.map(todo => (
-                        <div key={todo.id} draggable onDragStart={() => { dragItem.current = todo; }} className={`flex items-start gap-2.5 p-2.5 rounded-md border transition-all bg-white hover:bg-slate-50 group cursor-grab ${todo.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border-slate-100"}`}>
+                    <div className={`space-y-1 min-h-[80px] rounded-lg transition-colors ${dropTarget?.col === "active" ? "bg-blue-50/50" : ""}`}>
+                        {activeTodos.map((todo, cardIdx) => (
+                        <div key={todo.id}>
+                        {dropTarget?.col === "active" && dropTarget?.idx === cardIdx && <DropLine />}
+                        <div draggable onDragStart={() => { dragItem.current = todo; setDraggedId(todo.id); }}
+                            onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
+                            onDragOver={e => { e.preventDefault(); if (draggedId === todo.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: "active", idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
+                            className={`flex items-start gap-2.5 p-2.5 rounded-md border transition-all bg-white hover:bg-slate-50 group cursor-grab ${draggedId === todo.id ? "opacity-40 scale-95" : ""} ${todo.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : todo.priority === "highest" ? "border-2 border-red-400 ring-1 ring-red-100 bg-red-50/30" : "border-slate-100"}`}>
                             <div onClick={() => onToggle(todo.id)} className="w-[18px] h-[18px] rounded flex-shrink-0 mt-0.5 flex items-center justify-center transition-all cursor-pointer border-2 border-slate-300 hover:border-blue-400" />
                             <div className="flex-1 cursor-pointer" onClick={() => { setEditingTodo(todo); setNewText(todo.text); setNewAssignees(todo.assignees); setNewPriority(todo.priority); setNewDeadline(todo.deadline); setNewProgress(todo.progress ?? 0); }}>
                                 <label className="flex items-center gap-1.5 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
                                     <input type="checkbox" checked={!!todo.needsDiscussion} onChange={() => onUpdate({ ...todo, needsDiscussion: !todo.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
                                     <span className={`text-[10px] font-medium ${todo.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
                                 </label>
-                                <div className="text-[13px] text-slate-700 leading-relaxed">{PRIORITY_ICON[todo.priority] || ""} {todo.text}</div>
+                                <div className="text-[13px] text-slate-700 leading-relaxed">
+                                    {PRIORITY_ICON[todo.priority] || ""} {todo.text}
+                                    {todo.priority === "highest" && <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-bold align-middle">매우높음</span>}
+                                </div>
                                 {(todo.progress ?? 0) > 0 && (
                                     <div className="flex items-center gap-2 mt-1">
                                         <div className="flex-1 bg-slate-100 rounded-full h-1.5"><div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${todo.progress}%` }} /></div>
@@ -1428,30 +1601,55 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, currentUser }: {
                             </div>
                             <button onClick={() => onDelete(todo.id)} className="text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity mt-1">✕</button>
                         </div>
-                    ))}</div>
+                        </div>
+                    ))}
+                    {dropTarget?.col === "active" && dropTarget?.idx === activeTodos.length && <DropLine />}
+                    </div>
                     {activeTodos.length === 0 && <div className="text-center py-8 text-slate-300 text-[12px]">할 일 없음</div>}
                 </div>
                 {/* Right: Completed */}
                 <div className="flex-1 min-w-0"
-                    onDragOver={e => { e.preventDefault(); setDragOverCol("completed"); }}
-                    onDragLeave={() => setDragOverCol(null)}
-                    onDrop={() => { if (dragItem.current && !dragItem.current.done) { onToggle(dragItem.current.id); } dragItem.current = null; setDragOverCol(null); }}>
+                    onDragOver={e => { e.preventDefault(); setDropTarget(calcDropIdx(e, "completed")); }}
+                    onDragLeave={() => {}}
+                    onDrop={() => {
+                        if (dragItem.current && dropTarget) {
+                            if (!dragItem.current.done) { onToggle(dragItem.current.id); }
+                            else { const reordered = reorderKanbanItems(todos, dragItem.current, "completed", dropTarget.idx, t => t.done ? "completed" : "active", (t, s) => s === "active" ? { ...t, done: false } : { ...t, done: true }); onReorder(reordered); }
+                        } dragItem.current = null; setDraggedId(null); setDropTarget(null);
+                    }}>
                     <div className="flex items-center gap-2 mb-2 pb-1.5 border-b-2 border-emerald-500">
                         <span className="text-[13px] font-bold text-slate-800">완료</span>
                         <span className="text-[11px] text-slate-400">{completedTodos.length}</span>
                     </div>
-                    <div className={`space-y-1 min-h-[80px] rounded-lg transition-colors ${dragOverCol === "completed" ? "bg-emerald-50" : ""}`}>{completedTodos.map(todo => (
-                        <div key={todo.id} draggable onDragStart={() => { dragItem.current = todo; }} className="flex items-start gap-2.5 p-2.5 rounded-md border transition-all bg-slate-50 border-slate-100 opacity-70 group cursor-grab">
+                    <div className={`space-y-1 min-h-[80px] rounded-lg transition-colors ${dropTarget?.col === "completed" ? "bg-emerald-50/50" : ""}`}>
+                        {completedTodos.map((todo, cardIdx) => (
+                        <div key={todo.id}>
+                        {dropTarget?.col === "completed" && dropTarget?.idx === cardIdx && <DropLine />}
+                        <div draggable onDragStart={() => { dragItem.current = todo; setDraggedId(todo.id); }}
+                            onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
+                            onDragOver={e => { e.preventDefault(); if (draggedId === todo.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: "completed", idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
+                            className={`flex items-start gap-2.5 p-2.5 rounded-md border transition-all bg-slate-50 border-slate-100 opacity-70 group cursor-grab ${draggedId === todo.id ? "opacity-40 scale-95" : ""}`}>
                             <div onClick={() => onToggle(todo.id)} className="w-[18px] h-[18px] rounded flex-shrink-0 mt-0.5 flex items-center justify-center transition-all cursor-pointer bg-emerald-500"><span className="text-white text-[12px]">✓</span></div>
                             <div className="flex-1 cursor-pointer" onClick={() => { setEditingTodo(todo); setNewText(todo.text); setNewAssignees(todo.assignees); setNewPriority(todo.priority); setNewDeadline(todo.deadline); setNewProgress(todo.progress ?? 0); }}>
+                                {todo.needsDiscussion && (
+                                    <label className="flex items-center gap-1.5 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
+                                        <input type="checkbox" checked={true} onChange={() => onUpdate({ ...todo, needsDiscussion: false })} className="w-3 h-3 accent-orange-500" />
+                                        <span className="text-[10px] font-medium text-orange-500">논의 필요</span>
+                                    </label>
+                                )}
                                 <div className="text-[13px] text-slate-500 leading-relaxed">{PRIORITY_ICON[todo.priority] || ""} {todo.text}</div>
                                 <div className="flex gap-1 mt-1 flex-wrap items-center">
                                     {todo.assignees.map(a => <span key={a} className="text-[10px] px-1.5 py-0.5 rounded-lg bg-slate-100 text-slate-400">{MEMBERS[a]?.emoji || ""}{a}</span>)}
                                 </div>
                             </div>
-                            <button onClick={() => onDelete(todo.id)} className="text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity mt-1">✕</button>
+                            <div className="flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
+                                <button onClick={() => onDelete(todo.id)} className="text-slate-300 hover:text-red-500 text-[11px]">✕</button>
+                            </div>
                         </div>
-                    ))}</div>
+                        </div>
+                    ))}
+                    {dropTarget?.col === "completed" && dropTarget?.idx === completedTodos.length && <DropLine />}
+                    </div>
                     {completedTodos.length === 0 && <div className="text-center py-8 text-slate-300 text-[12px]">완료 항목 없음</div>}
                 </div>
             </div>
@@ -1477,7 +1675,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, currentUser }: {
                                 <div>
                                     <label className="text-[11px] font-semibold text-slate-500 block mb-1">우선순위</label>
                                     <div className="flex gap-1">
-                                        {(["high", "mid", "low"] as const).map(p => (
+                                        {PRIORITY_KEYS.map(p => (
                                             <button key={p} type="button" onClick={() => setNewPriority(p)}
                                                 className={`px-2 py-0.5 rounded text-[11px] ${newPriority === p ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500"}`}>
                                                 {PRIORITY_ICON[p]} {PRIORITY_LABEL[p]}
@@ -1623,12 +1821,13 @@ function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams
     );
 }
 
-function IPFormModal({ patent, onSave, onDelete, onClose, currentUser }: { patent: Patent | null; onSave: (p: Patent) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string }) {
+function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames }: { patent: Patent | null; onSave: (p: Patent) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; teamNames?: string[] }) {
     const isEdit = !!patent;
     const [title, setTitle] = useState(patent?.title || "");
     const [deadline, setDeadline] = useState(patent?.deadline || "");
     const [status, setStatus] = useState(patent?.status || "planning");
     const [assignees, setAssignees] = useState<string[]>(patent?.assignees || []);
+    const [team, setTeam] = useState(patent?.team || "");
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
     return (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
@@ -1664,12 +1863,13 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser }: { paten
                         <PillSelect options={MEMBER_NAMES} selected={assignees} onToggle={v => setAssignees(toggleArr(assignees, v))}
                             emojis={Object.fromEntries(Object.entries(MEMBERS).map(([k, v]) => [k, v.emoji]))} />
                     </div>
+                    {teamNames && <TeamSelect teamNames={teamNames} selected={team} onSelect={setTeam} />}
                 </div>
                 <div className="flex items-center justify-between p-4 border-t border-slate-200">
                     <div>{isEdit && onDelete && <button onClick={() => { onDelete(patent!.id); onClose(); }} className="text-[12px] text-red-500 hover:text-red-600">삭제</button>}</div>
                     <div className="flex gap-2">
                         <button onClick={onClose} className="px-4 py-2 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                        <button onClick={() => { if (title.trim()) { onSave({ id: patent?.id || Date.now(), title, deadline, status, assignees, creator: patent?.creator || currentUser, createdAt: patent?.createdAt || new Date().toLocaleString("ko-KR") }); onClose(); } }}
+                        <button onClick={() => { if (title.trim()) { onSave({ id: patent?.id ?? Date.now(), title, deadline, status, assignees, creator: patent?.creator || currentUser, createdAt: patent?.createdAt || new Date().toLocaleString("ko-KR"), team }); onClose(); } }}
                             className="px-4 py-2 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
                 </div>
@@ -1678,40 +1878,50 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser }: { paten
     );
 }
 
-function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion }: { patents: Patent[]; onSave: (p: Patent) => void; onDelete: (id: number) => void; currentUser: string; onToggleDiscussion: (p: Patent) => void }) {
+function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, onReorder, teamNames }: { patents: Patent[]; onSave: (p: Patent) => void; onDelete: (id: number) => void; currentUser: string; onToggleDiscussion: (p: Patent) => void; onReorder: (list: Patent[]) => void; teamNames?: string[] }) {
     const [editing, setEditing] = useState<Patent | null>(null);
     const [adding, setAdding] = useState(false);
-    const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+    const [filterTeam, setFilterTeam] = useState("전체");
+    const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
+    const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Patent | null>(null);
+    const filteredPatents = filterTeam === "전체" ? patents : patents.filter(p => p.team === filterTeam);
     return (
         <div>
             <div className="mb-3">
                 <button onClick={() => setAdding(true)} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 지재권 등록</button>
             </div>
+            {teamNames && teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
             <div className="flex gap-3 pb-2">
                 {IP_STATUS_KEYS.map(status => {
-                    const col = patents.filter(p => p.status === status);
+                    const col = filteredPatents.filter(p => p.status === status);
                     const cfg = IP_STATUS_CONFIG[status];
                     return (
                         <div key={status} className="flex-1 min-w-0"
-                            onDragOver={e => { e.preventDefault(); setDragOverCol(status); }}
-                            onDragLeave={() => setDragOverCol(null)}
-                            onDrop={() => { if (dragItem.current && dragItem.current.status !== status) { onSave({ ...dragItem.current, status }); } dragItem.current = null; setDragOverCol(null); }}>
+                            onDragOver={e => { e.preventDefault(); setDropTarget(calcDropIdx(e, status)); }}
+                            onDragLeave={() => {}}
+                            onDrop={() => { if (dragItem.current && dropTarget) { const reordered = reorderKanbanItems(patents, dragItem.current, status, dropTarget.idx, p => p.status, (p, s) => ({ ...p, status: s })); onReorder(reordered); } dragItem.current = null; setDraggedId(null); setDropTarget(null); }}>
                             <div className="flex items-center gap-2 mb-3 pb-1.5" style={{ borderBottom: `2px solid ${cfg.color}` }}>
                                 <span className="w-2 h-2 rounded-full inline-block" style={{ background: cfg.color }} />
                                 <span className="text-[13px] font-bold text-slate-800">{cfg.label}</span>
                                 <span className="text-[11px] text-slate-400">{col.length}</span>
                             </div>
-                            <div className={`min-h-[80px] space-y-2 rounded-lg transition-colors ${dragOverCol === status ? "bg-blue-50" : ""}`}>
-                                {col.map(p => (
-                                    <div key={p.id} draggable onDragStart={() => { dragItem.current = p; }} onClick={() => setEditing(p)}
-                                        className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-shadow overflow-hidden ${p.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
+                            <div className={`min-h-[80px] space-y-2 rounded-lg transition-colors ${dropTarget?.col === status ? "bg-blue-50/50" : ""}`}>
+                                {col.map((p, cardIdx) => (
+                                    <div key={p.id}>
+                                    {dropTarget?.col === status && dropTarget?.idx === cardIdx && <DropLine />}
+                                    <div draggable onDragStart={() => { dragItem.current = p; setDraggedId(p.id); }}
+                                        onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
+                                        onDragOver={e => { e.preventDefault(); if (draggedId === p.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
+                                        onClick={() => setEditing(p)}
+                                        className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-all overflow-hidden ${draggedId === p.id ? "opacity-40 scale-95" : ""} ${p.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
                                         style={{ borderLeft: `3px solid ${cfg.color}` }}>
                                         <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
                                             <input type="checkbox" checked={!!p.needsDiscussion} onChange={() => onToggleDiscussion(p)} className="w-3 h-3 accent-orange-500" />
                                             <span className={`text-[10px] font-medium ${p.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
                                         </label>
                                         <div className="text-[13px] font-semibold text-slate-800 mb-1 leading-snug break-words">{p.title}</div>
+                                        {p.team && <div className="mb-1"><span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{p.team}</span></div>}
                                         <div className="flex justify-between items-center">
                                             <div className="flex gap-1 flex-wrap">
                                                 {p.assignees.map(a => <span key={a} className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[a]?.emoji}{a}</span>)}
@@ -1720,45 +1930,28 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion }: 
                                         </div>
                                         {p.creator && <div className="text-[9px] text-slate-400 text-right mt-1">by {MEMBERS[p.creator]?.emoji || ""}{p.creator}{p.createdAt ? ` · ${p.createdAt}` : ""}</div>}
                                     </div>
+                                    </div>
                                 ))}
+                                {dropTarget?.col === status && dropTarget?.idx === col.length && <DropLine />}
                                 {col.length === 0 && <div className="text-[11px] text-slate-300 text-center py-6">—</div>}
                             </div>
                         </div>
                     );
                 })}
             </div>
-            {adding && <IPFormModal patent={null} onSave={p => { onSave(p); setAdding(false); }} onClose={() => setAdding(false)} currentUser={currentUser} />}
-            {editing && <IPFormModal patent={editing} onSave={p => { onSave(p); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} />}
+            {adding && <IPFormModal patent={null} onSave={p => { onSave(p); setAdding(false); }} onClose={() => setAdding(false)} currentUser={currentUser} teamNames={teamNames} />}
+            {editing && <IPFormModal patent={editing} onSave={p => { onSave(p); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} teamNames={teamNames} />}
         </div>
     );
 }
 
 // ─── Daily Target View ──────────────────────────────────────────────────────
 
-function getWeekdays(centerDate: Date, range: number): { date: Date; str: string; label: string; isToday: boolean }[] {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    // collect weekdays around center
-    const allDays: { date: Date; str: string; label: string; isToday: boolean }[] = [];
-    const d = new Date(centerDate); d.setDate(d.getDate() - range * 2); // start well before
-    while (allDays.length < range * 2 + 20) {
-        if (d.getDay() !== 0 && d.getDay() !== 6) {
-            const str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-            const dayL = ["일", "월", "화", "수", "목", "금", "토"];
-            allDays.push({ date: new Date(d), str, label: `${d.getMonth() + 1}/${d.getDate()} (${dayL[d.getDay()]})`, isToday: d.getTime() === today.getTime() });
-        }
-        d.setDate(d.getDate() + 1);
-    }
-    // find center index
-    const todayStr = `${centerDate.getFullYear()}-${String(centerDate.getMonth() + 1).padStart(2, "0")}-${String(centerDate.getDate()).padStart(2, "0")}`;
-    let ci = allDays.findIndex(d => d.str === todayStr);
-    if (ci < 0) ci = Math.floor(allDays.length / 2);
-    return allDays.slice(Math.max(0, ci - range), ci + range + 1);
-}
-
 function DailyTargetView({ targets, onSave, currentUser }: { targets: DailyTarget[]; onSave: (t: DailyTarget[]) => void; currentUser: string }) {
     const [endDate, setEndDate] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; });
     const [editCell, setEditCell] = useState<{ name: string; date: string } | null>(null);
     const [editText, setEditText] = useState("");
+    const todayStr = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; })();
 
     // 3 weekdays ending at endDate: 2일전 | 어제 | 오늘(rightmost)
     const days = useMemo(() => {
@@ -1808,9 +2001,9 @@ function DailyTargetView({ targets, onSave, currentUser }: { targets: DailyTarge
                             <th className="sticky left-0 z-10 bg-slate-50 border-b border-r border-slate-200 px-3 py-2 text-left text-[12px] font-semibold text-slate-600 min-w-[100px]">이름</th>
                             {days.map((d, i) => (
                                 <th key={d.str} className={`border-b border-l border-slate-200 px-3 py-2 text-center min-w-[160px] ${d.isToday ? "bg-blue-50" : "bg-white"}`}>
-                                    {i === 0 && <button onClick={() => shiftDays(-3)} className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 mb-1">◀◀</button>}
-                                    {i === 1 && <button onClick={() => shiftDays(-1)} className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 mb-1">◀</button>}
-                                    {i === 2 && <button onClick={goToday} className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-500 text-white hover:bg-blue-600 mb-1">▶▶▶</button>}
+                                    {i === 0 && <button onClick={() => shiftDays(-2)} className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 mb-1">2일전</button>}
+                                    {i === 1 && <button onClick={() => shiftDays(-1)} className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 mb-1">이전</button>}
+                                    {i === 2 && <button onClick={goToday} className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-500 text-white hover:bg-blue-600 mb-1">오늘로</button>}
                                     <div className={`text-[12px] font-semibold ${d.isToday ? "text-blue-600" : "text-slate-700"}`}>{d.label}</div>
                                     {d.isToday && <div className="text-[9px] text-blue-400 font-medium">TODAY</div>}
                                 </th>
@@ -1848,9 +2041,9 @@ function DailyTargetView({ targets, onSave, currentUser }: { targets: DailyTarge
             {editCell && (
                 <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={() => setEditCell(null)}>
                     <div className="bg-white rounded-xl p-4 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
-                        <h4 className="text-[14px] font-bold text-slate-800 mb-1">일일타겟</h4>
-                        <p className="text-[11px] text-slate-400 mb-3">{editCell.date} · {editCell.name}</p>
-                        <textarea value={editText} onChange={e => setEditText(e.target.value)} placeholder="오늘의 타겟을 작성하세요..."
+                        <h4 className="text-[14px] font-bold text-slate-800 mb-1">{editCell.date === todayStr ? "오늘 목표" : `${editCell.date} 목표`}</h4>
+                        <p className="text-[11px] text-slate-400 mb-3">{editCell.name}</p>
+                        <textarea value={editText} onChange={e => setEditText(e.target.value)} placeholder="오늘의 목표를 작성하세요..."
                             className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20" autoFocus />
                         <div className="flex justify-end gap-2 mt-3">
                             <button onClick={() => setEditCell(null)} className="px-3 py-1.5 text-[12px] text-slate-500">취소</button>
@@ -1886,7 +2079,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
 
     const handleSave = () => {
         if (!title.trim()) return;
-        onSave({ id: editing?.id || Date.now(), title, link, nasPath, author: editing?.author || currentUser, date: editing?.date || new Date().toLocaleDateString("ko-KR"), comments });
+        onSave({ id: editing?.id ?? Date.now(), title, link, nasPath, author: editing?.author || currentUser, date: editing?.date || new Date().toLocaleDateString("ko-KR"), comments, needsDiscussion: editing?.needsDiscussion });
         closeModal();
     };
     const addComment = () => {
@@ -2227,17 +2420,32 @@ const EMOJI_OPTIONS = [
     "🦊","🐱","🐶","🦁","🐼","🐻","🐸","🐙","🦋","🐝","🐺","🦄","🐯","🐮","🐷","🐵","🐰","🐨","🦅","🦇","🐳","🐬","🐠","🦈","🐢","🦜",
     "🍀","🌸","🌺","☀️","🌙","⚡","💥","✨","🎵","🎮","🏀","⚽","🎸","🎪","🎭","🎲","🎰","🏆","🥇","🏅","🎻","🎺","🥁","🎹","🎧","🎤",
     "🍎","🍊","🍋","🍇","🍓","🍑","🍒","🥝","🍌","🍉","🍔","🍕","🍩","🍪","🍰","🧁","🍫","🍿","☕","🍵","🥤","🧃","🍺","🧊","🍭","🎂",
-    "🚗","🚀","✈️","🚁","🚢","🏎️","🚂","🛸","🚲","🏍️","🛵","⛵","🚤","🚃","🚅","🚆","🛩️","🪂","⛷️","🏂","🏄","🚣","🤿","🧗","🪁","🛶",
-    "💪","👑","🧠","💡","🔑","❤️","💙","💚","💛","💜","🖤","🤍","💝","💖","❤️‍🔥","🫀","🩺","🔭","🔬","⚗️","🧲","🧫","🧰","🪛","⛏️","🗡️",
+    "🚗","✈️","🚁","🚢","🏎️","🚂","🛸","🚲","🏍️","🛵","⛵","🚤","🚃","🚅","🚆","🛩️","🪂","⛷️","🏂","🏄","🚣","🤿","🧗","🪁","🛶",
+    "💪","👑","🧠","💡","🔑","❤️","💙","💚","💛","💜","🖤","🤍","💝","💖","❤️‍🔥","🫀","🩺","🔭","⚗️","🧲","🧫","🧰","🪛","⛏️","🗡️",
     "🏔️","🌋","🏝️","🏖️","🌅","🌄","🌃","🏙️","🌉","🎡","🎢","🗼","🏯","🕌","⛩️","🗻","🌎","🌍","🌏","🗺️","🧭","⛺","🏕️","🪐","🌠","🌌",
     "😎","🥳","🤩","😈","👻","💀","👽","🤡","🦸","🦹","🧙","🧛","🧜","🧚","🧝","🧞","🥷","🧑‍🚀","🧑‍🔬","🧑‍💻","🧑‍🎨","🧑‍🏫","🧑‍🔧","🧑‍🍳","🧑‍⚕️","🧑‍🌾",
     "🔴","🟠","🟡","🟢","🔵","🟣","🟤","⚪","⚫","🔶","🔷","🔸","🔹","♠️","♥️","♦️","♣️","🃏","🀄","🎴","🏁","🚩","🎌","🏳️‍🌈","🏴‍☠️","🔔"
 ];
 
-function SettingsView({ currentUser, customEmojis, onSaveEmoji }: { currentUser: string; customEmojis: Record<string, string>; onSaveEmoji: (name: string, emoji: string) => void }) {
+function SettingsView({ currentUser, customEmojis, onSaveEmoji, statusMessages, onSaveStatusMsg }: { currentUser: string; customEmojis: Record<string, string>; onSaveEmoji: (name: string, emoji: string) => void; statusMessages: Record<string, string>; onSaveStatusMsg: (name: string, msg: string) => void }) {
     const currentEmoji = customEmojis[currentUser] || MEMBERS[currentUser]?.emoji || "👤";
+    const [msg, setMsg] = useState(statusMessages[currentUser] || "");
     return (
-        <div>
+        <div className="space-y-4">
+            {/* 한마디 */}
+            <div className="bg-white border border-slate-200 rounded-lg p-5">
+                <h3 className="text-[14px] font-bold text-slate-800 mb-3">하고 싶은 말 한마디</h3>
+                <p className="text-[11px] text-slate-400 mb-3">팀 Overview에 표시됩니다</p>
+                {statusMessages[currentUser] && (
+                    <div className="mb-3 px-3 py-2 bg-blue-50 rounded-lg text-[12px] text-blue-700 italic">&ldquo;{statusMessages[currentUser]}&rdquo;</div>
+                )}
+                <div className="flex gap-2">
+                    <input value={msg} onChange={e => setMsg(e.target.value)} placeholder="오늘의 한마디를 남겨보세요..." maxLength={50} className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" onKeyDown={e => { if (e.key === "Enter" && msg.trim()) { onSaveStatusMsg(currentUser, msg.trim()); } }} />
+                    <button onClick={() => { if (msg.trim()) onSaveStatusMsg(currentUser, msg.trim()); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-[12px] font-medium hover:bg-blue-700 shrink-0">저장</button>
+                </div>
+                <div className="text-[10px] text-slate-400 mt-1.5 text-right">{msg.length}/50</div>
+            </div>
+            {/* 이모지 */}
             <div className="bg-white border border-slate-200 rounded-lg p-5">
                 <h3 className="text-[14px] font-bold text-slate-800 mb-4">내 이모지 설정</h3>
                 <div className="mb-3">
@@ -2333,7 +2541,7 @@ function PersonalMemoView({ memos, onSave, onDelete }: {
     );
 }
 
-function LoginScreen({ onLogin }: { onLogin: (name: string) => void }) {
+function LoginScreen({ onLogin, members }: { onLogin: (name: string) => void; members: Record<string, { team: string; role: string; emoji: string }> }) {
     const [pw, setPw] = useState(""); const [name, setName] = useState(""); const [custom, setCustom] = useState(""); const [err, setErr] = useState("");
     const submit = () => {
         if (pw !== "Mftel7335!") { setErr("비밀번호가 틀렸습니다"); return; }
@@ -2351,7 +2559,7 @@ function LoginScreen({ onLogin }: { onLogin: (name: string) => void }) {
                 </div>
                 <div className="space-y-3">
                     <div><label className="text-[12px] font-medium text-slate-600 block mb-1">비밀번호</label><input type="password" value={pw} onChange={e => { setPw(e.target.value); setErr(""); }} placeholder="비밀번호 입력" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" onKeyDown={e => e.key === "Enter" && submit()} /></div>
-                    <div><label className="text-[12px] font-medium text-slate-600 block mb-1">이름</label><select value={name} onChange={e => { setName(e.target.value); setErr(""); }} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"><option value="">이름 선택...</option>{Object.keys(MEMBERS).map(n => <option key={n} value={n}>{MEMBERS[n].emoji} {n}</option>)}<option value="__custom">직접 입력</option></select></div>
+                    <div><label className="text-[12px] font-medium text-slate-600 block mb-1">이름</label><select value={name} onChange={e => { setName(e.target.value); setErr(""); }} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"><option value="">이름 선택...</option>{Object.keys(members).map(n => <option key={n} value={n}>{members[n].emoji} {n}</option>)}<option value="__custom">직접 입력</option></select></div>
                     {name === "__custom" && <input value={custom} onChange={e => setCustom(e.target.value)} placeholder="이름 입력" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />}
                     {err && <p className="text-[12px] text-red-500">{err}</p>}
                     <button onClick={submit} className="w-full py-2.5 rounded-lg text-[14px] font-semibold text-white" style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6)" }}>입장</button>
@@ -2361,14 +2569,425 @@ function LoginScreen({ onLogin }: { onLogin: (name: string) => void }) {
     );
 }
 
+// ─── Overview Dashboard ──────────────────────────────────────────────────────
+
+function MiniBar({ items, maxVal }: { items: Array<{ label: string; count: number; color: string }>; maxVal: number }) {
+    return (
+        <div className="space-y-1.5">
+            {items.map(item => (
+                <div key={item.label} className="flex items-center gap-2">
+                    <span className="text-[11px] text-slate-500 w-[52px] text-right truncate">{item.label}</span>
+                    <div className="flex-1 bg-slate-100 rounded-full h-[6px] overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-500" style={{ width: maxVal > 0 ? `${Math.max(4, (item.count / maxVal) * 100)}%` : "0%", background: item.color, opacity: item.count > 0 ? 1 : 0.2 }} />
+                    </div>
+                    <span className="text-[11px] font-semibold text-slate-600 w-[20px]">{item.count}</span>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPatents, announcements, dailyTargets, ideas, resources, onlineUsers, currentUser, onNavigate, mode, statusMessages, members, teams }: {
+    papers: Paper[]; reports: Report[]; experiments: Experiment[]; analyses: Analysis[]; todos: Todo[]; ipPatents: Patent[]; announcements: Announcement[]; dailyTargets: DailyTarget[]; ideas: IdeaPost[]; resources: Resource[]; onlineUsers: Array<{ name: string; timestamp: number }>; currentUser: string; onNavigate: (tab: string) => void; mode: "team" | "personal"; statusMessages: Record<string, string>; members: Record<string, { team: string; role: string; emoji: string }>; teams: Record<string, TeamData>;
+}) {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const isPersonal = mode === "personal";
+    const MEMBER_NAMES = useMemo(() => Object.keys(members).filter(k => k !== "박일웅"), [members]);
+
+    // For personal mode, filter items to currentUser
+    const fp = isPersonal ? papers.filter(p => p.assignees.includes(currentUser)) : papers;
+    const fr = isPersonal ? reports.filter(r => r.assignees.includes(currentUser)) : reports;
+    const fe = isPersonal ? experiments.filter(e => e.assignees.includes(currentUser)) : experiments;
+    const fa = isPersonal ? analyses.filter(a => a.assignees.includes(currentUser)) : analyses;
+    const ft = isPersonal ? todos.filter(t => t.assignees.includes(currentUser)) : todos;
+    const fip = isPersonal ? ipPatents.filter(p => p.assignees?.includes(currentUser)) : ipPatents;
+
+    // Pipeline stats
+    const papersByStatus = STATUS_KEYS.map(s => ({ key: s, ...STATUS_CONFIG[s], count: fp.filter(p => p.status === s).length }));
+    const expByStatus = EXP_STATUS_KEYS.map(s => ({ key: s, ...EXP_STATUS_CONFIG[s], count: fe.filter(e => e.status === s).length }));
+    const analysisByStatus = ANALYSIS_STATUS_KEYS.map(s => ({ key: s, ...ANALYSIS_STATUS_CONFIG[s], count: fa.filter(a => a.status === s).length }));
+
+    // Discussion items across all sections
+    const discussionItems: Array<{ section: string; tab: string; title: string; icon: string }> = [
+        ...ft.filter(t => t.needsDiscussion).map(t => ({ section: "To-do", tab: "todos", title: t.text, icon: "✅" })),
+        ...fp.filter(p => p.needsDiscussion).map(p => ({ section: "논문", tab: "papers", title: p.title, icon: "📄" })),
+        ...fr.filter(r => r.needsDiscussion).map(r => ({ section: "보고서", tab: "reports", title: r.title, icon: "📋" })),
+        ...fe.filter(e => e.needsDiscussion).map(e => ({ section: "실험", tab: "experiments", title: e.title, icon: "🧪" })),
+        ...fa.filter(a => a.needsDiscussion).map(a => ({ section: "해석", tab: "analysis", title: a.title, icon: "🖥️" })),
+        ...fip.filter(p => p.needsDiscussion).map(p => ({ section: "지재권", tab: "ip", title: p.title, icon: "💡" })),
+        ...resources.filter(r => r.needsDiscussion).map(r => ({ section: "자료", tab: "resources", title: r.title, icon: "📁" })),
+        ...ideas.filter(i => i.needsDiscussion).map(i => ({ section: "아이디어", tab: "ideas", title: i.title, icon: "💡" })),
+    ];
+
+    // Today's targets
+    // For weekends, also check the most recent weekday
+    const getRecentWeekday = () => {
+        const d = new Date(today);
+        while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    };
+    const isWeekend = today.getDay() === 0 || today.getDay() === 6;
+    const targetDateStr = isWeekend ? getRecentWeekday() : todayStr;
+    const todayTargets = dailyTargets.filter(t => t.date === targetDateStr);
+    const targetsWritten = todayTargets.length;
+    const targetsMissing = MEMBER_NAMES.filter(n => !todayTargets.some(t => t.name === n));
+
+    // Todo summary
+    const activeTodos = ft.filter(t => !t.done).length;
+
+    // Recent announcements (last 3)
+    const recentAnn = [...announcements].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 3);
+
+    // My items (always filtered to currentUser)
+    const myPapers = papers.filter(p => p.assignees.includes(currentUser));
+    const myTodos = todos.filter(t => !t.done && t.assignees.includes(currentUser));
+    const myExperiments = experiments.filter(e => e.assignees.includes(currentUser));
+    const myReports = reports.filter(r => r.assignees.includes(currentUser));
+    const myAnalyses = analyses.filter(a => a.assignees.includes(currentUser));
+
+    // Personal: today's target for current user
+    const myTarget = todayTargets.find(t => t.name === currentUser);
+
+    return (
+        <div className="space-y-5">
+            {/* Personal mode header */}
+            {isPersonal && (
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-5 text-white">
+                    <div className="flex items-center gap-3 mb-2">
+                        <span className="text-3xl">{members[currentUser]?.emoji || "👤"}</span>
+                        <div>
+                            <h2 className="text-[20px] font-bold">{currentUser}</h2>
+                            <div className="text-[12px] text-blue-200">{members[currentUser]?.team} {members[currentUser]?.role && `· ${members[currentUser]?.role}`}</div>
+                        </div>
+                    </div>
+                    {myTarget ? (
+                        <div className="mt-3 p-3 bg-white/10 rounded-lg">
+                            <div className="text-[11px] text-blue-200 mb-1">오늘의 목표</div>
+                            <div className="text-[13px] leading-relaxed">{myTarget.text}</div>
+                        </div>
+                    ) : (
+                        <div className="mt-3 p-3 bg-white/10 rounded-lg text-center">
+                            <div className="text-[12px] text-blue-200">오늘 목표를 아직 작성하지 않았습니다</div>
+                            <button onClick={() => onNavigate("daily")} className="mt-1 text-[12px] font-medium underline underline-offset-2 text-white">작성하러 가기</button>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Row 1: Key Numbers */}
+            <div className={`grid grid-cols-2 sm:grid-cols-3 ${isPersonal ? "lg:grid-cols-6" : "lg:grid-cols-6"} gap-3`}>
+                {[
+                    { label: isPersonal ? "내 논문" : "논문", value: fp.length, active: fp.filter(p => p.status === "writing").length, activeLabel: "작성중", color: "#3b82f6", tab: "papers" },
+                    { label: isPersonal ? "내 보고서" : "보고서", value: fr.length, active: fr.filter(r => r.status === "writing").length, activeLabel: "작성중", color: "#f59e0b", tab: "reports" },
+                    { label: isPersonal ? "내 실험" : "실험", value: fe.length, active: fe.filter(e => e.status === "running").length, activeLabel: "진행중", color: "#10b981", tab: "experiments" },
+                    { label: isPersonal ? "내 해석" : "해석", value: fa.length, active: fa.filter(a => a.status === "running").length, activeLabel: "진행중", color: "#8b5cf6", tab: "analysis" },
+                    { label: isPersonal ? "내 지재권" : "지재권", value: fip.length, active: fip.filter(p => p.status === "writing" || p.status === "evaluation").length, activeLabel: "진행중", color: "#059669", tab: "ip" },
+                    { label: isPersonal ? "내 To-do" : "To-do", value: activeTodos, active: 0, activeLabel: "", color: "#ef4444", tab: "todos" },
+                ].map(s => (
+                    <button key={s.label} onClick={() => onNavigate(s.tab)} className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-left hover:shadow-md hover:-translate-y-0.5 transition-all group">
+                        <div className="flex items-baseline gap-1.5">
+                            <span className="text-[24px] font-bold transition-colors" style={{ color: s.color }}>{s.value}</span>
+                            {s.active > 0 && <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-full text-white" style={{ background: s.color }}>{s.active} {s.activeLabel}</span>}
+                        </div>
+                        <div className="text-[12px] text-slate-400 mt-0.5 group-hover:text-slate-600 transition-colors">{s.label}</div>
+                    </button>
+                ))}
+            </div>
+
+            {/* Row 2: Pipeline + Discussion */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Pipeline Summary */}
+                <div className="bg-white border border-slate-200 rounded-xl p-4 lg:col-span-2">
+                    <h3 className="text-[14px] font-bold text-slate-800 mb-4">{isPersonal ? "내 연구 파이프라인" : "연구 파이프라인"}</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div>
+                            <div className="text-[12px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-blue-500" />논문 ({fp.length})
+                            </div>
+                            <MiniBar items={papersByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...papersByStatus.map(s => s.count))} />
+                        </div>
+                        <div>
+                            <div className="text-[12px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500" />실험 ({fe.length})
+                            </div>
+                            <MiniBar items={expByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...expByStatus.map(s => s.count))} />
+                        </div>
+                        <div>
+                            <div className="text-[12px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-violet-500" />해석 ({fa.length})
+                            </div>
+                            <MiniBar items={analysisByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...analysisByStatus.map(s => s.count))} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Discussion Items */}
+                <div className="bg-white border border-slate-200 rounded-xl p-4">
+                    <h3 className="text-[14px] font-bold text-slate-800 mb-3 flex items-center gap-2">
+                        {isPersonal ? "내 논의 필요" : "논의 필요"}
+                        {discussionItems.length > 0 && <span className="min-w-[20px] h-[20px] flex items-center justify-center rounded-full bg-orange-500 text-white text-[11px] font-bold">{discussionItems.length}</span>}
+                    </h3>
+                    {discussionItems.length === 0 ? (
+                        <div className="text-[12px] text-slate-300 text-center py-6">논의 필요 항목 없음</div>
+                    ) : (
+                        <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                            {discussionItems.slice(0, 10).map((item, i) => (
+                                <button key={i} onClick={() => onNavigate(item.tab)} className="w-full flex items-start gap-2 p-2 rounded-lg hover:bg-orange-50 text-left transition-colors group">
+                                    <span className="text-[12px] mt-0.5">{item.icon}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-[12px] text-slate-700 leading-snug truncate group-hover:text-orange-600 transition-colors">{item.title}</div>
+                                        <div className="text-[10px] text-slate-400">{item.section}</div>
+                                    </div>
+                                </button>
+                            ))}
+                            {discussionItems.length > 10 && <div className="text-[11px] text-slate-400 text-center py-1">+{discussionItems.length - 10}개 더</div>}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Row 3 */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Today's Target Status (team) or detailed items (personal) */}
+                {isPersonal ? (
+                    <div className="bg-white border border-slate-200 rounded-xl p-4 lg:col-span-2">
+                        <h3 className="text-[14px] font-bold text-slate-800 mb-3">내 전체 현황</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <div className="text-[11px] font-semibold text-slate-400 mb-2">내 To-do ({myTodos.length})</div>
+                                {myTodos.length === 0 ? <div className="text-[11px] text-slate-300">할 일 없음</div> : (
+                                    <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
+                                        {myTodos.map(t => (
+                                            <div key={t.id} className="flex items-start gap-1.5 text-[11px] text-slate-600">
+                                                <span className="shrink-0">{PRIORITY_ICON[t.priority]}</span>
+                                                <span className="leading-relaxed">{t.text}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <div>
+                                <div className="text-[11px] font-semibold text-slate-400 mb-2">내 논문 ({myPapers.length})</div>
+                                {myPapers.length === 0 ? <div className="text-[11px] text-slate-300">배정 논문 없음</div> : (
+                                    <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
+                                        {myPapers.map(p => (
+                                            <div key={p.id} className="flex items-center gap-1.5">
+                                                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: STATUS_CONFIG[p.status]?.color }} />
+                                                <span className="text-[11px] text-slate-600 truncate">{p.title}</span>
+                                                <span className="text-[9px] px-1 py-0.5 rounded bg-slate-100 text-slate-400 shrink-0">{STATUS_CONFIG[p.status]?.label}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <div>
+                                <div className="text-[11px] font-semibold text-slate-400 mb-2">내 실험 ({myExperiments.length})</div>
+                                {myExperiments.length === 0 ? <div className="text-[11px] text-slate-300">배정 실험 없음</div> : (
+                                    <div className="space-y-1.5 max-h-[120px] overflow-y-auto">
+                                        {myExperiments.map(e => (
+                                            <div key={e.id} className="flex items-center gap-1.5">
+                                                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: EXP_STATUS_CONFIG[e.status]?.color }} />
+                                                <span className="text-[11px] text-slate-600 truncate">{e.title}</span>
+                                                <span className="text-[9px] px-1 py-0.5 rounded bg-slate-100 text-slate-400 shrink-0">{EXP_STATUS_CONFIG[e.status]?.label}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <div>
+                                <div className="text-[11px] font-semibold text-slate-400 mb-2">내 보고서 ({myReports.length}) / 해석 ({myAnalyses.length})</div>
+                                {myReports.length === 0 && myAnalyses.length === 0 ? <div className="text-[11px] text-slate-300">배정 항목 없음</div> : (
+                                    <div className="space-y-1.5 max-h-[120px] overflow-y-auto">
+                                        {myReports.map(r => (
+                                            <div key={`r-${r.id}`} className="flex items-center gap-1.5">
+                                                <span className="text-[10px]">📋</span>
+                                                <span className="text-[11px] text-slate-600 truncate">{r.title}</span>
+                                            </div>
+                                        ))}
+                                        {myAnalyses.map(a => (
+                                            <div key={`a-${a.id}`} className="flex items-center gap-1.5">
+                                                <span className="text-[10px]">🖥️</span>
+                                                <span className="text-[11px] text-slate-600 truncate">{a.title}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="bg-white border border-slate-200 rounded-xl p-4">
+                        <button onClick={() => onNavigate("daily")} className="w-full text-left">
+                            <h3 className="text-[14px] font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                오늘 목표 현황
+                                <span className="text-[11px] font-medium text-slate-400">{targetsWritten}/{MEMBER_NAMES.length}</span>
+                            </h3>
+                        </button>
+                        <div className="mb-3">
+                            <div className="w-full bg-slate-100 rounded-full h-2">
+                                <div className="h-2 rounded-full bg-blue-500 transition-all duration-500" style={{ width: `${MEMBER_NAMES.length > 0 ? (targetsWritten / MEMBER_NAMES.length) * 100 : 0}%` }} />
+                            </div>
+                        </div>
+                        {targetsMissing.length > 0 ? (
+                            <div>
+                                <div className="text-[11px] text-slate-400 mb-1.5">미작성:</div>
+                                <div className="flex flex-wrap gap-1">
+                                    {targetsMissing.map(name => (
+                                        <span key={name} className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-100">{MEMBERS[name]?.emoji} {name}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-[12px] text-emerald-500 font-medium text-center py-2">전원 작성 완료</div>
+                        )}
+                        {todayTargets.length > 0 && (
+                            <div className="mt-3 space-y-1 max-h-[140px] overflow-y-auto">
+                                {todayTargets.map(t => (
+                                    <div key={t.name} className="flex items-start gap-2 py-1">
+                                        <span className="text-[10px] font-medium text-slate-500 shrink-0 mt-0.5">{MEMBERS[t.name]?.emoji} {t.name}</span>
+                                        <span className="text-[11px] text-slate-600 leading-relaxed">{t.text.length > 40 ? t.text.slice(0, 40) + "..." : t.text}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* My Items (team) or Recent Announcements (personal) */}
+                {!isPersonal && (() => {
+                    // Use teams data from "팀 현황" if available, otherwise derive from member fields
+                    const hasTeams = Object.keys(teams).length > 0;
+                    const teamEntries: Array<{ name: string; members: string[]; color: string }> = hasTeams
+                        ? Object.entries(teams).map(([name, t]) => ({ name, members: t.members, color: t.color }))
+                        : [...new Set(Object.values(members).map(m => m.team))].filter(t => t !== "PI").map(t => ({
+                            name: t,
+                            members: Object.entries(members).filter(([, m]) => m.team === t).map(([n]) => n),
+                            color: "#94a3b8",
+                        }));
+                    return (
+                        <div className="bg-white border border-slate-200 rounded-xl p-4">
+                            <h3 className="text-[14px] font-bold text-slate-800 mb-3">팀별 연구 현황</h3>
+                            <div className="space-y-3">
+                                {teamEntries.map(team => {
+                                    const tPapers = papers.filter(p => p.assignees.some(a => team.members.includes(a))).length;
+                                    const tExp = experiments.filter(e => e.assignees.some(a => team.members.includes(a))).length;
+                                    const tAnalysis = analyses.filter(a => a.assignees.some(aa => team.members.includes(aa))).length;
+                                    const tTodos = todos.filter(t => !t.done && t.assignees.some(a => team.members.includes(a))).length;
+                                    const total = tPapers + tExp + tAnalysis + tTodos;
+                                    return (
+                                        <div key={team.name}>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-[12px] font-semibold text-slate-700" style={hasTeams ? { color: team.color } : undefined}>{team.name}</span>
+                                                <span className="text-[10px] text-slate-400">{team.members.length}명</span>
+                                            </div>
+                                            <div className="flex gap-1 h-[6px] rounded-full overflow-hidden bg-slate-100">
+                                                {tPapers > 0 && <div className="bg-blue-500 rounded-full" style={{ width: `${(tPapers / Math.max(total, 1)) * 100}%` }} />}
+                                                {tExp > 0 && <div className="bg-emerald-500 rounded-full" style={{ width: `${(tExp / Math.max(total, 1)) * 100}%` }} />}
+                                                {tAnalysis > 0 && <div className="bg-violet-500 rounded-full" style={{ width: `${(tAnalysis / Math.max(total, 1)) * 100}%` }} />}
+                                                {tTodos > 0 && <div className="bg-red-400 rounded-full" style={{ width: `${(tTodos / Math.max(total, 1)) * 100}%` }} />}
+                                            </div>
+                                            <div className="flex gap-3 mt-1">
+                                                <span className="text-[10px] text-blue-600">논문 {tPapers}</span>
+                                                <span className="text-[10px] text-emerald-600">실험 {tExp}</span>
+                                                <span className="text-[10px] text-violet-600">해석 {tAnalysis}</span>
+                                                <span className="text-[10px] text-red-500">To-do {tTodos}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })()}
+
+                {/* Recent Announcements */}
+                <div className="bg-white border border-slate-200 rounded-xl p-4">
+                    <button onClick={() => onNavigate("announcements")} className="w-full text-left">
+                        <h3 className="text-[14px] font-bold text-slate-800 mb-3">최근 공지</h3>
+                    </button>
+                    {recentAnn.length === 0 ? (
+                        <div className="text-[12px] text-slate-300 text-center py-6">공지 없음</div>
+                    ) : (
+                        <div className="space-y-2">
+                            {recentAnn.map(ann => (
+                                <div key={ann.id} className="p-2.5 bg-slate-50 rounded-lg">
+                                    <div className="text-[12px] text-slate-700 leading-relaxed">{ann.text.length > 60 ? ann.text.slice(0, 60) + "..." : ann.text}</div>
+                                    <div className="text-[10px] text-slate-400 mt-1">{MEMBERS[ann.author]?.emoji} {ann.author} · {ann.date}</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Row 4: Member Activity Matrix (team only) */}
+            {!isPersonal && (
+                <div className="bg-white border border-slate-200 rounded-xl p-4">
+                    <h3 className="text-[14px] font-bold text-slate-800 mb-3">멤버별 현황</h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-[11px]">
+                            <thead>
+                                <tr className="border-b border-slate-100">
+                                    <th className="text-left py-1.5 px-1.5 font-semibold text-slate-500">멤버</th>
+                                    <th className="text-center py-1.5 px-1 font-semibold text-slate-500">논문</th>
+                                    <th className="text-center py-1.5 px-1 font-semibold text-slate-500">보고서</th>
+                                    <th className="text-center py-1.5 px-1 font-semibold text-slate-500">실험</th>
+                                    <th className="text-center py-1.5 px-1 font-semibold text-slate-500">해석</th>
+                                    <th className="text-center py-1.5 px-1 font-semibold text-slate-500">To-do</th>
+                                    <th className="text-center py-1.5 px-1 font-semibold text-slate-500">목표</th>
+                                    <th className="text-center py-1.5 px-1 font-semibold text-slate-500">접속</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {MEMBER_NAMES.map(name => {
+                                    const isMe = name === currentUser;
+                                    const isOnline = onlineUsers.some(u => u.name === name);
+                                    const memberPapers = papers.filter(p => p.assignees.includes(name)).length;
+                                    const memberReports = reports.filter(r => r.assignees.includes(name)).length;
+                                    const memberExp = experiments.filter(e => e.assignees.includes(name)).length;
+                                    const memberAnalysis = analyses.filter(a => a.assignees.includes(name)).length;
+                                    const memberTodos = todos.filter(t => !t.done && t.assignees.includes(name)).length;
+                                    const hasTarget = todayTargets.some(t => t.name === name);
+                                    const isTeamLead = Object.values(teams).some(t => t.lead === name);
+                                    return (
+                                        <tr key={name} className={`border-b border-slate-50 ${isMe ? "bg-blue-50/30" : "hover:bg-slate-50"} transition-colors`}>
+                                            <td className="py-1.5 px-1.5 font-medium text-slate-700">
+                                                <div className="flex items-center gap-1">
+                                                    <span className="whitespace-nowrap">{members[name]?.emoji} {name}</span>
+                                                    {isTeamLead && <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 text-blue-600 font-semibold">팀장</span>}
+                                                    {statusMessages[name] && <span className="text-[10px] text-blue-500/80 italic truncate max-w-[140px] ml-1.5 border-l border-slate-200 pl-1.5">&ldquo;{statusMessages[name]}&rdquo;</span>}
+                                                </div>
+                                            </td>
+                                            <td className="text-center py-1.5 px-1"><span className={memberPapers > 0 ? "font-semibold text-blue-600" : "text-slate-300"}>{memberPapers || "-"}</span></td>
+                                            <td className="text-center py-1.5 px-1"><span className={memberReports > 0 ? "font-semibold text-amber-600" : "text-slate-300"}>{memberReports || "-"}</span></td>
+                                            <td className="text-center py-1.5 px-1"><span className={memberExp > 0 ? "font-semibold text-emerald-600" : "text-slate-300"}>{memberExp || "-"}</span></td>
+                                            <td className="text-center py-1.5 px-1"><span className={memberAnalysis > 0 ? "font-semibold text-violet-600" : "text-slate-300"}>{memberAnalysis || "-"}</span></td>
+                                            <td className="text-center py-1.5 px-1"><span className={memberTodos > 0 ? "font-semibold text-red-500" : "text-slate-300"}>{memberTodos || "-"}</span></td>
+                                            <td className="text-center py-1.5 px-1">{hasTarget ? <span className="text-emerald-500 font-bold">O</span> : <span className="text-red-400">X</span>}</td>
+                                            <td className="text-center py-1.5 px-1">{isOnline ? <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" /> : <span className="inline-block w-2 h-2 rounded-full bg-slate-200" />}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
     const [loggedIn, setLoggedIn] = useState(false);
     const [userName, setUserName] = useState("");
-    const [activeTab, setActiveTab] = useState("announcements");
+    const [activeTab, setActiveTab] = useState("overview");
     const [selectedPerson, setSelectedPerson] = useState("전체");
     const [onlineUsers, setOnlineUsers] = useState<Array<{ name: string; timestamp: number }>>([]);
+    const [members, setMembers] = useState<Record<string, { team: string; role: string; emoji: string }>>(DEFAULT_MEMBERS);
+    const memberNames = useMemo(() => Object.keys(members).filter(k => k !== "박일웅"), [members]);
 
     // Paper modal state
     const [paperModal, setPaperModal] = useState<{ paper: Paper | null; mode: "add" | "edit" } | null>(null);
@@ -2384,6 +3003,7 @@ export default function DashboardPage() {
     const [timetable, setTimetable] = useState<TimetableBlock[]>(DEFAULT_TIMETABLE);
     const [reports, setReports] = useState<Report[]>([]);
     const [teams, setTeams] = useState<Record<string, TeamData>>(DEFAULT_TEAMS);
+    const teamNames = useMemo(() => Object.keys(teams), [teams]);
     const [dailyTargets, setDailyTargets] = useState<DailyTarget[]>([]);
     const [resources, setResources] = useState<Resource[]>([]);
     const [philosophy, setPhilosophy] = useState<Announcement[]>([]);
@@ -2391,14 +3011,17 @@ export default function DashboardPage() {
     const [analyses, setAnalyses] = useState<Analysis[]>([]);
     const [chatPosts, setChatPosts] = useState<IdeaPost[]>([]);
     const [customEmojis, setCustomEmojis] = useState<Record<string, string>>({});
+    const [statusMessages, setStatusMessages] = useState<Record<string, string>>({});
     const [equipmentList, setEquipmentList] = useState<string[]>(DEFAULT_EQUIPMENT);
     const [analysisToolList, setAnalysisToolList] = useState<string[]>(ANALYSIS_TOOLS);
     const [paperTagList, setPaperTagList] = useState<string[]>(PAPER_TAGS);
     const [personalMemos, setPersonalMemos] = useState<Record<string, Memo[]>>({});
 
     const tabs = [
+        { id: "overview", label: "Overview (연구실)", icon: "🏠" },
+        { id: "overview_me", label: `Overview (${userName})`, icon: "👤" },
         { id: "announcements", label: "공지사항", icon: "📢" },
-        { id: "daily", label: "일일타겟", icon: "🎯" },
+        { id: "daily", label: "오늘 목표", icon: "🎯" },
         { id: "calendar", label: "일정/휴가", icon: "📅" },
         { id: "todos", label: "To-do", icon: "✅" },
         { id: "papers", label: "논문 현황", icon: "📄" },
@@ -2412,14 +3035,14 @@ export default function DashboardPage() {
         { id: "teams", label: "팀 현황", icon: "👥" },
         { id: "lectures", label: "수업", icon: "📚" },
         { id: "settings", label: "설정", icon: "⚙️" },
-        ...MEMBER_NAMES.map(name => ({ id: `memo_${name}`, label: name, icon: customEmojis[name] || MEMBERS[name]?.emoji || "👤" })),
+        ...memberNames.map(name => ({ id: `memo_${name}`, label: name, icon: customEmojis[name] || members[name]?.emoji || "👤" })),
     ];
 
-    const allPeople = useMemo(() => ["전체", ...MEMBER_NAMES], []);
+    const allPeople = useMemo(() => ["전체", ...memberNames], [memberNames]);
 
     const saveSection = useCallback(async (section: string, data: unknown) => {
-        try { await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section, data }) }); } catch { /* ignore */ }
-    }, []);
+        try { await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section, data, userName }) }); } catch { /* ignore */ }
+    }, [userName]);
 
     const fetchData = useCallback(async () => {
         try {
@@ -2442,10 +3065,17 @@ export default function DashboardPage() {
             if (d.analyses) setAnalyses(d.analyses);
             if (d.chatPosts) setChatPosts(d.chatPosts);
             if (d.customEmojis) setCustomEmojis(d.customEmojis);
+            if (d.statusMessages) setStatusMessages(d.statusMessages);
             if (d.equipmentList) setEquipmentList(d.equipmentList);
             if (d.personalMemos) setPersonalMemos(d.personalMemos);
             if (d.analysisToolList) setAnalysisToolList(d.analysisToolList);
             if (d.paperTagList) setPaperTagList(d.paperTagList);
+            if (d.members && Object.keys(d.members).length > 0) {
+                setMembers(d.members);
+            } else {
+                // Auto-seed default members to server if none exist
+                fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "members", data: DEFAULT_MEMBERS }) }).catch(() => {});
+            }
         } catch { /* ignore */ }
     }, []);
 
@@ -2460,21 +3090,22 @@ export default function DashboardPage() {
 
     const handleLogin = async (name: string) => {
         setUserName(name); setLoggedIn(true);
-        await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "online", action: "join", userName: name }) });
+        try { await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "online", action: "join", userName: name }) }); } catch {}
     };
 
     useEffect(() => {
         if (!loggedIn) return;
-        fetchData(); fetchOnline();
+        // Use intervals starting at 0 for initial fetch to avoid lint warning about setState in effect body
+        const d = setTimeout(() => { fetchData(); fetchOnline(); }, 0);
         const a = setInterval(fetchData, 5000);
         const b = setInterval(fetchOnline, 5000);
         const c = setInterval(sendHeartbeat, 10000);
-        return () => { clearInterval(a); clearInterval(b); clearInterval(c); };
+        return () => { clearTimeout(d); clearInterval(a); clearInterval(b); clearInterval(c); };
     }, [loggedIn, fetchData, fetchOnline, sendHeartbeat]);
 
     useEffect(() => {
         if (!userName) return;
-        const h = () => navigator.sendBeacon("/api/dashboard", JSON.stringify({ section: "online", action: "leave", userName }));
+        const h = () => navigator.sendBeacon("/api/dashboard", new Blob([JSON.stringify({ section: "online", action: "leave", userName })], { type: "application/json" }));
         window.addEventListener("beforeunload", h);
         return () => window.removeEventListener("beforeunload", h);
     }, [userName]);
@@ -2573,6 +3204,10 @@ export default function DashboardPage() {
         const u = { ...customEmojis, [name]: emoji };
         setCustomEmojis(u); saveSection("customEmojis", u);
     };
+    const handleSaveStatusMsg = (name: string, msg: string) => {
+        const u = { ...statusMessages, [name]: msg };
+        setStatusMessages(u); saveSection("statusMessages", u);
+    };
     const handleSaveEquipment = (list: string[]) => { setEquipmentList(list); saveSection("equipmentList", list); };
     const handleSaveAnalysisTools = (list: string[]) => { setAnalysisToolList(list); saveSection("analysisToolList", list); };
     const handleSavePaperTags = (list: string[]) => { setPaperTagList(list); saveSection("paperTagList", list); };
@@ -2589,7 +3224,7 @@ export default function DashboardPage() {
         setPersonalMemos(u); saveSection("personalMemos", u);
     };
 
-    if (!loggedIn) return <LoginScreen onLogin={handleLogin} />;
+    if (!loggedIn) return <LoginScreen onLogin={handleLogin} members={members} />;
 
     const stats = [
         { label: "논문 작성중", value: papers.filter(p => p.status === "writing").length, color: "#3b82f6" },
@@ -2608,45 +3243,65 @@ export default function DashboardPage() {
         resources: resources.filter(r => r.needsDiscussion).length,
         ideas: ideas.filter(i => i.needsDiscussion).length,
         chat: chatPosts.filter(c => c.needsDiscussion).length,
-        ...Object.fromEntries(MEMBER_NAMES.map(name => [`memo_${name}`, (personalMemos[name] || []).filter(m => m.needsDiscussion).length])),
+        ...Object.fromEntries(memberNames.map(name => [`memo_${name}`, (personalMemos[name] || []).filter(m => m.needsDiscussion).length])),
     };
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-800" style={{ fontFamily: "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
             {/* Header */}
-            <div className="bg-slate-900 px-4 md:px-7 py-4 flex items-center justify-between">
+            <div className="bg-slate-900 px-4 md:px-7 py-3.5 flex items-center justify-between border-b border-slate-800">
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center text-[18px] font-extrabold text-white" style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6)" }}>M</div>
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center text-[18px] font-extrabold text-white shadow-lg" style={{ background: "linear-gradient(135deg, #3b82f6, #6366f1)" }}>M</div>
                     <div>
-                        <div className="text-[16px] font-bold text-white tracking-tight">MFTEL Lab Dashboard</div>
-                        <div className="text-[11px] text-slate-400">Multi-phase Flow & Thermal Energy Lab · Inha University</div>
+                        <div className="text-[16px] font-bold text-white tracking-tight">MFTEL Dashboard</div>
+                        <div className="text-[10px] text-slate-500 tracking-wide">Multiphase Flow & Thermal Engineering Lab</div>
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
-                    <div className="hidden sm:flex items-center gap-2 text-[12px] text-slate-400">
-                        <span className="text-[11px]">접속:</span>
-                        {onlineUsers.filter(u => u.name !== userName).length === 0 ? <span className="text-slate-500">-</span> : onlineUsers.filter(u => u.name !== userName).map(u => <span key={u.name} className="text-slate-300">{MEMBERS[u.name]?.emoji || "👤"}{u.name}</span>)}
+                    <div className="hidden sm:flex items-center gap-1.5">
+                        <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" /></span>
+                        <span className="text-[11px] text-emerald-400 font-medium">{onlineUsers.length}</span>
+                        <div className="flex items-center gap-1 ml-1">
+                            {onlineUsers.filter(u => u.name !== userName).slice(0, 5).map(u => (
+                                <span key={u.name} className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300">{MEMBERS[u.name]?.emoji || "👤"}{u.name}</span>
+                            ))}
+                            {onlineUsers.filter(u => u.name !== userName).length > 5 && <span className="text-[10px] text-slate-500">+{onlineUsers.filter(u => u.name !== userName).length - 5}</span>}
+                        </div>
                     </div>
-                    <span className="text-[12px] text-slate-400">{MEMBERS[userName]?.emoji || "👤"} {userName} (me)</span>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800">
+                        <span className="text-[12px] text-white font-medium">{MEMBERS[userName]?.emoji || "👤"} {userName}</span>
+                    </div>
                 </div>
             </div>
 
             <div className="flex flex-col md:flex-row">
                 {/* Sidebar */}
-                <div className="md:w-[200px] bg-white md:border-r border-b md:border-b-0 border-slate-200 md:min-h-[calc(100vh-60px)] flex-shrink-0">
-                    <div className="flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto p-3 md:p-0 md:pt-4 md:pb-8 gap-0.5">
-                        {tabs.map((tab, i) => (
-                            <div key={tab.id}>
-                                {tab.id.startsWith("memo_") && i > 0 && !tabs[i - 1].id.startsWith("memo_") && (
-                                    <div className="my-2 mx-3 border-t border-slate-200" />
-                                )}
-                                <button onClick={() => setActiveTab(tab.id)}
-                                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-[13px] whitespace-nowrap transition-all ${activeTab === tab.id ? "font-semibold text-slate-800 bg-slate-100" : "text-slate-500 hover:bg-slate-50"}`}>
-                                    <span>{tab.icon}</span><span>{tab.label}</span>
-                                    {(discussionCounts[tab.id] || 0) > 0 && <span className="ml-auto min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-orange-500 text-white text-[10px] font-bold">{discussionCounts[tab.id]}</span>}
-                                </button>
-                            </div>
-                        ))}
+                <div className="md:w-[210px] bg-white md:border-r border-b md:border-b-0 border-slate-200 md:min-h-[calc(100vh-56px)] flex-shrink-0">
+                    <div className="flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto md:max-h-[calc(100vh-56px)] p-3 md:p-0 md:pt-3 md:pb-8 gap-0.5">
+                        {tabs.map((tab, i) => {
+                            const sectionBreaks: Record<string, string> = { announcements: "관리", papers: "연구", resources: "커뮤니케이션", teams: "기타" };
+                            const showBreak = !tab.id.startsWith("memo_") && sectionBreaks[tab.id];
+                            const showMemoBreak = tab.id.startsWith("memo_") && i > 0 && !tabs[i - 1].id.startsWith("memo_");
+                            return (
+                                <div key={tab.id}>
+                                    {showBreak && (
+                                        <div className="hidden md:block mt-3 mb-1 mx-3">
+                                            <div className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.15em]">{sectionBreaks[tab.id]}</div>
+                                        </div>
+                                    )}
+                                    {showMemoBreak && (
+                                        <div className="hidden md:block mt-3 mb-1 mx-3">
+                                            <div className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.15em]">개인 메모</div>
+                                        </div>
+                                    )}
+                                    <button onClick={() => setActiveTab(tab.id)}
+                                        className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-[13px] whitespace-nowrap transition-all ${activeTab === tab.id ? "font-semibold text-blue-700 bg-blue-50" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"}`}>
+                                        <span className="text-[14px]">{tab.icon}</span><span>{tab.label}</span>
+                                        {(discussionCounts[tab.id] || 0) > 0 && <span className="ml-auto min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-orange-500 text-white text-[10px] font-bold">{discussionCounts[tab.id]}</span>}
+                                    </button>
+                                </div>
+                            );
+                        })}
                     </div>
                     {activeTab === "papers" && (
                         <div className="hidden md:block px-3 mt-4">
@@ -2665,31 +3320,37 @@ export default function DashboardPage() {
 
                 {/* Main Content */}
                 <div className="flex-1 p-4 md:p-5 overflow-x-auto">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-                        {stats.map(s => <div key={s.label} className="bg-white border border-slate-200 rounded-lg px-4 py-3"><div className="text-[22px] font-bold" style={{ color: s.color }}>{s.value}</div><div className="text-[11px] text-slate-400 mt-0.5">{s.label}</div></div>)}
-                    </div>
-                    <div className="mb-4">
-                        <h2 className="text-[18px] font-bold text-slate-900">
-                            {tabs.find(t => t.id === activeTab)?.icon} {tabs.find(t => t.id === activeTab)?.label}
-                            {activeTab === "papers" && selectedPerson !== "전체" && <span className="text-[14px] font-normal text-slate-500 ml-2">— {MEMBERS[selectedPerson]?.emoji} {selectedPerson}</span>}
-                        </h2>
-                    </div>
+                    {activeTab !== "overview" && activeTab !== "overview_me" && (
+                        <>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                                {stats.map(s => <div key={s.label} className="bg-white border border-slate-200 rounded-lg px-4 py-3"><div className="text-[22px] font-bold" style={{ color: s.color }}>{s.value}</div><div className="text-[11px] text-slate-400 mt-0.5">{s.label}</div></div>)}
+                            </div>
+                            <div className="mb-4">
+                                <h2 className="text-[18px] font-bold text-slate-900">
+                                    {tabs.find(t => t.id === activeTab)?.icon} {tabs.find(t => t.id === activeTab)?.label}
+                                    {activeTab === "papers" && selectedPerson !== "전체" && <span className="text-[14px] font-normal text-slate-500 ml-2">— {MEMBERS[selectedPerson]?.emoji} {selectedPerson}</span>}
+                                </h2>
+                            </div>
+                        </>
+                    )}
 
+                    {activeTab === "overview" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="team" statusMessages={statusMessages} members={members} teams={teams} />}
+                    {activeTab === "overview_me" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="personal" statusMessages={statusMessages} members={members} teams={teams} />}
                     {activeTab === "announcements" && <AnnouncementView announcements={announcements} onAdd={handleAddAnn} onDelete={handleDelAnn} onReorder={list => { setAnnouncements(list); saveSection("announcements", list); }} philosophy={philosophy} onAddPhilosophy={handleAddPhil} onDeletePhilosophy={handleDelPhil} currentUser={userName} />}
                     {activeTab === "daily" && <DailyTargetView targets={dailyTargets} onSave={handleSaveDailyTargets} currentUser={userName} />}
-                    {activeTab === "papers" && <KanbanView papers={papers} filter={selectedPerson} onClickPaper={p => setPaperModal({ paper: p, mode: "edit" })} onAddPaper={() => setPaperModal({ paper: null, mode: "add" })} onSavePaper={handleSavePaper} tagList={paperTagList} onSaveTags={handleSavePaperTags} />}
-                    {activeTab === "reports" && <ReportView reports={reports} currentUser={userName} onSave={handleSaveReport} onDelete={handleDeleteReport} onToggleDiscussion={r => handleSaveReport({ ...r, needsDiscussion: !r.needsDiscussion })} />}
-                    {activeTab === "experiments" && <ExperimentView experiments={experiments} onSave={handleSaveExperiment} onDelete={handleDeleteExperiment} currentUser={userName} equipmentList={equipmentList} onSaveEquipment={handleSaveEquipment} onToggleDiscussion={e => handleSaveExperiment({ ...e, needsDiscussion: !e.needsDiscussion })} />}
-                    {activeTab === "analysis" && <AnalysisView analyses={analyses} onSave={handleSaveAnalysis} onDelete={handleDeleteAnalysis} currentUser={userName} toolList={analysisToolList} onSaveTools={handleSaveAnalysisTools} onToggleDiscussion={a => handleSaveAnalysis({ ...a, needsDiscussion: !a.needsDiscussion })} />}
-                    {activeTab === "todos" && <TodoList todos={todos} onToggle={handleToggleTodo} onAdd={handleAddTodo} onUpdate={handleUpdateTodo} onDelete={handleDeleteTodo} currentUser={userName} />}
+                    {activeTab === "papers" && <KanbanView papers={papers} filter={selectedPerson} onClickPaper={p => setPaperModal({ paper: p, mode: "edit" })} onAddPaper={() => setPaperModal({ paper: null, mode: "add" })} onSavePaper={handleSavePaper} onReorder={list => { setPapers(list); saveSection("papers", list); }} tagList={paperTagList} onSaveTags={handleSavePaperTags} teamNames={teamNames} />}
+                    {activeTab === "reports" && <ReportView reports={reports} currentUser={userName} onSave={handleSaveReport} onDelete={handleDeleteReport} onToggleDiscussion={r => handleSaveReport({ ...r, needsDiscussion: !r.needsDiscussion })} onReorder={list => { setReports(list); saveSection("reports", list); }} teamNames={teamNames} />}
+                    {activeTab === "experiments" && <ExperimentView experiments={experiments} onSave={handleSaveExperiment} onDelete={handleDeleteExperiment} currentUser={userName} equipmentList={equipmentList} onSaveEquipment={handleSaveEquipment} onToggleDiscussion={e => handleSaveExperiment({ ...e, needsDiscussion: !e.needsDiscussion })} onReorder={list => { setExperiments(list); saveSection("experiments", list); }} teamNames={teamNames} />}
+                    {activeTab === "analysis" && <AnalysisView analyses={analyses} onSave={handleSaveAnalysis} onDelete={handleDeleteAnalysis} currentUser={userName} toolList={analysisToolList} onSaveTools={handleSaveAnalysisTools} onToggleDiscussion={a => handleSaveAnalysis({ ...a, needsDiscussion: !a.needsDiscussion })} onReorder={list => { setAnalyses(list); saveSection("analyses", list); }} teamNames={teamNames} />}
+                    {activeTab === "todos" && <TodoList todos={todos} onToggle={handleToggleTodo} onAdd={handleAddTodo} onUpdate={handleUpdateTodo} onDelete={handleDeleteTodo} onReorder={list => { setTodos(list); saveSection("todos", list); }} currentUser={userName} />}
                     {activeTab === "teams" && <TeamOverview papers={papers} todos={todos} experiments={experiments} analyses={analyses} teams={teams} onSaveTeams={handleSaveTeams} />}
                     {activeTab === "calendar" && <CalendarGrid data={[...vacations.map(v => ({ ...v, description: undefined })), ...schedule]} currentUser={userName} types={CALENDAR_TYPES} onToggle={handleCalendarToggle} showYearTotal />}
                     {activeTab === "lectures" && <TimetableView blocks={timetable} onSave={handleTimetableSave} onDelete={handleTimetableDelete} />}
-                    {activeTab === "ip" && <IPView patents={ipPatents} onSave={handleSavePatent} onDelete={handleDeletePatent} currentUser={userName} onToggleDiscussion={p => handleSavePatent({ ...p, needsDiscussion: !p.needsDiscussion })} />}
+                    {activeTab === "ip" && <IPView patents={ipPatents} onSave={handleSavePatent} onDelete={handleDeletePatent} currentUser={userName} onToggleDiscussion={p => handleSavePatent({ ...p, needsDiscussion: !p.needsDiscussion })} onReorder={list => { setIpPatents(list); saveSection("patents", list); }} teamNames={teamNames} />}
                     {activeTab === "resources" && <ResourceView resources={resources} onSave={handleSaveResource} onDelete={handleDeleteResource} onReorder={list => { setResources(list); saveSection("resources", list); }} currentUser={userName} />}
                     {activeTab === "ideas" && <IdeasView ideas={ideas} onSave={handleSaveIdea} onDelete={handleDeleteIdea} onReorder={list => { setIdeas(list); saveSection("ideas", list); }} currentUser={userName} />}
                     {activeTab === "chat" && <IdeasView ideas={chatPosts} onSave={handleSaveChat} onDelete={handleDeleteChat} onReorder={list => { setChatPosts(list); saveSection("chatPosts", list); }} currentUser={userName} />}
-                    {activeTab === "settings" && <SettingsView currentUser={userName} customEmojis={customEmojis} onSaveEmoji={handleSaveEmoji} />}
+                    {activeTab === "settings" && <SettingsView currentUser={userName} customEmojis={customEmojis} onSaveEmoji={handleSaveEmoji} statusMessages={statusMessages} onSaveStatusMsg={handleSaveStatusMsg} />}
                     {activeTab.startsWith("memo_") && (() => {
                         const name = activeTab.replace("memo_", "");
                         return <PersonalMemoView memos={personalMemos[name] || []} onSave={m => handleSaveMemo(name, m)} onDelete={id => handleDeleteMemo(name, id)} />;
@@ -2698,7 +3359,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Paper Modal */}
-            {paperModal && <PaperFormModal paper={paperModal.paper} onSave={handleSavePaper} onDelete={handleDeletePaper} onClose={() => setPaperModal(null)} currentUser={userName} tagList={paperTagList} />}
+            {paperModal && <PaperFormModal paper={paperModal.paper} onSave={handleSavePaper} onDelete={handleDeletePaper} onClose={() => setPaperModal(null)} currentUser={userName} tagList={paperTagList} teamNames={teamNames} />}
         </div>
     );
 }
