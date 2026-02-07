@@ -4,9 +4,10 @@ import { motion } from "framer-motion";
 import Section from "@/components/ui/section";
 import { Flame, Droplets, Atom } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
+import Link from "next/link";
 
 export default function About() {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
 
     const cards = [
         {
@@ -32,10 +33,28 @@ export default function About() {
         },
     ];
 
+    // Split "About Us" / "연구실 소개" so "Us" is a clickable easter egg
+    const label = t("about.label");
+    const renderLabel = () => {
+        if (language === "EN") {
+            // "About Us" → "About " + clickable "Us"
+            return (
+                <>
+                    About{" "}
+                    <Link href="/team-dashboard" className="hover:text-rose-800 transition-colors cursor-pointer">
+                        Us
+                    </Link>
+                </>
+            );
+        }
+        // Korean: "연구실 소개" - no easter egg in KR
+        return label;
+    };
+
     return (
         <Section id="about" className="bg-slate-50/50">
             <div className="text-center max-w-3xl mx-auto mb-16">
-                <h2 className="text-sm font-semibold text-rose-600 tracking-widest uppercase mb-3">{t("about.label")}</h2>
+                <h2 className="text-sm font-semibold text-rose-600 tracking-widest uppercase mb-3">{renderLabel()}</h2>
                 <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">{t("about.title")}</h3>
                 <p className="text-lg text-gray-600 leading-relaxed">
                     {t("about.description")}
