@@ -966,31 +966,77 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                 </table>
             </div>
             </div>
-            {/* Right sidebar – selected date / today summary */}
+            {/* Right sidebar – selected date / this week summary */}
             <div className="flex-1 min-w-[200px] hidden lg:block">
                 {(() => {
-                    const showDate = selectedDate || todayStr;
-                    const items = data.filter(v => v.date === showDate);
-                    const d = new Date(showDate);
-                    const dateLabel = selectedDate
-                        ? `${d.getMonth() + 1}월 ${d.getDate()}일 (${dayL[d.getDay()]})`
-                        : `오늘 (${new Date().getMonth() + 1}/${new Date().getDate()})`;
-                    const isSelected = !!selectedDate;
+                    if (selectedDate) {
+                        // 날짜 클릭 시: 해당 날짜만 표시
+                        const items = data.filter(v => v.date === selectedDate);
+                        const d = new Date(selectedDate);
+                        const dateLabel = `${d.getMonth() + 1}월 ${d.getDate()}일 (${dayL[d.getDay()]})`;
+                        return (
+                            <div className="p-3 rounded-lg border sticky top-0 bg-blue-50 border-blue-200">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[13px] font-semibold text-blue-700">📋 {dateLabel}</span>
+                                    <button onClick={() => setSelectedDate(null)} className="text-[10px] text-blue-400 hover:text-blue-600">✕ 닫기</button>
+                                </div>
+                                {items.length > 0 ? (
+                                    <div className="flex flex-col gap-1.5">
+                                        {items.map(v => {
+                                            const vt = types[v.type];
+                                            return <div key={`${v.name}-${v.type}`} className="text-[12px] px-2 py-1 rounded-md bg-white border border-blue-200 text-blue-800">
+                                                <span className="font-medium">{MEMBERS[v.name]?.emoji || "⭐"}{v.name}</span>
+                                                <div className="text-[11px] text-slate-500 mt-0.5">{vt?.label}{v.description ? `: ${v.description}` : ""}</div>
+                                            </div>;
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="text-[12px] text-slate-400">일정이 없습니다</div>
+                                )}
+                            </div>
+                        );
+                    }
+                    // 기본: 이번 주 일정 (월~금)
+                    const now = new Date();
+                    const dayOfWeek = now.getDay();
+                    const monday = new Date(now);
+                    monday.setDate(now.getDate() - ((dayOfWeek === 0 ? 7 : dayOfWeek) - 1));
+                    const weekDates: string[] = [];
+                    for (let i = 0; i < 5; i++) {
+                        const dd = new Date(monday);
+                        dd.setDate(monday.getDate() + i);
+                        weekDates.push(`${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, "0")}-${String(dd.getDate()).padStart(2, "0")}`);
+                    }
+                    const weekItems = data.filter(v => weekDates.includes(v.date));
+                    const monLabel = `${monday.getMonth() + 1}/${monday.getDate()}`;
+                    const fri = new Date(monday); fri.setDate(monday.getDate() + 4);
+                    const friLabel = `${fri.getMonth() + 1}/${fri.getDate()}`;
                     return (
-                        <div className={`p-3 rounded-lg border sticky top-0 ${isSelected ? "bg-blue-50 border-blue-200" : "bg-amber-50 border-amber-200"}`}>
-                            <div className={`text-[13px] font-semibold mb-2 ${isSelected ? "text-blue-700" : "text-amber-700"}`}>📋 {dateLabel}</div>
-                            {items.length > 0 ? (
-                                <div className="flex flex-col gap-1.5">
-                                    {items.map(v => {
-                                        const vt = types[v.type];
-                                        return <div key={`${v.name}-${v.type}`} className={`text-[12px] px-2 py-1 rounded-md bg-white border ${isSelected ? "border-blue-200 text-blue-800" : "border-amber-200 text-amber-800"}`}>
-                                            <span className="font-medium">{MEMBERS[v.name]?.emoji || "⭐"}{v.name}</span>
-                                            <div className="text-[11px] text-slate-500 mt-0.5">{vt?.label}{v.description ? `: ${v.description}` : ""}</div>
-                                        </div>;
+                        <div className="p-3 rounded-lg border sticky top-0 bg-amber-50 border-amber-200">
+                            <div className="text-[13px] font-semibold mb-2 text-amber-700">📋 이번 주 ({monLabel} ~ {friLabel})</div>
+                            {weekItems.length > 0 ? (
+                                <div className="flex flex-col gap-1">
+                                    {weekDates.map(dateStr => {
+                                        const dayItems = weekItems.filter(v => v.date === dateStr);
+                                        if (dayItems.length === 0) return null;
+                                        const dd = new Date(dateStr);
+                                        const dayLabel = `${dd.getMonth() + 1}/${dd.getDate()}(${dayL[dd.getDay()]})`;
+                                        return (
+                                            <div key={dateStr}>
+                                                <div className="text-[10px] font-semibold text-amber-600 mt-1 mb-0.5">{dayLabel}</div>
+                                                {dayItems.map(v => {
+                                                    const vt = types[v.type];
+                                                    return <div key={`${v.name}-${v.type}-${v.date}`} className="text-[12px] px-2 py-1 rounded-md bg-white border border-amber-200 text-amber-800 mb-0.5">
+                                                        <span className="font-medium">{MEMBERS[v.name]?.emoji || "⭐"}{v.name}</span>
+                                                        <span className="text-[11px] text-slate-500 ml-1">{vt?.label}{v.description ? `: ${v.description}` : ""}</span>
+                                                    </div>;
+                                                })}
+                                            </div>
+                                        );
                                     })}
                                 </div>
                             ) : (
-                                <div className="text-[12px] text-slate-400">일정이 없습니다</div>
+                                <div className="text-[12px] text-slate-400">이번 주 일정이 없습니다</div>
                             )}
                         </div>
                     );
