@@ -3021,8 +3021,10 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
 
     // Pipeline stats
     const papersByStatus = STATUS_KEYS.map(s => ({ key: s, ...STATUS_CONFIG[s], count: fp.filter(p => p.status === s).length }));
+    const reportsByStatus = REPORT_STATUS_KEYS.map(s => ({ key: s, ...REPORT_STATUS_CONFIG[s], count: fr.filter(r => r.status === s).length }));
     const expByStatus = EXP_STATUS_KEYS.map(s => ({ key: s, ...EXP_STATUS_CONFIG[s], count: fe.filter(e => e.status === s).length }));
     const analysisByStatus = ANALYSIS_STATUS_KEYS.map(s => ({ key: s, ...ANALYSIS_STATUS_CONFIG[s], count: fa.filter(a => a.status === s).length }));
+    const patentsByStatus = IP_STATUS_KEYS.map(s => ({ key: s, ...IP_STATUS_CONFIG[s], count: fip.filter(p => p.status === s).length }));
 
     // Discussion items across all sections
     const discussionItems: Array<{ section: string; tab: string; title: string; icon: string }> = [
@@ -3066,7 +3068,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
     const myTarget = todayTargets.find(t => t.name === currentUser);
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-4">
             {/* Personal mode header */}
             {isPersonal && (
                 <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-5 text-white">
@@ -3091,54 +3093,46 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                 </div>
             )}
 
-            {/* Row 1: Key Numbers */}
-            <div className={`grid grid-cols-2 sm:grid-cols-3 ${isPersonal ? "lg:grid-cols-6" : "lg:grid-cols-6"} gap-3`}>
-                {[
-                    { label: isPersonal ? "내 논문" : "논문", value: fp.length, active: fp.filter(p => p.status === "writing").length, activeLabel: "작성중", color: "#3b82f6", tab: "papers" },
-                    { label: isPersonal ? "내 보고서" : "보고서", value: fr.length, active: fr.filter(r => r.status === "writing").length, activeLabel: "작성중", color: "#f59e0b", tab: "reports" },
-                    { label: isPersonal ? "내 실험" : "실험", value: fe.length, active: fe.filter(e => e.status === "running").length, activeLabel: "진행중", color: "#10b981", tab: "experiments" },
-                    { label: isPersonal ? "내 해석" : "해석", value: fa.length, active: fa.filter(a => a.status === "running").length, activeLabel: "진행중", color: "#8b5cf6", tab: "analysis" },
-                    { label: isPersonal ? "내 지재권" : "지재권", value: fip.length, active: fip.filter(p => p.status === "writing" || p.status === "evaluation").length, activeLabel: "진행중", color: "#059669", tab: "ip" },
-                    { label: isPersonal ? "내 To-do" : "To-do", value: activeTodos, active: 0, activeLabel: "", color: "#ef4444", tab: "todos" },
-                ].map(s => (
-                    <button key={s.label} onClick={() => onNavigate(s.tab)} className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-left hover:shadow-md hover:-translate-y-0.5 transition-all group">
-                        <div className="flex items-baseline gap-1.5">
-                            <span className="text-[24px] font-bold transition-colors" style={{ color: s.color }}>{s.value}</span>
-                            {s.active > 0 && <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-full text-white" style={{ background: s.color }}>{s.active} {s.activeLabel}</span>}
+            {/* Row 1: 연구 파이프라인 5개 한 줄 */}
+            <div className="bg-white border border-slate-200 rounded-xl p-4">
+                <h3 className="text-[14px] font-bold text-slate-800 mb-4">{isPersonal ? "내 연구 파이프라인" : "연구 파이프라인"}</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    <button onClick={() => onNavigate("papers")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
+                        <div className="text-[12px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-blue-500" />논문 <span className="text-blue-600 font-bold">({fp.length})</span>
                         </div>
-                        <div className="text-[12px] text-slate-400 mt-0.5 group-hover:text-slate-600 transition-colors">{s.label}</div>
+                        <MiniBar items={papersByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...papersByStatus.map(s => s.count))} />
                     </button>
-                ))}
+                    <button onClick={() => onNavigate("reports")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
+                        <div className="text-[12px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-amber-500" />보고서 <span className="text-amber-600 font-bold">({fr.length})</span>
+                        </div>
+                        <MiniBar items={reportsByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...reportsByStatus.map(s => s.count))} />
+                    </button>
+                    <button onClick={() => onNavigate("experiments")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
+                        <div className="text-[12px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />실험 <span className="text-emerald-600 font-bold">({fe.length})</span>
+                        </div>
+                        <MiniBar items={expByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...expByStatus.map(s => s.count))} />
+                    </button>
+                    <button onClick={() => onNavigate("analysis")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
+                        <div className="text-[12px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-violet-500" />해석 <span className="text-violet-600 font-bold">({fa.length})</span>
+                        </div>
+                        <MiniBar items={analysisByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...analysisByStatus.map(s => s.count))} />
+                    </button>
+                    <button onClick={() => onNavigate("ip")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
+                        <div className="text-[12px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-teal-500" />지재권 <span className="text-teal-600 font-bold">({fip.length})</span>
+                        </div>
+                        <MiniBar items={patentsByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...patentsByStatus.map(s => s.count))} />
+                    </button>
+                </div>
             </div>
 
-            {/* Row 2: Pipeline + Discussion */}
+            {/* Row 2: 논의 필요 + (오늘목표 현황 or 투두) + 최근 공지 */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Pipeline Summary */}
-                <div className="bg-white border border-slate-200 rounded-xl p-4 lg:col-span-2">
-                    <h3 className="text-[14px] font-bold text-slate-800 mb-4">{isPersonal ? "내 연구 파이프라인" : "연구 파이프라인"}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                        <div>
-                            <div className="text-[12px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-blue-500" />논문 ({fp.length})
-                            </div>
-                            <MiniBar items={papersByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...papersByStatus.map(s => s.count))} />
-                        </div>
-                        <div>
-                            <div className="text-[12px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500" />실험 ({fe.length})
-                            </div>
-                            <MiniBar items={expByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...expByStatus.map(s => s.count))} />
-                        </div>
-                        <div>
-                            <div className="text-[12px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-violet-500" />해석 ({fa.length})
-                            </div>
-                            <MiniBar items={analysisByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...analysisByStatus.map(s => s.count))} />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Discussion Items */}
+                {/* 논의 필요 */}
                 <div className="bg-white border border-slate-200 rounded-xl p-4">
                     <h3 className="text-[14px] font-bold text-slate-800 mb-3 flex items-center gap-2">
                         {isPersonal ? "내 논의 필요" : "논의 필요"}
@@ -3161,76 +3155,28 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                         </div>
                     )}
                 </div>
-            </div>
 
-            {/* Row 3 */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Today's Target Status (team) or detailed items (personal) */}
+                {/* 오늘 목표 현황 (team) / 투두 리스트 (personal) */}
                 {isPersonal ? (
-                    <div className="bg-white border border-slate-200 rounded-xl p-4 lg:col-span-2">
-                        <h3 className="text-[14px] font-bold text-slate-800 mb-3">내 전체 현황</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <div className="text-[11px] font-semibold text-slate-400 mb-2">내 To-do ({myTodos.length})</div>
-                                {myTodos.length === 0 ? <div className="text-[11px] text-slate-300">할 일 없음</div> : (
-                                    <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
-                                        {myTodos.map(t => (
-                                            <div key={t.id} className="flex items-start gap-1.5 text-[11px] text-slate-600">
-                                                <span className="shrink-0">{PRIORITY_ICON[t.priority]}</span>
-                                                <span className="leading-relaxed">{t.text}</span>
-                                            </div>
-                                        ))}
+                    <div className="bg-white border border-slate-200 rounded-xl p-4">
+                        <button onClick={() => onNavigate("todos")} className="w-full text-left">
+                            <h3 className="text-[14px] font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                내 To-do
+                                {myTodos.length > 0 && <span className="min-w-[20px] h-[20px] flex items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold">{myTodos.length}</span>}
+                            </h3>
+                        </button>
+                        {myTodos.length === 0 ? (
+                            <div className="text-[12px] text-slate-300 text-center py-6">할 일 없음</div>
+                        ) : (
+                            <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                                {myTodos.map(t => (
+                                    <div key={t.id} className="flex items-start gap-1.5 text-[11px] text-slate-600 p-1.5 rounded hover:bg-slate-50">
+                                        <span className="shrink-0">{PRIORITY_ICON[t.priority]}</span>
+                                        <span className="leading-relaxed">{t.text}</span>
                                     </div>
-                                )}
+                                ))}
                             </div>
-                            <div>
-                                <div className="text-[11px] font-semibold text-slate-400 mb-2">내 논문 ({myPapers.length})</div>
-                                {myPapers.length === 0 ? <div className="text-[11px] text-slate-300">배정 논문 없음</div> : (
-                                    <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
-                                        {myPapers.map(p => (
-                                            <div key={p.id} className="flex items-center gap-1.5">
-                                                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: STATUS_CONFIG[p.status]?.color }} />
-                                                <span className="text-[11px] text-slate-600 truncate">{p.title}</span>
-                                                <span className="text-[9px] px-1 py-0.5 rounded bg-slate-100 text-slate-400 shrink-0">{STATUS_CONFIG[p.status]?.label}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                            <div>
-                                <div className="text-[11px] font-semibold text-slate-400 mb-2">내 실험 ({myExperiments.length})</div>
-                                {myExperiments.length === 0 ? <div className="text-[11px] text-slate-300">배정 실험 없음</div> : (
-                                    <div className="space-y-1.5 max-h-[120px] overflow-y-auto">
-                                        {myExperiments.map(e => (
-                                            <div key={e.id} className="flex items-center gap-1.5">
-                                                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: EXP_STATUS_CONFIG[e.status]?.color }} />
-                                                <span className="text-[11px] text-slate-600 truncate">{e.title}</span>
-                                                <span className="text-[9px] px-1 py-0.5 rounded bg-slate-100 text-slate-400 shrink-0">{EXP_STATUS_CONFIG[e.status]?.label}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                            <div>
-                                <div className="text-[11px] font-semibold text-slate-400 mb-2">내 보고서 ({myReports.length}) / 해석 ({myAnalyses.length})</div>
-                                {myReports.length === 0 && myAnalyses.length === 0 ? <div className="text-[11px] text-slate-300">배정 항목 없음</div> : (
-                                    <div className="space-y-1.5 max-h-[120px] overflow-y-auto">
-                                        {myReports.map(r => (
-                                            <div key={`r-${r.id}`} className="flex items-center gap-1.5">
-                                                <span className="text-[10px]">📋</span>
-                                                <span className="text-[11px] text-slate-600 truncate">{r.title}</span>
-                                            </div>
-                                        ))}
-                                        {myAnalyses.map(a => (
-                                            <div key={`a-${a.id}`} className="flex items-center gap-1.5">
-                                                <span className="text-[10px]">🖥️</span>
-                                                <span className="text-[11px] text-slate-600 truncate">{a.title}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                        )}
                     </div>
                 ) : (
                     <div className="bg-white border border-slate-200 rounded-xl p-4">
@@ -3270,58 +3216,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                     </div>
                 )}
 
-                {/* My Items (team) or Recent Announcements (personal) */}
-                {!isPersonal && (() => {
-                    // Use teams data from "팀 현황" if available, otherwise derive from member fields
-                    const hasTeams = Object.keys(teams).length > 0;
-                    const teamEntries: Array<{ name: string; members: string[]; color: string }> = hasTeams
-                        ? Object.entries(teams).map(([name, t]) => ({ name, members: t.members, color: t.color }))
-                        : [...new Set(Object.values(members).map(m => m.team))].filter(t => t !== "PI").map(t => ({
-                            name: t,
-                            members: Object.entries(members).filter(([, m]) => m.team === t).map(([n]) => n),
-                            color: "#94a3b8",
-                        }));
-                    return (
-                        <div className="bg-white border border-slate-200 rounded-xl p-4">
-                            <h3 className="text-[14px] font-bold text-slate-800 mb-3">팀별 연구 현황</h3>
-                            <div className="space-y-3">
-                                {teamEntries.map(team => {
-                                    const tPapers = papers.filter(p => p.team === team.name).length;
-                                    const tReports = reports.filter(r => r.team === team.name).length;
-                                    const tPatents = ipPatents.filter(p => p.team === team.name).length;
-                                    const tExp = experiments.filter(e => e.team === team.name).length;
-                                    const tAnalysis = analyses.filter(a => a.team === team.name).length;
-                                    const total = tPapers + tReports + tPatents + tExp + tAnalysis;
-                                    return (
-                                        <div key={team.name}>
-                                            <div className="flex items-center justify-between mb-1.5">
-                                                <span className="text-[12px] font-semibold text-slate-700" style={hasTeams ? { color: team.color } : undefined}>{team.name}</span>
-                                                <span className="text-[10px] text-slate-400">{total}건</span>
-                                            </div>
-                                            <div className="flex gap-1 h-[6px] rounded-full overflow-hidden bg-slate-100">
-                                                {tPapers > 0 && <div className="bg-blue-500 rounded-full" style={{ width: `${(tPapers / Math.max(total, 1)) * 100}%` }} />}
-                                                {tReports > 0 && <div className="bg-amber-500 rounded-full" style={{ width: `${(tReports / Math.max(total, 1)) * 100}%` }} />}
-                                                {tPatents > 0 && <div className="bg-teal-500 rounded-full" style={{ width: `${(tPatents / Math.max(total, 1)) * 100}%` }} />}
-                                                {tExp > 0 && <div className="bg-emerald-500 rounded-full" style={{ width: `${(tExp / Math.max(total, 1)) * 100}%` }} />}
-                                                {tAnalysis > 0 && <div className="bg-violet-500 rounded-full" style={{ width: `${(tAnalysis / Math.max(total, 1)) * 100}%` }} />}
-                                            </div>
-                                            <div className="flex gap-2 mt-1 flex-wrap">
-                                                {tPapers > 0 && <span className="text-[10px] text-blue-600">논문 {tPapers}</span>}
-                                                {tReports > 0 && <span className="text-[10px] text-amber-600">보고서 {tReports}</span>}
-                                                {tPatents > 0 && <span className="text-[10px] text-teal-600">지재권 {tPatents}</span>}
-                                                {tExp > 0 && <span className="text-[10px] text-emerald-600">실험 {tExp}</span>}
-                                                {tAnalysis > 0 && <span className="text-[10px] text-violet-600">해석 {tAnalysis}</span>}
-                                                {total === 0 && <span className="text-[10px] text-slate-300">항목 없음</span>}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    );
-                })()}
-
-                {/* Recent Announcements */}
+                {/* 최근 공지 */}
                 <div className="bg-white border border-slate-200 rounded-xl p-4">
                     <button onClick={() => onNavigate("announcements")} className="w-full text-left">
                         <h3 className="text-[14px] font-bold text-slate-800 mb-3">최근 공지</h3>
@@ -3341,8 +3236,79 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                 </div>
             </div>
 
-            {/* Row 4: Member Activity Matrix (team only) */}
-            {!isPersonal && (
+            {/* Row 3: 멤버별 현황 (team) / 내 현황 (personal) */}
+            {isPersonal ? (
+                <div className="bg-white border border-slate-200 rounded-xl p-4">
+                    <h3 className="text-[14px] font-bold text-slate-800 mb-3">내 전체 현황</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                        <div>
+                            <div className="text-[11px] font-semibold text-slate-400 mb-2">내 논문 ({myPapers.length})</div>
+                            {myPapers.length === 0 ? <div className="text-[11px] text-slate-300">없음</div> : (
+                                <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
+                                    {myPapers.map(p => (
+                                        <div key={p.id} className="flex items-center gap-1.5">
+                                            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: STATUS_CONFIG[p.status]?.color }} />
+                                            <span className="text-[11px] text-slate-600 truncate">{p.title}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <div className="text-[11px] font-semibold text-slate-400 mb-2">내 보고서 ({myReports.length})</div>
+                            {myReports.length === 0 ? <div className="text-[11px] text-slate-300">없음</div> : (
+                                <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
+                                    {myReports.map(r => (
+                                        <div key={r.id} className="flex items-center gap-1.5">
+                                            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: REPORT_STATUS_CONFIG[r.status]?.color }} />
+                                            <span className="text-[11px] text-slate-600 truncate">{r.title}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <div className="text-[11px] font-semibold text-slate-400 mb-2">내 실험 ({myExperiments.length})</div>
+                            {myExperiments.length === 0 ? <div className="text-[11px] text-slate-300">없음</div> : (
+                                <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
+                                    {myExperiments.map(e => (
+                                        <div key={e.id} className="flex items-center gap-1.5">
+                                            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: EXP_STATUS_CONFIG[e.status]?.color }} />
+                                            <span className="text-[11px] text-slate-600 truncate">{e.title}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <div className="text-[11px] font-semibold text-slate-400 mb-2">내 해석 ({myAnalyses.length})</div>
+                            {myAnalyses.length === 0 ? <div className="text-[11px] text-slate-300">없음</div> : (
+                                <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
+                                    {myAnalyses.map(a => (
+                                        <div key={a.id} className="flex items-center gap-1.5">
+                                            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: ANALYSIS_STATUS_CONFIG[a.status]?.color }} />
+                                            <span className="text-[11px] text-slate-600 truncate">{a.title}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <div className="text-[11px] font-semibold text-slate-400 mb-2">내 지재권 ({ipPatents.filter(p => p.assignees?.includes(currentUser)).length})</div>
+                            {ipPatents.filter(p => p.assignees?.includes(currentUser)).length === 0 ? <div className="text-[11px] text-slate-300">없음</div> : (
+                                <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
+                                    {ipPatents.filter(p => p.assignees?.includes(currentUser)).map(p => (
+                                        <div key={p.id} className="flex items-center gap-1.5">
+                                            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: IP_STATUS_CONFIG[p.status]?.color }} />
+                                            <span className="text-[11px] text-slate-600 truncate">{p.title}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            ) : (
                 <div className="bg-white border border-slate-200 rounded-xl p-4">
                     <h3 className="text-[14px] font-bold text-slate-800 mb-3">멤버별 현황</h3>
                     <div className="overflow-x-auto">
@@ -3394,6 +3360,56 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                     </div>
                 </div>
             )}
+
+            {/* Row 4: 팀별 현황 (team only) */}
+            {!isPersonal && (() => {
+                const hasTeams = Object.keys(teams).length > 0;
+                const teamEntries: Array<{ name: string; members: string[]; color: string }> = hasTeams
+                    ? Object.entries(teams).map(([name, t]) => ({ name, members: t.members, color: t.color }))
+                    : [...new Set(Object.values(members).map(m => m.team))].filter(t => t !== "PI").map(t => ({
+                        name: t,
+                        members: Object.entries(members).filter(([, m]) => m.team === t).map(([n]) => n),
+                        color: "#94a3b8",
+                    }));
+                return (
+                    <div className="bg-white border border-slate-200 rounded-xl p-4">
+                        <h3 className="text-[14px] font-bold text-slate-800 mb-3">팀별 연구 현황</h3>
+                        <div className="space-y-3">
+                            {teamEntries.map(team => {
+                                const tPapers = papers.filter(p => p.team === team.name).length;
+                                const tReports = reports.filter(r => r.team === team.name).length;
+                                const tPatents = ipPatents.filter(p => p.team === team.name).length;
+                                const tExp = experiments.filter(e => e.team === team.name).length;
+                                const tAnalysis = analyses.filter(a => a.team === team.name).length;
+                                const total = tPapers + tReports + tPatents + tExp + tAnalysis;
+                                return (
+                                    <div key={team.name}>
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <span className="text-[12px] font-semibold text-slate-700" style={hasTeams ? { color: team.color } : undefined}>{team.name}</span>
+                                            <span className="text-[10px] text-slate-400">{total}건</span>
+                                        </div>
+                                        <div className="flex gap-1 h-[6px] rounded-full overflow-hidden bg-slate-100">
+                                            {tPapers > 0 && <div className="bg-blue-500 rounded-full" style={{ width: `${(tPapers / Math.max(total, 1)) * 100}%` }} />}
+                                            {tReports > 0 && <div className="bg-amber-500 rounded-full" style={{ width: `${(tReports / Math.max(total, 1)) * 100}%` }} />}
+                                            {tPatents > 0 && <div className="bg-teal-500 rounded-full" style={{ width: `${(tPatents / Math.max(total, 1)) * 100}%` }} />}
+                                            {tExp > 0 && <div className="bg-emerald-500 rounded-full" style={{ width: `${(tExp / Math.max(total, 1)) * 100}%` }} />}
+                                            {tAnalysis > 0 && <div className="bg-violet-500 rounded-full" style={{ width: `${(tAnalysis / Math.max(total, 1)) * 100}%` }} />}
+                                        </div>
+                                        <div className="flex gap-2 mt-1 flex-wrap">
+                                            {tPapers > 0 && <span className="text-[10px] text-blue-600">논문 {tPapers}</span>}
+                                            {tReports > 0 && <span className="text-[10px] text-amber-600">보고서 {tReports}</span>}
+                                            {tPatents > 0 && <span className="text-[10px] text-teal-600">지재권 {tPatents}</span>}
+                                            {tExp > 0 && <span className="text-[10px] text-emerald-600">실험 {tExp}</span>}
+                                            {tAnalysis > 0 && <span className="text-[10px] text-violet-600">해석 {tAnalysis}</span>}
+                                            {total === 0 && <span className="text-[10px] text-slate-300">항목 없음</span>}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }
