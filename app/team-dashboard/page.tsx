@@ -65,7 +65,7 @@ const CALENDAR_TYPES: Record<string, { label: string; color: string; short: stri
     conference: { label: "학회", color: "#60a5fa", short: "학" },
     trip: { label: "출장", color: "#7dd3fc", short: "출" },
     seminar: { label: "세미나", color: "#67e8f9", short: "세" },
-    presentation: { label: "발표", color: "#5eead4", short: "발" },
+    meeting: { label: "회의", color: "#5eead4", short: "회" },
     vendor: { label: "업체", color: "#6ee7b7", short: "업" },
     other: { label: "기타", color: "#cbd5e1", short: "기" },
     dispatch: { label: "파견", color: "#a78bfa", short: "파" },
