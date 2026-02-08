@@ -993,10 +993,8 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                         </div>
                     );
                 })()}
-                {/* 파견 관리 패널 */}
-                {onDispatchSave && onDispatchDelete && (
-                    <DispatchPanel dispatches={dispatches || []} currentUser={currentUser} onSave={onDispatchSave} onDelete={onDispatchDelete} />
-                )}
+                {/* 파견 관리 패널 – 모두 열람, 박일웅만 편집 */}
+                <DispatchPanel dispatches={dispatches || []} currentUser={currentUser} onSave={onDispatchSave} onDelete={onDispatchDelete} />
             </div>
             </div>
             {/* Inline event form for schedule mode */}
