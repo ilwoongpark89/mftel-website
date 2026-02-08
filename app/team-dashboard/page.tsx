@@ -3357,39 +3357,45 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                 return (
                     <div className="bg-white border border-slate-200 rounded-xl p-4">
                         <h3 className="text-[14px] font-bold text-slate-800 mb-3">팀별 연구 현황</h3>
-                        <div className="space-y-3">
-                            {teamEntries.map(team => {
+                        {(() => {
+                            const teamStats = teamEntries.map(team => {
                                 const tPapers = papers.filter(p => p.team === team.name).length;
                                 const tReports = reports.filter(r => r.team === team.name).length;
                                 const tPatents = ipPatents.filter(p => p.team === team.name).length;
                                 const tExp = experiments.filter(e => e.team === team.name).length;
                                 const tAnalysis = analyses.filter(a => a.team === team.name).length;
                                 const total = tPapers + tReports + tPatents + tExp + tAnalysis;
-                                return (
-                                    <div key={team.name}>
-                                        <div className="flex items-center justify-between mb-1.5">
-                                            <span className="text-[12px] font-semibold text-slate-700" style={hasTeams ? { color: team.color } : undefined}>{team.name}</span>
-                                            <span className="text-[10px] text-slate-400">{total}건</span>
+                                return { ...team, tPapers, tReports, tPatents, tExp, tAnalysis, total };
+                            });
+                            const maxTotal = Math.max(...teamStats.map(t => t.total), 1);
+                            return (
+                                <div className="space-y-3">
+                                    {teamStats.map(team => (
+                                        <div key={team.name}>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-[12px] font-semibold text-slate-700" style={hasTeams ? { color: team.color } : undefined}>{team.name}</span>
+                                                <span className="text-[10px] text-slate-400">{team.total}건</span>
+                                            </div>
+                                            <div className="flex gap-[2px] h-[10px]">
+                                                {Array.from({ length: team.tPapers }, (_, i) => <div key={`p${i}`} className="bg-blue-500 rounded-sm" style={{ width: `${100 / maxTotal}%` }} />)}
+                                                {Array.from({ length: team.tReports }, (_, i) => <div key={`r${i}`} className="bg-amber-500 rounded-sm" style={{ width: `${100 / maxTotal}%` }} />)}
+                                                {Array.from({ length: team.tPatents }, (_, i) => <div key={`ip${i}`} className="bg-teal-500 rounded-sm" style={{ width: `${100 / maxTotal}%` }} />)}
+                                                {Array.from({ length: team.tExp }, (_, i) => <div key={`e${i}`} className="bg-emerald-500 rounded-sm" style={{ width: `${100 / maxTotal}%` }} />)}
+                                                {Array.from({ length: team.tAnalysis }, (_, i) => <div key={`a${i}`} className="bg-violet-500 rounded-sm" style={{ width: `${100 / maxTotal}%` }} />)}
+                                            </div>
+                                            <div className="flex gap-2 mt-1 flex-wrap">
+                                                {team.tPapers > 0 && <span className="text-[10px] text-blue-600">논문 {team.tPapers}</span>}
+                                                {team.tReports > 0 && <span className="text-[10px] text-amber-600">계획/보고 {team.tReports}</span>}
+                                                {team.tPatents > 0 && <span className="text-[10px] text-teal-600">지재권 {team.tPatents}</span>}
+                                                {team.tExp > 0 && <span className="text-[10px] text-emerald-600">실험 {team.tExp}</span>}
+                                                {team.tAnalysis > 0 && <span className="text-[10px] text-violet-600">해석 {team.tAnalysis}</span>}
+                                                {team.total === 0 && <span className="text-[10px] text-slate-300">항목 없음</span>}
+                                            </div>
                                         </div>
-                                        <div className="flex gap-1 h-[6px] rounded-full overflow-hidden bg-slate-100">
-                                            {tPapers > 0 && <div className="bg-blue-500 rounded-full" style={{ width: `${(tPapers / Math.max(total, 1)) * 100}%` }} />}
-                                            {tReports > 0 && <div className="bg-amber-500 rounded-full" style={{ width: `${(tReports / Math.max(total, 1)) * 100}%` }} />}
-                                            {tPatents > 0 && <div className="bg-teal-500 rounded-full" style={{ width: `${(tPatents / Math.max(total, 1)) * 100}%` }} />}
-                                            {tExp > 0 && <div className="bg-emerald-500 rounded-full" style={{ width: `${(tExp / Math.max(total, 1)) * 100}%` }} />}
-                                            {tAnalysis > 0 && <div className="bg-violet-500 rounded-full" style={{ width: `${(tAnalysis / Math.max(total, 1)) * 100}%` }} />}
-                                        </div>
-                                        <div className="flex gap-2 mt-1 flex-wrap">
-                                            {tPapers > 0 && <span className="text-[10px] text-blue-600">논문 {tPapers}</span>}
-                                            {tReports > 0 && <span className="text-[10px] text-amber-600">계획/보고 {tReports}</span>}
-                                            {tPatents > 0 && <span className="text-[10px] text-teal-600">지재권 {tPatents}</span>}
-                                            {tExp > 0 && <span className="text-[10px] text-emerald-600">실험 {tExp}</span>}
-                                            {tAnalysis > 0 && <span className="text-[10px] text-violet-600">해석 {tAnalysis}</span>}
-                                            {total === 0 && <span className="text-[10px] text-slate-300">항목 없음</span>}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                    ))}
+                                </div>
+                            );
+                        })()}
                     </div>
                 );
             })()}

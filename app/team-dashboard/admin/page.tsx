@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 
-type AccessLog = { userName: string; action: "login" | "logout"; timestamp: number; duration?: number; ip?: string };
+type AccessLog = { userName: string; action: "login" | "logout"; timestamp: number; duration?: number; ip?: string; ua?: string };
 type ModLog = { userName: string; section: string; action: string; timestamp: number; detail?: string };
 type BackupInfo = { date: string; size: number; auto: boolean };
 type Member = { team: string; role: string; emoji: string };
@@ -266,14 +266,24 @@ export default function AdminPage() {
                         {(() => {
                             // Build sessions by matching login→logout pairs per user
                             // Logs are newest-first; scan to pair logout (has duration) with preceding login
-                            type Session = { userName: string; loginTime: number; logoutTime?: number; duration?: number; ip?: string };
+                            type Session = { userName: string; loginTime: number; logoutTime?: number; duration?: number; ip?: string; ua?: string; timedOut?: boolean };
+                            const isMobile = (ua?: string) => !ua ? null : /Mobile|Android|iPhone|iPad|iPod/i.test(ua);
                             const sessions: Session[] = [];
 
                             // Process in chronological order (oldest first)
                             const chronoLogs = [...accessLogs].reverse();
                             for (const log of chronoLogs) {
                                 if (log.action === "login") {
-                                    sessions.push({ userName: log.userName, loginTime: log.timestamp, ip: log.ip });
+                                    // Auto-close any previous unmatched session for same user
+                                    for (let j = sessions.length - 1; j >= 0; j--) {
+                                        if (sessions[j].userName === log.userName && !sessions[j].logoutTime) {
+                                            sessions[j].logoutTime = sessions[j].loginTime;
+                                            sessions[j].duration = 0;
+                                            sessions[j].timedOut = true;
+                                            break;
+                                        }
+                                    }
+                                    sessions.push({ userName: log.userName, loginTime: log.timestamp, ip: log.ip, ua: log.ua });
                                 } else {
                                     // Find the last unmatched session for this user
                                     for (let j = sessions.length - 1; j >= 0; j--) {
@@ -283,6 +293,16 @@ export default function AdminPage() {
                                             break;
                                         }
                                     }
+                                }
+                            }
+                            // Auto-close stale sessions (no logout, older than 30 min)
+                            const STALE_MS = 30 * 60 * 1000;
+                            const now = Date.now();
+                            for (const s of sessions) {
+                                if (!s.logoutTime && now - s.loginTime > STALE_MS) {
+                                    s.logoutTime = s.loginTime;
+                                    s.duration = 0;
+                                    s.timedOut = true;
                                 }
                             }
                             // Sort newest first for display
@@ -303,14 +323,15 @@ export default function AdminPage() {
                                 </div>
                                 <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
                                     <table className="w-full text-[12px]">
-                                        <thead><tr className="bg-slate-50 border-b border-slate-200"><th className="px-4 py-2 text-left font-semibold text-slate-500">이름</th><th className="px-4 py-2 text-left font-semibold text-slate-500">로그인</th><th className="px-4 py-2 text-left font-semibold text-slate-500">로그아웃</th><th className="px-4 py-2 text-left font-semibold text-slate-500">접속시간</th><th className="px-4 py-2 text-left font-semibold text-slate-500">IP</th><th className="px-4 py-2 text-left font-semibold text-slate-500">위치</th></tr></thead>
+                                        <thead><tr className="bg-slate-50 border-b border-slate-200"><th className="px-4 py-2 text-left font-semibold text-slate-500">이름</th><th className="px-4 py-2 text-left font-semibold text-slate-500">기기</th><th className="px-4 py-2 text-left font-semibold text-slate-500">로그인</th><th className="px-4 py-2 text-left font-semibold text-slate-500">로그아웃</th><th className="px-4 py-2 text-left font-semibold text-slate-500">접속시간</th><th className="px-4 py-2 text-left font-semibold text-slate-500">IP</th><th className="px-4 py-2 text-left font-semibold text-slate-500">위치</th></tr></thead>
                                         <tbody>
                                             {sessions.slice(0, 200).map((s, i) => (
                                                 <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
                                                     <td className="px-4 py-2 font-medium">{s.userName}</td>
+                                                    <td className="px-4 py-2 text-center" title={s.ua || ""}>{isMobile(s.ua) === null ? <span className="text-slate-300">-</span> : isMobile(s.ua) ? <span className="text-[14px]" title="모바일">📱</span> : <span className="text-[14px]" title="PC">💻</span>}</td>
                                                     <td className="px-4 py-2 text-slate-500">{fmtTime(s.loginTime)}</td>
-                                                    <td className="px-4 py-2 text-slate-500">{s.logoutTime ? fmtTime(s.logoutTime) : <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">접속중</span>}</td>
-                                                    <td className="px-4 py-2 text-slate-600 font-medium">{s.duration ? fmtDuration(s.duration) : "-"}</td>
+                                                    <td className="px-4 py-2 text-slate-500">{s.timedOut ? <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700">시간초과</span> : s.logoutTime ? fmtTime(s.logoutTime) : <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">접속중</span>}</td>
+                                                    <td className="px-4 py-2 text-slate-600 font-medium">{s.timedOut ? <span className="text-slate-300">-</span> : s.duration ? fmtDuration(s.duration) : "-"}</td>
                                                     <td className="px-4 py-2 text-slate-400 text-[11px] font-mono">{s.ip || "-"}</td>
                                                     <td className="px-4 py-2 text-slate-500 text-[11px]">{s.ip && ipLocations[s.ip] ? <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{ipLocations[s.ip]}</span> : <span className="text-slate-300">-</span>}</td>
                                                 </tr>

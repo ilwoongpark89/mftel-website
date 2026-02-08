@@ -51,6 +51,19 @@ interface MessagesData {
 
 const COLORS = ['#e11d48', '#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626', '#4f46e5', '#0891b2'];
 
+type VisitSource = 'all' | 'human' | 'vercel' | 'claude';
+
+function classifyUA(ua: string): 'vercel' | 'claude' | 'human' {
+    const lower = ua.toLowerCase();
+    if (lower.includes('vercel') || lower.includes('next.js') || lower.includes('node-fetch') || lower.includes('undici')) return 'vercel';
+    if (lower.includes('claude') || lower.includes('anthropic') || lower.includes('chatgpt') || lower.includes('openai') || lower.includes('gptbot')) return 'claude';
+    if (lower.includes('bot') || lower.includes('crawler') || lower.includes('spider') || lower.includes('headless')) return 'claude';
+    return 'human';
+}
+
+const SOURCE_LABELS: Record<VisitSource, string> = { all: 'All', human: 'Visitors', vercel: 'Vercel / Build', claude: 'Bot / AI' };
+const SOURCE_COLORS: Record<VisitSource, string> = { all: 'slate', human: 'emerald', vercel: 'indigo', claude: 'amber' };
+
 export default function AdminDashboard() {
     const [password, setPassword] = useState('');
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -62,6 +75,7 @@ export default function AdminDashboard() {
     const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'analytics' | 'messages'>('analytics');
     const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+    const [sourceFilter, setSourceFilter] = useState<VisitSource>('all');
     const regionRef = useRef<HTMLDivElement>(null);
 
     const handleCountryClick = (country: string) => {
@@ -202,29 +216,63 @@ export default function AdminDashboard() {
         );
     }
 
+    // Classify & filter visits by source
+    const allVisits = data?.recentVisits || [];
+    const filteredVisits = sourceFilter === 'all' ? allVisits : allVisits.filter(v => classifyUA(v.userAgent) === sourceFilter);
+
+    // Source counts for badges
+    const sourceCounts = { human: 0, vercel: 0, claude: 0 };
+    allVisits.forEach(v => { sourceCounts[classifyUA(v.userAgent)]++; });
+
+    // Build daily stats from filtered visits
+    const filteredDailyStats: Record<string, number> = {};
+    if (sourceFilter === 'all' && data?.dailyStats) {
+        Object.assign(filteredDailyStats, data.dailyStats);
+    } else {
+        filteredVisits.forEach(v => {
+            const day = v.timestamp.split('T')[0];
+            filteredDailyStats[day] = (filteredDailyStats[day] || 0) + 1;
+        });
+        // Ensure all days in period are present
+        if (data?.dailyStats) {
+            for (const d of Object.keys(data.dailyStats)) {
+                if (!(d in filteredDailyStats)) filteredDailyStats[d] = 0;
+            }
+        }
+    }
+
+    // Build country stats from filtered visits
+    const filteredCountries: Record<string, number> = {};
+    if (sourceFilter === 'all' && data?.countries) {
+        Object.assign(filteredCountries, data.countries);
+    } else {
+        filteredVisits.forEach(v => {
+            if (v.country) filteredCountries[v.country] = (filteredCountries[v.country] || 0) + 1;
+        });
+    }
+
     // Prepare chart data
-    const chartData = data?.dailyStats
-        ? Object.entries(data.dailyStats)
-            .sort((a, b) => a[0].localeCompare(b[0]))
-            .map(([date, count]) => ({
-                date: date.slice(5), // MM-DD format
-                visits: count
-            }))
-        : [];
+    const chartData = Object.entries(filteredDailyStats)
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([date, count]) => ({
+            date: date.slice(5),
+            visits: count
+        }));
 
-    const countryData = data?.countries
-        ? Object.entries(data.countries)
-            .sort((a, b) => Number(b[1]) - Number(a[1]))
-            .slice(0, 8)
-            .map(([country, count]) => ({
-                name: country,
-                value: Number(count)
-            }))
-        : [];
+    const countryData = Object.entries(filteredCountries)
+        .sort((a, b) => Number(b[1]) - Number(a[1]))
+        .slice(0, 8)
+        .map(([country, count]) => ({
+            name: country,
+            value: Number(count)
+        }));
 
-    const sortedCountries = data?.countries
-        ? Object.entries(data.countries).sort((a, b) => Number(b[1]) - Number(a[1]))
-        : [];
+    const sortedCountries = Object.entries(filteredCountries)
+        .sort((a, b) => Number(b[1]) - Number(a[1]));
+
+    const filteredPeriodTotal = sourceFilter === 'all'
+        ? (data?.periodTotal || 0)
+        : Object.values(filteredDailyStats).reduce((a, b) => a + b, 0);
 
     return (
         <div className="min-h-screen bg-slate-100">
@@ -281,7 +329,7 @@ export default function AdminDashboard() {
                     {/* Analytics Tab */}
                     {activeTab === 'analytics' && (
                         <>
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
                                 <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
                                 <div className="flex gap-2 flex-wrap">
                                     <Button
@@ -311,6 +359,31 @@ export default function AdminDashboard() {
                                 </div>
                             </div>
 
+                            {/* Source Filter */}
+                            <div className="flex gap-2 mb-8 flex-wrap">
+                                {(['all', 'human', 'vercel', 'claude'] as VisitSource[]).map(src => {
+                                    const count = src === 'all' ? allVisits.length : sourceCounts[src as keyof typeof sourceCounts];
+                                    const active = sourceFilter === src;
+                                    const colorMap: Record<string, string> = {
+                                        all: active ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50',
+                                        human: active ? 'bg-emerald-600 text-white' : 'bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50',
+                                        vercel: active ? 'bg-indigo-600 text-white' : 'bg-white text-indigo-700 border border-indigo-200 hover:bg-indigo-50',
+                                        claude: active ? 'bg-amber-600 text-white' : 'bg-white text-amber-700 border border-amber-200 hover:bg-amber-50',
+                                    };
+                                    const icons: Record<string, string> = { all: '', human: '👤 ', vercel: '▲ ', claude: '🤖 ' };
+                                    return (
+                                        <button
+                                            key={src}
+                                            onClick={() => setSourceFilter(src)}
+                                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${colorMap[src]}`}
+                                        >
+                                            {icons[src]}{SOURCE_LABELS[src]}
+                                            <span className={`ml-2 text-xs ${active ? 'opacity-80' : 'opacity-60'}`}>({count})</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
                             {/* Summary Cards */}
                             <div className="grid md:grid-cols-4 gap-6 mb-8">
                                 <Card>
@@ -325,11 +398,11 @@ export default function AdminDashboard() {
                                 <Card>
                                     <CardHeader className="pb-2">
                                         <CardTitle className="text-sm text-gray-500">
-                                            Visits ({period === 1 ? 'Today' : `Last ${period} Days`})
+                                            {SOURCE_LABELS[sourceFilter]} ({period === 1 ? 'Today' : `Last ${period} Days`})
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <p className="text-4xl font-bold text-indigo-600">{data?.periodTotal || 0}</p>
+                                        <p className="text-4xl font-bold text-indigo-600">{filteredPeriodTotal}</p>
                                     </CardContent>
                                 </Card>
 
@@ -348,7 +421,7 @@ export default function AdminDashboard() {
                                     </CardHeader>
                                     <CardContent>
                                         <p className="text-4xl font-bold text-amber-600">
-                                            {data?.dailyStats?.[new Date().toISOString().split('T')[0]] || 0}
+                                            {filteredDailyStats[new Date().toISOString().split('T')[0]] || 0}
                                         </p>
                                     </CardContent>
                                 </Card>
@@ -467,11 +540,20 @@ export default function AdminDashboard() {
                                                 <thead className="sticky top-0 bg-white">
                                                     <tr className="border-b">
                                                         <th className="text-left py-2 px-2">Time</th>
+                                                        <th className="text-left py-2 px-2">Source</th>
                                                         <th className="text-left py-2 px-2">Location</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {data?.recentVisits?.map((visit, i) => (
+                                                    {filteredVisits.map((visit, i) => {
+                                                        const src = classifyUA(visit.userAgent);
+                                                        const badgeStyle: Record<string, string> = {
+                                                            human: 'bg-emerald-100 text-emerald-700',
+                                                            vercel: 'bg-indigo-100 text-indigo-700',
+                                                            claude: 'bg-amber-100 text-amber-700',
+                                                        };
+                                                        const badgeLabel: Record<string, string> = { human: '👤', vercel: '▲', claude: '🤖' };
+                                                        return (
                                                         <tr key={i} className="border-b hover:bg-gray-50">
                                                             <td className="py-2 px-2 text-gray-600 whitespace-nowrap">
                                                                 {new Date(visit.timestamp).toLocaleString('ko-KR', {
@@ -482,16 +564,22 @@ export default function AdminDashboard() {
                                                                 })}
                                                             </td>
                                                             <td className="py-2 px-2">
+                                                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${badgeStyle[src]}`} title={visit.userAgent}>
+                                                                    {badgeLabel[src]}
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-2 px-2">
                                                                 <span className="font-medium">{visit.country}</span>
                                                                 <span className="text-gray-400 ml-1">
                                                                     {visit.city !== 'Unknown' && `, ${visit.city}`}
                                                                 </span>
                                                             </td>
                                                         </tr>
-                                                    ))}
-                                                    {(!data?.recentVisits || data.recentVisits.length === 0) && (
+                                                    );
+                                                    })}
+                                                    {filteredVisits.length === 0 && (
                                                         <tr>
-                                                            <td colSpan={2} className="py-4 text-center text-gray-400">
+                                                            <td colSpan={3} className="py-4 text-center text-gray-400">
                                                                 No visits recorded yet
                                                             </td>
                                                         </tr>
@@ -523,8 +611,8 @@ export default function AdminDashboard() {
                                                 <div className="space-y-2 max-h-60 overflow-y-auto">
                                                     {(() => {
                                                         const regionCounts: Record<string, { count: number; cities: Record<string, number> }> = {};
-                                                        data?.recentVisits
-                                                            ?.filter(v => v.country === selectedCountry)
+                                                        filteredVisits
+                                                            .filter(v => v.country === selectedCountry)
                                                             .forEach(visit => {
                                                                 const region = visit.region || 'Unknown';
                                                                 const city = visit.city || 'Unknown';
@@ -569,8 +657,8 @@ export default function AdminDashboard() {
                                                 <div className="h-[250px]">
                                                     {(() => {
                                                         const regionCounts: Record<string, number> = {};
-                                                        data?.recentVisits
-                                                            ?.filter(v => v.country === selectedCountry)
+                                                        filteredVisits
+                                                            .filter(v => v.country === selectedCountry)
                                                             .forEach(visit => {
                                                                 const region = visit.region || 'Unknown';
                                                                 regionCounts[region] = (regionCounts[region] || 0) + 1;

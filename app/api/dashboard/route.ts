@@ -105,20 +105,21 @@ export async function POST(request: NextRequest) {
             const raw = await getKey(`${DASHBOARD_PREFIX}online`);
             let users = raw ? JSON.parse(raw) : [];
 
-            // Extract client IP for logging
+            // Extract client IP and User-Agent for logging
             const forwarded = request.headers.get('x-forwarded-for');
             const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip') || 'unknown');
+            const ua = request.headers.get('user-agent') || '';
 
             if (action === 'join') {
                 users = users.filter((u: { name: string }) => u.name !== userName);
                 const now = Date.now();
                 users.push({ name: userName, timestamp: now, joinedAt: now });
-                await appendLog(`${LOG_PREFIX}access`, { userName, action: 'login', ip });
+                await appendLog(`${LOG_PREFIX}access`, { userName, action: 'login', ip, ua });
             } else if (action === 'leave') {
                 const found = users.find((u: { name: string }) => u.name === userName);
                 const duration = found?.joinedAt ? Date.now() - found.joinedAt : (found ? Date.now() - found.timestamp : undefined);
                 users = users.filter((u: { name: string }) => u.name !== userName);
-                await appendLog(`${LOG_PREFIX}access`, { userName, action: 'logout', duration, ip });
+                await appendLog(`${LOG_PREFIX}access`, { userName, action: 'logout', duration, ip, ua });
             } else {
                 // heartbeat — only update timestamp (for freshness check), preserve joinedAt
                 users = users.map((u: { name: string; timestamp: number; joinedAt?: number }) =>
