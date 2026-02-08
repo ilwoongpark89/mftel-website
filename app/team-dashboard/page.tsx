@@ -793,7 +793,8 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
     const getEntry = (name: string, dateStr: string) => data.find(v => v.name === name && v.date === dateStr);
     const countMonth = (name: string) => data.filter(v => v.name === name && monthDates.has(v.date) && (v.type === "vacation" || v.type === "wfh")).length;
     const countYear = (name: string) => data.filter(v => v.name === name && v.date.startsWith(String(month.y)) && (v.type === "vacation" || v.type === "wfh")).length;
-    const isDispatched = (name: string) => (dispatches || []).some(d => d.name === name && d.start <= todayStr && d.end >= todayStr);
+    const isDispatchedOn = (name: string, dateStr: string) => (dispatches || []).some(d => d.name === name && d.start <= dateStr && d.end >= dateStr);
+    const isDispatched = (name: string) => isDispatchedOn(name, todayStr);
 
     const scheduleTypeKeys = Object.keys(types).filter(k => k !== "vacation" && k !== "wfh");
 
@@ -911,7 +912,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                             const isMe = name === currentUser;
                             const dispatched = isDispatched(name);
                             return (
-                                <tr key={name} className={`${dispatched ? "bg-violet-100/60" : isMe ? "bg-blue-50/30" : ""} hover:bg-slate-50/50`}>
+                                <tr key={name} className={`${isMe ? "bg-blue-50/30" : ""} hover:bg-slate-50/50`}>
                                     <td className={`sticky left-0 z-10 border-r border-b border-slate-100 px-1 py-1.5 text-[12px] text-center whitespace-nowrap overflow-hidden ${dispatched ? "bg-violet-100/80 font-medium text-violet-800" : isMe ? "bg-blue-50 font-semibold text-slate-800" : "bg-white text-slate-600"}`}>
                                         {MEMBERS[name]?.emoji} {name}
                                     </td>
@@ -921,9 +922,10 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                                         const td = d.str === todayStr;
                                         const vt = entry ? types[entry.type] : null;
                                         const inDrag = dragName === name && dragDates.includes(d.str);
+                                        const cellDispatched = isDispatchedOn(name, d.str);
                                         return (
                                             <td key={d.date}
-                                                className={`border-b border-slate-100 text-center py-0.5 px-0 select-none ${dispatched ? "" : td ? "bg-blue-50/50" : we ? "bg-slate-50/50" : ""} ${isMe ? "cursor-pointer" : ""} ${inDrag ? "bg-blue-100" : ""}`}
+                                                className={`border-b border-slate-100 text-center py-0.5 px-0 select-none ${cellDispatched ? "bg-violet-100/60" : td ? "bg-blue-50/50" : we ? "bg-slate-50/50" : ""} ${isMe ? "cursor-pointer" : ""} ${inDrag ? "bg-blue-100" : ""}`}
                                                 onMouseDown={() => {
                                                     if (!isMe) return;
                                                     if (entry) { setSelType(entry.type); setEditDesc(entry.description || ""); setEditCell({ name, date: d.str, existing: { type: entry.type, description: entry.description } }); return; }
