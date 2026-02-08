@@ -688,8 +688,8 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
 function DispatchPanel({ dispatches, currentUser, onSave, onDelete }: {
     dispatches: Array<{ id: number; name: string; start: string; end: string; description: string }>;
     currentUser: string;
-    onSave: (d: { id: number; name: string; start: string; end: string; description: string }) => void;
-    onDelete: (id: number) => void;
+    onSave?: (d: { id: number; name: string; start: string; end: string; description: string }) => void;
+    onDelete?: (id: number) => void;
 }) {
     const MEMBERS = useContext(MembersContext);
     const [showForm, setShowForm] = useState(false);
@@ -706,7 +706,7 @@ function DispatchPanel({ dispatches, currentUser, onSave, onDelete }: {
     const reset = () => { setEditId(null); setName(currentUser); setStart(""); setEnd(""); setDesc(""); setShowForm(false); };
     const submit = () => {
         if (!name || !start || !end) return;
-        onSave({ id: editId || Date.now(), name, start, end, description: desc });
+        onSave?.({ id: editId || Date.now(), name, start, end, description: desc });
         reset();
     };
     return (
@@ -729,7 +729,7 @@ function DispatchPanel({ dispatches, currentUser, onSave, onDelete }: {
                             {currentUser === "박일웅" && (
                                 <div className="flex gap-1 shrink-0">
                                     <button onClick={() => openEdit(d)} className="text-[10px] text-violet-500 hover:text-violet-700">수정</button>
-                                    <button onClick={() => onDelete(d.id)} className="text-[10px] text-red-400 hover:text-red-600">삭제</button>
+                                    <button onClick={() => onDelete?.(d.id)} className="text-[10px] text-red-400 hover:text-red-600">삭제</button>
                                 </div>
                             )}
                         </div>
