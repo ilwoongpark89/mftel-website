@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
         let location = { country: 'Unknown', city: 'Unknown', region: 'Unknown' };
 
         try {
-            const geoResponse = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city`);
+            const geoResponse = await fetch(`https://ip-api.com/json/${ip}?fields=status,country,regionName,city`);
             const geoData = await geoResponse.json();
             if (geoData.status === 'success') {
                 location = {

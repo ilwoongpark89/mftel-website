@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
 
         const batch = ips.slice(0, 100);
 
-        const res = await fetch('http://ip-api.com/batch', {
+        const res = await fetch('https://ip-api.com/batch', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(batch.map((ip: string) => ({ query: ip, fields: 'query,city,country,countryCode,status' }))),

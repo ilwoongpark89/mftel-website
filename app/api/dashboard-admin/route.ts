@@ -44,7 +44,8 @@ const ALL_SECTIONS = [
     "lectures", "patents", "vacations", "schedule", "timetable",
     "reports", "teams", "dailyTargets", "philosophy", "resources",
     "ideas", "analyses", "chatPosts", "customEmojis", "statusMessages",
-    "equipmentList", "personalMemos", "analysisToolList", "paperTagList", "members"
+    "equipmentList", "personalMemos", "analysisToolList", "paperTagList", "members",
+    "dispatches"
 ];
 
 const MAX_LOG_ENTRIES = 5000;
@@ -290,7 +291,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: true });
         }
 
-        return NextResponse.json({ error: 'Invalid action. Use: logAccess, logMod, backup, deleteBackup, saveMembers' }, { status: 400 });
+        return NextResponse.json({ error: 'Invalid action. Use: logAccess, logMod, backup, deleteBackup, saveMembers, restore' }, { status: 400 });
     } catch (error) {
         console.error('Dashboard Admin POST error:', error);
         return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });

@@ -300,8 +300,8 @@ export default function AdminPage() {
                             const now = Date.now();
                             for (const s of sessions) {
                                 if (!s.logoutTime && now - s.loginTime > STALE_MS) {
-                                    s.logoutTime = s.loginTime;
-                                    s.duration = 0;
+                                    s.logoutTime = now;
+                                    s.duration = now - s.loginTime;
                                     s.timedOut = true;
                                 }
                             }
