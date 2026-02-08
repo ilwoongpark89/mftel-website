@@ -68,7 +68,6 @@ const CALENDAR_TYPES: Record<string, { label: string; color: string; short: stri
     meeting: { label: "회의", color: "#5eead4", short: "회" },
     vendor: { label: "업체", color: "#6ee7b7", short: "업" },
     other: { label: "기타", color: "#cbd5e1", short: "기" },
-    dispatch: { label: "파견", color: "#a78bfa", short: "파" },
     vacation: { label: "휴가", color: "#fca5a5", short: "휴" },
     wfh: { label: "재택", color: "#fdba74", short: "재" },
 };
@@ -684,19 +683,97 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
     );
 }
 
+// ─── Dispatch Panel ──────────────────────────────────────────────────────────
+
+function DispatchPanel({ dispatches, currentUser, onSave, onDelete }: {
+    dispatches: Array<{ id: number; name: string; start: string; end: string; description: string }>;
+    currentUser: string;
+    onSave: (d: { id: number; name: string; start: string; end: string; description: string }) => void;
+    onDelete: (id: number) => void;
+}) {
+    const MEMBERS = useContext(MembersContext);
+    const [showForm, setShowForm] = useState(false);
+    const [editId, setEditId] = useState<number | null>(null);
+    const [name, setName] = useState(currentUser);
+    const [start, setStart] = useState("");
+    const [end, setEnd] = useState("");
+    const [desc, setDesc] = useState("");
+    const todayStr = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; })();
+    const active = dispatches.filter(d => d.end >= todayStr).sort((a, b) => a.start.localeCompare(b.start));
+    const openEdit = (d: { id: number; name: string; start: string; end: string; description: string }) => {
+        setEditId(d.id); setName(d.name); setStart(d.start); setEnd(d.end); setDesc(d.description); setShowForm(true);
+    };
+    const reset = () => { setEditId(null); setName(currentUser); setStart(""); setEnd(""); setDesc(""); setShowForm(false); };
+    const submit = () => {
+        if (!name || !start || !end) return;
+        onSave({ id: editId || Date.now(), name, start, end, description: desc });
+        reset();
+    };
+    return (
+        <div className="mt-2 p-2.5 rounded-lg border border-violet-200 bg-violet-50/50">
+            <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[12px] font-semibold text-violet-700">🟣 파견 현황</span>
+                {currentUser === "박일웅" && !showForm && (
+                    <button onClick={() => setShowForm(true)} className="text-[10px] px-2 py-0.5 rounded bg-violet-100 text-violet-600 hover:bg-violet-200">+ 추가</button>
+                )}
+            </div>
+            {active.length > 0 ? (
+                <div className="flex flex-col gap-1">
+                    {active.map(d => (
+                        <div key={d.id} className="flex items-center justify-between text-[11px] px-2 py-1 rounded bg-white border border-violet-100">
+                            <div>
+                                <span className="font-medium text-violet-800">{MEMBERS[d.name]?.emoji} {d.name}</span>
+                                <span className="text-slate-400 ml-1.5">{d.start.slice(5)} ~ {d.end.slice(5)}</span>
+                                {d.description && <span className="text-slate-500 ml-1">· {d.description}</span>}
+                            </div>
+                            {currentUser === "박일웅" && (
+                                <div className="flex gap-1 shrink-0">
+                                    <button onClick={() => openEdit(d)} className="text-[10px] text-violet-500 hover:text-violet-700">수정</button>
+                                    <button onClick={() => onDelete(d.id)} className="text-[10px] text-red-400 hover:text-red-600">삭제</button>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            ) : !showForm && (
+                <div className="text-[11px] text-slate-400">파견 중인 인원 없음</div>
+            )}
+            {showForm && (
+                <div className="mt-1.5 p-2 rounded bg-white border border-violet-200 space-y-1.5">
+                    <select value={name} onChange={e => setName(e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1 text-[12px]">
+                        {Object.keys(MEMBERS).filter(k => k !== "박일웅").map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                    <div className="flex gap-1">
+                        <input type="date" value={start} onChange={e => setStart(e.target.value)} className="flex-1 border border-slate-200 rounded px-2 py-1 text-[11px]" />
+                        <span className="text-slate-400 text-[11px] self-center">~</span>
+                        <input type="date" value={end} onChange={e => setEnd(e.target.value)} className="flex-1 border border-slate-200 rounded px-2 py-1 text-[11px]" />
+                    </div>
+                    <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="파견처" className="w-full border border-slate-200 rounded px-2 py-1 text-[12px]" />
+                    <div className="flex justify-end gap-1.5">
+                        <button onClick={reset} className="text-[11px] text-slate-400 px-2 py-0.5">취소</button>
+                        <button onClick={submit} className="text-[11px] text-white bg-violet-500 rounded px-2 py-0.5 font-medium">{editId ? "수정" : "추가"}</button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ─── Vacation View ───────────────────────────────────────────────────────────
 
-function CalendarGrid({ data, currentUser, types, onToggle, showYearTotal }: {
+function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispatchSave, onDispatchDelete }: {
     data: Array<{ name: string; date: string; type: string; description?: string }>;
     currentUser: string;
     types: Record<string, { label: string; color: string; short: string }>;
     onToggle: (name: string, date: string, type: string | null, desc?: string) => void;
-    showYearTotal?: boolean;
+    dispatches?: Array<{ id: number; name: string; start: string; end: string; description: string }>;
+    onDispatchSave?: (d: { id: number; name: string; start: string; end: string; description: string }) => void;
+    onDispatchDelete?: (id: number) => void;
 }) {
     const MEMBERS = useContext(MembersContext);
     const [month, setMonth] = useState(() => { const n = new Date(); return { y: n.getFullYear(), m: n.getMonth() }; });
     const [selType, setSelType] = useState(Object.keys(types)[0]);
-    const [editCell, setEditCell] = useState<{ name: string; date: string } | null>(null);
+    const [editCell, setEditCell] = useState<{ name: string; date: string; existing?: { type: string; description?: string } } | null>(null);
     const [editDesc, setEditDesc] = useState("");
     // Drag selection state
     const [dragName, setDragName] = useState<string | null>(null);
@@ -716,8 +793,9 @@ function CalendarGrid({ data, currentUser, types, onToggle, showYearTotal }: {
     const getEntry = (name: string, dateStr: string) => data.find(v => v.name === name && v.date === dateStr);
     const countMonth = (name: string) => data.filter(v => v.name === name && monthDates.has(v.date) && (v.type === "vacation" || v.type === "wfh")).length;
     const countYear = (name: string) => data.filter(v => v.name === name && v.date.startsWith(String(month.y)) && (v.type === "vacation" || v.type === "wfh")).length;
+    const isDispatched = (name: string) => (dispatches || []).some(d => d.name === name && d.start <= todayStr && d.end >= todayStr);
 
-    const scheduleTypeKeys = Object.keys(types).filter(k => k !== "vacation" && k !== "wfh" && k !== "dispatch");
+    const scheduleTypeKeys = Object.keys(types).filter(k => k !== "vacation" && k !== "wfh");
 
     return (
         <div>
@@ -745,6 +823,10 @@ function CalendarGrid({ data, currentUser, types, onToggle, showYearTotal }: {
                             <span className="text-[10px] text-slate-500">{vt.label}</span>
                         </div>
                     ))}
+                    <div className="flex items-center gap-0.5">
+                        <span className="w-3 h-2.5 rounded" style={{ background: "#a78bfa" }} />
+                        <span className="text-[10px] text-slate-500">파견</span>
+                    </div>
                 </div>
                 <div className="overflow-x-auto border border-slate-200 rounded-lg bg-white">
                 <table className="border-collapse" style={{ tableLayout: "fixed" }}>
@@ -791,7 +873,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, showYearTotal }: {
                                                 className={`border-b border-amber-100/60 text-center py-0.5 px-0 select-none ${td ? "bg-blue-50/50" : we ? "bg-slate-50/50" : ""} ${canEdit ? "cursor-pointer" : ""} ${inDrag ? "bg-amber-100" : ""}`}
                                                 onMouseDown={() => {
                                                     if (!canEdit) return;
-                                                    if (entry) { onToggle(label, d.str, null); return; }
+                                                    if (entry) { setSelType(entry.type); setEditDesc(entry.description || ""); setEditCell({ name: label, date: d.str, existing: { type: entry.type, description: entry.description } }); return; }
                                                     isDragging.current = true;
                                                     setDragName(label);
                                                     setDragStart(di);
@@ -827,9 +909,10 @@ function CalendarGrid({ data, currentUser, types, onToggle, showYearTotal }: {
                         })}
                         {MEMBER_NAMES.map(name => {
                             const isMe = name === currentUser;
+                            const dispatched = isDispatched(name);
                             return (
-                                <tr key={name} className={`${isMe ? "bg-blue-50/30" : ""} hover:bg-slate-50/50`}>
-                                    <td className={`sticky left-0 z-10 border-r border-b border-slate-100 px-1 py-1.5 text-[12px] text-center whitespace-nowrap overflow-hidden ${isMe ? "bg-blue-50 font-semibold text-slate-800" : "bg-white text-slate-600"}`}>
+                                <tr key={name} className={`${dispatched ? "bg-violet-100/60" : isMe ? "bg-blue-50/30" : ""} hover:bg-slate-50/50`}>
+                                    <td className={`sticky left-0 z-10 border-r border-b border-slate-100 px-1 py-1.5 text-[12px] text-center whitespace-nowrap overflow-hidden ${dispatched ? "bg-violet-100/80 font-medium text-violet-800" : isMe ? "bg-blue-50 font-semibold text-slate-800" : "bg-white text-slate-600"}`}>
                                         {MEMBERS[name]?.emoji} {name}
                                     </td>
                                     {days.map((d, di) => {
@@ -840,10 +923,10 @@ function CalendarGrid({ data, currentUser, types, onToggle, showYearTotal }: {
                                         const inDrag = dragName === name && dragDates.includes(d.str);
                                         return (
                                             <td key={d.date}
-                                                className={`border-b border-slate-100 text-center py-0.5 px-0 select-none ${td ? "bg-blue-50/50" : we ? "bg-slate-50/50" : ""} ${isMe ? "cursor-pointer" : ""} ${inDrag ? "bg-blue-100" : ""}`}
+                                                className={`border-b border-slate-100 text-center py-0.5 px-0 select-none ${dispatched ? "" : td ? "bg-blue-50/50" : we ? "bg-slate-50/50" : ""} ${isMe ? "cursor-pointer" : ""} ${inDrag ? "bg-blue-100" : ""}`}
                                                 onMouseDown={() => {
                                                     if (!isMe) return;
-                                                    if (entry) { onToggle(name, d.str, null); return; }
+                                                    if (entry) { setSelType(entry.type); setEditDesc(entry.description || ""); setEditCell({ name, date: d.str, existing: { type: entry.type, description: entry.description } }); return; }
                                                     isDragging.current = true;
                                                     setDragName(name);
                                                     setDragStart(di);
@@ -910,13 +993,19 @@ function CalendarGrid({ data, currentUser, types, onToggle, showYearTotal }: {
                         </div>
                     );
                 })()}
+                {/* 파견 관리 패널 */}
+                {onDispatchSave && onDispatchDelete && (
+                    <DispatchPanel dispatches={dispatches || []} currentUser={currentUser} onSave={onDispatchSave} onDelete={onDispatchDelete} />
+                )}
             </div>
             </div>
             {/* Inline event form for schedule mode */}
             {editCell && (
                 <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={() => setEditCell(null)}>
                     <div className="bg-white rounded-xl p-4 w-full max-w-xs shadow-xl" onClick={e => e.stopPropagation()}>
-                        <h4 className="text-[14px] font-bold text-slate-800 mb-3">{editCell.date.includes(",") ? `${editCell.date.split(",").length}일 추가` : `${editCell.date} 추가`}</h4>
+                        <h4 className="text-[14px] font-bold text-slate-800 mb-3">
+                            {editCell.existing ? `${editCell.date} 수정` : editCell.date.includes(",") ? `${editCell.date.split(",").length}일 추가` : `${editCell.date} 추가`}
+                        </h4>
                         <div className="mb-3">
                             <div className="flex flex-wrap gap-1 mb-1">
                                 {Object.entries(types).filter(([k]) => scheduleTypeKeys.includes(k)).map(([k, vt]) => (
@@ -933,11 +1022,17 @@ function CalendarGrid({ data, currentUser, types, onToggle, showYearTotal }: {
                                 ))}
                             </div>
                         </div>
-                        {scheduleTypeKeys.includes(selType) && <input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="내용 (예: NUTHOS 발표)" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />}
-                        <div className="flex justify-end gap-2">
-                            <button onClick={() => setEditCell(null)} className="px-3 py-1.5 text-[12px] text-slate-500">취소</button>
-                            <button onClick={() => { onToggle(editCell.name, editCell.date, selType, editDesc); setEditCell(null); }}
-                                className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium">추가</button>
+                        <input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="내용입력" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <div className="flex justify-between">
+                            {editCell.existing ? (
+                                <button onClick={() => { onToggle(editCell.name, editCell.date, null); setEditCell(null); }}
+                                    className="px-3 py-1.5 text-[12px] text-red-500 hover:bg-red-50 rounded-lg font-medium">삭제</button>
+                            ) : <div />}
+                            <div className="flex gap-2">
+                                <button onClick={() => setEditCell(null)} className="px-3 py-1.5 text-[12px] text-slate-500">취소</button>
+                                <button onClick={() => { onToggle(editCell.name, editCell.date, selType, editDesc); setEditCell(null); }}
+                                    className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium">{editCell.existing ? "수정" : "추가"}</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3279,6 +3374,7 @@ export default function DashboardPage() {
     const [ipPatents, setIpPatents] = useState(DEFAULT_PATENTS);
     const [vacations, setVacations] = useState<VacationEntry[]>([]);
     const [schedule, setSchedule] = useState<ScheduleEvent[]>([]);
+    const [dispatches, setDispatches] = useState<Array<{ id: number; name: string; start: string; end: string; description: string }>>([]);
     const [timetable, setTimetable] = useState<TimetableBlock[]>(DEFAULT_TIMETABLE);
     const [reports, setReports] = useState<Report[]>([]);
     const [teams, setTeams] = useState<Record<string, TeamData>>(DEFAULT_TEAMS);
@@ -3344,6 +3440,7 @@ export default function DashboardPage() {
             if (d.patents) setIpPatents(d.patents);
             if (d.vacations) setVacations(d.vacations);
             if (d.schedule) setSchedule(d.schedule);
+            if (d.dispatches) setDispatches(d.dispatches);
             if (d.timetable) setTimetable(d.timetable);
             if (d.reports) setReports(d.reports);
             if (d.teams) setTeams(d.teams);
@@ -3448,7 +3545,6 @@ export default function DashboardPage() {
     const handleCalendarToggle = (name: string, date: string, type: string | null, desc?: string) => {
         const dates = date.includes(",") ? date.split(",") : [date];
         const isVacType = type === "vacation" || type === "wfh";
-        // Update vacations
         let uv = [...vacations];
         let us = [...schedule];
         for (const dt of dates) {
@@ -3655,7 +3751,7 @@ export default function DashboardPage() {
                     {activeTab === "analysis" && <AnalysisView analyses={analyses} onSave={handleSaveAnalysis} onDelete={handleDeleteAnalysis} currentUser={userName} toolList={analysisToolList} onSaveTools={handleSaveAnalysisTools} onToggleDiscussion={a => handleSaveAnalysis({ ...a, needsDiscussion: !a.needsDiscussion })} onReorder={list => { setAnalyses(list); saveSection("analyses", list); }} teamNames={teamNames} />}
                     {activeTab === "todos" && <TodoList todos={todos} onToggle={handleToggleTodo} onAdd={handleAddTodo} onUpdate={handleUpdateTodo} onDelete={handleDeleteTodo} onReorder={list => { setTodos(list); saveSection("todos", list); }} currentUser={userName} />}
                     {activeTab === "teams" && <TeamOverview papers={papers} todos={todos} experiments={experiments} analyses={analyses} teams={teams} onSaveTeams={handleSaveTeams} />}
-                    {activeTab === "calendar" && <CalendarGrid data={[...vacations.map(v => ({ ...v, description: undefined })), ...schedule]} currentUser={userName} types={CALENDAR_TYPES} onToggle={handleCalendarToggle} showYearTotal />}
+                    {activeTab === "calendar" && <CalendarGrid data={[...vacations.map(v => ({ ...v, description: undefined })), ...schedule]} currentUser={userName} types={CALENDAR_TYPES} onToggle={handleCalendarToggle} dispatches={dispatches} onDispatchSave={(d) => { const u = d.id && dispatches.find(x => x.id === d.id) ? dispatches.map(x => x.id === d.id ? d : x) : [...dispatches, d]; setDispatches(u); saveSection("dispatches", u); }} onDispatchDelete={(id) => { const u = dispatches.filter(x => x.id !== id); setDispatches(u); saveSection("dispatches", u); }} />}
                     {activeTab === "lectures" && <TimetableView blocks={timetable} onSave={handleTimetableSave} onDelete={handleTimetableDelete} />}
                     {activeTab === "ip" && <IPView patents={ipPatents} onSave={handleSavePatent} onDelete={handleDeletePatent} currentUser={userName} onToggleDiscussion={p => handleSavePatent({ ...p, needsDiscussion: !p.needsDiscussion })} onReorder={list => { setIpPatents(list); saveSection("patents", list); }} teamNames={teamNames} />}
                     {activeTab === "conferenceTrips" && <ConferenceTripView items={conferenceTrips} onSave={handleSaveConference} onDelete={handleDeleteConference} onReorder={list => { setConferenceTrips(list); saveSection("conferences", list); }} currentUser={userName} />}
