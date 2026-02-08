@@ -3105,7 +3105,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                     </button>
                     <button onClick={() => onNavigate("reports")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
                         <div className="text-[12px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-amber-500" />보고서 <span className="text-amber-600 font-bold">({fr.length})</span>
+                            <span className="w-2 h-2 rounded-full bg-amber-500" />계획서/보고서 <span className="text-amber-600 font-bold">({fr.length})</span>
                         </div>
                         <MiniBar items={reportsByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...reportsByStatus.map(s => s.count))} />
                     </button>
@@ -3255,7 +3255,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                             )}
                         </div>
                         <div>
-                            <div className="text-[11px] font-semibold text-slate-400 mb-2">내 보고서 ({myReports.length})</div>
+                            <div className="text-[11px] font-semibold text-slate-400 mb-2">내 계획서/보고서 ({myReports.length})</div>
                             {myReports.length === 0 ? <div className="text-[11px] text-slate-300">없음</div> : (
                                 <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
                                     {myReports.map(r => (
@@ -3317,7 +3317,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                                 <tr className="border-b border-slate-100">
                                     <th className="text-left py-1.5 px-1.5 font-semibold text-slate-500">멤버</th>
                                     <th className="text-center py-1.5 px-1 font-semibold text-slate-500">논문</th>
-                                    <th className="text-center py-1.5 px-1 font-semibold text-slate-500">보고서</th>
+                                    <th className="text-center py-1.5 px-1 font-semibold text-slate-500">계획/보고</th>
                                     <th className="text-center py-1.5 px-1 font-semibold text-slate-500">실험</th>
                                     <th className="text-center py-1.5 px-1 font-semibold text-slate-500">해석</th>
                                     <th className="text-center py-1.5 px-1 font-semibold text-slate-500">To-do</th>
@@ -3397,7 +3397,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                                         </div>
                                         <div className="flex gap-2 mt-1 flex-wrap">
                                             {tPapers > 0 && <span className="text-[10px] text-blue-600">논문 {tPapers}</span>}
-                                            {tReports > 0 && <span className="text-[10px] text-amber-600">보고서 {tReports}</span>}
+                                            {tReports > 0 && <span className="text-[10px] text-amber-600">계획/보고 {tReports}</span>}
                                             {tPatents > 0 && <span className="text-[10px] text-teal-600">지재권 {tPatents}</span>}
                                             {tExp > 0 && <span className="text-[10px] text-emerald-600">실험 {tExp}</span>}
                                             {tAnalysis > 0 && <span className="text-[10px] text-violet-600">해석 {tAnalysis}</span>}
