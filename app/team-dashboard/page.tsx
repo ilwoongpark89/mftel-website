@@ -62,13 +62,15 @@ const EXP_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 const EXP_STATUS_KEYS = ["planning", "preparing", "running", "paused", "completed"];
 
 const CALENDAR_TYPES: Record<string, { label: string; color: string; short: string }> = {
-    conference: { label: "학회", color: "#3b82f6", short: "학" },
-    trip: { label: "출장", color: "#2563eb", short: "출" },
-    seminar: { label: "세미나", color: "#0ea5e9", short: "세" },
-    dispatch: { label: "파견", color: "#6366f1", short: "파" },
-    other: { label: "기타", color: "#94a3b8", short: "기" },
-    vacation: { label: "휴가", color: "#ef4444", short: "휴" },
-    wfh: { label: "재택", color: "#f97316", short: "재" },
+    conference: { label: "학회", color: "#60a5fa", short: "학" },
+    trip: { label: "출장", color: "#7dd3fc", short: "출" },
+    seminar: { label: "세미나", color: "#67e8f9", short: "세" },
+    presentation: { label: "발표", color: "#5eead4", short: "발" },
+    vendor: { label: "업체", color: "#6ee7b7", short: "업" },
+    other: { label: "기타", color: "#cbd5e1", short: "기" },
+    dispatch: { label: "파견", color: "#a78bfa", short: "파" },
+    vacation: { label: "휴가", color: "#fca5a5", short: "휴" },
+    wfh: { label: "재택", color: "#fdba74", short: "재" },
 };
 
 const TIMETABLE_COLORS = ["#3b82f6", "#ef4444", "#f59e0b", "#10b981", "#8b5cf6", "#ec4899", "#f97316", "#14b8a6", "#6366f1", "#84cc16"];
@@ -715,68 +717,119 @@ function CalendarGrid({ data, currentUser, types, onToggle, showYearTotal }: {
     const countMonth = (name: string) => data.filter(v => v.name === name && monthDates.has(v.date) && (v.type === "vacation" || v.type === "wfh")).length;
     const countYear = (name: string) => data.filter(v => v.name === name && v.date.startsWith(String(month.y)) && (v.type === "vacation" || v.type === "wfh")).length;
 
-    const scheduleTypeKeys = Object.keys(types).filter(k => k !== "vacation" && k !== "wfh");
+    const scheduleTypeKeys = Object.keys(types).filter(k => k !== "vacation" && k !== "wfh" && k !== "dispatch");
 
     return (
         <div>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
+            <div className="flex items-center mb-2">
                 <div className="flex items-center gap-2">
                     <button onClick={() => setMonth(p => p.m === 0 ? { y: p.y - 1, m: 11 } : { ...p, m: p.m - 1 })} className="px-2 py-1 rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-[13px]">◀</button>
                     <span className="text-[15px] font-bold text-slate-800 min-w-[120px] text-center">{month.y}년 {month.m + 1}월</span>
                     <button onClick={() => setMonth(p => p.m === 11 ? { y: p.y + 1, m: 0 } : { ...p, m: p.m + 1 })} className="px-2 py-1 rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-[13px]">▶</button>
                     <button onClick={() => { const n = new Date(); setMonth({ y: n.getFullYear(), m: n.getMonth() }); }} className="px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-[11px] font-medium hover:bg-slate-200 ml-1">오늘</button>
                 </div>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[11px] text-slate-400 mr-1">유형:</span>
-                    {Object.entries(types).map(([k, vt]) => (
-                        <button key={k} onClick={() => setSelType(k)}
-                            className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${selType === k ? "text-white shadow-sm" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}
-                            style={selType === k ? { background: vt.color } : undefined}>{vt.label}</button>
+            </div>
+            <div className="flex gap-3 items-start">
+            <div className="shrink-0 relative" onMouseLeave={() => { if (isDragging.current) { isDragging.current = false; setDragName(null); setDragDates([]); setDragStart(null); } }}>
+                <div className="absolute right-0 -top-5 flex gap-2 items-center z-10">
+                    {Object.entries(types).filter(([k]) => scheduleTypeKeys.includes(k)).map(([k, vt]) => (
+                        <div key={k} className="flex items-center gap-0.5">
+                            <span className="w-3 h-2.5 rounded" style={{ background: vt.color }} />
+                            <span className="text-[10px] text-slate-500">{vt.label}</span>
+                        </div>
+                    ))}
+                    <span className="text-slate-300 text-[10px]">|</span>
+                    {Object.entries(types).filter(([k]) => !scheduleTypeKeys.includes(k)).map(([k, vt]) => (
+                        <div key={k} className="flex items-center gap-0.5">
+                            <span className="w-3 h-2.5 rounded" style={{ background: vt.color }} />
+                            <span className="text-[10px] text-slate-500">{vt.label}</span>
+                        </div>
                     ))}
                 </div>
-            </div>
-            <div className="flex gap-3 mb-3 flex-wrap items-center">
-                {Object.entries(types).filter(([k]) => scheduleTypeKeys.includes(k)).map(([k, vt]) => (
-                    <div key={k} className="flex items-center gap-1">
-                        <span className="w-3 h-3 rounded-sm" style={{ background: vt.color }} />
-                        <span className="text-[10px] text-slate-500">{vt.label}</span>
-                    </div>
-                ))}
-                <span className="text-slate-300 text-[10px]">|</span>
-                {Object.entries(types).filter(([k]) => !scheduleTypeKeys.includes(k)).map(([k, vt]) => (
-                    <div key={k} className="flex items-center gap-1">
-                        <span className="w-3 h-3 rounded-sm" style={{ background: vt.color }} />
-                        <span className="text-[10px] text-slate-500">{vt.label}</span>
-                    </div>
-                ))}
-            </div>
-            <div className="overflow-x-auto border border-slate-200 rounded-lg bg-white" onMouseLeave={() => { if (isDragging.current) { isDragging.current = false; setDragName(null); setDragDates([]); setDragStart(null); } }}>
-                <table className="w-full border-collapse">
+                <div className="overflow-x-auto border border-slate-200 rounded-lg bg-white">
+                <table className="border-collapse" style={{ tableLayout: "fixed" }}>
+                    <colgroup>
+                        <col style={{ width: "68px" }} />
+                        {days.map(d => <col key={d.date} style={{ width: "28px" }} />)}
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th className="sticky left-0 z-10 bg-slate-50 border-b border-r border-slate-200 px-2 py-2 text-left text-[12px] font-semibold text-slate-600 whitespace-nowrap">이름</th>
+                            <th className="sticky left-0 z-10 bg-slate-50 border-b border-r border-slate-200 px-1 py-2 text-center text-[12px] font-semibold text-slate-600 whitespace-nowrap">이름</th>
                             {days.map(d => {
                                 const we = d.dow === 0 || d.dow === 6;
                                 const td = d.str === todayStr;
                                 const sel = d.str === selectedDate;
                                 return (
-                                    <th key={d.date} className={`border-b border-slate-200 px-0 py-1.5 text-center cursor-pointer hover:bg-blue-50 transition-colors ${sel ? "bg-amber-50 ring-1 ring-inset ring-amber-300" : td ? "bg-blue-50" : we ? "bg-slate-50/80" : "bg-white"}`}
+                                    <th key={d.date} className={`border-b border-slate-200 px-0 py-1 text-center cursor-pointer hover:bg-blue-50 transition-colors ${sel ? "bg-amber-50 ring-1 ring-inset ring-amber-300" : td ? "bg-blue-50" : we ? "bg-slate-50/80" : "bg-white"}`}
                                         onClick={() => setSelectedDate(sel ? null : d.str)}>
-                                        <div className={`text-[10px] ${we ? (d.dow === 0 ? "text-red-400" : "text-blue-400") : "text-slate-400"}`}>{dayL[d.dow]}</div>
-                                        <div className={`text-[12px] font-semibold ${sel ? "text-amber-700" : td ? "text-blue-600" : we ? (d.dow === 0 ? "text-red-500" : "text-blue-500") : "text-slate-700"}`}>{d.date}</div>
+                                        <div className={`text-[10px] leading-tight ${we ? (d.dow === 0 ? "text-red-400" : "text-blue-400") : "text-slate-400"}`}>{dayL[d.dow]}</div>
+                                        <div className={`text-[12px] font-semibold leading-tight ${sel ? "text-amber-700" : td ? "text-blue-600" : we ? (d.dow === 0 ? "text-red-500" : "text-blue-500") : "text-slate-700"}`}>{d.date}</div>
                                     </th>
                                 );
                             })}
-                            <th className="border-b border-l border-slate-200 px-2 py-1.5 text-center bg-slate-50 min-w-[36px]"><div className="text-[10px] text-slate-400">월</div><div className="text-[8px] text-slate-300">휴가</div></th>
-                            {showYearTotal && <th className="border-b border-l border-slate-200 px-2 py-1.5 text-center bg-slate-50 min-w-[36px]"><div className="text-[10px] text-slate-400">연</div><div className="text-[8px] text-slate-300">휴가</div></th>}
                         </tr>
                     </thead>
                     <tbody>
+                        {/* 중요/공통 일정 rows – 박일웅만 편집 가능 */}
+                        {["중요일정", "공통일정"].map(label => {
+                            const canEdit = currentUser === "박일웅";
+                            const entryFor = (ds: string) => data.find(v => v.name === label && v.date === ds);
+                            const inDragRow = dragName === label;
+                            return (
+                                <tr key={label} className="bg-amber-50/40 hover:bg-amber-50/70">
+                                    <td className="sticky left-0 z-10 border-r border-b border-amber-200/60 px-1 py-1.5 text-[11px] text-center whitespace-nowrap bg-amber-50 font-semibold text-amber-700">
+                                        {label === "중요일정" ? "⭐ 중요" : "👥 공통"}
+                                    </td>
+                                    {days.map((d, di) => {
+                                        const entry = entryFor(d.str);
+                                        const we = d.dow === 0 || d.dow === 6;
+                                        const td = d.str === todayStr;
+                                        const vt = entry ? types[entry.type] : null;
+                                        const inDrag = inDragRow && dragDates.includes(d.str);
+                                        return (
+                                            <td key={d.date}
+                                                className={`border-b border-amber-100/60 text-center py-0.5 px-0 select-none ${td ? "bg-blue-50/50" : we ? "bg-slate-50/50" : ""} ${canEdit ? "cursor-pointer" : ""} ${inDrag ? "bg-amber-100" : ""}`}
+                                                onMouseDown={() => {
+                                                    if (!canEdit) return;
+                                                    if (entry) { onToggle(label, d.str, null); return; }
+                                                    isDragging.current = true;
+                                                    setDragName(label);
+                                                    setDragStart(di);
+                                                    setDragDates([d.str]);
+                                                }}
+                                                onMouseEnter={() => {
+                                                    if (!isDragging.current || dragName !== label || dragStart === null) return;
+                                                    const lo = Math.min(dragStart, di);
+                                                    const hi = Math.max(dragStart, di);
+                                                    setDragDates(days.slice(lo, hi + 1).map(x => x.str));
+                                                }}
+                                                onMouseUp={() => {
+                                                    if (!isDragging.current || dragName !== label) { isDragging.current = false; setDragName(null); setDragDates([]); setDragStart(null); return; }
+                                                    isDragging.current = false;
+                                                    const dates = [...dragDates].filter(dt => !entryFor(dt));
+                                                    setDragName(null); setDragDates([]); setDragStart(null);
+                                                    if (dates.length === 0) return;
+                                                    setEditCell({ name: label, date: dates.join(",") }); setEditDesc("");
+                                                }}>
+                                                {vt ? (
+                                                    <div className="mx-auto w-[24px] h-[22px] rounded flex items-center justify-center text-[10.5px] font-bold text-white hover:scale-110 transition-transform"
+                                                        style={{ background: vt.color }} title={entry?.description || vt.label}>{vt.short}</div>
+                                                ) : canEdit ? (
+                                                    <div className={`mx-auto w-[22px] h-[20px] rounded flex items-center justify-center ${inDrag ? "bg-amber-200" : "opacity-0 hover:opacity-100 bg-amber-100"} transition-opacity`}>
+                                                        <span className="text-[9px] text-amber-300">+</span>
+                                                    </div>
+                                                ) : null}
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            );
+                        })}
                         {MEMBER_NAMES.map(name => {
                             const isMe = name === currentUser;
                             return (
                                 <tr key={name} className={`${isMe ? "bg-blue-50/30" : ""} hover:bg-slate-50/50`}>
-                                    <td className={`sticky left-0 z-10 border-r border-b border-slate-100 px-2 py-1.5 text-[12px] whitespace-nowrap ${isMe ? "bg-blue-50 font-semibold text-slate-800" : "bg-white text-slate-600"}`}>
+                                    <td className={`sticky left-0 z-10 border-r border-b border-slate-100 px-1 py-1.5 text-[12px] text-center whitespace-nowrap overflow-hidden ${isMe ? "bg-blue-50 font-semibold text-slate-800" : "bg-white text-slate-600"}`}>
                                         {MEMBERS[name]?.emoji} {name}
                                     </td>
                                     {days.map((d, di) => {
@@ -787,7 +840,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, showYearTotal }: {
                                         const inDrag = dragName === name && dragDates.includes(d.str);
                                         return (
                                             <td key={d.date}
-                                                className={`border-b border-slate-100 text-center p-0 select-none ${td ? "bg-blue-50/50" : we ? "bg-slate-50/50" : ""} ${isMe ? "cursor-pointer" : ""} ${inDrag ? "bg-blue-100" : ""}`}
+                                                className={`border-b border-slate-100 text-center py-0.5 px-0 select-none ${td ? "bg-blue-50/50" : we ? "bg-slate-50/50" : ""} ${isMe ? "cursor-pointer" : ""} ${inDrag ? "bg-blue-100" : ""}`}
                                                 onMouseDown={() => {
                                                     if (!isMe) return;
                                                     if (entry) { onToggle(name, d.str, null); return; }
@@ -811,29 +864,53 @@ function CalendarGrid({ data, currentUser, types, onToggle, showYearTotal }: {
                                                     setEditCell({ name, date: dates.join(",") }); setEditDesc("");
                                                 }}>
                                                 {vt ? (
-                                                    <div className="mx-auto w-[28px] h-[24px] rounded flex items-center justify-center text-[10px] font-bold text-white hover:scale-110 transition-transform"
+                                                    <div className="mx-auto w-[24px] h-[22px] rounded flex items-center justify-center text-[10.5px] font-bold text-white hover:scale-110 transition-transform"
                                                         style={{ background: vt.color }} title={entry?.description || vt.label}>{vt.short}</div>
                                                 ) : isMe ? (
-                                                    <div className={`mx-auto w-[28px] h-[24px] rounded flex items-center justify-center ${inDrag ? "bg-blue-200" : "opacity-0 hover:opacity-100 bg-slate-100"} transition-opacity`}>
-                                                        <span className="text-[10px] text-slate-300">+</span>
+                                                    <div className={`mx-auto w-[22px] h-[20px] rounded flex items-center justify-center ${inDrag ? "bg-blue-200" : "opacity-0 hover:opacity-100 bg-slate-100"} transition-opacity`}>
+                                                        <span className="text-[9px] text-slate-300">+</span>
                                                     </div>
                                                 ) : null}
                                             </td>
                                         );
                                     })}
-                                    <td className="border-b border-l border-slate-100 text-center px-2 py-1.5">
-                                        <span className={`text-[12px] font-semibold ${countMonth(name) > 0 ? "text-blue-600" : "text-slate-300"}`}>{countMonth(name) || "-"}</span>
-                                    </td>
-                                    {showYearTotal && (
-                                        <td className="border-b border-l border-slate-100 text-center px-2 py-1.5">
-                                            <span className={`text-[12px] font-semibold ${countYear(name) > 0 ? "text-violet-600" : "text-slate-300"}`}>{countYear(name) || "-"}</span>
-                                        </td>
-                                    )}
                                 </tr>
                             );
                         })}
                     </tbody>
                 </table>
+            </div>
+            </div>
+            {/* Right sidebar – selected date / today summary */}
+            <div className="flex-1 min-w-[200px] hidden lg:block">
+                {(() => {
+                    const showDate = selectedDate || todayStr;
+                    const items = data.filter(v => v.date === showDate);
+                    const d = new Date(showDate);
+                    const dateLabel = selectedDate
+                        ? `${d.getMonth() + 1}월 ${d.getDate()}일 (${dayL[d.getDay()]})`
+                        : `오늘 (${new Date().getMonth() + 1}/${new Date().getDate()})`;
+                    const isSelected = !!selectedDate;
+                    return (
+                        <div className={`p-3 rounded-lg border sticky top-0 ${isSelected ? "bg-blue-50 border-blue-200" : "bg-amber-50 border-amber-200"}`}>
+                            <div className={`text-[13px] font-semibold mb-2 ${isSelected ? "text-blue-700" : "text-amber-700"}`}>📋 {dateLabel}</div>
+                            {items.length > 0 ? (
+                                <div className="flex flex-col gap-1.5">
+                                    {items.map(v => {
+                                        const vt = types[v.type];
+                                        return <div key={`${v.name}-${v.type}`} className={`text-[12px] px-2 py-1 rounded-md bg-white border ${isSelected ? "border-blue-200 text-blue-800" : "border-amber-200 text-amber-800"}`}>
+                                            <span className="font-medium">{MEMBERS[v.name]?.emoji || "⭐"}{v.name}</span>
+                                            <div className="text-[11px] text-slate-500 mt-0.5">{vt?.label}{v.description ? `: ${v.description}` : ""}</div>
+                                        </div>;
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="text-[12px] text-slate-400">일정이 없습니다</div>
+                            )}
+                        </div>
+                    );
+                })()}
+            </div>
             </div>
             {/* Inline event form for schedule mode */}
             {editCell && (
@@ -865,32 +942,6 @@ function CalendarGrid({ data, currentUser, types, onToggle, showYearTotal }: {
                     </div>
                 </div>
             )}
-            {/* Selected date or today summary */}
-            {(() => {
-                const showDate = selectedDate || todayStr;
-                const items = data.filter(v => v.date === showDate);
-                const d = new Date(showDate);
-                const dateLabel = selectedDate
-                    ? `${d.getMonth() + 1}월 ${d.getDate()}일 (${dayL[d.getDay()]})`
-                    : "오늘";
-                const isSelected = !!selectedDate;
-                if (items.length === 0 && !isSelected) return null;
-                return (
-                    <div className={`mt-4 p-3 rounded-lg ${isSelected ? "bg-blue-50 border border-blue-200" : "bg-amber-50 border border-amber-200"}`}>
-                        <div className={`text-[12px] font-semibold mb-1 ${isSelected ? "text-blue-700" : "text-amber-700"}`}>📋 {dateLabel}</div>
-                        {items.length > 0 ? (
-                            <div className="flex gap-2 flex-wrap">
-                                {items.map(v => {
-                                    const vt = types[v.type];
-                                    return <span key={`${v.name}-${v.type}`} className={`text-[12px] px-2 py-0.5 rounded-full bg-white border ${isSelected ? "border-blue-200 text-blue-800" : "border-amber-200 text-amber-800"}`}>{MEMBERS[v.name]?.emoji}{v.name} ({vt?.label}{v.description ? `: ${v.description}` : ""})</span>;
-                                })}
-                            </div>
-                        ) : (
-                            <div className="text-[11px] text-slate-400">이 날의 일정이 없습니다</div>
-                        )}
-                    </div>
-                );
-            })()}
         </div>
     );
 }
