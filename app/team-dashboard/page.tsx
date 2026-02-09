@@ -3098,7 +3098,6 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
         <div className="space-y-8">
             {/* 📢 공지사항 */}
             <div>
-                <h3 className="text-[16px] font-bold text-slate-900 mb-4">📢 공지사항</h3>
                 {isLeader && (
                     <div className="flex gap-2 mb-3">
                         <textarea value={newText} onChange={e => setNewText(e.target.value)} placeholder="공지사항 작성..."
