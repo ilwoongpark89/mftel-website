@@ -5359,7 +5359,7 @@ export default function DashboardPage() {
 
     return (
         <MembersContext.Provider value={displayMembers}>
-        <div className="min-h-screen bg-slate-50 text-slate-800" style={{ fontFamily: "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+        <div className="min-h-screen bg-slate-50 text-slate-800 leading-tight" style={{ fontFamily: "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
             {/* Header */}
             <div className="bg-slate-900 px-4 md:px-7 py-3.5 flex items-center justify-between border-b border-slate-800">
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab("overview")}>
