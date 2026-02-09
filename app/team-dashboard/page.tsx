@@ -3520,7 +3520,7 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
                     </div>
                 )}
                 {announcements.length === 0 && <div className="text-center py-8 text-slate-400 text-[14px]">공지사항이 없습니다</div>}
-                <div className="grid grid-cols-3 gap-3 items-stretch">{sorted.map((ann, idx) => (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-stretch">{sorted.map((ann, idx) => (
                     <div key={ann.id} draggable
                         onDragStart={() => { dragAnn.current = idx; }}
                         onDragOver={e => { e.preventDefault(); setDragOverAnn(idx); }}
@@ -3576,7 +3576,7 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
                     </div>
                 )}
                 {philosophy.length === 0 && <div className="text-center py-8 text-slate-400 text-[14px]">등록된 내용이 없습니다</div>}
-                <div className="grid grid-cols-3 gap-3 items-stretch">{philosophy.map(p => (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-stretch">{philosophy.map(p => (
                     <div key={p.id} className={`bg-white border border-slate-200 rounded-xl p-4 flex flex-col ${isPI ? "cursor-pointer hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)]" : ""}`}
                         style={{borderLeft:"3px solid #8B5CF6"}}
                         onClick={() => { if (isPI) openEditPhil(p); }}>
