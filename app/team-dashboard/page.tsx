@@ -426,35 +426,30 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                                         onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
                                         onDragOver={e => { e.preventDefault(); if (draggedId === p.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
                                         onClick={() => onClickPaper(p)}
-                                        className={`bg-white rounded-xl p-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === p.id ? "opacity-40 scale-95" : ""} ${p.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}
-                                        style={{ borderLeft: `3px solid ${st.color}` }}>
-                                        <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                            <input type="checkbox" checked={!!p.needsDiscussion} onChange={() => onSavePaper({ ...p, needsDiscussion: !p.needsDiscussion })} className="w-3 h-3 accent-red-500" />
-                                            <span className={`text-[11px] font-medium ${p.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
-                                        </label>
-                                        <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words overflow-hidden">{p.title}</div>
-                                        {p.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{p.team}</span>}
-                                        {p.journal !== "TBD" && <div className="text-[12px] text-slate-500 italic mb-1 truncate">{p.journal}</div>}
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <div className="flex-1 bg-slate-100 rounded-full h-1.5">
-                                                <div className="h-1.5 rounded-full bg-blue-500 transition-all" style={{ width: `${p.progress}%` }} />
-                                            </div>
-                                            <span className="text-[11px] font-semibold text-blue-500">{p.progress}%</span>
+                                        className={`bg-white rounded-xl px-3 py-2.5 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === p.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
+                                        style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${st.color}` }}>
+                                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words overflow-hidden line-clamp-2">{p.title}</div>
+                                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                            {p.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md" style={{background:"#EFF6FF", color:"#3B82F6", fontWeight:500}}>{p.team}</span>}
+                                            {p.tags.slice(0, 2).map(t => <span key={t} className="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500">{t}</span>)}
+                                            {p.tags.length > 2 && <span className="text-[10px] text-slate-400">+{p.tags.length - 2}</span>}
                                         </div>
-                                        <div className="flex gap-1 flex-wrap mb-1.5">
-                                            {p.tags.map(t => <span key={t} className="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">{t}</span>)}
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex gap-1 flex-wrap">
-                                                {p.assignees.slice(0, 3).map(a => <span key={a} className="text-[11px] px-1.5 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[a]?.emoji}{a}</span>)}
-                                                {p.assignees.length > 3 && <span className="text-[11px] text-slate-400">+{p.assignees.length - 3}</span>}
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
+                                                <div className="h-1 rounded-full transition-all" style={{ width: `${p.progress}%`, background: "#3B82F6" }} />
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                {p.comments.length > 0 && <span className="text-[11px] text-slate-400">💬{p.comments.length}</span>}
-                                                {p.deadline && <span className="text-[11px] text-red-500 font-semibold">~{p.deadline}</span>}
+                                            <span className="text-[10px] font-semibold" style={{color: p.progress >= 80 ? "#10B981" : "#3B82F6"}}>{p.progress}%</span>
+                                        </div>
+                                        <div className="flex justify-between items-center mt-1.5">
+                                            <div className="flex -space-x-1">
+                                                {p.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
+                                                {p.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{p.assignees.length - 4}</span>}
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                {p.comments.length > 0 && <span className="text-[10px] text-slate-400">💬{p.comments.length}</span>}
+                                                {p.deadline && <span className="text-[10px] text-red-400 font-medium">~{p.deadline.slice(5)}</span>}
                                             </div>
                                         </div>
-                                        {p.creator && <div className="text-[10px] text-slate-400 text-right mt-1">by {MEMBERS[p.creator]?.emoji || ""}{p.creator}{p.createdAt ? ` · ${p.createdAt}` : ""}</div>}
                                     </div>
                                     </div>
                                 ))}
@@ -3378,7 +3373,7 @@ function SettingsView({ currentUser, customEmojis, onSaveEmoji, statusMessages, 
 
 // ─── Personal Memo View ──────────────────────────────────────────────────────
 
-const MEMO_COLORS = ["#f8fafc", "#fef3c7", "#dcfce7", "#dbeafe", "#fce7f3", "#f3e8ff", "#e0f2fe", "#fef9c3", "#fff1f2", "#ecfdf5", "#eff6ff", "#fdf4ff", "#fffbeb", "#f0fdfa", "#faf5ff", "#fff7ed"];
+const MEMO_COLORS = ["#FFFFFF", "#FEF9C3", "#FFEDD5", "#FCE7F3", "#FEE2E2", "#F3E8FF", "#DBEAFE", "#E0F2FE", "#DCFCE7", "#F1F5F9"];
 const MEMO_BORDERS = ["", "#94a3b8", "#f59e0b", "#22c55e", "#3b82f6", "#ec4899", "#8b5cf6", "#ef4444", "#14b8a6", "#f97316"];
 
 function ColorPicker({ color, onColor, compact }: { color: string; onColor: (c: string) => void; compact?: boolean }) {
@@ -3828,6 +3823,7 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
     const [boardColor, setBoardColor] = useState(MEMO_COLORS[0]);
     const [selectedCard, setSelectedCard] = useState<TeamMemoCard | null>(null);
     const [boardComment, setBoardComment] = useState("");
+    const [boardEditing, setBoardEditing] = useState(false);
 
     const send = () => {
         if (!text.trim() && !chatImg) return;
@@ -3976,7 +3972,7 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                 </div>
             )}
             {/* Board detail modal */}
-            {selectedCard && (
+            {selectedCard && !boardEditing && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setSelectedCard(null); setBoardComment(""); }}>
                     <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
@@ -4007,6 +4003,44 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                                         className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium">전송</button>
                                 </div>
                             </div>
+                        </div>
+                        <div className="flex items-center justify-between p-4 border-t border-slate-200">
+                            <div className="flex items-center gap-2">
+                                {(currentUser === selectedCard.author || currentUser === "박일웅") && (
+                                    <button onClick={() => { setBoardTitle(selectedCard.title); setBoardContent(selectedCard.content); setBoardColor(selectedCard.color); setBoardEditing(true); }} className="px-3 py-1.5 text-[13px] text-blue-600 hover:bg-blue-50 rounded-lg font-medium">수정</button>
+                                )}
+                                {(currentUser === selectedCard.author || currentUser === "박일웅") && (
+                                    <button onClick={() => { onDeleteBoard(selectedCard.id); setSelectedCard(null); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                                )}
+                            </div>
+                            <button onClick={() => { setSelectedCard(null); setBoardComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Board edit modal */}
+            {selectedCard && boardEditing && (
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setBoardEditing(false)}>
+                    <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-4 border-b border-slate-200">
+                            <h3 className="text-[15px] font-bold text-slate-800">글 수정</h3>
+                            <button onClick={() => setBoardEditing(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            <div>
+                                <label className="text-[12px] font-semibold text-slate-500 block mb-1">제목 *</label>
+                                <input value={boardTitle} onChange={e => setBoardTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                            </div>
+                            <div>
+                                <label className="text-[12px] font-semibold text-slate-500 block mb-1">내용</label>
+                                <textarea value={boardContent} onChange={e => setBoardContent(e.target.value)} rows={5}
+                                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                            </div>
+                            <ColorPicker color={boardColor} onColor={setBoardColor} />
+                        </div>
+                        <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
+                            <button onClick={() => setBoardEditing(false)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                            <button onClick={() => { const updated = { ...selectedCard, title: boardTitle.trim() || "제목 없음", content: boardContent, color: boardColor, updatedAt: new Date().toISOString().split("T")[0] }; onSaveBoard(updated); setSelectedCard(updated); setBoardEditing(false); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                         </div>
                     </div>
                 </div>
@@ -5422,7 +5456,7 @@ export default function DashboardPage() {
                 {/* Sidebar */}
                 <div className="md:w-[240px] md:h-screen flex-shrink-0 flex flex-col" style={{background:"#0F172A", borderRight:"1px solid #1E293B", boxShadow:"2px 0 8px rgba(0,0,0,0.1)"}}>
                     {/* Sidebar top: MFTEL logo */}
-                    <div className="hidden md:flex items-center gap-3 px-5 pt-5 pb-4" style={{borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
+                    <div className="hidden md:flex items-center gap-3 px-5 pt-5 pb-4 relative z-10 flex-shrink-0" style={{borderBottom:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
                         <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-[17px] font-extrabold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", boxShadow: "0 2px 8px rgba(59,130,246,0.3)" }}>M</div>
                         <div className="min-w-0">
                             <div className="text-[15px] tracking-tight text-white" style={{fontWeight:750}}>MFTEL</div>
@@ -5430,7 +5464,7 @@ export default function DashboardPage() {
                         </div>
                     </div>
                     {/* Sidebar nav */}
-                    <div className="flex-1 flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto p-3 md:p-0 md:pt-2 md:pb-2 gap-px dark-scrollbar">
+                    <div className="flex-1 min-h-0 flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto p-3 md:p-0 md:pt-2 md:pb-2 gap-px dark-scrollbar">
                         {tabs.map((tab, i) => {
                             const sectionBreaks: Record<string, string> = { announcements: "운영", todos: "내 노트", papers: "연구", conferenceTrips: "커뮤니케이션" };
                             const showBreak = !tab.id.startsWith("memo_") && !tab.id.startsWith("teamMemo_") && sectionBreaks[tab.id];
@@ -5508,7 +5542,7 @@ export default function DashboardPage() {
                         })()}
                     </div>
                     {/* Sidebar bottom: user profile */}
-                    <div className="hidden md:flex items-center gap-2.5 px-4 py-3.5 mt-auto" style={{borderTop:"1px solid rgba(255,255,255,0.08)"}}>
+                    <div className="hidden md:flex items-center gap-2.5 px-4 py-3.5 relative z-10 flex-shrink-0" style={{borderTop:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
                         <div className="w-8 h-8 rounded-full flex items-center justify-center text-[16px] flex-shrink-0" style={{background:"rgba(59,130,246,0.1)", border:"1.5px solid rgba(59,130,246,0.25)"}}>{displayMembers[userName]?.emoji || "👤"}</div>
                         <div className="flex-1 min-w-0">
                             <div className="text-[13px] truncate text-white" style={{fontWeight:650}}>{userName}</div>
