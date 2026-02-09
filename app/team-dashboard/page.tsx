@@ -2896,15 +2896,69 @@ function DailyTargetView({ targets, onSave, currentUser }: { targets: DailyTarge
         navigator.clipboard.writeText([header, ...lines].join("\n"));
     };
 
+    // Mobile single-day view
+    const mobileDateStr = fmtDate(centerDate);
+    const mobileDow = centerDate.getDay();
+    const mobileWritten = MEMBER_NAMES.filter(n => getTarget(n, mobileDateStr));
+    const mobileUnwritten = MEMBER_NAMES.filter(n => !getTarget(n, mobileDateStr));
+
     return (
         <div>
+            {/* Mobile single-day view */}
+            <div className="md:hidden">
+                <div className="flex items-center justify-between mb-4">
+                    <button onClick={() => shiftCenter(-1)} className="px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-[16px]">◀</button>
+                    <div className="text-center">
+                        <div className="text-[16px] font-bold text-slate-800">
+                            {centerDate.getMonth() + 1}월 {centerDate.getDate()}일 ({dayL[mobileDow]})
+                            {isCenterToday && <span className="ml-1.5 text-[11px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded align-middle">TODAY</span>}
+                        </div>
+                        {!isCenterToday && <button onClick={goToday} className="text-[12px] text-blue-500 mt-0.5">오늘로 이동</button>}
+                    </div>
+                    <button onClick={() => shiftCenter(1)} className="px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-[16px]">▶</button>
+                </div>
+                <div className="space-y-2">
+                    {mobileWritten.map(name => {
+                        const target = getTarget(name, mobileDateStr)!;
+                        const isMe = name === currentUser;
+                        const canEdit = isMe || currentUser === "박일웅";
+                        return (
+                            <div key={name} className={`rounded-xl p-3 ${isMe ? "bg-blue-50 border border-blue-200" : "bg-white border border-slate-200"}`}
+                                onClick={() => { if (canEdit) { setEditCell({ name, date: mobileDateStr }); setEditText(target.text); } }}>
+                                <div className="text-[13px] font-bold text-slate-700 mb-1">{MEMBERS[name]?.emoji} {name}</div>
+                                <div className="text-[14px] text-slate-700 leading-relaxed whitespace-pre-wrap">{target.text}</div>
+                            </div>
+                        );
+                    })}
+                </div>
+                {mobileUnwritten.length > 0 && (
+                    <div className="mt-4">
+                        <div className="text-[12px] font-semibold text-slate-400 mb-2">미작성</div>
+                        <div className="flex flex-wrap gap-1.5">
+                            {mobileUnwritten.map(name => {
+                                const canEdit = name === currentUser || currentUser === "박일웅";
+                                return (
+                                    <span key={name} className={`text-[12px] px-2 py-1 rounded-lg bg-slate-100 text-slate-400 ${canEdit ? "cursor-pointer hover:bg-slate-200" : ""}`}
+                                        onClick={() => { if (canEdit) { setEditCell({ name, date: mobileDateStr }); setEditText(""); } }}>
+                                        {MEMBERS[name]?.emoji} {name}
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Desktop 3-day table view */}
+            <div className="hidden md:block">
             {/* Navigation bar */}
             <div className="flex items-center justify-center gap-3 mb-3">
                 <button onClick={() => shiftCenter(-1)} className="px-2.5 py-1 rounded-md text-[14px] font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">&lt;</button>
                 <button onClick={goToday} className={`px-3 py-1 rounded-md text-[14px] font-medium transition-colors ${isCenterToday ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>오늘</button>
                 <button onClick={() => shiftCenter(1)} className="px-2.5 py-1 rounded-md text-[14px] font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">&gt;</button>
             </div>
-            <div className="overflow-x-auto border border-slate-200 rounded-lg bg-white">
+            </div>
+            <div className="hidden md:block overflow-x-auto border border-slate-200 rounded-lg bg-white">
                 <table className="w-full border-collapse table-fixed">
                     <thead>
                         <tr>
