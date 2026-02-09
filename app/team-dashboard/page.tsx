@@ -4832,6 +4832,7 @@ export default function DashboardPage() {
     const [labChat, setLabChat] = useState<TeamChatMsg[]>([]);
     const [labFiles, setLabFiles] = useState<LabFile[]>([]);
     const [labBoard, setLabBoard] = useState<TeamMemoCard[]>([]);
+    const [chatReadTs, setChatReadTs] = useState<Record<string, number>>({});
 
     const tabs = [
         { id: "overview", label: "연구실 현황", icon: "🏠" },
@@ -4985,6 +4986,25 @@ export default function DashboardPage() {
         window.addEventListener("beforeunload", h);
         return () => window.removeEventListener("beforeunload", h);
     }, [userName]);
+
+    // chatReadTs: init from localStorage
+    useEffect(() => {
+        if (!userName) return;
+        try {
+            const saved = localStorage.getItem(`mftel_chatReadTs_${userName}`);
+            if (saved) setChatReadTs(JSON.parse(saved));
+        } catch {}
+    }, [userName]);
+
+    // chatReadTs: mark current tab as read
+    useEffect(() => {
+        if (!userName) return;
+        setChatReadTs(prev => {
+            const next = { ...prev, [activeTab]: Date.now() };
+            try { localStorage.setItem(`mftel_chatReadTs_${userName}`, JSON.stringify(next)); } catch {}
+            return next;
+        });
+    }, [activeTab, userName]);
 
     // Handlers
     const handleToggleTodo = (id: number) => { const u = todos.map(t => t.id === id ? { ...t, done: !t.done } : t); setTodos(u); saveSection("todos", u); };
@@ -5231,6 +5251,12 @@ export default function DashboardPage() {
         ...Object.fromEntries(memberNames.map(name => [`memo_${name}`, (personalMemos[name] || []).filter(m => m.needsDiscussion).length])),
     };
 
+    const unreadCounts: Record<string, number> = {
+        labChat: labChat.filter(m => m.id > (chatReadTs.labChat || 0)).length,
+        ...Object.fromEntries(teamNames.map(t => [`teamMemo_${t}`, (teamMemos[t]?.chat || []).filter(m => m.id > (chatReadTs[`teamMemo_${t}`] || 0)).length])),
+        ...Object.fromEntries(memberNames.map(name => [`memo_${name}`, (piChat[name] || []).filter(m => m.id > (chatReadTs[`memo_${name}`] || 0)).length])),
+    };
+
     return (
         <MembersContext.Provider value={displayMembers}>
         <div className="min-h-screen bg-slate-50 text-slate-800" style={{ fontFamily: "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
@@ -5296,7 +5322,12 @@ export default function DashboardPage() {
                                         <span className="text-[14px]">{tab.icon}</span>
 {/* color dot removed */}
                                         <span>{tab.label}</span>
-                                        {(discussionCounts[tab.id] || 0) > 0 && <span className="ml-auto min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-orange-500 text-white text-[10px] font-bold">{discussionCounts[tab.id]}</span>}
+                                        {((unreadCounts[tab.id] || 0) > 0 || (discussionCounts[tab.id] || 0) > 0) && (
+                                            <div className="ml-auto flex items-center gap-1">
+                                                {(unreadCounts[tab.id] || 0) > 0 && <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-blue-500 text-white text-[10px] font-bold shadow-sm">{unreadCounts[tab.id]}</span>}
+                                                {(discussionCounts[tab.id] || 0) > 0 && <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-orange-500 text-white text-[10px] font-bold shadow-sm">{discussionCounts[tab.id]}</span>}
+                                            </div>
+                                        )}
                                     </button>
                                 </div>
                             );
