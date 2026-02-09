@@ -927,7 +927,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                                 const td = d.str === todayStr;
                                 const sel = d.str === selectedDate;
                                 return (
-                                    <th key={d.date} className={`border-b border-slate-200 px-0 py-1 text-center cursor-pointer hover:bg-blue-50 transition-colors ${sel ? "bg-amber-50 ring-1 ring-inset ring-amber-300" : td ? "bg-blue-50" : we ? "bg-slate-50/80" : "bg-white"}`}
+                                    <th key={d.date} className={`border-b border-[#E2E8F0] px-0 py-1 text-center cursor-pointer hover:bg-blue-50 transition-colors ${sel ? "bg-amber-50 ring-1 ring-inset ring-amber-300" : td ? "bg-[#EFF6FF]" : we ? "bg-[#F8FAFC]" : "bg-white"}`}
                                         onClick={() => setSelectedDate(sel ? null : d.str)}>
                                         <div className={`text-[11px] leading-tight ${we ? (d.dow === 0 ? "text-red-400" : "text-blue-400") : "text-slate-400"}`}>{dayL[d.dow]}</div>
                                         <div className={`text-[13px] font-semibold leading-tight ${sel ? "text-amber-700" : td ? "text-blue-600" : we ? (d.dow === 0 ? "text-red-500" : "text-blue-500") : "text-slate-700"}`}>{d.date}</div>
@@ -955,7 +955,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                                         const inDrag = inDragRow && dragDates.includes(d.str);
                                         return (
                                             <td key={d.date}
-                                                className={`border-b border-amber-100/60 text-center py-0.5 px-0 select-none ${td ? "bg-[#EFF6FF]" : we ? "bg-slate-50/50" : ""} ${canEdit ? "cursor-pointer" : ""} ${inDrag ? "bg-amber-100" : ""}`}
+                                                className={`border-b border-[#E2E8F0] text-center py-0.5 px-0 select-none ${td ? "bg-[#EFF6FF]" : we ? "bg-[#F8FAFC]" : ""} ${canEdit ? "cursor-pointer" : ""} ${inDrag ? "bg-amber-100" : ""}`}
                                                 onMouseDown={() => {
                                                     if (!canEdit) return;
                                                     if (entry) { setSelType(entry.type); setEditDesc(entry.description || ""); setEditCell({ name: label, date: d.str, existing: { type: entry.type, description: entry.description } }); return; }
@@ -998,7 +998,8 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                             const dispatched = isDispatched(name);
                             return (
                                 <tr key={name} className={`${isMe ? "bg-blue-50/30" : ""} hover:bg-slate-50/50`}>
-                                    <td className={`sticky left-0 z-10 border-r border-b border-slate-100 px-1 py-1.5 text-[13px] text-center whitespace-nowrap overflow-hidden ${dispatched ? "bg-violet-100/80 font-medium text-violet-800" : isMe ? "bg-blue-50 font-semibold text-slate-800" : "bg-white text-slate-600"}`}>
+                                    <td className={`sticky left-0 z-10 border-r border-b border-[#E2E8F0] px-1 py-1.5 text-[13px] text-center whitespace-nowrap overflow-hidden ${isMe ? "bg-blue-50 font-semibold text-slate-800" : "bg-white text-slate-600"}`}
+                                        style={dispatched ? { borderLeft: "3px solid #8B5CF6", background: "#F5F3FF" } : undefined}>
                                         {MEMBERS[name]?.emoji} {name}
                                     </td>
                                     {days.map((d, di) => {
@@ -1010,7 +1011,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                                         const cellDispatched = isDispatchedOn(name, d.str);
                                         return (
                                             <td key={d.date}
-                                                className={`border-b border-slate-100 text-center py-0.5 px-0 select-none ${cellDispatched ? "bg-violet-100/60" : td ? "bg-[#EFF6FF]" : we ? "bg-slate-50/50" : ""} ${canEdit ? "cursor-pointer" : ""} ${inDrag ? "bg-blue-100" : ""}`}
+                                                className={`border-b border-[#E2E8F0] text-center py-0.5 px-0 select-none ${cellDispatched ? "bg-violet-50/80" : td ? "bg-[#EFF6FF]" : we ? "bg-[#F8FAFC]" : ""} ${canEdit ? "cursor-pointer" : ""} ${inDrag ? "bg-blue-100" : ""}`}
                                                 onMouseDown={() => {
                                                     if (!canEdit) return;
                                                     if (entry) { setSelType(entry.type); setEditDesc(entry.description || ""); setEditCell({ name, date: d.str, existing: { type: entry.type, description: entry.description } }); return; }
@@ -4869,7 +4870,14 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                     }));
                 return (
                     <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
-                        <h3 className="text-[16px] font-bold text-slate-900 mb-4">팀별 연구 현황</h3>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-[16px] font-bold text-slate-900">팀별 연구 현황</h3>
+                            <div className="flex items-center gap-3">
+                                {[{label:"논문",color:"#3B82F6"},{label:"계획/보고",color:"#F59E0B"},{label:"실험",color:"#EF4444"},{label:"해석",color:"#8B5CF6"},{label:"지식재산권",color:"#10B981"}].map(c => (
+                                    <span key={c.label} className="flex items-center gap-1 text-[11px]" style={{color:"#94A3B8"}}><span className="w-2 h-2 rounded-sm" style={{background:c.color}} />{c.label}</span>
+                                ))}
+                            </div>
+                        </div>
                         {(() => {
                             const teamStats = teamEntries.map(team => {
                                 const tPapers = papers.filter(p => p.team === team.name).length;
@@ -4882,30 +4890,39 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                             });
                             const maxTotal = Math.max(...teamStats.map(t => t.total), 1);
                             return (
-                                <div className="space-y-3">
-                                    {teamStats.map(team => (
+                                <div className="space-y-2">
+                                    {teamStats.filter(t => t.total > 0).map(team => (
                                         <div key={team.name}>
-                                            <div className="flex items-center justify-between mb-1.5">
-                                                <span className="text-[13px] font-semibold text-slate-700" style={hasTeams ? { color: team.color } : undefined}>{team.name}</span>
-                                                <span className="text-[11px] text-slate-400">{team.total}건</span>
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-[13px]" style={{fontWeight:600, color:"#334155"}}>{team.name}</span>
+                                                <span className="text-[11px]" style={{color:"#94A3B8"}}>{team.total}건</span>
                                             </div>
-                                            <div className="flex gap-[2px] h-[10px]">
-                                                {Array.from({ length: team.tPapers }, (_, i) => <div key={`p${i}`} className="bg-blue-500 rounded-sm" style={{ width: `${100 / maxTotal}%` }} />)}
-                                                {Array.from({ length: team.tReports }, (_, i) => <div key={`r${i}`} className="bg-amber-500 rounded-sm" style={{ width: `${100 / maxTotal}%` }} />)}
-                                                {Array.from({ length: team.tPatents }, (_, i) => <div key={`ip${i}`} className="bg-teal-500 rounded-sm" style={{ width: `${100 / maxTotal}%` }} />)}
-                                                {Array.from({ length: team.tExp }, (_, i) => <div key={`e${i}`} className="bg-emerald-500 rounded-sm" style={{ width: `${100 / maxTotal}%` }} />)}
-                                                {Array.from({ length: team.tAnalysis }, (_, i) => <div key={`a${i}`} className="bg-violet-500 rounded-sm" style={{ width: `${100 / maxTotal}%` }} />)}
+                                            <div className="flex gap-[2px] h-[8px] rounded-sm overflow-hidden" style={{background:"#F1F5F9"}}>
+                                                {team.tPapers > 0 && <div className="rounded-sm" style={{ width: `${(team.tPapers / maxTotal) * 100}%`, background: "#3B82F6" }} />}
+                                                {team.tReports > 0 && <div className="rounded-sm" style={{ width: `${(team.tReports / maxTotal) * 100}%`, background: "#F59E0B" }} />}
+                                                {team.tExp > 0 && <div className="rounded-sm" style={{ width: `${(team.tExp / maxTotal) * 100}%`, background: "#EF4444" }} />}
+                                                {team.tAnalysis > 0 && <div className="rounded-sm" style={{ width: `${(team.tAnalysis / maxTotal) * 100}%`, background: "#8B5CF6" }} />}
+                                                {team.tPatents > 0 && <div className="rounded-sm" style={{ width: `${(team.tPatents / maxTotal) * 100}%`, background: "#10B981" }} />}
                                             </div>
-                                            <div className="flex gap-2 mt-1 flex-wrap">
-                                                {team.tPapers > 0 && <span className="text-[11px] text-blue-600">논문 {team.tPapers}</span>}
-                                                {team.tReports > 0 && <span className="text-[11px] text-amber-600">계획/보고 {team.tReports}</span>}
-                                                {team.tPatents > 0 && <span className="text-[11px] text-teal-600">지식재산권 {team.tPatents}</span>}
-                                                {team.tExp > 0 && <span className="text-[11px] text-emerald-600">실험 {team.tExp}</span>}
-                                                {team.tAnalysis > 0 && <span className="text-[11px] text-violet-600">해석 {team.tAnalysis}</span>}
-                                                {team.total === 0 && <span className="text-[11px] text-slate-300">항목 없음</span>}
+                                            <div className="flex gap-2.5 mt-1 flex-wrap">
+                                                {team.tPapers > 0 && <span className="text-[11px]" style={{color:"#3B82F6"}}>논문 {team.tPapers}</span>}
+                                                {team.tReports > 0 && <span className="text-[11px]" style={{color:"#F59E0B"}}>계획/보고 {team.tReports}</span>}
+                                                {team.tExp > 0 && <span className="text-[11px]" style={{color:"#EF4444"}}>실험 {team.tExp}</span>}
+                                                {team.tAnalysis > 0 && <span className="text-[11px]" style={{color:"#8B5CF6"}}>해석 {team.tAnalysis}</span>}
+                                                {team.tPatents > 0 && <span className="text-[11px]" style={{color:"#10B981"}}>지식재산권 {team.tPatents}</span>}
                                             </div>
                                         </div>
                                     ))}
+                                    {teamStats.filter(t => t.total === 0).length > 0 && (
+                                        <div className="pt-1.5 mt-1" style={{borderTop:"1px solid #F1F5F9"}}>
+                                            {teamStats.filter(t => t.total === 0).map(team => (
+                                                <div key={team.name} className="flex items-center justify-between py-0.5">
+                                                    <span className="text-[12px]" style={{color:"#94A3B8"}}>{team.name}</span>
+                                                    <span className="text-[11px]" style={{color:"#CBD5E1"}}>0건</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })()}
