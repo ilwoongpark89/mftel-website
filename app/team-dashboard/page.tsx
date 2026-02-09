@@ -4408,22 +4408,25 @@ function LoginScreen({ onLogin, members }: { onLogin: (name: string, password: s
         const error = await onLogin(n, pw, remember);
         if (error) { setErr(error); setLoading(false); }
     };
+    const focusStyle = "w-full border border-slate-200 rounded-lg px-3 py-2.5 text-[14px] focus:outline-none transition-all";
+    const handleFocus = (e: React.FocusEvent<HTMLElement>) => { e.currentTarget.style.borderColor = "#3B82F6"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(59,130,246,0.1)"; };
+    const handleBlur = (e: React.FocusEvent<HTMLElement>) => { e.currentTarget.style.borderColor = "#E2E8F0"; e.currentTarget.style.boxShadow = "none"; };
     return (
-        <div className="min-h-screen bg-slate-900 flex items-center justify-center px-4">
-            <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl">
+        <div className="min-h-screen flex items-center justify-center px-4" style={{background:"radial-gradient(ellipse at top, #1E293B, #0F172A)"}}>
+            <div className="bg-white rounded-2xl p-8 w-full max-w-sm" style={{boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
                 <div className="text-center mb-6">
-                    <div className="w-14 h-14 rounded-xl mx-auto mb-3 flex items-center justify-center text-2xl font-bold text-white" style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6)" }}>M</div>
+                    <div className="w-14 h-14 rounded-xl mx-auto mb-3 flex items-center justify-center text-2xl font-bold text-white" style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)", boxShadow: "0 4px 12px rgba(59,130,246,0.3)" }}>M</div>
                     <h1 className="text-xl font-bold text-slate-800">MFTEL Dashboard</h1>
                     <p className="text-[13px] text-slate-400 mt-1">Team members only</p>
                 </div>
                 <div className="space-y-3">
-                    <div><label className="text-[13px] font-medium text-slate-600 block mb-1">이름</label><select value={name} onChange={e => { setName(e.target.value); setErr(""); }} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"><option value="">이름 선택...</option>{Object.keys(members).map(n => <option key={n} value={n}>{members[n]?.emoji || "👤"} {n}</option>)}<option value="__custom">직접 입력</option></select></div>
-                    {name === "__custom" && <input value={custom} onChange={e => setCustom(e.target.value)} placeholder="이름 입력" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />}
-                    <div><label className="text-[13px] font-medium text-slate-600 block mb-1">비밀번호</label><input type="password" value={pw} onChange={e => { setPw(e.target.value); setErr(""); }} placeholder="비밀번호 입력" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" onKeyDown={e => e.key === "Enter" && !loading && submit()} /></div>
+                    <div><label className="text-[13px] font-medium text-slate-600 block mb-1">이름</label><select value={name} onChange={e => { setName(e.target.value); setErr(""); }} className={`${focusStyle} bg-white`} onFocus={handleFocus} onBlur={handleBlur}><option value="">이름 선택...</option>{Object.keys(members).map(n => <option key={n} value={n}>{members[n]?.emoji || "👤"} {n}</option>)}<option value="__custom">직접 입력</option></select></div>
+                    {name === "__custom" && <input value={custom} onChange={e => setCustom(e.target.value)} placeholder="이름 입력" className={focusStyle} onFocus={handleFocus} onBlur={handleBlur} />}
+                    <div><label className="text-[13px] font-medium text-slate-600 block mb-1">비밀번호</label><input type="password" value={pw} onChange={e => { setPw(e.target.value); setErr(""); }} placeholder="비밀번호 입력" className={focusStyle} onFocus={handleFocus} onBlur={handleBlur} onKeyDown={e => e.key === "Enter" && !loading && submit()} /></div>
                     <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} className="w-3.5 h-3.5 accent-blue-500" /><span className="text-[13px] text-slate-500">자동 로그인</span></label>
                     {err && <p className="text-[13px] text-red-500">{err}</p>}
-                    <button onClick={submit} disabled={loading} className="w-full py-2.5 rounded-lg text-[14px] font-semibold text-white disabled:opacity-60" style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6)" }}>{loading ? "로그인 중..." : "입장"}</button>
-                    <p className="text-[12px] text-slate-400 text-center">초기 비밀번호: 0000</p>
+                    <button onClick={submit} disabled={loading} className="w-full py-2.5 rounded-lg text-[14px] font-semibold text-white disabled:opacity-60 transition-all hover:brightness-110" style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)" }}>{loading ? "로그인 중..." : "입장"}</button>
+                    <p className="text-[11px] text-center" style={{color:"#CBD5E1"}}>초기 비밀번호: 0000</p>
                 </div>
             </div>
         </div>
@@ -5386,9 +5389,9 @@ export default function DashboardPage() {
         <MembersContext.Provider value={displayMembers}>
         <div className="min-h-screen bg-[#F8FAFC] text-slate-800 leading-normal" style={{ fontFamily: "'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif" }}>
 
-            <div className="flex flex-col md:flex-row">
+            <div className="flex flex-col md:flex-row md:h-screen md:overflow-hidden">
                 {/* Sidebar */}
-                <div className="md:w-[240px] md:min-h-screen flex-shrink-0 flex flex-col" style={{background:"#0F172A", borderRight:"1px solid #1E293B", boxShadow:"2px 0 8px rgba(0,0,0,0.1)"}}>
+                <div className="md:w-[240px] md:h-screen flex-shrink-0 flex flex-col" style={{background:"#0F172A", borderRight:"1px solid #1E293B", boxShadow:"2px 0 8px rgba(0,0,0,0.1)"}}>
                     {/* Sidebar top: MFTEL logo */}
                     <div className="hidden md:flex items-center gap-3 px-5 pt-5 pb-4" style={{borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
                         <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-[17px] font-extrabold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", boxShadow: "0 2px 8px rgba(59,130,246,0.3)" }}>M</div>
@@ -5507,7 +5510,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 p-4 md:py-7 md:px-9 overflow-x-auto">
+                <div className="flex-1 p-4 md:py-7 md:px-9 overflow-x-auto md:overflow-y-auto">
                     {activeTab !== "overview" && activeTab !== "overview_me" && (() => {
                         const extraTabs: Record<string, { icon: string; label: string }> = { teams: { icon: "👥", label: "팀 관리" }, settings: { icon: "⚙️", label: "설정" } };
                         const found = tabs.find(t => t.id === activeTab) || extraTabs[activeTab];
