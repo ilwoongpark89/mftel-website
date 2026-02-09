@@ -841,6 +841,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
     onDispatchDelete?: (id: number) => void;
 }) {
     const MEMBERS = useContext(MembersContext);
+    const isPI = currentUser === "박일웅";
     const [month, setMonth] = useState(() => { const n = new Date(); return { y: n.getFullYear(), m: n.getMonth() }; });
     const [selType, setSelType] = useState(Object.keys(types)[0]);
     const [editCell, setEditCell] = useState<{ name: string; date: string; existing?: { type: string; description?: string } } | null>(null);
@@ -980,6 +981,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                         })}
                         {MEMBER_NAMES.map(name => {
                             const isMe = name === currentUser;
+                            const canEdit = isMe || isPI;
                             const dispatched = isDispatched(name);
                             return (
                                 <tr key={name} className={`${isMe ? "bg-blue-50/30" : ""} hover:bg-slate-50/50`}>
@@ -995,9 +997,9 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                                         const cellDispatched = isDispatchedOn(name, d.str);
                                         return (
                                             <td key={d.date}
-                                                className={`border-b border-slate-100 text-center py-0.5 px-0 select-none ${cellDispatched ? "bg-violet-100/60" : td ? "bg-blue-50/50" : we ? "bg-slate-50/50" : ""} ${isMe ? "cursor-pointer" : ""} ${inDrag ? "bg-blue-100" : ""}`}
+                                                className={`border-b border-slate-100 text-center py-0.5 px-0 select-none ${cellDispatched ? "bg-violet-100/60" : td ? "bg-blue-50/50" : we ? "bg-slate-50/50" : ""} ${canEdit ? "cursor-pointer" : ""} ${inDrag ? "bg-blue-100" : ""}`}
                                                 onMouseDown={() => {
-                                                    if (!isMe) return;
+                                                    if (!canEdit) return;
                                                     if (entry) { setSelType(entry.type); setEditDesc(entry.description || ""); setEditCell({ name, date: d.str, existing: { type: entry.type, description: entry.description } }); return; }
                                                     isDragging.current = true;
                                                     setDragName(name);
@@ -1021,7 +1023,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                                                 {vt ? (
                                                     <div className="mx-auto w-[24px] h-[22px] rounded flex items-center justify-center text-[10.5px] font-bold text-white hover:scale-110 transition-transform"
                                                         style={{ background: vt.color }} title={entry?.description || vt.label}>{vt.short}</div>
-                                                ) : isMe ? (
+                                                ) : canEdit ? (
                                                     <div className={`mx-auto w-[22px] h-[20px] rounded flex items-center justify-center ${inDrag ? "bg-blue-200" : "opacity-0 hover:opacity-100 bg-slate-100"} transition-opacity`}>
                                                         <span className="text-[9px] text-slate-300">+</span>
                                                     </div>
@@ -3376,9 +3378,13 @@ function ColorPicker({ color, onColor, compact }: { color: string; onColor: (c: 
     );
 }
 
-function PersonalMemoView({ memos, onSave, onDelete }: {
+function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteFile, chat, onAddChat, onDeleteChat, onClearChat, currentUser }: {
     memos: Memo[]; onSave: (m: Memo) => void; onDelete: (id: number) => void;
+    files: LabFile[]; onAddFile: (f: LabFile) => void; onDeleteFile: (id: number) => void;
+    chat: TeamChatMsg[]; onAddChat: (msg: TeamChatMsg) => void; onDeleteChat: (id: number) => void; onClearChat: () => void;
+    currentUser: string;
 }) {
+    const MEMBERS = useContext(MembersContext);
     const [selected, setSelected] = useState<Memo | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [adding, setAdding] = useState(false);
@@ -3387,7 +3393,9 @@ function PersonalMemoView({ memos, onSave, onDelete }: {
     const [color, setColor] = useState(MEMO_COLORS[0]);
     const [borderColor, setBorderColor] = useState("");
     const [newComment, setNewComment] = useState("");
+    const [chatText, setChatText] = useState("");
     const composingRef = useRef(false);
+    const chatEndRef = useRef<HTMLDivElement>(null);
 
     const openDetail = (m: Memo) => { setSelected(m); setIsEditing(false); setNewComment(""); };
     const startEdit = () => { if (!selected) return; setTitle(selected.title); setContent(selected.content); setColor(selected.color); setBorderColor(selected.borderColor || ""); setIsEditing(true); };
@@ -3405,7 +3413,7 @@ function PersonalMemoView({ memos, onSave, onDelete }: {
     };
     const addComment = () => {
         if (!newComment.trim() || !selected) return;
-        const updated = { ...selected, comments: [...(selected.comments || []), { id: Date.now(), author: "나", text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] };
+        const updated = { ...selected, comments: [...(selected.comments || []), { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] };
         onSave(updated); setSelected(updated); setNewComment("");
     };
     const deleteComment = (cid: number) => {
@@ -3413,48 +3421,102 @@ function PersonalMemoView({ memos, onSave, onDelete }: {
         const updated = { ...selected, comments: (selected.comments || []).filter(c => c.id !== cid) };
         onSave(updated); setSelected(updated);
     };
+    const sendChat = () => {
+        if (!chatText.trim()) return;
+        onAddChat({ id: Date.now(), author: currentUser, text: chatText.trim(), date: new Date().toLocaleString("ko-KR") });
+        setChatText("");
+    };
+
+    useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chat.length]);
 
     return (
-        <div>
-            <div className="mb-3">
-                <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 노트 추가</button>
-            </div>
-            {memos.length === 0 && !adding && <div className="text-center py-12 text-slate-400 text-[13px]">노트가 없습니다</div>}
-            <div className="grid grid-cols-3 gap-3">
-                {[...memos].sort((a, b) => b.id - a.id).map(m => {
-                    const cmts = m.comments || [];
-                    return (
-                        <div key={m.id} className={`rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow flex flex-col group relative ${m.needsDiscussion && !m.borderColor ? "ring-1 ring-orange-200" : ""}`}
-                            style={{ background: m.color, border: m.borderColor ? `2px solid ${m.borderColor}` : m.needsDiscussion ? "2px solid #fb923c" : "1px solid #e2e8f0" }}
-                            onClick={() => openDetail(m)}>
-                            <button onClick={e => { e.stopPropagation(); onDelete(m.id); }}
-                                className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                            <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                <input type="checkbox" checked={!!m.needsDiscussion} onChange={() => onSave({ ...m, needsDiscussion: !m.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
-                                <span className={`text-[10px] font-medium ${m.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
-                            </label>
-                            <div className="flex items-start justify-between mb-2">
-                                <div className="text-[14px] font-semibold text-slate-800 break-words flex-1">{m.title}</div>
-                                <span className="text-[10px] text-slate-400 ml-2 whitespace-nowrap">{m.updatedAt}</span>
-                            </div>
-                            {m.content && <div className="text-[12px] text-slate-600 mb-3 line-clamp-3 break-words">{m.content}</div>}
-                            {cmts.length > 0 ? (
-                                <div className="border-t border-slate-100 pt-2 mt-auto space-y-1">
-                                    <div className="text-[10px] font-semibold text-slate-400 mb-1">💬 댓글 {cmts.length}개</div>
-                                    {cmts.slice(-2).map(c => (
-                                        <div key={c.id} className="text-[11px] text-slate-500 truncate">
-                                            <span className="font-medium text-slate-600">{c.author}</span> {c.text}
+        <div className="flex gap-3 h-[calc(100vh-140px)]">
+            {/* Board (2/4) */}
+            <div className="w-2/4 flex flex-col">
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-[13px] font-bold text-slate-700">📝 노트</h3>
+                    <button onClick={openAdd} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[11px] font-medium hover:bg-blue-600">+ 추가</button>
+                </div>
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                    {memos.length === 0 && !adding && <div className="text-center py-12 text-slate-400 text-[12px]">노트가 없습니다</div>}
+                    <div className="grid grid-cols-2 gap-2">
+                        {[...memos].sort((a, b) => b.id - a.id).map(m => {
+                            const cmts = m.comments || [];
+                            return (
+                                <div key={m.id} className={`rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow flex flex-col group relative ${m.needsDiscussion && !m.borderColor ? "ring-1 ring-orange-200" : ""}`}
+                                    style={{ background: m.color, border: m.borderColor ? `2px solid ${m.borderColor}` : m.needsDiscussion ? "2px solid #fb923c" : "1px solid #e2e8f0" }}
+                                    onClick={() => openDetail(m)}>
+                                    <button onClick={e => { e.stopPropagation(); onDelete(m.id); }}
+                                        className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                                    <label className="flex items-center gap-1.5 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
+                                        <input type="checkbox" checked={!!m.needsDiscussion} onChange={() => onSave({ ...m, needsDiscussion: !m.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
+                                        <span className={`text-[9px] font-medium ${m.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                                    </label>
+                                    <div className="flex items-start justify-between mb-1">
+                                        <div className="text-[12px] font-semibold text-slate-800 break-words flex-1">{m.title}</div>
+                                        <span className="text-[9px] text-slate-400 ml-1 whitespace-nowrap">{m.updatedAt}</span>
+                                    </div>
+                                    {m.content && <div className="text-[10px] text-slate-600 mb-2 line-clamp-3 break-words">{m.content}</div>}
+                                    {cmts.length > 0 ? (
+                                        <div className="border-t border-slate-100 pt-1.5 mt-auto space-y-0.5">
+                                            <div className="text-[9px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
+                                            {cmts.slice(-2).map(c => (
+                                                <div key={c.id} className="text-[9px] text-slate-500 truncate">
+                                                    <span className="font-medium text-slate-600">{c.author}</span> {c.text}
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
+                                    ) : (
+                                        <div className="border-t border-slate-100 pt-1.5 mt-auto">
+                                            <div className="text-[9px] text-slate-300">💬 댓글 없음</div>
+                                        </div>
+                                    )}
                                 </div>
-                            ) : (
-                                <div className="border-t border-slate-100 pt-2 mt-auto">
-                                    <div className="text-[10px] text-slate-300">💬 댓글 없음</div>
-                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+            {/* Files (1/4) */}
+            <div className="w-1/4 flex flex-col bg-white border border-slate-200 rounded-lg">
+                <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
+                    <h3 className="text-[13px] font-bold text-slate-700">📎 파일</h3>
+                    <span className="text-[11px] text-slate-400">{files.length}개</span>
+                </div>
+                <FileBox files={files} currentUser={currentUser} onAddFile={onAddFile} onDeleteFile={onDeleteFile} />
+            </div>
+            {/* PI Chat (1/4) */}
+            <div className="w-1/4 flex flex-col bg-white border border-slate-200 rounded-lg">
+                <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
+                    <h3 className="text-[13px] font-bold text-slate-700">💬 PI 채팅</h3>
+                    {currentUser === "박일웅" && (
+                        <button onClick={() => { if (confirm("채팅을 모두 삭제하시겠습니까?")) onClearChat(); }} className="text-[11px] text-slate-400 hover:text-red-500">초기화</button>
+                    )}
+                </div>
+                <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                    {chat.length === 0 && <div className="text-center py-12 text-slate-400 text-[11px]">PI와 대화를 시작하세요</div>}
+                    {chat.map(msg => (
+                        <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`}>
+                            <div className={`inline-block max-w-[90%] rounded-lg px-3 py-2 text-[12px] ${msg.author === currentUser ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-700"}`}>
+                                {msg.author !== currentUser && <div className="text-[10px] font-bold mb-0.5">{MEMBERS[msg.author]?.emoji || "👤"} {msg.author}</div>}
+                                <div className="whitespace-pre-wrap">{msg.text}</div>
+                                <div className={`text-[9px] mt-0.5 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>{msg.date}</div>
+                            </div>
+                            {msg.author === currentUser && (
+                                <button onClick={() => onDeleteChat(msg.id)} className="text-[9px] text-slate-300 hover:text-red-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">삭제</button>
                             )}
                         </div>
-                    );
-                })}
+                    ))}
+                    <div ref={chatEndRef} />
+                </div>
+                <div className="p-2.5 border-t border-slate-100">
+                    <div className="flex gap-2">
+                        <textarea value={chatText} onChange={e => setChatText(e.target.value)}
+                            placeholder="메시지 입력..." rows={2}
+                            className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                        <button onClick={sendChat} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[11px] font-medium hover:bg-blue-600 flex-shrink-0 self-end">전송</button>
+                    </div>
+                </div>
             </div>
 
             {/* Add modal */}
@@ -3812,12 +3874,10 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                 </div>
                 <div className="p-3 border-t border-slate-100">
                     <div className="flex gap-2">
-                        <input value={text} onChange={e => setText(e.target.value)}
-                            onCompositionStart={() => { composingRef.current = true; }}
-                            onCompositionEnd={() => { composingRef.current = false; }}
-                            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !composingRef.current) { e.preventDefault(); send(); } }}
-                            placeholder="메시지 입력..." className="flex-1 border border-slate-200 rounded-lg px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-                        <button onClick={send} className="px-4 py-2.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 flex-shrink-0">전송</button>
+                        <textarea value={text} onChange={e => setText(e.target.value)}
+                            placeholder="메시지 입력... (엔터로 줄바꿈)" rows={2}
+                            className="flex-1 border border-slate-200 rounded-lg px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                        <button onClick={send} className="px-4 py-2.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 flex-shrink-0 self-end">전송</button>
                     </div>
                 </div>
             </div>
@@ -4164,11 +4224,10 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                 </div>
                 <div className="p-2.5 border-t border-slate-100">
                     <div className="flex gap-2">
-                        <input value={chatText} onChange={e => setChatText(e.target.value)}
-                            onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
-                            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !composingRef.current) { e.preventDefault(); sendChat(); } }}
-                            placeholder="메시지 입력..." className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-                        <button onClick={sendChat} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">전송</button>
+                        <textarea value={chatText} onChange={e => setChatText(e.target.value)}
+                            placeholder="메시지 입력... (엔터로 줄바꿈)" rows={2}
+                            className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                        <button onClick={sendChat} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0 self-end">전송</button>
                     </div>
                 </div>
             </div>
@@ -4767,6 +4826,8 @@ export default function DashboardPage() {
     const [analysisToolList, setAnalysisToolList] = useState<string[]>(ANALYSIS_TOOLS);
     const [paperTagList, setPaperTagList] = useState<string[]>(PAPER_TAGS);
     const [personalMemos, setPersonalMemos] = useState<Record<string, Memo[]>>({});
+    const [personalFiles, setPersonalFiles] = useState<Record<string, LabFile[]>>({});
+    const [piChat, setPiChat] = useState<Record<string, TeamChatMsg[]>>({});
     const [teamMemos, setTeamMemos] = useState<Record<string, { kanban: TeamMemoCard[]; chat: TeamChatMsg[]; files?: LabFile[] }>>({});
     const [labChat, setLabChat] = useState<TeamChatMsg[]>([]);
     const [labFiles, setLabFiles] = useState<LabFile[]>([]);
@@ -4833,6 +4894,8 @@ export default function DashboardPage() {
             if (d.statusMessages) setStatusMessages(d.statusMessages);
             if (d.equipmentList) setEquipmentList(d.equipmentList);
             if (d.personalMemos) setPersonalMemos(d.personalMemos);
+            if (d.personalFiles) setPersonalFiles(d.personalFiles);
+            if (d.piChat) setPiChat(d.piChat);
             if (d.teamMemos) setTeamMemos(d.teamMemos);
             if (d.labChat) setLabChat(d.labChat);
             if (d.labFiles) setLabFiles(d.labFiles);
@@ -5048,6 +5111,26 @@ export default function DashboardPage() {
         const updated = (personalMemos[memberName] || []).filter(m => m.id !== id);
         const u = { ...personalMemos, [memberName]: updated };
         setPersonalMemos(u); saveSection("personalMemos", u);
+    };
+    const handleAddPersonalFile = (name: string, f: LabFile) => {
+        const u = { ...personalFiles, [name]: [...(personalFiles[name] || []), f] };
+        setPersonalFiles(u); saveSection("personalFiles", u);
+    };
+    const handleDeletePersonalFile = (name: string, id: number) => {
+        const u = { ...personalFiles, [name]: (personalFiles[name] || []).filter(f => f.id !== id) };
+        setPersonalFiles(u); saveSection("personalFiles", u);
+    };
+    const handleAddPiChat = (name: string, msg: TeamChatMsg) => {
+        const u = { ...piChat, [name]: [...(piChat[name] || []), msg] };
+        setPiChat(u); saveSection("piChat", u);
+    };
+    const handleDeletePiChat = (name: string, id: number) => {
+        const u = { ...piChat, [name]: (piChat[name] || []).filter(m => m.id !== id) };
+        setPiChat(u); saveSection("piChat", u);
+    };
+    const handleClearPiChat = (name: string) => {
+        const u = { ...piChat, [name]: [] };
+        setPiChat(u); saveSection("piChat", u);
     };
 
     const handleSaveTeamMemo = (teamName: string, card: TeamMemoCard) => {
@@ -5272,7 +5355,7 @@ export default function DashboardPage() {
                     })()}
                     {activeTab.startsWith("memo_") && (() => {
                         const name = activeTab.replace("memo_", "");
-                        return <PersonalMemoView memos={personalMemos[name] || []} onSave={m => handleSaveMemo(name, m)} onDelete={id => handleDeleteMemo(name, id)} />;
+                        return <PersonalMemoView memos={personalMemos[name] || []} onSave={m => handleSaveMemo(name, m)} onDelete={id => handleDeleteMemo(name, id)} files={personalFiles[name] || []} onAddFile={f => handleAddPersonalFile(name, f)} onDeleteFile={id => handleDeletePersonalFile(name, id)} chat={piChat[name] || []} onAddChat={msg => handleAddPiChat(name, msg)} onDeleteChat={id => handleDeletePiChat(name, id)} onClearChat={() => handleClearPiChat(name)} currentUser={userName} />;
                     })()}
                 </div>
             </div>
