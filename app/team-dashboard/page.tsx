@@ -488,12 +488,9 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
             {selected && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setSelected(null); setDetailComment(""); }}>
                     <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between p-5 pb-3">
-                            <div className="flex-1 min-w-0">
-                                <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selected.title}</h2>
-                                {selected.journal !== "TBD" && <p className="text-[13px] text-slate-500 italic mt-1">{selected.journal}</p>}
-                            </div>
-                            <button onClick={() => { onClickPaper(selected); setSelected(null); setDetailComment(""); }} className="px-3 py-1.5 text-[13px] text-blue-600 hover:bg-blue-50 rounded-lg font-medium ml-3 flex-shrink-0">수정</button>
+                        <div className="p-5 pb-3">
+                            <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selected.title}</h2>
+                            {selected.journal !== "TBD" && <p className="text-[13px] text-slate-500 italic mt-1">{selected.journal}</p>}
                         </div>
                         <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4 space-y-4 modal-scroll">
                             <div className="flex flex-wrap gap-1.5">
@@ -563,6 +560,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                                 {onDeletePaper && (currentUser === selected.creator || currentUser === "박일웅") && (
                                     <button onClick={() => { onDeletePaper(selected.id); setSelected(null); setDetailComment(""); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                                 )}
+                                <button onClick={() => { onClickPaper(selected); setSelected(null); setDetailComment(""); }} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
                             </div>
                             <button onClick={() => { setSelected(null); setDetailComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                         </div>
@@ -826,14 +824,11 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
             {selected && !editing && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setSelected(null); setDetailComment(""); }}>
                     <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between p-5 pb-3">
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                    {selected.category && <span className={`text-[11px] px-2 py-0.5 rounded font-medium ${selected.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`}>{selected.category}</span>}
-                                </div>
-                                <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selected.title}</h2>
+                        <div className="p-5 pb-3">
+                            <div className="flex items-center gap-2 mb-1">
+                                {selected.category && <span className={`text-[11px] px-2 py-0.5 rounded font-medium ${selected.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`}>{selected.category}</span>}
                             </div>
-                            <button onClick={() => { setEditing(selected); setSelected(null); setDetailComment(""); }} className="px-3 py-1.5 text-[13px] text-blue-600 hover:bg-blue-50 rounded-lg font-medium ml-3 flex-shrink-0">수정</button>
+                            <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selected.title}</h2>
                         </div>
                         <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4 space-y-4 modal-scroll">
                             {selected.team && (
@@ -918,6 +913,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                                 {(currentUser === selected.creator || currentUser === "박일웅") && (
                                     <button onClick={() => { onDelete(selected.id); setSelected(null); setDetailComment(""); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                                 )}
+                                <button onClick={() => { setEditing(selected); setSelected(null); setDetailComment(""); }} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
                             </div>
                             <button onClick={() => { setSelected(null); setDetailComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                         </div>
@@ -1693,12 +1689,9 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
             {selected && !editing && !adding && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setSelected(null); setDetailComment(""); }}>
                     <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between p-5 pb-3">
-                            <div className="flex-1 min-w-0">
-                                <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selected.title}</h2>
-                                <p className="text-[13px] text-slate-500 mt-1">🔧 {selected.equipment}</p>
-                            </div>
-                            <button onClick={() => { setEditing(selected); setSelected(null); setDetailComment(""); }} className="px-3 py-1.5 text-[13px] text-blue-600 hover:bg-blue-50 rounded-lg font-medium ml-3 flex-shrink-0">수정</button>
+                        <div className="p-5 pb-3">
+                            <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selected.title}</h2>
+                            <p className="text-[13px] text-slate-500 mt-1">🔧 {selected.equipment}</p>
                         </div>
                         <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4 space-y-4 modal-scroll">
                             {selected.goal && (
@@ -1776,6 +1769,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                                 {(currentUser === selected.creator || currentUser === "박일웅") && (
                                     <button onClick={() => { onDelete(selected.id); setSelected(null); setDetailComment(""); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                                 )}
+                                <button onClick={() => { setEditing(selected); setSelected(null); setDetailComment(""); }} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
                             </div>
                             <button onClick={() => { setSelected(null); setDetailComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                         </div>
@@ -2038,12 +2032,9 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
             {selected && !editing && !adding && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setSelected(null); setDetailComment(""); }}>
                     <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between p-5 pb-3">
-                            <div className="flex-1 min-w-0">
-                                <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selected.title}</h2>
-                                <p className="text-[13px] text-slate-500 mt-1">🖥️ {selected.tool}</p>
-                            </div>
-                            <button onClick={() => { setEditing(selected); setSelected(null); setDetailComment(""); }} className="px-3 py-1.5 text-[13px] text-blue-600 hover:bg-blue-50 rounded-lg font-medium ml-3 flex-shrink-0">수정</button>
+                        <div className="p-5 pb-3">
+                            <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selected.title}</h2>
+                            <p className="text-[13px] text-slate-500 mt-1">🖥️ {selected.tool}</p>
                         </div>
                         <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4 space-y-4 modal-scroll">
                             {selected.goal && (
@@ -2121,6 +2112,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                                 {(currentUser === selected.creator || currentUser === "박일웅") && (
                                     <button onClick={() => { onDelete(selected.id); setSelected(null); setDetailComment(""); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                                 )}
+                                <button onClick={() => { setEditing(selected); setSelected(null); setDetailComment(""); }} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
                             </div>
                             <button onClick={() => { setSelected(null); setDetailComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                         </div>
@@ -2665,27 +2657,23 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
                                         onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
                                         onDragOver={e => { e.preventDefault(); if (draggedId === p.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
                                         onClick={() => setEditing(p)}
-                                        className={`bg-white rounded-xl p-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === p.id ? "opacity-40 scale-95" : ""} ${p.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}
-                                        style={{ borderLeft: `3px solid ${cfg.color}` }}>
-                                        <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                            <input type="checkbox" checked={!!p.needsDiscussion} onChange={() => onToggleDiscussion(p)} className="w-3 h-3 accent-red-500" />
-                                            <span className={`text-[11px] font-medium ${p.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
-                                        </label>
-                                        <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{p.title}</div>
-                                        {p.team && <div className="mb-1"><span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{p.team}</span></div>}
-                                        <div className="flex items-center gap-2 mb-1.5">
-                                            <div className="flex-1 bg-slate-100 rounded-full h-1.5">
-                                                <div className="h-1.5 rounded-full bg-blue-500 transition-all" style={{ width: `${p.progress || 0}%` }} />
-                                            </div>
-                                            <span className="text-[11px] font-semibold text-blue-500">{p.progress || 0}%</span>
+                                        className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === p.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
+                                        style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${cfg.color}` }}>
+                                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{p.title}</div>
+                                        <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
+                                            {p.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{p.team}</span>}
+                                            {p.deadline && <span className="text-[10.5px] px-1.5 py-0.5 rounded bg-red-50 text-red-500 flex-shrink-0" style={{fontWeight:500}}>~{p.deadline}</span>}
                                         </div>
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex gap-1 flex-wrap">
-                                                {p.assignees.map(a => <span key={a} className="text-[11px] px-1.5 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[a]?.emoji}{a}</span>)}
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
+                                                <div className="h-1 rounded-full transition-all" style={{ width: `${p.progress || 0}%`, background: "#3B82F6" }} />
                                             </div>
-                                            {p.deadline && <span className="text-[11px] text-red-500 font-semibold">~{p.deadline}</span>}
+                                            <span className="text-[10px] font-semibold" style={{color: (p.progress || 0) >= 80 ? "#10B981" : "#3B82F6"}}>{p.progress || 0}%</span>
                                         </div>
-                                        {p.creator && <div className="text-[10px] text-slate-400 text-right mt-1">by {MEMBERS[p.creator]?.emoji || ""}{p.creator}{p.createdAt ? ` · ${p.createdAt}` : ""}</div>}
+                                        <div className="flex -space-x-1 mt-1.5">
+                                            {p.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
+                                            {p.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{p.assignees.length - 4}</span>}
+                                        </div>
                                     </div>
                                     </div>
                                 ))}
