@@ -26,7 +26,7 @@ const MEMBER_NAMES = Object.keys(MEMBERS).filter(k => k !== "박일웅");
 // Context for dynamic member data (customEmojis merged)
 const MembersContext = createContext<Record<string, { team: string; role: string; emoji: string }>>(DEFAULT_MEMBERS);
 
-type TeamData = { lead: string; members: string[]; color: string };
+type TeamData = { lead: string; members: string[]; color: string; emoji?: string };
 
 const DEFAULT_TEAMS: Record<string, TeamData> = {};
 
@@ -1900,6 +1900,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
 }
 
 const TEAM_COLORS = ["#3b82f6", "#ef4444", "#f59e0b", "#8b5cf6", "#10b981", "#ec4899", "#f97316", "#14b8a6"];
+const TEAM_EMOJIS = ["💧", "⚙️", "🔋", "🌊", "🔬", "🧪", "📐", "🔧", "❄️", "☢️", "🔥", "💻", "📊", "🌡️", "⚡", "🛠️", "🧬", "🏗️", "📡", "🎯"];
 
 function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams, currentUser }: { papers: Paper[]; todos: Todo[]; experiments: Experiment[]; analyses: Analysis[]; teams: Record<string, TeamData>; onSaveTeams: (t: Record<string, TeamData>) => void; currentUser: string }) {
     const MEMBERS = useContext(MembersContext);
@@ -1909,20 +1910,22 @@ function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams
     const [formLead, setFormLead] = useState("");
     const [formMembers, setFormMembers] = useState<string[]>([]);
     const [formColor, setFormColor] = useState(TEAM_COLORS[0]);
+    const [formEmoji, setFormEmoji] = useState(TEAM_EMOJIS[0]);
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const openEdit = (name: string) => {
         const t = teams[name];
-        setEditingTeam(name); setFormName(name); setFormLead(t.lead); setFormMembers(t.members); setFormColor(t.color);
+        setEditingTeam(name); setFormName(name); setFormLead(t.lead); setFormMembers(t.members); setFormColor(t.color); setFormEmoji(t.emoji || TEAM_EMOJIS[0]);
     };
     const openAdd = () => {
-        setAddingTeam(true); setFormName(""); setFormLead(""); setFormMembers([]); setFormColor(TEAM_COLORS[Object.keys(teams).length % TEAM_COLORS.length]);
+        const idx = Object.keys(teams).length;
+        setAddingTeam(true); setFormName(""); setFormLead(""); setFormMembers([]); setFormColor(TEAM_COLORS[idx % TEAM_COLORS.length]); setFormEmoji(TEAM_EMOJIS[idx % TEAM_EMOJIS.length]);
     };
     const handleSave = () => {
         if (!formName.trim()) return;
         const updated = { ...teams };
         if (editingTeam && editingTeam !== formName) delete updated[editingTeam];
-        updated[formName] = { lead: formLead, members: formMembers, color: formColor };
+        updated[formName] = { lead: formLead, members: formMembers, color: formColor, emoji: formEmoji };
         onSaveTeams(updated); setEditingTeam(null); setAddingTeam(false);
     };
     const handleDelete = (name: string) => {
@@ -1937,7 +1940,7 @@ function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams
             <div className="grid gap-3 sm:grid-cols-2">{Object.entries(teams).map(([name, team]) => (
                 <div key={name} className="bg-white border border-slate-200 rounded-xl p-4 cursor-pointer hover:shadow-md transition-shadow" style={{ borderTop: `3px solid ${team.color}` }}
                     onClick={() => openEdit(name)}>
-                    <div className="text-[15px] font-bold text-slate-800 mb-1">TEAM_{name}</div>
+                    <div className="text-[15px] font-bold text-slate-800 mb-1">{team.emoji || "📌"} TEAM_{name}</div>
                     <div className="text-[11px] text-slate-500 mb-3">팀장: {MEMBERS[team.lead]?.emoji || ""} {team.lead}</div>
                     <div className="space-y-1.5">{team.members.map(m => {
                         const paperCount = papers.filter(p => p.assignees.includes(m)).length;
@@ -1970,6 +1973,17 @@ function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams
                             <div>
                                 <label className="text-[11px] font-semibold text-slate-500 block mb-1">팀 이름 *</label>
                                 <input value={formName} onChange={e => setFormName(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                            </div>
+                            <div>
+                                <label className="text-[11px] font-semibold text-slate-500 block mb-1">아이콘</label>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {TEAM_EMOJIS.map(e => (
+                                        <button key={e} type="button" onClick={() => setFormEmoji(e)}
+                                            className={`w-8 h-8 rounded-lg text-[16px] flex items-center justify-center transition-all ${formEmoji === e ? "bg-blue-100 ring-2 ring-blue-500 scale-110" : "bg-slate-50 hover:bg-slate-100 hover:scale-105"}`}>
+                                            {e}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                             <div>
                                 <label className="text-[11px] font-semibold text-slate-500 block mb-1">색상</label>
@@ -4224,7 +4238,7 @@ export default function DashboardPage() {
         { id: "ideas", label: "아이디어", icon: "💡" },
         { id: "chat", label: "잡담", icon: "💬" },
         { id: "lectures", label: "수업", icon: "📚" },
-        ...teamNames.map(t => ({ id: `teamMemo_${t}`, label: t, icon: "📌" })),
+        ...teamNames.map(t => ({ id: `teamMemo_${t}`, label: t, icon: teams[t]?.emoji || "📌", color: teams[t]?.color })),
         ...(userName === "박일웅" ? memberNames : memberNames.filter(n => n === userName)).map(name => ({ id: `memo_${name}`, label: name, icon: customEmojis[name] || members[name]?.emoji || "👤" })),
     ];
 
@@ -4629,7 +4643,9 @@ export default function DashboardPage() {
                                     )}
                                     <button onClick={() => setActiveTab(tab.id)}
                                         className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-[13px] whitespace-nowrap transition-all ${activeTab === tab.id ? "font-semibold text-blue-700 bg-blue-50" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"}`}>
-                                        <span className="text-[14px]">{tab.icon}</span><span>{tab.label}</span>
+                                        <span className="text-[14px]">{tab.icon}</span>
+                                        {"color" in tab && (tab as {color?: string}).color && <span className="w-2 h-2 rounded-full shrink-0 -ml-1" style={{ background: (tab as {color?: string}).color }} />}
+                                        <span>{tab.label}</span>
                                         {(discussionCounts[tab.id] || 0) > 0 && <span className="ml-auto min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-orange-500 text-white text-[10px] font-bold">{discussionCounts[tab.id]}</span>}
                                     </button>
                                 </div>
