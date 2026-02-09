@@ -31,11 +31,11 @@ type TeamData = { lead: string; members: string[]; color: string; emoji?: string
 const DEFAULT_TEAMS: Record<string, TeamData> = {};
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-    planning: { label: "기획", color: "#94a3b8" },
-    exp_analysis: { label: "실험·해석", color: "#3b82f6" },
-    writing: { label: "작성중", color: "#f59e0b" },
-    under_review: { label: "심사중", color: "#10b981" },
-    completed: { label: "완료", color: "#059669" },
+    planning: { label: "기획", color: "#CBD5E1" },
+    exp_analysis: { label: "실험·해석", color: "#93C5FD" },
+    writing: { label: "작성중", color: "#60A5FA" },
+    under_review: { label: "심사중", color: "#3B82F6" },
+    completed: { label: "완료", color: "#22C55E" },
 };
 const STATUS_KEYS = ["planning", "exp_analysis", "writing", "under_review"];
 // Migration: map old statuses to merged ones
@@ -43,11 +43,11 @@ const PAPER_STATUS_MIGRATE = (s: string) => (s === "experiment" || s === "analys
 const PAPER_TAGS = ["안전예타", "생애첫", "TES", "액침냉각", "이상유동", "시스템코드", "NTNU", "PCM", "기타"];
 
 const REPORT_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-    planning: { label: "기획", color: "#94a3b8" },
-    writing: { label: "작성중", color: "#f59e0b" },
-    checking: { label: "검토중", color: "#8b5cf6" },
-    review: { label: "심사중", color: "#3b82f6" },
-    done: { label: "완료", color: "#059669" },
+    planning: { label: "기획", color: "#CBD5E1" },
+    writing: { label: "작성중", color: "#93C5FD" },
+    checking: { label: "검토중", color: "#60A5FA" },
+    review: { label: "심사중", color: "#3B82F6" },
+    done: { label: "완료", color: "#22C55E" },
 };
 const REPORT_STATUS_KEYS = ["planning", "writing", "checking", "review"];
 const PRIORITY_ICON: Record<string, string> = { highest: "🔥", high: "🔴", mid: "🟡", low: "🔵", lowest: "⚪" };
@@ -56,11 +56,11 @@ const PRIORITY_KEYS = ["highest", "high", "mid", "low", "lowest"];
 
 const DEFAULT_EQUIPMENT = ["액침냉각", "이상유동", "예연소실", "라이덴프로스트", "모래배터리", "기타"];
 const EXP_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-    planning: { label: "기획중", color: "#94a3b8" },
-    preparing: { label: "준비중", color: "#8b5cf6" },
-    running: { label: "진행중", color: "#3b82f6" },
-    paused_done: { label: "중단", color: "#f97316" },
-    completed: { label: "완료", color: "#059669" },
+    planning: { label: "기획중", color: "#CBD5E1" },
+    preparing: { label: "준비중", color: "#93C5FD" },
+    running: { label: "진행중", color: "#60A5FA" },
+    paused_done: { label: "중단", color: "#EF4444" },
+    completed: { label: "완료", color: "#22C55E" },
 };
 const EXP_STATUS_KEYS = ["planning", "preparing", "running", "paused_done"];
 const EXP_STATUS_MIGRATE = (s: string) => s === "paused" ? "paused_done" : s;
@@ -114,20 +114,20 @@ const DEFAULT_PAPERS: Paper[] = [];
 const DEFAULT_TODOS: Todo[] = [];
 const DEFAULT_EXPERIMENTS: Experiment[] = [];
 const IP_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-    planning: { label: "기획", color: "#94a3b8" },
-    writing: { label: "작성중", color: "#f59e0b" },
-    evaluation: { label: "평가중", color: "#3b82f6" },
-    filed: { label: "출원", color: "#059669" },
-    completed: { label: "완료", color: "#22c55e" },
+    planning: { label: "기획", color: "#CBD5E1" },
+    writing: { label: "작성중", color: "#93C5FD" },
+    evaluation: { label: "평가중", color: "#60A5FA" },
+    filed: { label: "출원", color: "#3B82F6" },
+    completed: { label: "완료", color: "#22C55E" },
 };
 const IP_STATUS_KEYS = ["planning", "writing", "evaluation", "filed"];
 
 const ANALYSIS_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-    planning: { label: "기획중", color: "#94a3b8" },
-    preparing: { label: "준비중", color: "#8b5cf6" },
-    running: { label: "진행중", color: "#3b82f6" },
-    paused_done: { label: "중단", color: "#f97316" },
-    completed: { label: "완료", color: "#059669" },
+    planning: { label: "기획중", color: "#CBD5E1" },
+    preparing: { label: "준비중", color: "#93C5FD" },
+    running: { label: "진행중", color: "#60A5FA" },
+    paused_done: { label: "중단", color: "#EF4444" },
+    completed: { label: "완료", color: "#22C55E" },
 };
 const ANALYSIS_STATUS_KEYS = ["planning", "preparing", "running", "paused_done"];
 const ANALYSIS_STATUS_MIGRATE = (s: string) => s === "paused" ? "paused_done" : s;
