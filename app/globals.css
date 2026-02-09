@@ -146,3 +146,22 @@
   0%, 100% { opacity: 0.5; transform: scaleX(0.95); }
   50% { opacity: 1; transform: scaleX(1); }
 }
+
+/* Dark sidebar thin scrollbar */
+.dark-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+.dark-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.dark-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dark-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 4px;
+}
+.dark-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.25);
+}

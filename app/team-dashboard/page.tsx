@@ -3454,7 +3454,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [chat.length]);
 
     return (
-        <div className="grid gap-3 h-[calc(100vh-90px)]" style={{gridTemplateColumns:"1.2fr 0.8fr 1fr"}}>
+        <div className="grid gap-3 flex-1 min-h-0" style={{gridTemplateColumns:"1.2fr 0.8fr 1fr"}}>
             {/* Board */}
             <div className="flex flex-col min-w-0">
                 <div className="flex items-center justify-between mb-2">
@@ -3849,7 +3849,7 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
     useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [chat.length]);
 
     return (
-        <div className="grid gap-3 h-[calc(100vh-90px)]" style={{gridTemplateColumns:"1fr 0.8fr 1.2fr"}}>
+        <div className="grid gap-3 flex-1 min-h-0" style={{gridTemplateColumns:"1fr 0.8fr 1.2fr"}}>
             {/* Board */}
             <div className="flex flex-col min-w-0">
                 <div className="flex items-center justify-between mb-2">
@@ -4205,7 +4205,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [chat.length]);
 
     return (
-        <div className="grid gap-3 h-[calc(100vh-90px)]" style={{gridTemplateColumns:"1fr 0.8fr 1.2fr"}}>
+        <div className="grid gap-3 flex-1 min-h-0" style={{gridTemplateColumns:"1fr 0.8fr 1.2fr"}}>
             {/* Board */}
             <div className="flex flex-col min-w-0">
                 <div className="flex items-center justify-between mb-2">
@@ -5401,7 +5401,7 @@ export default function DashboardPage() {
                         </div>
                     </div>
                     {/* Sidebar nav */}
-                    <div className="flex-1 flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto p-3 md:p-0 md:pt-2 md:pb-2 gap-px">
+                    <div className="flex-1 flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto p-3 md:p-0 md:pt-2 md:pb-2 gap-px dark-scrollbar">
                         {tabs.map((tab, i) => {
                             const sectionBreaks: Record<string, string> = { announcements: "운영", todos: "내 노트", papers: "연구", conferenceTrips: "커뮤니케이션" };
                             const showBreak = !tab.id.startsWith("memo_") && !tab.id.startsWith("teamMemo_") && sectionBreaks[tab.id];
@@ -5510,12 +5510,12 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 p-4 md:py-7 md:px-9 overflow-x-auto md:overflow-y-auto">
+                <div className="flex-1 p-4 md:py-7 md:px-9 overflow-x-auto md:overflow-y-auto md:flex md:flex-col">
                     {activeTab !== "overview" && activeTab !== "overview_me" && (() => {
                         const extraTabs: Record<string, { icon: string; label: string }> = { teams: { icon: "👥", label: "팀 관리" }, settings: { icon: "⚙️", label: "설정" } };
                         const found = tabs.find(t => t.id === activeTab) || extraTabs[activeTab];
                         return found ? (
-                            <div className="mb-6">
+                            <div className="mb-6 flex-shrink-0">
                                 <h2 className="text-[26px] font-extrabold tracking-tight" style={{color:"#0F172A", letterSpacing:"-0.03em"}}>
                                     {found.icon} {found.label}
                                     {activeTab === "papers" && selectedPerson !== "전체" && <span className="text-[14px] font-normal text-slate-500 ml-2">— {displayMembers[selectedPerson]?.emoji} {selectedPerson}</span>}
