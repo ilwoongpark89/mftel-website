@@ -31,6 +31,15 @@ type TeamData = { lead: string; members: string[]; color: string; emoji?: string
 const DEFAULT_TEAMS: Record<string, TeamData> = {};
 
 // Helper: auto text color for status badge contrast
+// Enter=send, Shift+Enter=newline, mobile=button only
+const chatKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>, send: () => void, composing?: React.MutableRefObject<boolean>) => {
+    if (composing?.current) return;
+    if (e.key !== "Enter") return;
+    if ("ontouchstart" in window) return; // mobile: button only
+    if (e.shiftKey) return; // shift+enter: newline
+    e.preventDefault(); send();
+};
+
 const statusText = (hex: string) => {
     const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
     return (r * 299 + g * 587 + b * 114) / 1000 < 160 ? "#FFFFFF" : "#1E293B";
@@ -335,7 +344,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
                         <div className="flex gap-2">
                             <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="코멘트 작성..."
                                 className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                onKeyDown={e => e.key === "Enter" && addComment()} />
+                                onKeyDown={e => chatKeyDown(e, addComment)} />
                             <button onClick={addComment} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">전송</button>
                         </div>
                     </div>
@@ -704,7 +713,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                         <div className="flex gap-2">
                             <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="코멘트 작성..."
                                 className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                onKeyDown={e => e.key === "Enter" && addComment()} />
+                                onKeyDown={e => chatKeyDown(e, addComment)} />
                             <button onClick={addComment} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">전송</button>
                         </div>
                     </div>
@@ -3250,7 +3259,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
                                 <div className="flex gap-2">
                                     <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="코멘트 작성..."
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                        onKeyDown={e => e.key === "Enter" && addComment()} />
+                                        onKeyDown={e => chatKeyDown(e, addComment)} />
                                     <button onClick={addComment} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">전송</button>
                                 </div>
                             </div>
@@ -3422,7 +3431,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                         onCompositionStart={() => { composingRef.current = true; }}
                                         onCompositionEnd={() => { composingRef.current = false; }}
-                                        onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addComment(); }} />
+                                        onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
                                     <button onClick={addComment} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium">전송</button>
                                 </div>
                             </div>
@@ -3944,6 +3953,8 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                         <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
                         <button onClick={() => chatFileRef.current?.click()} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-500 transition-colors flex-shrink-0 text-[16px]" title="사진 첨부">{imgUploading ? "⏳" : "📷"}</button>
                         <textarea value={chatText} onChange={e => setChatText(e.target.value)} onPaste={handlePaste}
+                            onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
+                            onKeyDown={e => chatKeyDown(e, sendChat, composingRef)}
                             placeholder="메시지 입력..." rows={1}
                             className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
                         <button onClick={sendChat} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">전송</button>
@@ -4002,7 +4013,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                     <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글..."
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
-                                        onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addComment(); }} />
+                                        onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
                                     <button onClick={addComment} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium flex-shrink-0">전송</button>
                                 </div>
                             </div>
@@ -4117,7 +4128,7 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
                                 className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                 onCompositionStart={() => { composingRef.current = true; }}
                                 onCompositionEnd={() => { composingRef.current = false; }}
-                                onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addComment(); }} />
+                                onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
                             <button onClick={addComment} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] hover:bg-blue-600">추가</button>
                         </div>
                     </div>
@@ -4351,6 +4362,8 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                         <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
                         <button onClick={() => chatFileRef.current?.click()} className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-500 transition-colors flex-shrink-0 text-[18px]" title="사진 첨부">{imgUploading ? "⏳" : "📷"}</button>
                         <textarea value={text} onChange={e => setText(e.target.value)} onPaste={handlePaste}
+                            onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
+                            onKeyDown={e => chatKeyDown(e, send, composingRef)}
                             placeholder="메시지 입력..." rows={1}
                             className="flex-1 border border-slate-200 rounded-lg px-3 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
                         <button onClick={send} className="px-4 py-2.5 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600 flex-shrink-0">전송</button>
@@ -4404,7 +4417,7 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                                 <div className="flex gap-2">
                                     <input value={boardComment} onChange={e => setBoardComment(e.target.value)} placeholder="댓글 작성..."
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                        onKeyDown={e => { if (e.key === "Enter" && boardComment.trim()) { const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: Date.now(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); } }} />
+                                        onKeyDown={e => chatKeyDown(e, () => { if (!boardComment.trim()) return; const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: Date.now(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); })} />
                                     <button onClick={() => { if (!boardComment.trim()) return; const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: Date.now(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); }}
                                         className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium">전송</button>
                                 </div>
@@ -4782,6 +4795,8 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                         <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
                         <button onClick={() => chatFileRef.current?.click()} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-500 transition-colors flex-shrink-0 text-[16px]" title="사진 첨부">{imgUploading ? "⏳" : "📷"}</button>
                         <textarea value={chatText} onChange={e => setChatText(e.target.value)} onPaste={handlePaste}
+                            onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
+                            onKeyDown={e => chatKeyDown(e, sendChat, composingRef)}
                             placeholder="메시지 입력..." rows={1}
                             className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
                         <button onClick={sendChat} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 flex-shrink-0">전송</button>
@@ -4816,7 +4831,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                     <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글 작성..."
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
-                                        onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addComment(); }} />
+                                        onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
                                     <button onClick={addComment} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium flex-shrink-0">전송</button>
                                 </div>
                             </div>
