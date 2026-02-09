@@ -5418,7 +5418,7 @@ export default function DashboardPage() {
                                         </div>
                                     )}
                                     <button onClick={() => setActiveTab(tab.id)}
-                                        className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-[14px] whitespace-nowrap transition-all ${activeTab === tab.id ? "font-semibold text-blue-700 bg-blue-50" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"}`}>
+                                        className={`w-full flex items-center gap-2 px-3 py-1 rounded-md text-[14px] whitespace-nowrap transition-all ${activeTab === tab.id ? "font-semibold text-blue-700 bg-blue-50" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"}`}>
                                         <span className="text-[14px]">{tab.icon}</span>
 {/* color dot removed */}
                                         <span>{tab.label}</span>
