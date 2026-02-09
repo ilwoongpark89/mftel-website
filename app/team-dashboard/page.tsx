@@ -4321,8 +4321,8 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                 <FileBox files={files} currentUser={currentUser} onAddFile={onAddFile} onDeleteFile={onDeleteFile} />
             </div>
             {/* Chat */}
-            <div className={`flex-col min-w-0 bg-white border border-slate-200 rounded-xl md:rounded-xl ${mobileTab === "chat" ? "flex flex-1 min-h-0 md:border" : "hidden"} md:flex`}>
-                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+            <div className={`flex-col min-w-0 md:bg-white md:border md:border-slate-200 md:rounded-xl ${mobileTab === "chat" ? "flex flex-1 min-h-0" : "hidden"} md:flex`}>
+                <div className="hidden md:flex px-4 py-3 border-b border-slate-100 items-center justify-between">
                     <h3 className="text-[15px] font-bold text-slate-700">💬 연구실 채팅</h3>
                     {currentUser === "박일웅" && (
                         <button onClick={() => { if (confirm("채팅을 모두 삭제하시겠습니까?")) onClear(); }} className="text-[12px] text-slate-400 hover:text-red-500 transition-colors">초기화</button>
@@ -4345,7 +4345,7 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                     ))}
                     <div ref={endRef} />
                 </div>
-                <div className="p-3 border-t border-slate-100">
+                <div className="p-3 border-t border-slate-100 flex-shrink-0 bg-white">
                     {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[100px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center">✕</button></div>}
                     <div className="flex gap-2 items-center">
                         <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
@@ -4752,8 +4752,8 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                 <FileBox files={files} currentUser={currentUser} onAddFile={onAddFile} onDeleteFile={onDeleteFile} compact />
             </div>
             {/* Chat */}
-            <div className={`flex-col min-w-0 bg-white border border-slate-200 rounded-xl md:rounded-xl min-h-0 ${mobileTab === "chat" ? "flex flex-1" : "hidden"} md:flex`}>
-                <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
+            <div className={`flex-col min-w-0 md:bg-white md:border md:border-slate-200 md:rounded-xl min-h-0 ${mobileTab === "chat" ? "flex flex-1" : "hidden"} md:flex`}>
+                <div className="hidden md:flex px-3 py-2.5 border-b border-slate-100 items-center justify-between">
                     <h4 className="text-[14px] font-bold text-slate-700">💬 채팅</h4>
                     {currentUser === "박일웅" && (
                         <button onClick={() => { if (confirm("채팅을 모두 삭제하시겠습니까?")) onClearChat(); }} className="text-[11px] text-slate-400 hover:text-red-500 transition-colors">초기화</button>
@@ -4776,7 +4776,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                     ))}
                     <div ref={chatEndRef} />
                 </div>
-                <div className="p-2.5 border-t border-slate-100">
+                <div className="p-2.5 border-t border-slate-100 flex-shrink-0 bg-white">
                     {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[80px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">✕</button></div>}
                     <div className="flex gap-1.5 items-center">
                         <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
@@ -5925,7 +5925,7 @@ export default function DashboardPage() {
                     </div>
                 </div>
             )}
-            <div className="flex flex-col md:flex-row md:h-screen md:overflow-hidden pt-[56px] md:pt-0">
+            <div className="flex flex-col h-[100dvh] overflow-hidden md:flex-row md:h-screen pt-[56px] md:pt-0">
                 {/* Desktop Sidebar */}
                 <div className="hidden md:flex md:w-[240px] md:h-screen flex-shrink-0 flex-col" style={{background:"#0F172A", borderRight:"1px solid #1E293B", boxShadow:"2px 0 8px rgba(0,0,0,0.1)"}}>
                     {/* Sidebar top: MFTEL logo */}
@@ -6029,12 +6029,12 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 p-4 md:py-7 md:px-9 overflow-x-auto md:overflow-y-auto md:flex md:flex-col">
+                <div className="flex-1 p-4 md:py-7 md:px-9 overflow-y-auto flex flex-col min-h-0">
                     {activeTab !== "overview" && activeTab !== "overview_me" && (() => {
                         const extraTabs: Record<string, { icon: string; label: string }> = { teams: { icon: "👥", label: "팀 관리" }, settings: { icon: "⚙️", label: "설정" } };
                         const found = tabs.find(t => t.id === activeTab) || extraTabs[activeTab];
                         return found ? (
-                            <div className="mb-6 flex-shrink-0">
+                            <div className="mb-6 flex-shrink-0 hidden md:block">
                                 <h2 className="text-[26px] font-extrabold tracking-tight" style={{color:"#0F172A", letterSpacing:"-0.03em"}}>
                                     {found.icon} {found.label}
                                 </h2>
