@@ -18,21 +18,32 @@ export async function POST(request: NextRequest) {
         const forwarded = request.headers.get('x-forwarded-for');
         const ip = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown';
 
-        // Get geolocation from IP (using free service)
-        let location = { country: 'Unknown', city: 'Unknown', region: 'Unknown' };
+        // Get geolocation from Vercel headers (free, no external API needed)
+        const country = request.headers.get('x-vercel-ip-country') || '';
+        const city = request.headers.get('x-vercel-ip-city') || '';
+        const region = request.headers.get('x-vercel-ip-country-region') || '';
 
-        try {
-            const geoResponse = await fetch(`https://ip-api.com/json/${ip}?fields=status,country,regionName,city`);
-            const geoData = await geoResponse.json();
-            if (geoData.status === 'success') {
-                location = {
-                    country: geoData.country || 'Unknown',
-                    city: geoData.city || 'Unknown',
-                    region: geoData.regionName || 'Unknown'
-                };
+        let location = {
+            country: country || 'Unknown',
+            city: city ? decodeURIComponent(city) : 'Unknown',
+            region: region || 'Unknown'
+        };
+
+        // Fallback to ip-api.com if Vercel headers are missing (local dev)
+        if (!country) {
+            try {
+                const geoResponse = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city`);
+                const geoData = await geoResponse.json();
+                if (geoData.status === 'success') {
+                    location = {
+                        country: geoData.country || 'Unknown',
+                        city: geoData.city || 'Unknown',
+                        region: geoData.regionName || 'Unknown'
+                    };
+                }
+            } catch {
+                // Geolocation failed, use defaults
             }
-        } catch {
-            // Geolocation failed, use defaults
         }
 
         const visit = {

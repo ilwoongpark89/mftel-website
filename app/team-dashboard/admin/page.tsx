@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 
-type AccessLog = { userName: string; action: "login" | "logout"; timestamp: number; duration?: number; ip?: string; ua?: string };
+type AccessLog = { userName: string; action: "login" | "logout"; timestamp: number; duration?: number; ip?: string; ua?: string; location?: string };
 type ModLog = { userName: string; section: string; action: string; timestamp: number; detail?: string };
 type BackupInfo = { date: string; size: number; auto: boolean };
 type Member = { team: string; role: string; emoji: string };
@@ -266,7 +266,7 @@ export default function AdminPage() {
                         {(() => {
                             // Build sessions by matching login→logout pairs per user
                             // Logs are newest-first; scan to pair logout (has duration) with preceding login
-                            type Session = { userName: string; loginTime: number; logoutTime?: number; duration?: number; ip?: string; ua?: string; timedOut?: boolean };
+                            type Session = { userName: string; loginTime: number; logoutTime?: number; duration?: number; ip?: string; ua?: string; location?: string; timedOut?: boolean };
                             const isMobile = (ua?: string) => !ua ? null : /Mobile|Android|iPhone|iPad|iPod/i.test(ua);
                             const sessions: Session[] = [];
 
@@ -283,7 +283,7 @@ export default function AdminPage() {
                                             break;
                                         }
                                     }
-                                    sessions.push({ userName: log.userName, loginTime: log.timestamp, ip: log.ip, ua: log.ua });
+                                    sessions.push({ userName: log.userName, loginTime: log.timestamp, ip: log.ip, ua: log.ua, location: log.location });
                                 } else {
                                     // Find the last unmatched session for this user
                                     for (let j = sessions.length - 1; j >= 0; j--) {
@@ -333,7 +333,7 @@ export default function AdminPage() {
                                                     <td className="px-4 py-2 text-slate-500">{s.timedOut ? <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700">시간초과</span> : s.logoutTime ? fmtTime(s.logoutTime) : <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">접속중</span>}</td>
                                                     <td className="px-4 py-2 text-slate-600 font-medium">{s.timedOut ? <span className="text-slate-300">-</span> : s.duration ? fmtDuration(s.duration) : "-"}</td>
                                                     <td className="px-4 py-2 text-slate-400 text-[11px] font-mono">{s.ip || "-"}</td>
-                                                    <td className="px-4 py-2 text-slate-500 text-[11px]">{s.ip && ipLocations[s.ip] ? <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{ipLocations[s.ip]}</span> : <span className="text-slate-300">-</span>}</td>
+                                                    <td className="px-4 py-2 text-slate-500 text-[11px]">{s.location ? <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{s.location}</span> : s.ip && ipLocations[s.ip] ? <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{ipLocations[s.ip]}</span> : <span className="text-slate-300">-</span>}</td>
                                                 </tr>
                                             ))}
                                         </tbody>

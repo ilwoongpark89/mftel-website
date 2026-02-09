@@ -105,21 +105,24 @@ export async function POST(request: NextRequest) {
             const raw = await getKey(`${DASHBOARD_PREFIX}online`);
             let users = raw ? JSON.parse(raw) : [];
 
-            // Extract client IP and User-Agent for logging
+            // Extract client IP, User-Agent, and geolocation for logging
             const forwarded = request.headers.get('x-forwarded-for');
             const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip') || 'unknown');
             const ua = request.headers.get('user-agent') || '';
+            const geoCountry = request.headers.get('x-vercel-ip-country') || '';
+            const geoCity = request.headers.get('x-vercel-ip-city') || '';
+            const location = geoCity ? `${decodeURIComponent(geoCity)}, ${geoCountry}` : geoCountry || '';
 
             if (action === 'join') {
                 users = users.filter((u: { name: string }) => u.name !== userName);
                 const now = Date.now();
                 users.push({ name: userName, timestamp: now, joinedAt: now });
-                await appendLog(`${LOG_PREFIX}access`, { userName, action: 'login', ip, ua });
+                await appendLog(`${LOG_PREFIX}access`, { userName, action: 'login', ip, ua, location });
             } else if (action === 'leave') {
                 const found = users.find((u: { name: string }) => u.name === userName);
                 const duration = found?.joinedAt ? Date.now() - found.joinedAt : (found ? Date.now() - found.timestamp : undefined);
                 users = users.filter((u: { name: string }) => u.name !== userName);
-                await appendLog(`${LOG_PREFIX}access`, { userName, action: 'logout', duration, ip, ua });
+                await appendLog(`${LOG_PREFIX}access`, { userName, action: 'logout', duration, ip, ua, location });
             } else {
                 // heartbeat — only update timestamp (for freshness check), preserve joinedAt
                 users = users.map((u: { name: string; timestamp: number; joinedAt?: number }) =>
