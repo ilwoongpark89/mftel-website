@@ -2379,6 +2379,8 @@ const TEAM_EMOJIS = ["💧", "⚙️", "🔋", "🌊", "🔬", "🧪", "📐", "
 
 function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams, currentUser }: { papers: Paper[]; todos: Todo[]; experiments: Experiment[]; analyses: Analysis[]; teams: Record<string, TeamData>; onSaveTeams: (t: Record<string, TeamData>) => void; currentUser: string }) {
     const MEMBERS = useContext(MembersContext);
+    const isPI = currentUser === "박일웅";
+    const [expanded, setExpanded] = useState<Set<string>>(new Set());
     const [editingTeam, setEditingTeam] = useState<string | null>(null);
     const [addingTeam, setAddingTeam] = useState(false);
     const [formName, setFormName] = useState("");
@@ -2387,13 +2389,17 @@ function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams
     const [formColor, setFormColor] = useState(TEAM_COLORS[0]);
     const [formEmoji, setFormEmoji] = useState(TEAM_EMOJIS[0]);
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
+    const [draggedTeam, setDraggedTeam] = useState<string | null>(null);
+    const [dropIdx, setDropIdx] = useState<number | null>(null);
+    const teamNames = Object.keys(teams);
 
+    const toggleExpand = (name: string) => { setExpanded(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n; }); };
     const openEdit = (name: string) => {
         const t = teams[name];
         setEditingTeam(name); setFormName(name); setFormLead(t.lead); setFormMembers(t.members); setFormColor(t.color); setFormEmoji(t.emoji || TEAM_EMOJIS[0]);
     };
     const openAdd = () => {
-        const idx = Object.keys(teams).length;
+        const idx = teamNames.length;
         setAddingTeam(true); setFormName(""); setFormLead(""); setFormMembers([]); setFormColor(TEAM_COLORS[idx % TEAM_COLORS.length]); setFormEmoji(TEAM_EMOJIS[idx % TEAM_EMOJIS.length]);
     };
     const handleSave = () => {
@@ -2406,36 +2412,95 @@ function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams
     const handleDelete = (name: string) => {
         const updated = { ...teams }; delete updated[name]; onSaveTeams(updated);
     };
+    const handleDrop = (targetIdx: number) => {
+        if (!draggedTeam) return;
+        const srcIdx = teamNames.indexOf(draggedTeam);
+        if (srcIdx === targetIdx || srcIdx === targetIdx - 1) { setDraggedTeam(null); setDropIdx(null); return; }
+        const ordered = [...teamNames];
+        ordered.splice(srcIdx, 1);
+        const insertAt = targetIdx > srcIdx ? targetIdx - 1 : targetIdx;
+        ordered.splice(insertAt, 0, draggedTeam);
+        const reordered: Record<string, TeamData> = {};
+        ordered.forEach(n => { reordered[n] = teams[n]; });
+        onSaveTeams(reordered);
+        setDraggedTeam(null); setDropIdx(null);
+    };
 
     const modal = editingTeam !== null || addingTeam;
 
     return (
         <div>
-            <button onClick={openAdd} className="mb-3 px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">+ 팀 추가</button>
-            <div className="grid gap-3 sm:grid-cols-2">{Object.entries(teams).map(([name, team]) => (
-                <div key={name} className="bg-white border border-slate-200 rounded-xl p-4 cursor-pointer hover:shadow-md transition-shadow" style={{ borderTop: `3px solid ${team.color}` }}
-                    onClick={() => openEdit(name)}>
-                    <div className="text-[15px] font-bold text-slate-800 mb-1">{team.emoji || "📌"} TEAM_{name}</div>
-                    <div className="text-[12px] text-slate-500 mb-3">팀장: {MEMBERS[team.lead]?.emoji || ""} {team.lead}</div>
-                    <div className="space-y-1.5">{team.members.map(m => {
-                        const paperCount = papers.filter(p => p.assignees.includes(m)).length;
-                        const todoCount = todos.filter(t => !t.done && (t.assignees.includes(m) || t.assignees.includes("전체"))).length;
-                        const expCount = experiments.filter(e => e.assignees.includes(m) && e.status === "running").length;
-                        const anaCount = analyses.filter(a => a.assignees.includes(m) && a.status === "running").length;
-                        return (
-                            <div key={m} className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-slate-50">
-                                <span className="text-[14px] text-slate-700">{MEMBERS[m]?.emoji} {m}</span>
-                                <div className="flex gap-2">
-                                    <span className="text-[12px] text-slate-500" title="논문">📄{paperCount}</span>
-                                    <span className="text-[12px] text-slate-500" title="할 일">✅{todoCount}</span>
-                                    <span className="text-[12px] text-slate-500" title="실험 진행중">🧪{expCount}</span>
-                                    <span className="text-[12px] text-slate-500" title="해석 진행중">🖥️{anaCount}</span>
-                                </div>
+            <div className="mb-3 flex items-center gap-2">
+                {isPI && <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">+ 팀 추가</button>}
+                <span className="text-[13px] text-slate-400">{teamNames.length}개 팀</span>
+            </div>
+            <div className="space-y-0 border border-slate-200 rounded-xl overflow-hidden bg-white">
+                {teamNames.map((name, idx) => {
+                    const team = teams[name];
+                    const isOpen = expanded.has(name);
+                    const paperCount = papers.filter(p => p.team === name).length;
+                    const todoCount = todos.filter(t => !t.done && team.members.some(m => t.assignees.includes(m))).length;
+                    const expCount = experiments.filter(e => team.members.some(m => e.assignees.includes(m))).length;
+                    const anaCount = analyses.filter(a => team.members.some(m => a.assignees.includes(m))).length;
+                    return (
+                        <div key={name}>
+                            {isPI && dropIdx === idx && draggedTeam && draggedTeam !== name && <div className="h-0.5 bg-blue-400 mx-3" />}
+                            <div
+                                draggable={isPI}
+                                onDragStart={() => setDraggedTeam(name)}
+                                onDragEnd={() => { setDraggedTeam(null); setDropIdx(null); }}
+                                onDragOver={e => { e.preventDefault(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropIdx(e.clientY < mid ? idx : idx + 1); }}
+                                onDrop={() => handleDrop(dropIdx ?? idx)}
+                                className={`flex items-center gap-2 px-3 py-3 cursor-pointer transition-colors hover:bg-slate-50 ${idx > 0 ? "border-t border-slate-100" : ""} ${draggedTeam === name ? "opacity-40" : ""}`}
+                                onClick={() => toggleExpand(name)}>
+                                {isPI && <span className="text-slate-300 cursor-grab flex-shrink-0 text-[14px]" title="드래그하여 순서 변경">⋮⋮</span>}
+                                <span className={`text-[13px] text-slate-400 transition-transform flex-shrink-0 ${isOpen ? "rotate-90" : ""}`}>▶</span>
+                                <span className="text-[15px] flex-shrink-0">{team.emoji || "📌"}</span>
+                                <span className="text-[14px] font-bold text-slate-800 truncate">{name}</span>
+                                <span className="text-[12px] text-slate-400 flex-shrink-0">팀장: {MEMBERS[team.lead]?.emoji || ""}{team.lead}</span>
+                                <span className="text-[12px] text-slate-400 flex-shrink-0">|</span>
+                                <span className="text-[12px] text-slate-400 flex-shrink-0">{team.members.length}명</span>
+                                <span className="text-[12px] text-slate-400 flex-shrink-0">|</span>
+                                <span className="text-[11px] text-slate-400 flex-shrink-0 flex items-center gap-1.5">
+                                    <span title="논문">📄{paperCount}</span>
+                                    <span title="할 일">✅{todoCount}</span>
+                                    <span title="실험">🧪{expCount}</span>
+                                    <span title="해석">💻{anaCount}</span>
+                                </span>
+                                {isPI && <button onClick={e => { e.stopPropagation(); openEdit(name); }} className="ml-auto text-[12px] text-slate-400 hover:text-blue-500 flex-shrink-0 px-1.5 py-0.5 rounded hover:bg-blue-50">수정</button>}
                             </div>
-                        );
-                    })}</div>
-                </div>
-            ))}</div>
+                            {isOpen && (
+                                <div className="px-4 pb-3 pt-1 bg-slate-50/50 border-t border-slate-100">
+                                    <div className="space-y-1.5">
+                                        {team.members.map(m => {
+                                            const mp = papers.filter(p => p.assignees.includes(m) && p.team === name).length;
+                                            const mt = todos.filter(t => !t.done && t.assignees.includes(m)).length;
+                                            const me = experiments.filter(e => e.assignees.includes(m) && EXP_STATUS_MIGRATE(e.status) !== "completed").length;
+                                            const ma = analyses.filter(a => a.assignees.includes(m) && ANALYSIS_STATUS_MIGRATE(a.status) !== "completed").length;
+                                            return (
+                                                <div key={m} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white border border-slate-100">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[14px]">{MEMBERS[m]?.emoji || "👤"}</span>
+                                                        <span className="text-[13px] font-medium text-slate-700">{m}</span>
+                                                        {m === team.lead && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-500 font-semibold">팀장</span>}
+                                                    </div>
+                                                    <div className="flex gap-2.5 text-[12px] text-slate-500">
+                                                        <span title="논문">📄{mp}</span>
+                                                        <span title="할 일">✅{mt}</span>
+                                                        <span title="실험 진행중">🧪{me}</span>
+                                                        <span title="해석 진행중">💻{ma}</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+                {isPI && dropIdx === teamNames.length && draggedTeam && <div className="h-0.5 bg-blue-400 mx-3" />}
+            </div>
             {/* Team edit/add modal */}
             {modal && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setEditingTeam(null); setAddingTeam(false); }}>
@@ -2488,7 +2553,7 @@ function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams
                             </div>
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-200">
-                            <div>{editingTeam && currentUser === "박일웅" && <button onClick={() => { handleDelete(editingTeam); setEditingTeam(null); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}</div>
+                            <div>{editingTeam && isPI && <button onClick={() => { handleDelete(editingTeam); setEditingTeam(null); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}</div>
                             <div className="flex gap-2">
                                 <button onClick={() => { setEditingTeam(null); setAddingTeam(false); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                                 <button onClick={handleSave} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
