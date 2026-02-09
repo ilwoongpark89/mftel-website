@@ -4517,8 +4517,33 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
     // Personal: today's target for current user
     const myTarget = todayTargets.find(t => t.name === currentUser);
 
+    const dayNames = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
+    const dateLabel = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${dayNames[today.getDay()]}`;
+
     return (
         <div className="space-y-5">
+            {/* Team mode: page title + date + online users */}
+            {!isPersonal && (
+                <div>
+                    <div className="text-[12px] mb-1" style={{color:"#94A3B8", fontWeight:500}}>대시보드</div>
+                    <h2 className="text-[26px] font-extrabold tracking-tight" style={{color:"#0F172A", letterSpacing:"-0.03em"}}>연구실 현황</h2>
+                    <div className="flex items-center gap-3 mt-1.5">
+                        <span className="text-[13.5px]" style={{color:"#94A3B8"}}>{dateLabel}</span>
+                        <span className="text-[13px] flex items-center gap-1.5" style={{color:"#94A3B8"}}>
+                            · 접속 중 <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" /></span>
+                            <span style={{color:"#10B981", fontWeight:600}}>{onlineUsers.length}명</span>
+                        </span>
+                        {onlineUsers.length > 0 && (
+                            <div className="flex items-center -space-x-1.5 ml-1">
+                                {onlineUsers.slice(0, 8).map(u => (
+                                    <div key={u.name} className="w-6 h-6 rounded-full flex items-center justify-center text-[12px] border-2 border-white" style={{background:"#F1F5F9"}} title={u.name}>{MEMBERS[u.name]?.emoji || "👤"}</div>
+                                ))}
+                                {onlineUsers.length > 8 && <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] border-2 border-white" style={{background:"#F1F5F9", color:"#94A3B8", fontWeight:600}}>+{onlineUsers.length - 8}</div>}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
             {/* Personal mode header */}
             {isPersonal && (
                 <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 text-white">
@@ -4550,7 +4575,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
             )}
 
             {/* Row 1: 연구 파이프라인 5개 한 줄 */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
                 <h3 className="text-[16px] font-bold text-slate-900 mb-4">{isPersonal ? "내 연구 파이프라인" : "연구 파이프라인"}</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
                     <button onClick={() => onNavigate("papers")} className="text-left hover:bg-slate-50 rounded-lg p-3 -m-3 transition-colors">
@@ -4589,7 +4614,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
             {/* Row 2: 논의 필요 + (오늘목표 현황 or 투두) + 최근 공지 */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
                 {/* 논의 필요 */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
                     <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
                         {isPersonal ? "내 논의 필요" : "논의 필요"}
                         {discussionItems.length > 0 && <span className="px-1.5 py-0.5 rounded-md bg-orange-50 text-orange-500 text-[11px] font-semibold">{discussionItems.length}</span>}
@@ -4614,7 +4639,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
 
                 {/* 오늘 목표 현황 (team) / 투두 리스트 (personal) */}
                 {isPersonal ? (
-                    <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
                         <button onClick={() => onNavigate("todos")} className="w-full text-left">
                             <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
                                 내 To-do
@@ -4635,7 +4660,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                         )}
                     </div>
                 ) : (
-                    <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
                         <button onClick={() => onNavigate("daily")} className="w-full text-left">
                             <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
                                 오늘 목표 현황
@@ -4673,7 +4698,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                 )}
 
                 {/* 최근 공지 */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
                     <button onClick={() => onNavigate("announcements")} className="w-full text-left">
                         <h3 className="text-[16px] font-bold text-slate-900 mb-4">최근 공지</h3>
                     </button>
@@ -4694,7 +4719,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
 
             {/* Row 3: 멤버별 현황 (team) / 내 현황 (personal) */}
             {isPersonal ? (
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
                     <h3 className="text-[16px] font-bold text-slate-900 mb-4">내 전체 현황</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                         <div>
@@ -4765,7 +4790,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                     </div>
                 </div>
             ) : (
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
                     <h3 className="text-[16px] font-bold text-slate-900 mb-4">멤버별 현황</h3>
                     <div className="overflow-x-auto">
                         <table className="w-full text-[13px]">
@@ -4828,7 +4853,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                         color: "#94a3b8",
                     }));
                 return (
-                    <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
                         <h3 className="text-[16px] font-bold text-slate-900 mb-4">팀별 연구 현황</h3>
                         {(() => {
                             const teamStats = teamEntries.map(team => {
@@ -5360,72 +5385,54 @@ export default function DashboardPage() {
     return (
         <MembersContext.Provider value={displayMembers}>
         <div className="min-h-screen bg-[#F8FAFC] text-slate-800 leading-normal" style={{ fontFamily: "'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif" }}>
-            {/* Header */}
-            <div className="bg-slate-900 px-4 md:px-7 py-3.5 flex items-center justify-between border-b border-slate-800 shadow-lg shadow-slate-900/20">
-                <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab("overview")}>
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center text-[18px] font-extrabold text-white shadow-lg" style={{ background: "linear-gradient(135deg, #3b82f6, #6366f1)" }}>M</div>
-                    <div>
-                        <div className="text-[16px] font-bold text-white tracking-tight">MFTEL Dashboard</div>
-                        <div className="text-[11px] text-slate-500 tracking-wide">Multiphase Flow & Thermal Engineering Lab</div>
-                    </div>
-                </div>
-                <div className="flex items-center gap-4">
-                    <div className="hidden sm:flex items-center gap-1.5">
-                        <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" /></span>
-                        <span className="text-[12px] text-emerald-400 font-medium">{onlineUsers.length}</span>
-                        <div className="flex items-center gap-1 ml-1">
-                            {onlineUsers.filter(u => u.name !== userName).slice(0, 5).map(u => (
-                                <span key={u.name} className="text-[12px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300">{displayMembers[u.name]?.emoji || "👤"}{u.name}</span>
-                            ))}
-                            {onlineUsers.filter(u => u.name !== userName).length > 5 && <span className="text-[11px] text-slate-500">+{onlineUsers.filter(u => u.name !== userName).length - 5}</span>}
-                        </div>
-                    </div>
-                    <div className="hidden sm:flex items-center gap-1.5">
-                        <button onClick={() => setActiveTab("teams")} className={`px-3 py-1.5 rounded-lg text-[18px] transition-all ${activeTab === "teams" ? "bg-slate-700 ring-1 ring-slate-500" : "hover:bg-slate-800"}`} title="팀 현황">👥</button>
-                        <button onClick={() => setActiveTab("settings")} className={`px-3 py-1.5 rounded-lg text-[18px] transition-all ${activeTab === "settings" ? "bg-slate-700 ring-1 ring-slate-500" : "hover:bg-slate-800"}`} title="설정">⚙️</button>
-                    </div>
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800">
-                        <span className="text-[13px] text-white font-medium">{displayMembers[userName]?.emoji || "👤"} {userName}</span>
-                        <button onClick={handleLogout} className="text-[12px] text-slate-400 hover:text-red-400 ml-1.5 transition-colors" title="로그아웃">⏻</button>
-                    </div>
-                </div>
-            </div>
 
             <div className="flex flex-col md:flex-row">
                 {/* Sidebar */}
-                <div className="md:w-[240px] bg-white md:border-r border-b md:border-b-0 border-slate-200 md:min-h-[calc(100vh-56px)] flex-shrink-0">
-                    <div className="flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto md:max-h-[calc(100vh-56px)] p-3 md:p-0 md:pt-2 md:pb-8 gap-px">
+                <div className="md:w-[240px] md:min-h-screen flex-shrink-0 flex flex-col" style={{background:"#0F172A", borderRight:"1px solid #1E293B", boxShadow:"2px 0 8px rgba(0,0,0,0.1)"}}>
+                    {/* Sidebar top: MFTEL logo */}
+                    <div className="hidden md:flex items-center gap-3 px-5 pt-5 pb-4" style={{borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
+                        <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-[17px] font-extrabold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", boxShadow: "0 2px 8px rgba(59,130,246,0.3)" }}>M</div>
+                        <div className="min-w-0">
+                            <div className="text-[15px] tracking-tight text-white" style={{fontWeight:750}}>MFTEL</div>
+                            <div className="text-[10.5px] truncate" style={{color:"#64748B"}}>Multiphase Flow & Thermal Energy</div>
+                        </div>
+                    </div>
+                    {/* Sidebar nav */}
+                    <div className="flex-1 flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto p-3 md:p-0 md:pt-2 md:pb-2 gap-px">
                         {tabs.map((tab, i) => {
                             const sectionBreaks: Record<string, string> = { announcements: "운영", todos: "내 노트", papers: "연구", conferenceTrips: "커뮤니케이션" };
                             const showBreak = !tab.id.startsWith("memo_") && !tab.id.startsWith("teamMemo_") && sectionBreaks[tab.id];
                             const showTeamMemoBreak = tab.id.startsWith("teamMemo_") && i > 0 && !tabs[i - 1].id.startsWith("teamMemo_");
                             const showMemoBreak = false;
+                            const isActive = activeTab === tab.id;
                             return (
                                 <div key={tab.id}>
                                     {showBreak && (
                                         <div className="hidden md:block mt-5 mb-1.5 px-4">
-                                            <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-[0.08em]">{sectionBreaks[tab.id]}</div>
+                                            <div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>{sectionBreaks[tab.id]}</div>
                                         </div>
                                     )}
                                     {showTeamMemoBreak && (
                                         <div className="hidden md:block mt-5 mb-1.5 px-4">
-                                            <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-[0.08em]">팀 워크</div>
+                                            <div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>팀 워크</div>
                                         </div>
                                     )}
                                     {showMemoBreak && (
                                         <div className="hidden md:block mt-5 mb-1.5 px-4">
-                                            <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-[0.08em]">내 노트</div>
+                                            <div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>내 노트</div>
                                         </div>
                                     )}
                                     <button onClick={() => setActiveTab(tab.id)}
-                                        className={`relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13.5px] whitespace-nowrap transition-all ${activeTab === tab.id ? "font-semibold text-blue-800 bg-blue-50" : "text-slate-600 hover:bg-slate-50"}`}
-                                        style={{ fontWeight: activeTab === tab.id ? 600 : 450, letterSpacing: "-0.01em" }}>
-                                        {activeTab === tab.id && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-blue-500" />}
+                                        className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13.5px] whitespace-nowrap transition-all"
+                                        style={{ fontWeight: isActive ? 600 : 450, letterSpacing: "-0.01em", color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}
+                                        onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#E2E8F0"; } }}
+                                        onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94A3B8"; } }}>
+                                        {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-blue-400" />}
                                         <span className="text-[15px]">{tab.icon}</span>
                                         <span>{tab.label}</span>
                                         {((unreadCounts[tab.id] || 0) > 0 || (discussionCounts[tab.id] || 0) > 0) && (
                                             <div className="flex items-center gap-1.5">
-                                                {(unreadCounts[tab.id] || 0) > 0 && <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 text-[11px] font-semibold">{unreadCounts[tab.id]}</span>}
+                                                {(unreadCounts[tab.id] || 0) > 0 && <span className="px-1.5 py-0.5 rounded-md text-[11px] font-semibold" style={{background:"rgba(59,130,246,0.2)", color:"#60A5FA"}}>{unreadCounts[tab.id]}</span>}
                                                 {(discussionCounts[tab.id] || 0) > 0 && <span className="w-[6px] h-[6px] rounded-full bg-orange-400" />}
                                             </div>
                                         )}
@@ -5433,32 +5440,86 @@ export default function DashboardPage() {
                                 </div>
                             );
                         })}
+                        {/* Admin: 팀 관리 + 설정 */}
+                        {userName === "박일웅" && (
+                            <div className="hidden md:block mt-5 mb-1.5 px-4">
+                                <div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>관리</div>
+                            </div>
+                        )}
+                        {userName === "박일웅" && (() => {
+                            const isActive = activeTab === "teams";
+                            return (
+                                <button onClick={() => setActiveTab("teams")}
+                                    className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13.5px] whitespace-nowrap transition-all"
+                                    style={{ fontWeight: isActive ? 600 : 450, letterSpacing: "-0.01em", color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}
+                                    onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#E2E8F0"; } }}
+                                    onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94A3B8"; } }}>
+                                    {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-blue-400" />}
+                                    <span className="text-[15px]">👥</span>
+                                    <span>팀 관리</span>
+                                </button>
+                            );
+                        })()}
+                        {(() => {
+                            const isActive = activeTab === "settings";
+                            return (
+                                <button onClick={() => setActiveTab("settings")}
+                                    className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13.5px] whitespace-nowrap transition-all"
+                                    style={{ fontWeight: isActive ? 600 : 450, letterSpacing: "-0.01em", color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}
+                                    onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#E2E8F0"; } }}
+                                    onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94A3B8"; } }}>
+                                    {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-blue-400" />}
+                                    <span className="text-[15px]">⚙️</span>
+                                    <span>설정</span>
+                                </button>
+                            );
+                        })()}
                     </div>
                     {activeTab === "papers" && (
                         <div className="hidden md:block px-4 mt-4">
-                            <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-[0.08em] px-4 mb-2">필터</div>
+                            <div className="text-[10.5px] font-bold uppercase tracking-[0.08em] px-4 mb-2" style={{color:"#475569"}}>필터</div>
                             <div className="max-h-[360px] overflow-y-auto space-y-0.5">
-                                {allPeople.map(person => (
-                                    <button key={person} onClick={() => setSelectedPerson(person)}
-                                        className={`flex items-center gap-1.5 w-full px-4 py-1.5 rounded-[10px] text-[13px] transition-all ${selectedPerson === person ? "font-semibold text-slate-800 bg-blue-50" : "text-slate-500 hover:bg-slate-50"}`}>
-                                        {person !== "전체" && <span>{displayMembers[person]?.emoji}</span>}{person}
-                                    </button>
-                                ))}
+                                {allPeople.map(person => {
+                                    const isActive = selectedPerson === person;
+                                    return (
+                                        <button key={person} onClick={() => setSelectedPerson(person)}
+                                            className="flex items-center gap-1.5 w-full px-4 py-1.5 rounded-[10px] text-[13px] transition-all"
+                                            style={{ fontWeight: isActive ? 600 : 400, color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}>
+                                            {person !== "전체" && <span>{displayMembers[person]?.emoji}</span>}{person}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
+                    {/* Sidebar bottom: user profile */}
+                    <div className="hidden md:flex items-center gap-2.5 px-4 py-3.5 mt-auto" style={{borderTop:"1px solid rgba(255,255,255,0.08)"}}>
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-[16px] flex-shrink-0" style={{background:"rgba(59,130,246,0.1)", border:"1.5px solid rgba(59,130,246,0.25)"}}>{displayMembers[userName]?.emoji || "👤"}</div>
+                        <div className="flex-1 min-w-0">
+                            <div className="text-[13px] truncate text-white" style={{fontWeight:650}}>{userName}</div>
+                            <div className="text-[10.5px]" style={{color:"#64748B"}}>{displayMembers[userName]?.role || "학생"}</div>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" /></span>
+                            <button onClick={handleLogout} className="text-[16px] transition-colors" style={{color:"#64748B"}} onMouseEnter={e => e.currentTarget.style.color = "#EF4444"} onMouseLeave={e => e.currentTarget.style.color = "#64748B"} title="로그아웃">⏻</button>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Main Content */}
                 <div className="flex-1 p-4 md:py-7 md:px-9 overflow-x-auto">
-                    {activeTab !== "overview" && activeTab !== "overview_me" && (
-                        <div className="mb-6">
-                            <h2 className="text-[26px] font-extrabold tracking-tight" style={{color:"#0F172A", letterSpacing:"-0.03em"}}>
-                                {tabs.find(t => t.id === activeTab)?.icon} {tabs.find(t => t.id === activeTab)?.label}
-                                {activeTab === "papers" && selectedPerson !== "전체" && <span className="text-[14px] font-normal text-slate-500 ml-2">— {displayMembers[selectedPerson]?.emoji} {selectedPerson}</span>}
-                            </h2>
-                        </div>
-                    )}
+                    {activeTab !== "overview" && activeTab !== "overview_me" && (() => {
+                        const extraTabs: Record<string, { icon: string; label: string }> = { teams: { icon: "👥", label: "팀 관리" }, settings: { icon: "⚙️", label: "설정" } };
+                        const found = tabs.find(t => t.id === activeTab) || extraTabs[activeTab];
+                        return found ? (
+                            <div className="mb-6">
+                                <h2 className="text-[26px] font-extrabold tracking-tight" style={{color:"#0F172A", letterSpacing:"-0.03em"}}>
+                                    {found.icon} {found.label}
+                                    {activeTab === "papers" && selectedPerson !== "전체" && <span className="text-[14px] font-normal text-slate-500 ml-2">— {displayMembers[selectedPerson]?.emoji} {selectedPerson}</span>}
+                                </h2>
+                            </div>
+                        ) : null;
+                    })()}
 
                     {activeTab === "overview" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} chatPosts={chatPosts} personalMemos={personalMemos} teamMemos={teamMemos} meetings={meetings} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="team" statusMessages={statusMessages} members={displayMembers} teams={teams} />}
                     {activeTab === "overview_me" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} chatPosts={chatPosts} personalMemos={personalMemos} teamMemos={teamMemos} meetings={meetings} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="personal" statusMessages={statusMessages} members={displayMembers} teams={teams} />}
