@@ -30,8 +30,14 @@ type TeamData = { lead: string; members: string[]; color: string; emoji?: string
 
 const DEFAULT_TEAMS: Record<string, TeamData> = {};
 
+// Helper: auto text color for status badge contrast
+const statusText = (hex: string) => {
+    const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+    return (r * 299 + g * 587 + b * 114) / 1000 < 160 ? "#FFFFFF" : "#1E293B";
+};
+
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-    planning: { label: "기획", color: "#CBD5E1" },
+    planning: { label: "기획", color: "#BFDBFE" },
     exp_analysis: { label: "실험·해석", color: "#93C5FD" },
     writing: { label: "작성중", color: "#60A5FA" },
     under_review: { label: "심사중", color: "#3B82F6" },
@@ -43,10 +49,10 @@ const PAPER_STATUS_MIGRATE = (s: string) => (s === "experiment" || s === "analys
 const PAPER_TAGS = ["안전예타", "생애첫", "TES", "액침냉각", "이상유동", "시스템코드", "NTNU", "PCM", "기타"];
 
 const REPORT_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-    planning: { label: "기획", color: "#CBD5E1" },
-    writing: { label: "작성중", color: "#93C5FD" },
-    checking: { label: "검토중", color: "#60A5FA" },
-    review: { label: "심사중", color: "#3B82F6" },
+    planning: { label: "기획", color: "#FED7AA" },
+    writing: { label: "작성중", color: "#FDBA74" },
+    checking: { label: "검토중", color: "#FB923C" },
+    review: { label: "심사중", color: "#F59E0B" },
     done: { label: "완료", color: "#22C55E" },
 };
 const REPORT_STATUS_KEYS = ["planning", "writing", "checking", "review"];
@@ -56,10 +62,10 @@ const PRIORITY_KEYS = ["highest", "high", "mid", "low", "lowest"];
 
 const DEFAULT_EQUIPMENT = ["액침냉각", "이상유동", "예연소실", "라이덴프로스트", "모래배터리", "기타"];
 const EXP_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-    planning: { label: "기획중", color: "#CBD5E1" },
-    preparing: { label: "준비중", color: "#93C5FD" },
-    running: { label: "진행중", color: "#60A5FA" },
-    paused_done: { label: "중단", color: "#EF4444" },
+    planning: { label: "기획중", color: "#FECACA" },
+    preparing: { label: "준비중", color: "#FCA5A5" },
+    running: { label: "진행중", color: "#F87171" },
+    paused_done: { label: "완료", color: "#EF4444" },
     completed: { label: "완료", color: "#22C55E" },
 };
 const EXP_STATUS_KEYS = ["planning", "preparing", "running", "paused_done"];
@@ -114,19 +120,19 @@ const DEFAULT_PAPERS: Paper[] = [];
 const DEFAULT_TODOS: Todo[] = [];
 const DEFAULT_EXPERIMENTS: Experiment[] = [];
 const IP_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-    planning: { label: "기획", color: "#CBD5E1" },
-    writing: { label: "작성중", color: "#93C5FD" },
-    evaluation: { label: "평가중", color: "#60A5FA" },
-    filed: { label: "출원", color: "#3B82F6" },
+    planning: { label: "기획", color: "#99F6E4" },
+    writing: { label: "작성중", color: "#5EEAD4" },
+    evaluation: { label: "평가중", color: "#2DD4BF" },
+    filed: { label: "출원", color: "#14B8A6" },
     completed: { label: "완료", color: "#22C55E" },
 };
 const IP_STATUS_KEYS = ["planning", "writing", "evaluation", "filed"];
 
 const ANALYSIS_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-    planning: { label: "기획중", color: "#CBD5E1" },
-    preparing: { label: "준비중", color: "#93C5FD" },
-    running: { label: "진행중", color: "#60A5FA" },
-    paused_done: { label: "중단", color: "#EF4444" },
+    planning: { label: "기획중", color: "#DDD6FE" },
+    preparing: { label: "준비중", color: "#C4B5FD" },
+    running: { label: "진행중", color: "#A78BFA" },
+    paused_done: { label: "완료", color: "#8B5CF6" },
     completed: { label: "완료", color: "#22C55E" },
 };
 const ANALYSIS_STATUS_KEYS = ["planning", "preparing", "running", "paused_done"];
@@ -290,8 +296,8 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
                         <div className="flex flex-wrap gap-1">
                             {[...STATUS_KEYS, "completed"].map(s => (
                                 <button key={s} type="button" onClick={() => setStatus(s)}
-                                    className={`px-2.5 py-1 rounded-full text-[12px] font-medium transition-all ${status === s ? "text-white" : "bg-slate-100 text-slate-500"}`}
-                                    style={status === s ? { background: STATUS_CONFIG[s].color } : undefined}>
+                                    className={`px-2.5 py-1 rounded-full text-[12px] font-medium transition-all ${status === s ? "" : "bg-slate-100 text-slate-500"}`}
+                                    style={status === s ? { background: STATUS_CONFIG[s].color, color: statusText(STATUS_CONFIG[s].color) } : undefined}>
                                     {STATUS_CONFIG[s].label}
                                 </button>
                             ))}
@@ -508,7 +514,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="text-[12px] font-semibold text-slate-500">상태</span>
-                                <span className="text-[12px] px-2 py-0.5 rounded-full font-medium text-white" style={{background: STATUS_CONFIG[PAPER_STATUS_MIGRATE(selected.status)]?.color || "#94A3B8"}}>{STATUS_CONFIG[PAPER_STATUS_MIGRATE(selected.status)]?.label || selected.status}</span>
+                                <span className="text-[12px] px-2 py-0.5 rounded-full font-medium" style={{background: STATUS_CONFIG[PAPER_STATUS_MIGRATE(selected.status)]?.color || "#94A3B8", color: statusText(STATUS_CONFIG[PAPER_STATUS_MIGRATE(selected.status)]?.color || "#94A3B8")}}>{STATUS_CONFIG[PAPER_STATUS_MIGRATE(selected.status)]?.label || selected.status}</span>
                             </div>
                             <div>
                                 <span className="text-[12px] font-semibold text-slate-500 block mb-1.5">담당자</span>
@@ -637,8 +643,8 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                                     const cfg = REPORT_STATUS_CONFIG[s];
                                     return (
                                         <button key={s} type="button" onClick={() => setStatus(s)}
-                                            className={`px-2.5 py-1 rounded-full text-[12px] font-medium transition-all ${status === s ? "text-white" : "bg-slate-100 text-slate-500"}`}
-                                            style={status === s ? { background: cfg.color } : undefined}>{cfg.label}</button>
+                                            className={`px-2.5 py-1 rounded-full text-[12px] font-medium transition-all ${status === s ? "" : "bg-slate-100 text-slate-500"}`}
+                                            style={status === s ? { background: cfg.color, color: statusText(cfg.color) } : undefined}>{cfg.label}</button>
                                     );
                                 })}
                             </div>
@@ -848,7 +854,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="text-[12px] font-semibold text-slate-500">상태</span>
-                                <span className="text-[12px] px-2 py-0.5 rounded-full font-medium text-white" style={{background: REPORT_STATUS_CONFIG[selected.status]?.color || "#94A3B8"}}>{REPORT_STATUS_CONFIG[selected.status]?.label || selected.status}</span>
+                                <span className="text-[12px] px-2 py-0.5 rounded-full font-medium" style={{background: REPORT_STATUS_CONFIG[selected.status]?.color || "#94A3B8", color: statusText(REPORT_STATUS_CONFIG[selected.status]?.color || "#94A3B8")}}>{REPORT_STATUS_CONFIG[selected.status]?.label || selected.status}</span>
                             </div>
                             <div>
                                 <span className="text-[12px] font-semibold text-slate-500 block mb-1.5">담당자</span>
@@ -1503,8 +1509,8 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
                                 const cfg = EXP_STATUS_CONFIG[s];
                                 return (
                                     <button key={s} type="button" onClick={() => setStatus(s)}
-                                        className={`px-2.5 py-1 rounded-full text-[12px] font-medium transition-all ${status === s ? "text-white" : "bg-slate-100 text-slate-500"}`}
-                                        style={status === s ? { background: cfg.color } : undefined}>{cfg.label}</button>
+                                        className={`px-2.5 py-1 rounded-full text-[12px] font-medium transition-all ${status === s ? "" : "bg-slate-100 text-slate-500"}`}
+                                        style={status === s ? { background: cfg.color, color: statusText(cfg.color) } : undefined}>{cfg.label}</button>
                                 );
                             })}
                         </div>
@@ -1717,7 +1723,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="text-[12px] font-semibold text-slate-500">상태</span>
-                                <span className="text-[12px] px-2 py-0.5 rounded-full font-medium text-white" style={{background: EXP_STATUS_CONFIG[EXP_STATUS_MIGRATE(selected.status)]?.color || "#94A3B8"}}>{EXP_STATUS_CONFIG[EXP_STATUS_MIGRATE(selected.status)]?.label || selected.status}</span>
+                                <span className="text-[12px] px-2 py-0.5 rounded-full font-medium" style={{background: EXP_STATUS_CONFIG[EXP_STATUS_MIGRATE(selected.status)]?.color || "#94A3B8", color: statusText(EXP_STATUS_CONFIG[EXP_STATUS_MIGRATE(selected.status)]?.color || "#94A3B8")}}>{EXP_STATUS_CONFIG[EXP_STATUS_MIGRATE(selected.status)]?.label || selected.status}</span>
                             </div>
                             <div>
                                 <span className="text-[12px] font-semibold text-slate-500 block mb-1.5">담당자</span>
@@ -1847,8 +1853,8 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
                                 const cfg = ANALYSIS_STATUS_CONFIG[s];
                                 return (
                                     <button key={s} type="button" onClick={() => setStatus(s)}
-                                        className={`px-2.5 py-1 rounded-full text-[12px] font-medium transition-all ${status === s ? "text-white" : "bg-slate-100 text-slate-500"}`}
-                                        style={status === s ? { background: cfg.color } : undefined}>{cfg.label}</button>
+                                        className={`px-2.5 py-1 rounded-full text-[12px] font-medium transition-all ${status === s ? "" : "bg-slate-100 text-slate-500"}`}
+                                        style={status === s ? { background: cfg.color, color: statusText(cfg.color) } : undefined}>{cfg.label}</button>
                                 );
                             })}
                         </div>
@@ -2060,7 +2066,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="text-[12px] font-semibold text-slate-500">상태</span>
-                                <span className="text-[12px] px-2 py-0.5 rounded-full font-medium text-white" style={{background: ANALYSIS_STATUS_CONFIG[ANALYSIS_STATUS_MIGRATE(selected.status)]?.color || "#94A3B8"}}>{ANALYSIS_STATUS_CONFIG[ANALYSIS_STATUS_MIGRATE(selected.status)]?.label || selected.status}</span>
+                                <span className="text-[12px] px-2 py-0.5 rounded-full font-medium" style={{background: ANALYSIS_STATUS_CONFIG[ANALYSIS_STATUS_MIGRATE(selected.status)]?.color || "#94A3B8", color: statusText(ANALYSIS_STATUS_CONFIG[ANALYSIS_STATUS_MIGRATE(selected.status)]?.color || "#94A3B8")}}>{ANALYSIS_STATUS_CONFIG[ANALYSIS_STATUS_MIGRATE(selected.status)]?.label || selected.status}</span>
                             </div>
                             <div>
                                 <span className="text-[12px] font-semibold text-slate-500 block mb-1.5">담당자</span>
@@ -2589,8 +2595,8 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
                                 const cfg = IP_STATUS_CONFIG[s];
                                 return (
                                     <button key={s} type="button" onClick={() => setStatus(s)}
-                                        className={`px-2.5 py-1 rounded-full text-[12px] font-medium transition-all ${status === s ? "text-white" : "bg-slate-100 text-slate-500"}`}
-                                        style={status === s ? { background: cfg.color } : undefined}>{cfg.label}</button>
+                                        className={`px-2.5 py-1 rounded-full text-[12px] font-medium transition-all ${status === s ? "" : "bg-slate-100 text-slate-500"}`}
+                                        style={status === s ? { background: cfg.color, color: statusText(cfg.color) } : undefined}>{cfg.label}</button>
                                 );
                             })}
                         </div>
