@@ -99,11 +99,11 @@ type DailyTarget = { name: string; date: string; text: string };
 type Resource = { id: number; title: string; link: string; nasPath: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean };
 type IdeaPost = { id: number; title: string; body: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean };
 type Memo = { id: number; title: string; content: string; color: string; updatedAt: string; needsDiscussion?: boolean };
-type TeamMemoCard = { id: number; title: string; content: string; status: "todo" | "doing" | "done"; color: string; author: string; updatedAt: string; comments?: Comment[]; needsDiscussion?: boolean };
+type TeamMemoCard = { id: number; title: string; content: string; status: string; color: string; author: string; updatedAt: string; comments?: Comment[]; needsDiscussion?: boolean };
 type TeamChatMsg = { id: number; author: string; text: string; date: string };
+type LabFile = { id: number; name: string; size: number; url: string; type: string; uploader: string; date: string };
 type ConferenceTrip = { id: number; title: string; startDate: string; endDate: string; homepage: string; fee: string; participants: string[]; creator: string; createdAt: string };
 type Meeting = { id: number; title: string; goal: string; summary: string; date: string; assignees: string[]; status: string; creator: string; createdAt: string; comments: Comment[]; team?: string; needsDiscussion?: boolean };
-type LabFile = { id: number; name: string; size: number; data: string; uploader: string; date: string };
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
 
@@ -2902,6 +2902,60 @@ function PasswordChangeSection({ currentUser }: { currentUser: string }) {
     );
 }
 
+function AdminLogSection() {
+    const MEMBERS = useContext(MembersContext);
+    const [logs, setLogs] = useState<{ userName: string; section: string; action: string; timestamp: number }[]>([]);
+    const [filterUser, setFilterUser] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await fetch("/api/dashboard?section=logs");
+                const data = await res.json();
+                setLogs(data.data || []);
+            } catch { /* ignore */ }
+            setLoading(false);
+        })();
+    }, []);
+
+    const SECTION_LABELS: Record<string, string> = { announcements: "공지사항", papers: "논문", experiments: "실험", todos: "To-do", conferences: "학회/출장", lectures: "수업", patents: "지재권", vacations: "휴가", schedule: "일정", timetable: "시간표", reports: "계획서/보고서", teams: "팀", dailyTargets: "오늘 목표", philosophy: "연구실 철학", resources: "자료", ideas: "아이디어", analyses: "해석", chatPosts: "잡담", customEmojis: "이모지", statusMessages: "한마디", equipmentList: "장비", personalMemos: "개인 메모", teamMemos: "팀 메모", labChat: "연구실 채팅", labFiles: "파일", meetings: "회의록", analysisToolList: "해석 도구", paperTagList: "태그", members: "멤버", dispatches: "출장" };
+
+    const uniqueUsers = useMemo(() => [...new Set(logs.map(l => l.userName))].sort(), [logs]);
+    const filtered = filterUser ? logs.filter(l => l.userName === filterUser) : logs;
+
+    return (
+        <div className="bg-white border border-slate-200 rounded-lg p-5">
+            <h3 className="text-[14px] font-bold text-slate-800 mb-3">수정 로그</h3>
+            {loading ? <p className="text-[12px] text-slate-400">로딩 중...</p> : (
+                <>
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                        <button onClick={() => setFilterUser(null)} className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${!filterUser ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>전체</button>
+                        {uniqueUsers.map(u => (
+                            <button key={u} onClick={() => setFilterUser(filterUser === u ? null : u)}
+                                className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${filterUser === u ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
+                                {MEMBERS[u]?.emoji || "👤"}{u}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="max-h-[400px] overflow-y-auto space-y-1">
+                        {filtered.length === 0 && <p className="text-[12px] text-slate-400 py-4 text-center">로그가 없습니다</p>}
+                        {filtered.slice(0, 200).map((l, i) => (
+                            <div key={i} className="flex items-center gap-2 py-1.5 px-2 hover:bg-slate-50 rounded text-[12px]">
+                                <span className="text-slate-400 text-[10px] font-mono shrink-0 w-[120px]">{new Date(l.timestamp).toLocaleString("ko-KR")}</span>
+                                <button onClick={() => setFilterUser(filterUser === l.userName ? null : l.userName)} className="text-slate-700 font-medium shrink-0 hover:text-blue-600 transition-colors">{MEMBERS[l.userName]?.emoji || "👤"}{l.userName}</button>
+                                <span className="text-slate-400">→</span>
+                                <span className="text-slate-600">{SECTION_LABELS[l.section] || l.section}</span>
+                            </div>
+                        ))}
+                        {filtered.length > 200 && <p className="text-[10px] text-slate-400 text-center py-2">최근 200건만 표시</p>}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}
+
 function SettingsView({ currentUser, customEmojis, onSaveEmoji, statusMessages, onSaveStatusMsg }: { currentUser: string; customEmojis: Record<string, string>; onSaveEmoji: (name: string, emoji: string) => void; statusMessages: Record<string, string>; onSaveStatusMsg: (name: string, msg: string) => void }) {
     const MEMBERS = useContext(MembersContext);
     const savedEmoji = customEmojis[currentUser] || MEMBERS[currentUser]?.emoji || "👤";
@@ -2950,6 +3004,8 @@ function SettingsView({ currentUser, customEmojis, onSaveEmoji, statusMessages, 
                     ))}
                 </div>
             </div>
+            {/* Admin Log */}
+            {currentUser === "박일웅" && <AdminLogSection />}
         </div>
     );
 }
@@ -3204,32 +3260,11 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
     const [text, setText] = useState("");
     const endRef = useRef<HTMLDivElement>(null);
     const composingRef = useRef(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const send = () => {
         if (!text.trim()) return;
         onAdd({ id: Date.now(), author: currentUser, text: text.trim(), date: new Date().toLocaleString("ko-KR") });
         setText("");
-    };
-
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        if (file.type !== "application/pdf") { alert("PDF 파일만 업로드 가능합니다."); return; }
-        if (file.size > 1024 * 1024) { alert("1MB 이하 파일만 업로드 가능합니다."); return; }
-        const reader = new FileReader();
-        reader.onload = () => {
-            onAddFile({ id: Date.now(), name: file.name, size: file.size, data: reader.result as string, uploader: currentUser, date: new Date().toLocaleString("ko-KR") });
-        };
-        reader.readAsDataURL(file);
-        e.target.value = "";
-    };
-
-    const downloadFile = (f: LabFile) => {
-        const link = document.createElement("a");
-        link.href = f.data;
-        link.download = f.name;
-        link.click();
     };
 
     useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chat.length]);
@@ -3277,56 +3312,132 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                     <h3 className="text-[14px] font-bold text-slate-700">📎 파일</h3>
                     <span className="text-[11px] text-slate-400">{files.length}개</span>
                 </div>
-                <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                    {files.length === 0 && <div className="text-center py-12 text-slate-400 text-[12px]">PDF 파일을 업로드하세요 (1MB 이하)</div>}
-                    {[...files].sort((a, b) => b.id - a.id).map(f => (
-                        <div key={f.id} className="group bg-slate-50 rounded-lg p-3 hover:bg-slate-100 transition-colors">
-                            <div className="flex items-start gap-2">
-                                <span className="text-[18px] mt-0.5 shrink-0">📄</span>
-                                <div className="flex-1 min-w-0">
-                                    <button onClick={() => downloadFile(f)} className="text-[12px] font-semibold text-blue-600 hover:text-blue-800 truncate block w-full text-left">{f.name}</button>
-                                    <div className="text-[10px] text-slate-400 mt-0.5">{(f.size / 1024).toFixed(0)} KB · {MEMBERS[f.uploader]?.emoji || ""}{f.uploader} · {f.date}</div>
-                                </div>
-                                {(f.uploader === currentUser || currentUser === "박일웅") && (
-                                    <button onClick={() => { if (confirm("파일을 삭제하시겠습니까?")) onDeleteFile(f.id); }}
-                                        className="text-[10px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">✕</button>
-                                )}
-                            </div>
-                        </div>
-                    ))}
+                <FileBox files={files} currentUser={currentUser} onAddFile={onAddFile} onDeleteFile={onDeleteFile} />
+            </div>
+        </div>
+    );
+}
+
+// ─── File Helpers ────────────────────────────────────────────────────────────
+
+const FILE_MAX = 10 * 1024 * 1024;
+const isImageFile = (f: LabFile) => /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(f.name) || f.type?.startsWith("image/");
+const isPdfFile = (f: LabFile) => /\.pdf$/i.test(f.name) || f.type === "application/pdf";
+
+async function uploadFile(file: File): Promise<string> {
+    try {
+        const { upload } = await import("@vercel/blob/client");
+        const blob = await upload(`dashboard/${Date.now()}_${file.name}`, file, { access: "public", handleUploadUrl: "/api/dashboard-files" });
+        return blob.url;
+    } catch {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+}
+
+function FilePreviewModal({ file, onClose }: { file: LabFile; onClose: () => void }) {
+    const img = isImageFile(file);
+    const pdf = isPdfFile(file);
+    return (
+        <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
+            <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between p-4 border-b">
+                    <span className="text-[14px] font-bold text-slate-800 truncate flex-1 pr-4">{file.name}</span>
+                    <div className="flex items-center gap-3 shrink-0">
+                        <a href={file.url} download={file.name} className="text-[12px] text-blue-500 hover:text-blue-600 font-medium">다운로드</a>
+                        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                    </div>
                 </div>
-                <div className="p-3 border-t border-slate-100">
-                    <input ref={fileInputRef} type="file" accept=".pdf" onChange={handleFileUpload} className="hidden" />
-                    <button onClick={() => fileInputRef.current?.click()}
-                        className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[12px] font-medium transition-colors">
-                        📎 PDF 업로드 (1MB 이하)
-                    </button>
+                <div className="overflow-auto" style={{ maxHeight: "calc(90vh - 60px)" }}>
+                    {img && <img src={file.url} alt={file.name} className="max-w-full mx-auto p-4" />}
+                    {pdf && <iframe src={file.url} className="w-full border-0" style={{ height: "75vh" }} />}
+                    {!img && !pdf && (
+                        <div className="text-center py-20">
+                            <div className="text-[48px] mb-4">📄</div>
+                            <div className="text-[15px] font-semibold text-slate-700 mb-1">{file.name}</div>
+                            <div className="text-[12px] text-slate-400 mb-6">{(file.size / 1024).toFixed(0)} KB · {file.type || "알 수 없는 형식"}</div>
+                            <a href={file.url} download={file.name} className="px-5 py-2.5 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 inline-block">다운로드</a>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
     );
 }
 
+function FileBox({ files, currentUser, onAddFile, onDeleteFile, compact }: {
+    files: LabFile[]; currentUser: string; onAddFile: (f: LabFile) => void; onDeleteFile: (id: number) => void; compact?: boolean;
+}) {
+    const MEMBERS = useContext(MembersContext);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [preview, setPreview] = useState<LabFile | null>(null);
+    const [uploading, setUploading] = useState(false);
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > FILE_MAX) { alert("10MB 이하 파일만 업로드 가능합니다."); return; }
+        setUploading(true);
+        try {
+            const url = await uploadFile(file);
+            onAddFile({ id: Date.now(), name: file.name, size: file.size, url, type: file.type, uploader: currentUser, date: new Date().toLocaleString("ko-KR") });
+        } catch { alert("파일 업로드에 실패했습니다."); }
+        setUploading(false);
+        e.target.value = "";
+    };
+
+    const sorted = [...files].sort((a, b) => b.id - a.id);
+
+    return (
+        <>
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {sorted.length === 0 && <div className={`text-center text-slate-400 ${compact ? "py-6 text-[11px]" : "py-12 text-[12px]"}`}>파일을 업로드하세요 (10MB 이하)</div>}
+                {sorted.map(f => (
+                    <div key={f.id} className="group bg-slate-50 rounded-lg p-2.5 hover:bg-slate-100 transition-colors">
+                        <div className="flex items-start gap-2">
+                            <span className="text-[16px] mt-0.5 shrink-0 cursor-pointer" onClick={() => { if (isImageFile(f) || isPdfFile(f)) setPreview(f); else { const a = document.createElement("a"); a.href = f.url; a.download = f.name; a.click(); } }}>
+                                {isImageFile(f) ? "🖼️" : isPdfFile(f) ? "📄" : "📎"}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                                <button onClick={() => { if (isImageFile(f) || isPdfFile(f)) setPreview(f); else { const a = document.createElement("a"); a.href = f.url; a.download = f.name; a.click(); } }}
+                                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 truncate block w-full text-left">{f.name}</button>
+                                <div className="text-[9px] text-slate-400 mt-0.5">{(f.size / 1024).toFixed(0)} KB · {MEMBERS[f.uploader]?.emoji || ""}{f.uploader}</div>
+                            </div>
+                            {(f.uploader === currentUser || currentUser === "박일웅") && (
+                                <button onClick={() => { if (confirm("삭제?")) onDeleteFile(f.id); }}
+                                    className="text-[10px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">✕</button>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <div className="p-2.5 border-t border-slate-100">
+                <input ref={fileInputRef} type="file" onChange={handleUpload} className="hidden" />
+                <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+                    className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-medium transition-colors disabled:opacity-50">
+                    {uploading ? "업로드 중..." : "📎 파일 업로드"}
+                </button>
+            </div>
+            {preview && <FilePreviewModal file={preview} onClose={() => setPreview(null)} />}
+        </>
+    );
+}
+
 // ─── Team Memo View ──────────────────────────────────────────────────────────
 
 const TEAM_MEMO_COLORS = ["#f8fafc", "#fef3c7", "#dcfce7", "#dbeafe", "#fce7f3", "#f3e8ff", "#e0f2fe", "#fef9c3"];
-const TEAM_MEMO_STATUS: { key: "todo" | "doing" | "done"; label: string; color: string }[] = [
-    { key: "todo", label: "할 일", color: "#94a3b8" },
-    { key: "doing", label: "진행중", color: "#3b82f6" },
-    { key: "done", label: "완료", color: "#059669" },
-];
+const MEMO_COL_MIGRATE = (s: string) => (s === "done" || s === "right") ? "right" : "left";
+const MEMO_COLUMNS = [{ key: "left", label: "메모", color: "#3b82f6" }, { key: "right", label: "메모", color: "#8b5cf6" }];
 
-function TeamMemoView({ teamName, kanban, chat, currentUser, onSaveCard, onDeleteCard, onReorderCards, onAddChat, onDeleteChat, onClearChat }: {
-    teamName: string;
-    kanban: TeamMemoCard[];
-    chat: TeamChatMsg[];
-    currentUser: string;
-    onSaveCard: (card: TeamMemoCard) => void;
-    onDeleteCard: (id: number) => void;
-    onReorderCards: (cards: TeamMemoCard[]) => void;
-    onAddChat: (msg: TeamChatMsg) => void;
-    onDeleteChat: (id: number) => void;
-    onClearChat: () => void;
+function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, onDeleteCard, onReorderCards, onAddChat, onDeleteChat, onClearChat, onAddFile, onDeleteFile }: {
+    teamName: string; kanban: TeamMemoCard[]; chat: TeamChatMsg[]; files: LabFile[]; currentUser: string;
+    onSaveCard: (card: TeamMemoCard) => void; onDeleteCard: (id: number) => void; onReorderCards: (cards: TeamMemoCard[]) => void;
+    onAddChat: (msg: TeamChatMsg) => void; onDeleteChat: (id: number) => void; onClearChat: () => void;
+    onAddFile: (f: LabFile) => void; onDeleteFile: (id: number) => void;
 }) {
     const MEMBERS = useContext(MembersContext);
     const [showForm, setShowForm] = useState(false);
@@ -3335,7 +3446,7 @@ function TeamMemoView({ teamName, kanban, chat, currentUser, onSaveCard, onDelet
     const [isEditing, setIsEditing] = useState(false);
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
-    const [status, setStatus] = useState<"todo" | "doing" | "done">("todo");
+    const [col, setCol] = useState("left");
     const [color, setColor] = useState(TEAM_MEMO_COLORS[0]);
     const [chatText, setChatText] = useState("");
     const [newComment, setNewComment] = useState("");
@@ -3344,22 +3455,21 @@ function TeamMemoView({ teamName, kanban, chat, currentUser, onSaveCard, onDelet
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
 
-    const openNew = (s: "todo" | "doing" | "done" = "todo") => { setEditing(null); setTitle(""); setContent(""); setStatus(s); setColor(TEAM_MEMO_COLORS[0]); setShowForm(true); };
+    const openNew = (c = "left") => { setEditing(null); setTitle(""); setContent(""); setCol(c); setColor(TEAM_MEMO_COLORS[0]); setShowForm(true); };
     const openDetail = (c: TeamMemoCard) => { setSelected(c); setIsEditing(false); setNewComment(""); };
     const startEdit = () => {
         if (!selected) return;
-        setEditing(selected); setTitle(selected.title); setContent(selected.content); setStatus(selected.status); setColor(selected.color); setIsEditing(true);
+        setEditing(selected); setTitle(selected.title); setContent(selected.content); setCol(MEMO_COL_MIGRATE(selected.status)); setColor(selected.color); setIsEditing(true);
     };
     const saveEdit = () => {
         if (!editing) return;
         const now = new Date().toISOString().split("T")[0];
-        const updated = { ...editing, title: title.trim() || "제목 없음", content, status, color, updatedAt: now };
-        onSaveCard(updated);
-        setSelected(updated); setIsEditing(false);
+        const updated = { ...editing, title: title.trim() || "제목 없음", content, status: col, color, updatedAt: now };
+        onSaveCard(updated); setSelected(updated); setIsEditing(false);
     };
     const saveNew = () => {
         const now = new Date().toISOString().split("T")[0];
-        onSaveCard({ id: Date.now(), title: title.trim() || "제목 없음", content, status, color, author: currentUser, updatedAt: now, comments: [] });
+        onSaveCard({ id: Date.now(), title: title.trim() || "제목 없음", content, status: col, color, author: currentUser, updatedAt: now, comments: [] });
         setShowForm(false);
     };
     const addComment = () => {
@@ -3381,101 +3491,72 @@ function TeamMemoView({ teamName, kanban, chat, currentUser, onSaveCard, onDelet
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chat.length]);
 
     return (
-        <div className="flex gap-4 h-[calc(100vh-140px)]">
-            {/* Kanban 2/3 */}
-            <div className="w-2/3 flex flex-col">
+        <div className="flex gap-3 h-[calc(100vh-140px)]">
+            {/* Kanban 1/2 - 2 columns */}
+            <div className="w-1/2 flex flex-col">
                 <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-[15px] font-bold text-slate-700">📌 {teamName} 팀 메모</h3>
-                    <button onClick={() => openNew()} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 카드 추가</button>
+                    <h3 className="text-[15px] font-bold text-slate-700">📌 {teamName} 메모</h3>
+                    <button onClick={() => openNew()} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
                 </div>
-                {/* New card form */}
                 {showForm && (
-                    <div className="bg-white border border-blue-200 rounded-lg p-4 mb-3 space-y-2.5 flex-shrink-0">
-                        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="카드 제목" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-                        <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용..." rows={4} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
-                        <div className="flex items-center gap-4">
-                            <div>
-                                <label className="text-[10px] font-semibold text-slate-400 block mb-1">상태</label>
-                                <div className="flex gap-1">
-                                    {TEAM_MEMO_STATUS.map(s => (
-                                        <button key={s.key} type="button" onClick={() => setStatus(s.key)}
-                                            className={`px-2 py-0.5 rounded-full text-[11px] font-medium transition-all ${status === s.key ? "text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
-                                            style={status === s.key ? { background: s.color } : {}}>
-                                            {s.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-semibold text-slate-400 block mb-1">색상</label>
-                                <div className="flex gap-1">
-                                    {TEAM_MEMO_COLORS.map(c => (
-                                        <button key={c} type="button" onClick={() => setColor(c)}
-                                            className={`w-5 h-5 rounded border-2 transition-all ${color === c ? "border-blue-500 scale-110" : "border-slate-200"}`}
-                                            style={{ background: c }} />
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex justify-end gap-2">
-                            <button onClick={() => setShowForm(false)} className="px-3 py-1.5 text-[12px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                    <div className="bg-white border border-blue-200 rounded-lg p-3 mb-3 space-y-2 flex-shrink-0">
+                        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용..." rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                        <div className="flex items-center gap-3">
+                            <div className="flex gap-1">{TEAM_MEMO_COLORS.map(c => (
+                                <button key={c} type="button" onClick={() => setColor(c)} className={`w-5 h-5 rounded border-2 transition-all ${color === c ? "border-blue-500 scale-110" : "border-slate-200"}`} style={{ background: c }} />
+                            ))}</div>
+                            <div className="flex-1" />
+                            <button onClick={() => setShowForm(false)} className="px-3 py-1.5 text-[12px] text-slate-500">취소</button>
                             <button onClick={saveNew} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">저장</button>
                         </div>
                     </div>
                 )}
-                {/* Columns */}
-                <div className="grid grid-cols-3 gap-3 flex-1 min-h-0 overflow-y-auto">
-                    {TEAM_MEMO_STATUS.map(col => {
-                        const colCards = kanban.filter(c => c.status === col.key);
+                <div className="grid grid-cols-2 gap-3 flex-1 min-h-0 overflow-y-auto">
+                    {MEMO_COLUMNS.map(mc => {
+                        const colCards = kanban.filter(c => MEMO_COL_MIGRATE(c.status) === mc.key);
                         return (
-                            <div key={col.key} className="flex flex-col"
-                                onDragOver={e => { e.preventDefault(); setDropTarget(calcDropIdx(e, col.key)); }}
+                            <div key={mc.key} className="flex flex-col"
+                                onDragOver={e => { e.preventDefault(); setDropTarget(calcDropIdx(e, mc.key)); }}
                                 onDragLeave={() => setDropTarget(null)}
                                 onDrop={() => {
                                     if (draggedId == null || !dropTarget) return;
                                     const dragged = kanban.find(c => c.id === draggedId);
                                     if (!dragged) return;
-                                    const reordered = reorderKanbanItems(kanban, dragged, dropTarget.col as "todo" | "doing" | "done", dropTarget.idx, c => c.status, (c, s) => ({ ...c, status: s as "todo" | "doing" | "done" }));
-                                    onReorderCards(reordered);
-                                    setDraggedId(null); setDropTarget(null);
+                                    const reordered = reorderKanbanItems(kanban, dragged, dropTarget.col, dropTarget.idx, c => MEMO_COL_MIGRATE(c.status), (c, s) => ({ ...c, status: s }));
+                                    onReorderCards(reordered); setDraggedId(null); setDropTarget(null);
                                 }}>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: col.color }} />
-                                    <span className="text-[12px] font-bold text-slate-600">{col.label}</span>
+                                <div className="flex items-center gap-2 mb-2 pb-1.5" style={{ borderBottom: `2px solid ${mc.color}` }}>
+                                    <span className="text-[12px] font-bold text-slate-600">{mc.label}</span>
                                     <span className="text-[11px] text-slate-400">{colCards.length}</span>
                                 </div>
-                                <div className="space-y-2 flex-1 min-h-[60px] rounded-lg bg-slate-50/50 p-2">
+                                <div className="space-y-2 flex-1 min-h-[60px] rounded-lg p-1">
                                     {colCards.map((card, ci) => (
                                         <div key={card.id}>
-                                            {dropTarget && dropTarget.col === col.key && dropTarget.idx === ci && draggedId !== card.id && <DropLine />}
-                                            <div draggable
-                                                onDragStart={() => setDraggedId(card.id)}
-                                                onDragEnd={() => { setDraggedId(null); setDropTarget(null); }}
+                                            {dropTarget?.col === mc.key && dropTarget?.idx === ci && draggedId !== card.id && <DropLine />}
+                                            <div draggable onDragStart={() => setDraggedId(card.id)} onDragEnd={() => { setDraggedId(null); setDropTarget(null); }}
                                                 onDragOver={e => { if (draggedId === card.id) return; e.stopPropagation(); e.preventDefault(); }}
                                                 onClick={() => openDetail(card)}
-                                                className={`rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow group relative ${card.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"} ${draggedId === card.id ? "opacity-40" : ""}`}
+                                                className={`rounded-lg p-2.5 cursor-pointer hover:shadow-md transition-shadow group relative ${card.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"} ${draggedId === card.id ? "opacity-40" : ""}`}
                                                 style={{ background: card.color }}>
                                                 <button onClick={e => { e.stopPropagation(); onDeleteCard(card.id); }}
-                                                    className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                                <label className="flex items-center gap-1.5 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
+                                                    className="absolute top-1 right-1 text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                                                <label className="flex items-center gap-1 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
                                                     <input type="checkbox" checked={!!card.needsDiscussion} onChange={() => onSaveCard({ ...card, needsDiscussion: !card.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
-                                                    <span className={`text-[10px] font-medium ${card.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                                                    <span className={`text-[9px] font-medium ${card.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의</span>
                                                 </label>
                                                 <h4 className="text-[12px] font-bold text-slate-800 mb-0.5 truncate">{card.title}</h4>
-                                                <p className="text-[11px] text-slate-600 whitespace-pre-wrap line-clamp-3">{card.content}</p>
-                                                <div className="mt-1.5 flex items-center justify-between">
-                                                    <span className="text-[10px] text-slate-400">{card.author}</span>
-                                                    <span className="text-[10px] text-slate-400">{card.updatedAt}</span>
+                                                <p className="text-[10px] text-slate-600 whitespace-pre-wrap line-clamp-3">{card.content}</p>
+                                                <div className="mt-1 flex items-center justify-between text-[9px] text-slate-400">
+                                                    <span>{card.author}</span>
+                                                    <span>{(card.comments?.length || 0) > 0 ? `💬${card.comments!.length}` : ""}</span>
                                                 </div>
-                                                {(card.comments?.length || 0) > 0 && (
-                                                    <div className="mt-1 text-[10px] text-slate-400">💬 {card.comments!.length}</div>
-                                                )}
                                             </div>
                                         </div>
                                     ))}
-                                    {dropTarget && dropTarget.col === col.key && dropTarget.idx >= colCards.length && draggedId != null && <DropLine />}
+                                    {dropTarget?.col === mc.key && dropTarget.idx >= colCards.length && draggedId != null && <DropLine />}
                                     {colCards.length === 0 && !draggedId && (
-                                        <button onClick={() => openNew(col.key)} className="w-full py-4 text-[11px] text-slate-400 hover:text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">+ 추가</button>
+                                        <button onClick={() => openNew(mc.key)} className="w-full py-4 text-[11px] text-slate-400 hover:text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">+ 추가</button>
                                     )}
                                 </div>
                             </div>
@@ -3484,39 +3565,49 @@ function TeamMemoView({ teamName, kanban, chat, currentUser, onSaveCard, onDelet
                 </div>
             </div>
 
-            {/* Chat 1/3 */}
-            <div className="w-1/3 flex flex-col bg-white border border-slate-200 rounded-lg">
-                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                    <h4 className="text-[13px] font-bold text-slate-700">💬 팀 채팅</h4>
-                    {currentUser === "박일웅" && (
-                        <button onClick={() => { if (confirm("채팅을 모두 삭제하시겠습니까?")) onClearChat(); }} className="text-[10px] text-slate-400 hover:text-red-500 transition-colors">초기화</button>
-                    )}
-                </div>
-                <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
-                    {chat.length === 0 && <div className="text-center py-8 text-slate-400 text-[12px]">메시지가 없습니다</div>}
-                    {chat.map(msg => (
-                        <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`}>
-                            <div className={`inline-block max-w-[85%] rounded-lg px-3 py-2 text-[12px] ${msg.author === currentUser ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-700"}`}>
-                                {msg.author !== currentUser && <div className="text-[10px] font-bold mb-0.5">{msg.author}</div>}
-                                <div className="whitespace-pre-wrap">{msg.text}</div>
-                                <div className={`text-[9px] mt-1 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>{msg.date}</div>
-                            </div>
-                            {msg.author === currentUser && (
-                                <button onClick={() => onDeleteChat(msg.id)} className="text-[10px] text-slate-300 hover:text-red-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">삭제</button>
-                            )}
-                        </div>
-                    ))}
-                    <div ref={chatEndRef} />
-                </div>
-                <div className="p-3 border-t border-slate-100">
-                    <div className="flex gap-2">
-                        <input value={chatText} onChange={e => setChatText(e.target.value)}
-                            onCompositionStart={() => { composingRef.current = true; }}
-                            onCompositionEnd={() => { composingRef.current = false; }}
-                            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !composingRef.current) { e.preventDefault(); sendChat(); } }}
-                            placeholder="메시지 입력..." className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-                        <button onClick={sendChat} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">전송</button>
+            {/* Right half: Chat + File side by side */}
+            <div className="w-1/2 flex gap-3">
+                {/* Chat */}
+                <div className="w-1/2 flex flex-col bg-white border border-slate-200 rounded-lg min-h-0">
+                    <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
+                        <h4 className="text-[13px] font-bold text-slate-700">💬 채팅</h4>
+                        {currentUser === "박일웅" && (
+                            <button onClick={() => { if (confirm("채팅을 모두 삭제하시겠습니까?")) onClearChat(); }} className="text-[10px] text-slate-400 hover:text-red-500 transition-colors">초기화</button>
+                        )}
                     </div>
+                    <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                        {chat.length === 0 && <div className="text-center py-6 text-slate-400 text-[11px]">메시지가 없습니다</div>}
+                        {chat.map(msg => (
+                            <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`}>
+                                <div className={`inline-block max-w-[85%] rounded-lg px-3 py-2 text-[12px] ${msg.author === currentUser ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-700"}`}>
+                                    {msg.author !== currentUser && <div className="text-[10px] font-bold mb-0.5">{MEMBERS[msg.author]?.emoji || "👤"}{msg.author}</div>}
+                                    <div className="whitespace-pre-wrap">{msg.text}</div>
+                                    <div className={`text-[9px] mt-1 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>{msg.date}</div>
+                                </div>
+                                {msg.author === currentUser && (
+                                    <button onClick={() => onDeleteChat(msg.id)} className="text-[10px] text-slate-300 hover:text-red-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">삭제</button>
+                                )}
+                            </div>
+                        ))}
+                        <div ref={chatEndRef} />
+                    </div>
+                    <div className="p-2.5 border-t border-slate-100">
+                        <div className="flex gap-2">
+                            <input value={chatText} onChange={e => setChatText(e.target.value)}
+                                onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
+                                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !composingRef.current) { e.preventDefault(); sendChat(); } }}
+                                placeholder="메시지 입력..." className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                            <button onClick={sendChat} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">전송</button>
+                        </div>
+                    </div>
+                </div>
+                {/* File box */}
+                <div className="w-1/2 flex flex-col bg-white border border-slate-200 rounded-lg">
+                    <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
+                        <h4 className="text-[13px] font-bold text-slate-700">📎 파일</h4>
+                        <span className="text-[11px] text-slate-400">{files.length}개</span>
+                    </div>
+                    <FileBox files={files} currentUser={currentUser} onAddFile={onAddFile} onDeleteFile={onDeleteFile} compact />
                 </div>
             </div>
 
@@ -3525,24 +3616,18 @@ function TeamMemoView({ teamName, kanban, chat, currentUser, onSaveCard, onDelet
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
                     <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
-                            <div className="flex items-center gap-2 flex-1 pr-2">
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium text-white" style={{ background: TEAM_MEMO_STATUS.find(s => s.key === selected.status)?.color }}>{TEAM_MEMO_STATUS.find(s => s.key === selected.status)?.label}</span>
-                                <h3 className="text-[15px] font-bold text-slate-800 break-words">{selected.title}</h3>
-                            </div>
+                            <h3 className="text-[15px] font-bold text-slate-800 break-words flex-1 pr-2">{selected.title}</h3>
                             <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-slate-600 text-lg flex-shrink-0">✕</button>
                         </div>
                         <div className="p-4">
                             <div className="text-[11px] text-slate-400 mb-3">{MEMBERS[selected.author]?.emoji || "👤"} {selected.author} · {selected.updatedAt}</div>
                             {selected.content && <div className="text-[13px] text-slate-700 mb-4 whitespace-pre-wrap break-words">{selected.content}</div>}
-
-                            {/* Comments */}
                             <div className="border-t border-slate-200 pt-4">
                                 <div className="text-[12px] font-semibold text-slate-600 mb-3">💬 댓글 ({(selected.comments || []).length})</div>
                                 <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto">
                                     {(selected.comments || []).map(c => (
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group/c relative">
-                                            <button onClick={() => deleteComment(c.id)}
-                                                className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
+                                            <button onClick={() => deleteComment(c.id)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
                                             <div className="text-[12px] text-slate-700 pr-4 break-words">{c.text}</div>
                                             <div className="text-[10px] text-slate-400 mt-1">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
@@ -3552,8 +3637,7 @@ function TeamMemoView({ teamName, kanban, chat, currentUser, onSaveCard, onDelet
                                 <div className="flex gap-2">
                                     <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글 작성..."
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                        onCompositionStart={() => { composingRef.current = true; }}
-                                        onCompositionEnd={() => { composingRef.current = false; }}
+                                        onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                         onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addComment(); }} />
                                     <button onClick={addComment} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[12px] hover:bg-blue-600 font-medium flex-shrink-0">전송</button>
                                 </div>
@@ -3569,8 +3653,6 @@ function TeamMemoView({ teamName, kanban, chat, currentUser, onSaveCard, onDelet
                     </div>
                 </div>
             )}
-
-            {/* Edit modal */}
             {selected && isEditing && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setIsEditing(false)}>
                     <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -3579,32 +3661,11 @@ function TeamMemoView({ teamName, kanban, chat, currentUser, onSaveCard, onDelet
                             <button onClick={() => setIsEditing(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
-                            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="카드 제목" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                             <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용..." rows={5} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
-                            <div className="flex items-center gap-4">
-                                <div>
-                                    <label className="text-[10px] font-semibold text-slate-400 block mb-1">상태</label>
-                                    <div className="flex gap-1">
-                                        {TEAM_MEMO_STATUS.map(s => (
-                                            <button key={s.key} type="button" onClick={() => setStatus(s.key)}
-                                                className={`px-2 py-0.5 rounded-full text-[11px] font-medium transition-all ${status === s.key ? "text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
-                                                style={status === s.key ? { background: s.color } : {}}>
-                                                {s.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-semibold text-slate-400 block mb-1">색상</label>
-                                    <div className="flex gap-1">
-                                        {TEAM_MEMO_COLORS.map(c => (
-                                            <button key={c} type="button" onClick={() => setColor(c)}
-                                                className={`w-5 h-5 rounded border-2 transition-all ${color === c ? "border-blue-500 scale-110" : "border-slate-200"}`}
-                                                style={{ background: c }} />
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
+                            <div className="flex gap-1">{TEAM_MEMO_COLORS.map(c => (
+                                <button key={c} type="button" onClick={() => setColor(c)} className={`w-5 h-5 rounded border-2 transition-all ${color === c ? "border-blue-500 scale-110" : "border-slate-200"}`} style={{ background: c }} />
+                            ))}</div>
                         </div>
                         <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
                             <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
@@ -4140,7 +4201,7 @@ export default function DashboardPage() {
     const [analysisToolList, setAnalysisToolList] = useState<string[]>(ANALYSIS_TOOLS);
     const [paperTagList, setPaperTagList] = useState<string[]>(PAPER_TAGS);
     const [personalMemos, setPersonalMemos] = useState<Record<string, Memo[]>>({});
-    const [teamMemos, setTeamMemos] = useState<Record<string, { kanban: TeamMemoCard[]; chat: TeamChatMsg[] }>>({});
+    const [teamMemos, setTeamMemos] = useState<Record<string, { kanban: TeamMemoCard[]; chat: TeamChatMsg[]; files?: LabFile[] }>>({});
     const [labChat, setLabChat] = useState<TeamChatMsg[]>([]);
     const [labFiles, setLabFiles] = useState<LabFile[]>([]);
 
@@ -4164,7 +4225,7 @@ export default function DashboardPage() {
         { id: "chat", label: "잡담", icon: "💬" },
         { id: "lectures", label: "수업", icon: "📚" },
         ...teamNames.map(t => ({ id: `teamMemo_${t}`, label: t, icon: "📌" })),
-        ...memberNames.map(name => ({ id: `memo_${name}`, label: name, icon: customEmojis[name] || members[name]?.emoji || "👤" })),
+        ...(userName === "박일웅" ? memberNames : memberNames.filter(n => n === userName)).map(name => ({ id: `memo_${name}`, label: name, icon: customEmojis[name] || members[name]?.emoji || "👤" })),
     ];
 
     const allPeople = useMemo(() => ["전체", ...memberNames], [memberNames]);
@@ -4448,6 +4509,18 @@ export default function DashboardPage() {
         const u = { ...teamMemos, [teamName]: { ...data, chat: [] } };
         setTeamMemos(u); saveSection("teamMemos", u);
     };
+    const handleAddTeamFile = (teamName: string, file: LabFile) => {
+        const data = teamMemos[teamName] || { kanban: [], chat: [] };
+        const u = { ...teamMemos, [teamName]: { ...data, files: [...(data.files || []), file] } };
+        setTeamMemos(u); saveSection("teamMemos", u);
+    };
+    const handleDeleteTeamFile = async (teamName: string, id: number) => {
+        const data = teamMemos[teamName] || { kanban: [], chat: [] };
+        const file = (data.files || []).find(f => f.id === id);
+        if (file?.url?.startsWith("https://")) { try { await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: file.url }), headers: { "Content-Type": "application/json" } }); } catch {} }
+        const u = { ...teamMemos, [teamName]: { ...data, files: (data.files || []).filter(f => f.id !== id) } };
+        setTeamMemos(u); saveSection("teamMemos", u);
+    };
 
     const handleAddLabChat = (msg: TeamChatMsg) => {
         const u = [...labChat, msg];
@@ -4463,7 +4536,9 @@ export default function DashboardPage() {
     const handleAddLabFile = (file: LabFile) => {
         const u = [...labFiles, file]; setLabFiles(u); saveSection("labFiles", u);
     };
-    const handleDeleteLabFile = (id: number) => {
+    const handleDeleteLabFile = async (id: number) => {
+        const file = labFiles.find(f => f.id === id);
+        if (file?.url?.startsWith("https://")) { try { await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: file.url }), headers: { "Content-Type": "application/json" } }); } catch {} }
         const u = labFiles.filter(f => f.id !== id); setLabFiles(u); saveSection("labFiles", u);
     };
 
@@ -4610,7 +4685,7 @@ export default function DashboardPage() {
                     {activeTab.startsWith("teamMemo_") && (() => {
                         const tName = activeTab.replace("teamMemo_", "");
                         const data = teamMemos[tName] || { kanban: [], chat: [] };
-                        return <TeamMemoView teamName={tName} kanban={data.kanban} chat={data.chat} currentUser={userName} onSaveCard={c => handleSaveTeamMemo(tName, c)} onDeleteCard={id => handleDeleteTeamMemo(tName, id)} onReorderCards={cards => handleReorderTeamMemo(tName, cards)} onAddChat={msg => handleAddTeamChat(tName, msg)} onDeleteChat={id => handleDeleteTeamChat(tName, id)} onClearChat={() => handleClearTeamChat(tName)} />;
+                        return <TeamMemoView teamName={tName} kanban={data.kanban} chat={data.chat} files={data.files || []} currentUser={userName} onSaveCard={c => handleSaveTeamMemo(tName, c)} onDeleteCard={id => handleDeleteTeamMemo(tName, id)} onReorderCards={cards => handleReorderTeamMemo(tName, cards)} onAddChat={msg => handleAddTeamChat(tName, msg)} onDeleteChat={id => handleDeleteTeamChat(tName, id)} onClearChat={() => handleClearTeamChat(tName)} onAddFile={f => handleAddTeamFile(tName, f)} onDeleteFile={id => handleDeleteTeamFile(tName, id)} />;
                     })()}
                     {activeTab.startsWith("memo_") && (() => {
                         const name = activeTab.replace("memo_", "");

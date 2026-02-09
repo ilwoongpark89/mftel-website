@@ -65,6 +65,11 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ users: active });
         }
 
+        if (section === 'logs') {
+            const raw = await getKey(`${LOG_PREFIX}modifications`);
+            return NextResponse.json({ data: raw ? JSON.parse(raw) : [] });
+        }
+
         if (section === 'all') {
             // Return all dashboard data at once
             const keys = ["announcements","papers","experiments","todos","conferences","lectures","patents","vacations","schedule","timetable","reports","teams","dailyTargets","philosophy","resources","ideas","analyses","chatPosts","customEmojis","statusMessages","equipmentList","personalMemos","teamMemos","labChat","labFiles","meetings","analysisToolList","paperTagList","members","dispatches"];

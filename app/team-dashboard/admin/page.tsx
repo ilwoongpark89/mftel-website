@@ -39,6 +39,7 @@ export default function AdminPage() {
     const [pwStatus, setPwStatus] = useState<Record<string, { hasPassword: boolean; isDefault: boolean }>>({});
     const [pwLoading, setPwLoading] = useState<string | null>(null);
     const [ipLocations, setIpLocations] = useState<Record<string, string>>({});
+    const [modFilterUser, setModFilterUser] = useState<string | null>(null);
     const ipLookupDone = useRef<Set<string>>(new Set());
 
     // Member editing state
@@ -386,7 +387,7 @@ export default function AdminPage() {
                 {tab === "mods" && !loading && (
                     <div>
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-[16px] font-bold">📝 수정 로그</h2>
+                            <h2 className="text-[16px] font-bold">📝 수정 로그 {modFilterUser && <span className="text-[13px] font-normal text-slate-400 ml-2">— {modFilterUser}</span>}</h2>
                             <div className="flex items-center gap-2">
                                 <select value={days} onChange={e => setDays(Number(e.target.value))} className="border border-slate-200 rounded-lg px-2 py-1 text-[12px]">
                                     <option value={1}>1일</option><option value={3}>3일</option><option value={7}>7일</option><option value={14}>14일</option><option value={30}>30일</option>
@@ -394,37 +395,44 @@ export default function AdminPage() {
                                 <button onClick={fetchLogs} className="px-3 py-1 bg-slate-100 rounded-lg text-[12px] hover:bg-slate-200">새로고침</button>
                             </div>
                         </div>
-                        {/* Summary: modifications by user */}
+                        {/* Summary: modifications by user — clickable to filter */}
                         {(() => {
                             const byUser: Record<string, number> = {};
                             modLogs.forEach(l => { byUser[l.userName] = (byUser[l.userName] || 0) + 1; });
                             const sorted = Object.entries(byUser).sort((a, b) => b[1] - a[1]);
                             return sorted.length > 0 && (
                                 <div className="flex flex-wrap gap-2 mb-4">
+                                    <button onClick={() => setModFilterUser(null)} className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all ${!modFilterUser ? "bg-blue-500 text-white" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>전체 <span className="font-bold">{modLogs.length}</span>건</button>
                                     {sorted.map(([name, count]) => (
-                                        <div key={name} className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-[12px]">
-                                            <span className="font-medium">{name}</span> <span className="text-blue-600 font-bold">{count}</span>건
-                                        </div>
+                                        <button key={name} onClick={() => setModFilterUser(modFilterUser === name ? null : name)}
+                                            className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all ${modFilterUser === name ? "bg-blue-500 text-white" : "bg-white border border-slate-200 hover:bg-slate-50"}`}>
+                                            <span>{name}</span> <span className={modFilterUser === name ? "text-blue-100 font-bold" : "text-blue-600 font-bold"}>{count}</span>건
+                                        </button>
                                     ))}
                                 </div>
                             );
                         })()}
-                        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-                            <table className="w-full text-[12px]">
-                                <thead><tr className="bg-slate-50 border-b border-slate-200"><th className="px-4 py-2 text-left font-semibold text-slate-500">이름</th><th className="px-4 py-2 text-left font-semibold text-slate-500">섹션</th><th className="px-4 py-2 text-left font-semibold text-slate-500">작업</th><th className="px-4 py-2 text-left font-semibold text-slate-500">시간</th></tr></thead>
-                                <tbody>
-                                    {modLogs.slice(0, 200).map((log, i) => (
-                                        <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
-                                            <td className="px-4 py-2 font-medium">{log.userName}</td>
-                                            <td className="px-4 py-2"><span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-medium">{SECTION_LABELS[log.section] || log.section}</span></td>
-                                            <td className="px-4 py-2 text-slate-500">{log.action}</td>
-                                            <td className="px-4 py-2 text-slate-500">{fmtTime(log.timestamp)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {modLogs.length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">수정 로그가 없습니다</div>}
-                        </div>
+                        {(() => {
+                            const filtered = modFilterUser ? modLogs.filter(l => l.userName === modFilterUser) : modLogs;
+                            return (
+                                <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                                    <table className="w-full text-[12px]">
+                                        <thead><tr className="bg-slate-50 border-b border-slate-200"><th className="px-4 py-2 text-left font-semibold text-slate-500">이름</th><th className="px-4 py-2 text-left font-semibold text-slate-500">섹션</th><th className="px-4 py-2 text-left font-semibold text-slate-500">작업</th><th className="px-4 py-2 text-left font-semibold text-slate-500">시간</th></tr></thead>
+                                        <tbody>
+                                            {filtered.slice(0, 200).map((log, i) => (
+                                                <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
+                                                    <td className="px-4 py-2 font-medium"><button onClick={() => setModFilterUser(modFilterUser === log.userName ? null : log.userName)} className="hover:text-blue-600 transition-colors">{log.userName}</button></td>
+                                                    <td className="px-4 py-2"><span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-medium">{SECTION_LABELS[log.section] || log.section}</span></td>
+                                                    <td className="px-4 py-2 text-slate-500">{log.action}</td>
+                                                    <td className="px-4 py-2 text-slate-500">{fmtTime(log.timestamp)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    {filtered.length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">수정 로그가 없습니다</div>}
+                                </div>
+                            );
+                        })()}
                     </div>
                 )}
 
