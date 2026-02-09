@@ -3019,17 +3019,15 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
         <div className="space-y-8">
             {/* 📢 공지사항 */}
             <div>
-                <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-[14px] font-bold text-slate-800">📢 공지사항</h3>
-                    {isLeader && (
-                        <div className="flex gap-2">
-                            <textarea value={newText} onChange={e => setNewText(e.target.value)} placeholder="공지사항 작성..."
-                                className="border border-slate-200 rounded-lg px-3 py-1.5 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none w-[300px]" rows={1}
-                                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && newText.trim()) { e.preventDefault(); onAdd(newText.trim()); setNewText(""); } }} />
-                            <button onClick={() => { if (newText.trim()) { onAdd(newText.trim()); setNewText(""); } }} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">게시</button>
-                        </div>
-                    )}
-                </div>
+                <h3 className="text-[14px] font-bold text-slate-800 mb-3">📢 공지사항</h3>
+                {isLeader && (
+                    <div className="flex gap-2 mb-3">
+                        <textarea value={newText} onChange={e => setNewText(e.target.value)} placeholder="공지사항 작성..."
+                            className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" rows={2}
+                            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && newText.trim()) { e.preventDefault(); onAdd(newText.trim()); setNewText(""); } }} />
+                        <button onClick={() => { if (newText.trim()) { onAdd(newText.trim()); setNewText(""); } }} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 self-end">게시</button>
+                    </div>
+                )}
                 {announcements.length === 0 && <div className="text-center py-8 text-slate-400 text-[13px]">공지사항이 없습니다</div>}
                 <div className="grid grid-cols-3 gap-3">{sorted.map((ann, idx) => (
                     <div key={ann.id} draggable
@@ -3077,17 +3075,15 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
 
             {/* 🧭 문화 */}
             <div>
-                <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-[14px] font-bold text-slate-800">🧭 문화</h3>
-                    {isLeader && (
-                        <div className="flex gap-2">
-                            <textarea value={newPhil} onChange={e => setNewPhil(e.target.value)} placeholder="연구실 문화 작성..."
-                                className="border border-slate-200 rounded-lg px-3 py-1.5 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none w-[300px]" rows={1}
-                                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && newPhil.trim()) { e.preventDefault(); onAddPhilosophy(newPhil.trim()); setNewPhil(""); } }} />
-                            <button onClick={() => { if (newPhil.trim()) { onAddPhilosophy(newPhil.trim()); setNewPhil(""); } }} className="px-3 py-1.5 bg-violet-500 text-white rounded-lg text-[12px] font-medium hover:bg-violet-600">게시</button>
-                        </div>
-                    )}
-                </div>
+                <h3 className="text-[14px] font-bold text-slate-800 mb-3">🧭 문화</h3>
+                {isLeader && (
+                    <div className="flex gap-2 mb-3">
+                        <textarea value={newPhil} onChange={e => setNewPhil(e.target.value)} placeholder="연구실 문화 작성..."
+                            className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" rows={2}
+                            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && newPhil.trim()) { e.preventDefault(); onAddPhilosophy(newPhil.trim()); setNewPhil(""); } }} />
+                        <button onClick={() => { if (newPhil.trim()) { onAddPhilosophy(newPhil.trim()); setNewPhil(""); } }} className="px-4 py-2 bg-violet-500 text-white rounded-lg text-[12px] font-medium hover:bg-violet-600 self-end">게시</button>
+                    </div>
+                )}
                 {philosophy.length === 0 && <div className="text-center py-8 text-slate-400 text-[13px]">등록된 내용이 없습니다</div>}
                 <div className="grid grid-cols-3 gap-3">{philosophy.map(p => (
                     <div key={p.id} className={`bg-violet-50/50 border border-violet-200 rounded-lg p-4 flex flex-col ${isPI ? "cursor-pointer hover:shadow-md" : ""}`}
