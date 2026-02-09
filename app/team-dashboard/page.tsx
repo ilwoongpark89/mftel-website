@@ -88,7 +88,7 @@ function slotToTime(slot: number) {
 
 type Comment = { id: number; author: string; text: string; date: string };
 type Paper = { id: number; title: string; journal: string; status: string; assignees: string[]; tags: string[]; deadline: string; progress: number; comments: Comment[]; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string };
-type Todo = { id: number; text: string; assignees: string[]; done: boolean; priority: string; deadline: string; progress?: number; needsDiscussion?: boolean };
+type Todo = { id: number; text: string; assignees: string[]; done: boolean; priority: string; deadline: string; progress?: number; needsDiscussion?: boolean; comments?: Comment[] };
 type ExperimentLog = { id: number; date: string; author: string; text: string };
 type Experiment = { id: number; title: string; equipment: string; status: string; assignees: string[]; goal: string; startDate: string; endDate: string; logs: ExperimentLog[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string };
 type Announcement = { id: number; text: string; author: string; date: string; pinned: boolean };
@@ -104,7 +104,7 @@ type Memo = { id: number; title: string; content: string; color: string; borderC
 type TeamMemoCard = { id: number; title: string; content: string; status: string; color: string; borderColor?: string; author: string; updatedAt: string; comments?: Comment[]; needsDiscussion?: boolean };
 type TeamChatMsg = { id: number; author: string; text: string; date: string };
 type LabFile = { id: number; name: string; size: number; url: string; type: string; uploader: string; date: string };
-type ConferenceTrip = { id: number; title: string; startDate: string; endDate: string; homepage: string; fee: string; participants: string[]; creator: string; createdAt: string; status?: string };
+type ConferenceTrip = { id: number; title: string; startDate: string; endDate: string; homepage: string; fee: string; participants: string[]; creator: string; createdAt: string; status?: string; comments?: Comment[]; needsDiscussion?: boolean };
 type Meeting = { id: number; title: string; goal: string; summary: string; date: string; assignees: string[]; status: string; creator: string; createdAt: string; comments: Comment[]; team?: string; needsDiscussion?: boolean };
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
@@ -1796,6 +1796,8 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Todo | null>(null);
+    const [editComments, setEditComments] = useState<Comment[]>([]);
+    const [editNewComment, setEditNewComment] = useState("");
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const filtered = filterPeople.length === 0 ? todos : todos.filter(t => t.assignees.some(a => filterPeople.includes(a)));
@@ -1813,7 +1815,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
     const handleAdd = () => {
         if (!newText.trim()) return;
         const assignees = newAssignees.length > 0 ? newAssignees : [currentUser];
-        onAdd({ id: Date.now(), text: newText.trim(), assignees, done: false, priority: newPriority, deadline: newDeadline, progress: newProgress });
+        onAdd({ id: Date.now(), text: newText.trim(), assignees, done: false, priority: newPriority, deadline: newDeadline, progress: newProgress, comments: [] });
         setNewText(""); setNewAssignees([]); setNewPriority("mid"); setNewDeadline(""); setNewProgress(0); setShowForm(false);
     };
 
@@ -1904,7 +1906,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                                         <div onClick={() => onToggle(todo.id)} className={`w-[18px] h-[18px] rounded flex-shrink-0 mt-0.5 flex items-center justify-center transition-all cursor-pointer ${col.id === "completed" ? "bg-emerald-500" : "border-2 border-slate-300 hover:border-blue-400"}`}>
                                             {col.id === "completed" && <span className="text-white text-[12px]">✓</span>}
                                         </div>
-                                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { setEditingTodo(todo); setNewText(todo.text); setNewAssignees(todo.assignees); setNewPriority(todo.priority); setNewDeadline(todo.deadline); setNewProgress(todo.progress ?? 0); }}>
+                                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { setEditingTodo(todo); setNewText(todo.text); setNewAssignees(todo.assignees); setNewPriority(todo.priority); setNewDeadline(todo.deadline); setNewProgress(todo.progress ?? 0); setEditComments(todo.comments || []); setEditNewComment(""); }}>
                                             {col.id !== "completed" && (
                                                 <label className="flex items-center gap-1.5 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
                                                     <input type="checkbox" checked={!!todo.needsDiscussion} onChange={() => onUpdate({ ...todo, needsDiscussion: !todo.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
@@ -1924,6 +1926,16 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                                             <div className="flex gap-1 mt-1 flex-wrap items-center">
                                                 {todo.assignees.map(a => <span key={a} className={`text-[10px] px-1.5 py-0.5 rounded-lg bg-slate-100 ${col.id === "completed" ? "text-slate-400" : "text-slate-500"}`}>{MEMBERS[a]?.emoji || ""}{a}</span>)}
                                                 {col.id !== "completed" && todo.deadline && <span className="text-[10px] text-red-500 font-semibold ml-auto">~{todo.deadline}</span>}
+                                            </div>
+                                            {/* Comment preview */}
+                                            <div className="border-t border-slate-100 pt-1 mt-1.5">
+                                                {(todo.comments || []).length > 0 ? (
+                                                    <div className="text-[10px] text-slate-500 truncate">
+                                                        <span className="font-medium text-slate-600">{MEMBERS[(todo.comments || []).slice(-1)[0]?.author]?.emoji}{(todo.comments || []).slice(-1)[0]?.author}</span> {(todo.comments || []).slice(-1)[0]?.text}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-[10px] text-slate-300">💬 댓글 없음</div>
+                                                )}
                                             </div>
                                         </div>
                                         <button onClick={() => onDelete(todo.id)} className="text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity mt-1">✕</button>
@@ -1976,12 +1988,34 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                                 <label className="text-[11px] font-semibold text-slate-500 block mb-1">달성도 {newProgress}%</label>
                                 <input type="range" min={0} max={100} step={5} value={newProgress} onChange={e => setNewProgress(Number(e.target.value))} className="w-full accent-blue-500" />
                             </div>
+                            {/* Comments */}
+                            <div>
+                                <label className="text-[11px] font-semibold text-slate-500 block mb-1">댓글 ({editComments.length})</label>
+                                <div className="space-y-1.5 max-h-[200px] overflow-y-auto mb-2">
+                                    {editComments.map(c => (
+                                        <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
+                                            <button onClick={() => setEditComments(editComments.filter(x => x.id !== c.id))}
+                                                className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                                            <div className="text-[12px] text-slate-700 pr-4">{c.text}</div>
+                                            <div className="text-[10px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
+                                        </div>
+                                    ))}
+                                    {editComments.length === 0 && <div className="text-[11px] text-slate-300 py-2">댓글 없음</div>}
+                                </div>
+                                <div className="flex gap-2">
+                                    <input value={editNewComment} onChange={e => setEditNewComment(e.target.value)} placeholder="댓글 작성..."
+                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        onKeyDown={e => { if (e.key === "Enter" && editNewComment.trim()) { setEditComments([...editComments, { id: Date.now(), author: currentUser, text: editNewComment.trim(), date: new Date().toLocaleDateString("ko-KR") }]); setEditNewComment(""); } }} />
+                                    <button onClick={() => { if (editNewComment.trim()) { setEditComments([...editComments, { id: Date.now(), author: currentUser, text: editNewComment.trim(), date: new Date().toLocaleDateString("ko-KR") }]); setEditNewComment(""); } }}
+                                        className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] hover:bg-slate-200">전송</button>
+                                </div>
+                            </div>
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-200">
                             <button onClick={() => { onDelete(editingTodo.id); setEditingTodo(null); }} className="text-[12px] text-red-500 hover:text-red-600">삭제</button>
                             <div className="flex gap-2">
                                 <button onClick={() => setEditingTodo(null)} className="px-4 py-2 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                                <button onClick={() => { onUpdate({ ...editingTodo, text: newText, assignees: newAssignees.length > 0 ? newAssignees : editingTodo.assignees, priority: newPriority, deadline: newDeadline, progress: newProgress }); setEditingTodo(null); }}
+                                <button onClick={() => { onUpdate({ ...editingTodo, text: newText, assignees: newAssignees.length > 0 ? newAssignees : editingTodo.assignees, priority: newPriority, deadline: newDeadline, progress: newProgress, comments: editComments }); setEditingTodo(null); }}
                                     className="px-4 py-2 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                             </div>
                         </div>
@@ -2131,7 +2165,7 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
             <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
-                    <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "지재권 수정" : "지재권 등록"}</h3>
+                    <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "지식재산권 수정" : "지식재산권 등록"}</h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
                 </div>
                 <div className="p-4 space-y-3">
@@ -2191,7 +2225,7 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
     return (
         <div>
             <div className="mb-3 flex items-center gap-2">
-                <button onClick={() => setAdding(true)} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 지재권 등록</button>
+                <button onClick={() => setAdding(true)} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 지식재산권 등록</button>
                 <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-2 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedPatents.length})</button>
             </div>
             {teamNames && teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
@@ -2267,7 +2301,7 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
                             {p.creator && <div className="text-[9px] text-slate-400 text-right mt-1">by {MEMBERS[p.creator]?.emoji || ""}{p.creator}{p.createdAt ? ` · ${p.createdAt}` : ""}</div>}
                         </div>
                     ))}
-                    {completedPatents.length === 0 && <div className="col-span-3 text-center text-[12px] text-slate-400 py-8">완료된 지재권이 없습니다</div>}
+                    {completedPatents.length === 0 && <div className="col-span-3 text-center text-[12px] text-slate-400 py-8">완료된 지식재산권이 없습니다</div>}
                 </div>
             )}
             {adding && <IPFormModal patent={null} onSave={p => { onSave(p); setAdding(false); }} onClose={() => setAdding(false)} currentUser={currentUser} teamNames={teamNames} />}
@@ -2545,13 +2579,15 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
     const modal = adding || editing !== null;
     const isEdit = !!editing;
 
-    const openAdd = (status?: string) => { setAdding(true); setEditing(null); setTitle(""); setStartDate(""); setEndDate(""); setHomepage(""); setFee(""); setParticipants([]); setFormStatus(status || "관심"); };
-    const openEdit = (c: ConferenceTrip) => { setEditing(c); setAdding(false); setTitle(c.title); setStartDate(c.startDate); setEndDate(c.endDate); setHomepage(c.homepage); setFee(c.fee); setParticipants(c.participants); setFormStatus(c.status || "관심"); };
+    const [comments, setComments] = useState<Comment[]>([]);
+    const [newComment, setNewComment] = useState("");
+    const openAdd = (status?: string) => { setAdding(true); setEditing(null); setTitle(""); setStartDate(""); setEndDate(""); setHomepage(""); setFee(""); setParticipants([]); setFormStatus(status || "관심"); setComments([]); setNewComment(""); };
+    const openEdit = (c: ConferenceTrip) => { setEditing(c); setAdding(false); setTitle(c.title); setStartDate(c.startDate); setEndDate(c.endDate); setHomepage(c.homepage); setFee(c.fee); setParticipants(c.participants); setFormStatus(c.status || "관심"); setComments(c.comments || []); setNewComment(""); };
     const closeModal = () => { setAdding(false); setEditing(null); };
 
     const handleSave = () => {
         if (!title.trim()) return false;
-        onSave({ id: editing?.id ?? Date.now(), title: title.trim(), startDate, endDate, homepage: homepage.trim(), fee: fee.trim(), participants, creator: editing?.creator || currentUser, createdAt: editing?.createdAt || new Date().toISOString(), status: formStatus });
+        onSave({ id: editing?.id ?? Date.now(), title: title.trim(), startDate, endDate, homepage: homepage.trim(), fee: fee.trim(), participants, creator: editing?.creator || currentUser, createdAt: editing?.createdAt || new Date().toISOString(), status: formStatus, comments, needsDiscussion: editing?.needsDiscussion });
         return true;
     };
 
@@ -2580,9 +2616,15 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
         <div>
             <button onClick={() => openAdd()} className="mb-3 px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 학회/출장 추가</button>
             <div className="grid grid-cols-3 gap-3">
-                {items.map(c => (
+                {items.map(c => {
+                    const cmt = c.comments || [];
+                    return (
                     <div key={c.id} onClick={() => openEdit(c)}
-                        className="bg-white rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow border border-slate-200">
+                        className={`bg-white rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow ${c.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}>
+                        <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
+                            <input type="checkbox" checked={!!c.needsDiscussion} onChange={() => onSave({ ...c, needsDiscussion: !c.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
+                            <span className={`text-[10px] font-medium ${c.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                        </label>
                         <div className="text-[14px] font-semibold text-slate-800 mb-1">{c.title}</div>
                         {(c.startDate || c.endDate) && <div className="text-[11px] text-slate-500 mb-0.5">📅 {formatPeriod(c.startDate, c.endDate)}</div>}
                         {c.homepage && <div className="text-[10px] text-blue-500 mb-0.5 truncate" onClick={e => { e.stopPropagation(); try { const u = new URL(c.homepage); if (["http:", "https:"].includes(u.protocol)) window.open(c.homepage, "_blank", "noopener"); } catch {} }}>🔗 {c.homepage}</div>}
@@ -2592,8 +2634,18 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
                                 {c.participants.map(p => <span key={p} className="text-[9px] px-1 py-0.5 rounded bg-blue-50 text-blue-600">{MEMBERS[p]?.emoji || "👤"}{p}</span>)}
                             </div>
                         )}
+                        <div className="border-t border-slate-100 pt-1.5 mt-2">
+                            {cmt.length > 0 ? (
+                                <div className="text-[10px] text-slate-500 truncate">
+                                    <span className="font-medium text-slate-600">{MEMBERS[cmt.slice(-1)[0]?.author]?.emoji}{cmt.slice(-1)[0]?.author}</span> {cmt.slice(-1)[0]?.text}
+                                </div>
+                            ) : (
+                                <div className="text-[10px] text-slate-300">💬 댓글 없음</div>
+                            )}
+                        </div>
                     </div>
-                ))}
+                    );
+                })}
                 {items.length === 0 && <div className="text-center py-12 text-slate-400 text-[13px] col-span-full">등록된 학회/출장이 없습니다</div>}
             </div>
 
@@ -2636,6 +2688,28 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
                                             {MEMBERS[name]?.emoji || "👤"} {name}
                                         </button>
                                     ))}
+                                </div>
+                            </div>
+                            {/* Comments */}
+                            <div>
+                                <label className="text-[11px] font-semibold text-slate-500 block mb-1">댓글 ({comments.length})</label>
+                                <div className="space-y-1.5 max-h-[200px] overflow-y-auto mb-2">
+                                    {comments.map(c => (
+                                        <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
+                                            <button onClick={() => setComments(comments.filter(x => x.id !== c.id))}
+                                                className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                                            <div className="text-[12px] text-slate-700 pr-4">{c.text}</div>
+                                            <div className="text-[10px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
+                                        </div>
+                                    ))}
+                                    {comments.length === 0 && <div className="text-[11px] text-slate-300 py-2">댓글 없음</div>}
+                                </div>
+                                <div className="flex gap-2">
+                                    <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글 작성..."
+                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        onKeyDown={e => { if (e.key === "Enter" && newComment.trim()) { setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR") }]); setNewComment(""); } }} />
+                                    <button onClick={() => { if (newComment.trim()) { setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR") }]); setNewComment(""); } }}
+                                        className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] hover:bg-slate-200">전송</button>
                                 </div>
                             </div>
                         </div>
@@ -2715,15 +2789,17 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
                                 <div className="text-[10px] text-slate-400">{MEMBERS[r.author]?.emoji || ""} {r.author} · {r.date}</div>
                                 {cmt.length > 0 && <span className="text-[10px] text-slate-400">💬{cmt.length}</span>}
                             </div>
-                            {cmt.length > 0 && (
-                                <div className="border-t border-slate-100 pt-1.5 mt-2">
-                                    {cmt.slice(-1).map(c => (
+                            <div className="border-t border-slate-100 pt-1.5 mt-2">
+                                {cmt.length > 0 ? (
+                                    cmt.slice(-1).map(c => (
                                         <div key={c.id} className="text-[11px] text-slate-500 truncate">
                                             <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}
                                         </div>
-                                    ))}
-                                </div>
-                            )}
+                                    ))
+                                ) : (
+                                    <div className="text-[10px] text-slate-300">💬 댓글 없음</div>
+                                )}
+                            </div>
                         </div>
                     );
                 })}
@@ -3191,7 +3267,7 @@ function AdminLogSection() {
         })();
     }, []);
 
-    const SECTION_LABELS: Record<string, string> = { announcements: "공지사항", papers: "논문", experiments: "실험", todos: "To-do", conferences: "학회/출장", lectures: "수업", patents: "지재권", vacations: "휴가", schedule: "일정", timetable: "시간표", reports: "계획서/보고서", teams: "팀", dailyTargets: "오늘 목표", philosophy: "연구실 철학", resources: "자료", ideas: "아이디어", analyses: "해석", chatPosts: "잡담", customEmojis: "이모지", statusMessages: "한마디", equipmentList: "장비", personalMemos: "개인 메모", teamMemos: "팀 메모", labChat: "연구실 채팅", labFiles: "파일", meetings: "회의록", analysisToolList: "해석 도구", paperTagList: "태그", members: "멤버", dispatches: "출장" };
+    const SECTION_LABELS: Record<string, string> = { announcements: "공지사항", papers: "논문", experiments: "실험", todos: "To-do", conferences: "학회/출장", lectures: "수업", patents: "지식재산권", vacations: "휴가", schedule: "일정", timetable: "시간표", reports: "계획서/보고서", teams: "팀", dailyTargets: "오늘 목표", philosophy: "연구실 철학", resources: "자료", ideas: "아이디어", analyses: "해석", chatPosts: "잡담", customEmojis: "이모지", statusMessages: "한마디", equipmentList: "장비", personalMemos: "개인 메모", teamMemos: "팀 메모", labChat: "연구실 채팅", labFiles: "파일", meetings: "회의록", analysisToolList: "해석 도구", paperTagList: "태그", members: "멤버", dispatches: "출장" };
 
     const uniqueUsers = useMemo(() => [...new Set(logs.map(l => l.userName))].sort(), [logs]);
     const filtered = filterUser ? logs.filter(l => l.userName === filterUser) : logs;
@@ -4244,7 +4320,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
         ...fr.filter(r => r.needsDiscussion).map(r => ({ section: "보고서", tab: "reports", title: r.title, icon: "📋" })),
         ...fe.filter(e => e.needsDiscussion).map(e => ({ section: "실험", tab: "experiments", title: e.title, icon: "🧪" })),
         ...fa.filter(a => a.needsDiscussion).map(a => ({ section: "해석", tab: "analysis", title: a.title, icon: "🖥️" })),
-        ...fip.filter(p => p.needsDiscussion).map(p => ({ section: "지재권", tab: "ip", title: p.title, icon: "💡" })),
+        ...fip.filter(p => p.needsDiscussion).map(p => ({ section: "지식재산권", tab: "ip", title: p.title, icon: "💡" })),
         ...resources.filter(r => r.needsDiscussion).map(r => ({ section: "자료", tab: "resources", title: r.title, icon: "📁" })),
         ...ideas.filter(i => i.needsDiscussion).map(i => ({ section: "아이디어", tab: "ideas", title: i.title, icon: "💡" })),
         ...chatPosts.filter(c => c.needsDiscussion).map(c => ({ section: "잡담", tab: "chat", title: c.title, icon: "💬" })),
@@ -4344,7 +4420,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                     </button>
                     <button onClick={() => onNavigate("ip")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
                         <div className="text-[12px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-teal-500" />지재권 <span className="text-teal-600 font-bold">({fip.length})</span>
+                            <span className="w-2 h-2 rounded-full bg-teal-500" />지식재산권 <span className="text-teal-600 font-bold">({fip.length})</span>
                         </div>
                         <MiniBar items={patentsByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...patentsByStatus.map(s => s.count))} />
                     </button>
@@ -4515,7 +4591,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                             )}
                         </div>
                         <div>
-                            <div className="text-[11px] font-semibold text-slate-400 mb-2">내 지재권 ({ipPatents.filter(p => p.assignees?.includes(currentUser)).length})</div>
+                            <div className="text-[11px] font-semibold text-slate-400 mb-2">내 지식재산권 ({ipPatents.filter(p => p.assignees?.includes(currentUser)).length})</div>
                             {ipPatents.filter(p => p.assignees?.includes(currentUser)).length === 0 ? <div className="text-[11px] text-slate-300">없음</div> : (
                                 <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
                                     {ipPatents.filter(p => p.assignees?.includes(currentUser)).map(p => (
@@ -4624,7 +4700,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                                             <div className="flex gap-2 mt-1 flex-wrap">
                                                 {team.tPapers > 0 && <span className="text-[10px] text-blue-600">논문 {team.tPapers}</span>}
                                                 {team.tReports > 0 && <span className="text-[10px] text-amber-600">계획/보고 {team.tReports}</span>}
-                                                {team.tPatents > 0 && <span className="text-[10px] text-teal-600">지재권 {team.tPatents}</span>}
+                                                {team.tPatents > 0 && <span className="text-[10px] text-teal-600">지식재산권 {team.tPatents}</span>}
                                                 {team.tExp > 0 && <span className="text-[10px] text-emerald-600">실험 {team.tExp}</span>}
                                                 {team.tAnalysis > 0 && <span className="text-[10px] text-violet-600">해석 {team.tAnalysis}</span>}
                                                 {team.total === 0 && <span className="text-[10px] text-slate-300">항목 없음</span>}
@@ -4712,7 +4788,7 @@ export default function DashboardPage() {
         // 연구
         { id: "papers", label: "논문 현황", icon: "📄" },
         { id: "reports", label: "계획서/보고서", icon: "📋" },
-        { id: "ip", label: "지재권", icon: "💡" },
+        { id: "ip", label: "지식재산권", icon: "💡" },
         { id: "experiments", label: "실험 현황", icon: "🧪" },
         { id: "analysis", label: "해석 현황", icon: "🖥️" },
         // 커뮤니케이션
