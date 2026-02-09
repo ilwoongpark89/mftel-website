@@ -372,12 +372,12 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
             </div>
             {teamNames && teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
             {allPeople && onFilterPerson && (
-                <div className="flex items-center gap-1 mb-3 flex-wrap">
-                    <span className="text-[11px] font-semibold mr-1" style={{color:"#94A3B8"}}>멤버:</span>
+                <div className="flex items-center gap-1 mb-3 overflow-x-auto pb-1" style={{scrollbarWidth:"none"}}>
+                    <span className="text-[11px] font-semibold mr-1 flex-shrink-0" style={{color:"#94A3B8"}}>멤버:</span>
                     {allPeople.map(p => (
                         <button key={p} onClick={() => onFilterPerson(p)}
-                            className={`px-2.5 py-1 rounded-md text-[12px] font-medium transition-all ${filter === p ? "text-white" : "hover:bg-slate-50"}`}
-                            style={{ background: filter === p ? "#3B82F6" : "transparent", color: filter === p ? "#FFFFFF" : "#64748B" }}>
+                            className={`px-2.5 py-1 rounded-md text-[12px] font-medium transition-all whitespace-nowrap flex-shrink-0 ${filter === p ? "" : "hover:bg-slate-50"}`}
+                            style={{ background: filter === p ? "rgba(59,130,246,0.1)" : "transparent", color: filter === p ? "#3B82F6" : "#64748B", fontWeight: filter === p ? 600 : 500 }}>
                             {p !== "전체" && <span className="mr-0.5">{MEMBERS[p]?.emoji}</span>}{p}
                         </button>
                     ))}
@@ -426,13 +426,13 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                                         onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
                                         onDragOver={e => { e.preventDefault(); if (draggedId === p.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
                                         onClick={() => onClickPaper(p)}
-                                        className={`bg-white rounded-xl px-3 py-2.5 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === p.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
+                                        className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === p.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
                                         style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${st.color}` }}>
-                                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words overflow-hidden line-clamp-2">{p.title}</div>
-                                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                                            {p.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md" style={{background:"#EFF6FF", color:"#3B82F6", fontWeight:500}}>{p.team}</span>}
-                                            {p.tags.slice(0, 2).map(t => <span key={t} className="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500">{t}</span>)}
-                                            {p.tags.length > 2 && <span className="text-[10px] text-slate-400">+{p.tags.length - 2}</span>}
+                                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{p.title}</div>
+                                        <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
+                                            {p.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md flex-shrink-0" style={{background:"#EFF6FF", color:"#3B82F6", fontWeight:500}}>{p.team}</span>}
+                                            {p.tags.slice(0, 2).map(t => <span key={t} className="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">{t}</span>)}
+                                            {p.tags.length > 2 && <span className="text-[10px] text-slate-400 flex-shrink-0">+{p.tags.length - 2}</span>}
                                         </div>
                                         <div className="flex items-center gap-2 mt-2">
                                             <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
@@ -440,15 +440,9 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                                             </div>
                                             <span className="text-[10px] font-semibold" style={{color: p.progress >= 80 ? "#10B981" : "#3B82F6"}}>{p.progress}%</span>
                                         </div>
-                                        <div className="flex justify-between items-center mt-1.5">
-                                            <div className="flex -space-x-1">
-                                                {p.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
-                                                {p.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{p.assignees.length - 4}</span>}
-                                            </div>
-                                            <div className="flex items-center gap-1.5">
-                                                {p.comments.length > 0 && <span className="text-[10px] text-slate-400">💬{p.comments.length}</span>}
-                                                {p.deadline && <span className="text-[10px] text-red-400 font-medium">~{p.deadline.slice(5)}</span>}
-                                            </div>
+                                        <div className="flex -space-x-1 mt-1.5">
+                                            {p.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
+                                            {p.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{p.assignees.length - 4}</span>}
                                         </div>
                                     </div>
                                     </div>
@@ -680,45 +674,23 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                                             onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
                                             onDragOver={e => { e.preventDefault(); if (draggedId === r.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
                                             onClick={() => setEditing(r)}
-                                            className={`bg-white rounded-xl p-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === r.id ? "opacity-40 scale-95" : ""} ${r.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}
-                                            style={{ borderLeft: `3px solid ${cfg.color}` }}>
-                                            <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                                <input type="checkbox" checked={!!r.needsDiscussion} onChange={() => onToggleDiscussion(r)} className="w-3 h-3 accent-red-500" />
-                                                <span className={`text-[11px] font-medium ${r.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
-                                            </label>
-                                            <div className="flex items-center gap-1.5 mb-1">
-                                                {r.category && <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${r.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`}>{r.category}</span>}
-                                                {r.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{r.team}</span>}
-                                                <span className="text-[14px] font-semibold text-slate-800 leading-snug break-words">{r.title}</span>
+                                            className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === r.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
+                                            style={{ borderLeft: r.needsDiscussion ? "3px solid #EF4444" : `3px solid ${cfg.color}` }}>
+                                            <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{r.title}</div>
+                                            <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
+                                                {r.category && <span className={`text-[10.5px] px-1.5 py-0.5 rounded flex-shrink-0 ${r.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`} style={{fontWeight:500}}>{r.category}</span>}
+                                                {r.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{r.team}</span>}
                                             </div>
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <div className="flex-1 bg-slate-100 rounded-full h-1.5">
-                                                    <div className="h-1.5 rounded-full bg-blue-500 transition-all" style={{ width: `${r.progress}%` }} />
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
+                                                    <div className="h-1 rounded-full transition-all" style={{ width: `${r.progress}%`, background: "#3B82F6" }} />
                                                 </div>
-                                                <span className="text-[11px] font-semibold text-blue-500">{r.progress}%</span>
+                                                <span className="text-[10px] font-semibold" style={{color: r.progress >= 80 ? "#10B981" : "#3B82F6"}}>{r.progress}%</span>
                                             </div>
-                                            {cl.length > 0 && (
-                                                <div className="space-y-0.5 mb-1.5">
-                                                    {cl.slice(0, 3).map(item => (
-                                                        <div key={item.id} className="flex items-center gap-1.5 text-[11px]">
-                                                            <span className={item.done ? "text-emerald-500" : "text-slate-300"}>{item.done ? "✓" : "○"}</span>
-                                                            <span className={`truncate ${item.done ? "line-through text-slate-400" : "text-slate-600"}`}>{item.text}</span>
-                                                        </div>
-                                                    ))}
-                                                    {cl.length > 3 && <div className="text-[10px] text-slate-400 pl-4">+{cl.length - 3}개 더</div>}
-                                                </div>
-                                            )}
-                                            <div className="flex justify-between items-center">
-                                                <div className="flex gap-1 flex-wrap">
-                                                    {r.assignees.slice(0, 3).map(a => <span key={a} className="text-[11px] px-1.5 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[a]?.emoji}{a}</span>)}
-                                                    {r.assignees.length > 3 && <span className="text-[11px] text-slate-400">+{r.assignees.length - 3}</span>}
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    {r.comments.length > 0 && <span className="text-[11px] text-slate-400">💬{r.comments.length}</span>}
-                                                    {r.deadline && <span className="text-[11px] text-red-500 font-semibold">~{r.deadline}</span>}
-                                                </div>
+                                            <div className="flex -space-x-1 mt-1.5">
+                                                {r.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
+                                                {r.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{r.assignees.length - 4}</span>}
                                             </div>
-                                            {r.creator && <div className="text-[10px] text-slate-400 text-right mt-1">by {MEMBERS[r.creator]?.emoji || ""}{r.creator}{r.createdAt ? ` · ${r.createdAt}` : ""}</div>}
                                         </div>
                                         </div>
                                     );
@@ -1463,35 +1435,23 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                                         onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
                                         onDragOver={e => { e.preventDefault(); if (draggedId === exp.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
                                         onClick={() => setEditing(exp)}
-                                        className={`bg-white rounded-xl p-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === exp.id ? "opacity-40 scale-95" : ""} ${exp.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}
-                                        style={{ borderLeft: `3px solid ${cfg.color}` }}>
-                                        <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                            <input type="checkbox" checked={!!exp.needsDiscussion} onChange={() => onToggleDiscussion(exp)} className="w-3 h-3 accent-red-500" />
-                                            <span className={`text-[11px] font-medium ${exp.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
-                                        </label>
-                                        <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{exp.title}</div>
-                                        <div className="flex items-center gap-1.5 mb-1">
-                                            <span className="text-[11px] text-slate-500">🔧 {exp.equipment}</span>
-                                            {exp.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{exp.team}</span>}
+                                        className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === exp.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
+                                        style={{ borderLeft: exp.needsDiscussion ? "3px solid #EF4444" : `3px solid ${cfg.color}` }}>
+                                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{exp.title}</div>
+                                        <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
+                                            <span className="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">🔧 {exp.equipment}</span>
+                                            {exp.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{exp.team}</span>}
                                         </div>
-                                        {(exp.progress ?? 0) > 0 && (
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <div className="flex-1 bg-slate-100 rounded-full h-1.5"><div className="h-1.5 rounded-full bg-blue-500 transition-all" style={{ width: `${exp.progress}%` }} /></div>
-                                                <span className="text-[11px] font-semibold text-blue-500">{exp.progress}%</span>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
+                                                <div className="h-1 rounded-full transition-all" style={{ width: `${exp.progress ?? 0}%`, background: "#3B82F6" }} />
                                             </div>
-                                        )}
-                                        {exp.goal && <div className="text-[11px] text-slate-400 mb-1.5 line-clamp-2">{exp.goal}</div>}
-                                        {(exp.startDate || exp.endDate) && (
-                                            <div className="text-[11px] text-slate-400 mb-1.5">📅 {exp.startDate} ~ {exp.endDate}</div>
-                                        )}
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex gap-1 flex-wrap">
-                                                {exp.assignees.slice(0, 3).map(a => <span key={a} className="text-[11px] px-1.5 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[a]?.emoji}{a}</span>)}
-                                                {exp.assignees.length > 3 && <span className="text-[11px] text-slate-400">+{exp.assignees.length - 3}</span>}
-                                            </div>
-                                            {exp.logs.length > 0 && <span className="text-[11px] text-slate-400">📝{exp.logs.length}</span>}
+                                            <span className="text-[10px] font-semibold" style={{color: (exp.progress ?? 0) >= 80 ? "#10B981" : "#3B82F6"}}>{exp.progress ?? 0}%</span>
                                         </div>
-                                        {exp.creator && <div className="text-[10px] text-slate-400 text-right mt-1">by {MEMBERS[exp.creator]?.emoji || ""}{exp.creator}{exp.createdAt ? ` · ${exp.createdAt}` : ""}</div>}
+                                        <div className="flex -space-x-1 mt-1.5">
+                                            {exp.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
+                                            {exp.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{exp.assignees.length - 4}</span>}
+                                        </div>
                                     </div>
                                     </div>
                                 ))}
@@ -1723,35 +1683,23 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                                         onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
                                         onDragOver={e => { e.preventDefault(); if (draggedId === a.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
                                         onClick={() => setEditing(a)}
-                                        className={`bg-white rounded-xl p-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === a.id ? "opacity-40 scale-95" : ""} ${a.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}
-                                        style={{ borderLeft: `3px solid ${cfg.color}` }}>
-                                        <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                            <input type="checkbox" checked={!!a.needsDiscussion} onChange={() => onToggleDiscussion(a)} className="w-3 h-3 accent-red-500" />
-                                            <span className={`text-[11px] font-medium ${a.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
-                                        </label>
-                                        <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{a.title}</div>
-                                        <div className="flex items-center gap-1.5 mb-1">
-                                            <span className="text-[11px] text-slate-500">🖥️ {a.tool}</span>
-                                            {a.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{a.team}</span>}
+                                        className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === a.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
+                                        style={{ borderLeft: a.needsDiscussion ? "3px solid #EF4444" : `3px solid ${cfg.color}` }}>
+                                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{a.title}</div>
+                                        <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
+                                            <span className="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">🖥️ {a.tool}</span>
+                                            {a.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{a.team}</span>}
                                         </div>
-                                        {(a.progress ?? 0) > 0 && (
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <div className="flex-1 bg-slate-100 rounded-full h-1.5"><div className="h-1.5 rounded-full bg-blue-500 transition-all" style={{ width: `${a.progress}%` }} /></div>
-                                                <span className="text-[11px] font-semibold text-blue-500">{a.progress}%</span>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
+                                                <div className="h-1 rounded-full transition-all" style={{ width: `${a.progress ?? 0}%`, background: "#3B82F6" }} />
                                             </div>
-                                        )}
-                                        {a.goal && <div className="text-[11px] text-slate-400 mb-1.5 line-clamp-2">{a.goal}</div>}
-                                        {(a.startDate || a.endDate) && (
-                                            <div className="text-[11px] text-slate-400 mb-1.5">📅 {a.startDate} ~ {a.endDate}</div>
-                                        )}
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex gap-1 flex-wrap">
-                                                {a.assignees.slice(0, 3).map(n => <span key={n} className="text-[11px] px-1.5 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[n]?.emoji}{n}</span>)}
-                                                {a.assignees.length > 3 && <span className="text-[11px] text-slate-400">+{a.assignees.length - 3}</span>}
-                                            </div>
-                                            {a.logs.length > 0 && <span className="text-[11px] text-slate-400">📝{a.logs.length}</span>}
+                                            <span className="text-[10px] font-semibold" style={{color: (a.progress ?? 0) >= 80 ? "#10B981" : "#3B82F6"}}>{a.progress ?? 0}%</span>
                                         </div>
-                                        {a.creator && <div className="text-[10px] text-slate-400 text-right mt-1">by {MEMBERS[a.creator]?.emoji || ""}{a.creator}{a.createdAt ? ` · ${a.createdAt}` : ""}</div>}
+                                        <div className="flex -space-x-1 mt-1.5">
+                                            {a.assignees.slice(0, 4).map(n => <span key={n} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={n}>{MEMBERS[n]?.emoji || "👤"}</span>)}
+                                            {a.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{a.assignees.length - 4}</span>}
+                                        </div>
                                     </div>
                                     </div>
                                 ))}
@@ -4455,12 +4403,12 @@ function LoginScreen({ onLogin, members }: { onLogin: (name: string, password: s
         const error = await onLogin(n, pw, remember);
         if (error) { setErr(error); setLoading(false); }
     };
-    const focusStyle = "w-full border border-slate-200 rounded-lg px-3 py-2.5 text-[14px] focus:outline-none transition-all";
+    const focusStyle = "w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none transition-all min-h-[48px]";
     const handleFocus = (e: React.FocusEvent<HTMLElement>) => { e.currentTarget.style.borderColor = "#3B82F6"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(59,130,246,0.1)"; };
     const handleBlur = (e: React.FocusEvent<HTMLElement>) => { e.currentTarget.style.borderColor = "#E2E8F0"; e.currentTarget.style.boxShadow = "none"; };
     return (
-        <div className="min-h-screen flex items-center justify-center px-4" style={{background:"radial-gradient(ellipse at top, #1E293B, #0F172A)"}}>
-            <div className="bg-white rounded-2xl p-8 w-full max-w-sm" style={{boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+        <div className="min-h-screen flex items-center justify-center px-5" style={{background:"radial-gradient(ellipse at top, #1E293B, #0F172A)"}}>
+            <div className="bg-white rounded-2xl p-6 sm:p-8 w-full max-w-sm" style={{boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
                 <div className="text-center mb-6">
                     <div className="w-14 h-14 rounded-xl mx-auto mb-3 flex items-center justify-center text-2xl font-bold text-white" style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)", boxShadow: "0 4px 12px rgba(59,130,246,0.3)" }}>M</div>
                     <h1 className="text-xl font-bold text-slate-800">MFTEL Dashboard</h1>
@@ -4472,7 +4420,7 @@ function LoginScreen({ onLogin, members }: { onLogin: (name: string, password: s
                     <div><label className="text-[13px] font-medium text-slate-600 block mb-1">비밀번호</label><input type="password" value={pw} onChange={e => { setPw(e.target.value); setErr(""); }} placeholder="비밀번호 입력" className={focusStyle} onFocus={handleFocus} onBlur={handleBlur} onKeyDown={e => e.key === "Enter" && !loading && submit()} /></div>
                     <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} className="w-3.5 h-3.5 accent-blue-500" /><span className="text-[13px] text-slate-500">자동 로그인</span></label>
                     {err && <p className="text-[13px] text-red-500">{err}</p>}
-                    <button onClick={submit} disabled={loading} className="w-full py-2.5 rounded-lg text-[14px] font-semibold text-white disabled:opacity-60 transition-all hover:brightness-110" style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)" }}>{loading ? "로그인 중..." : "입장"}</button>
+                    <button onClick={submit} disabled={loading} className="w-full py-3 min-h-[48px] rounded-lg text-[14px] font-semibold text-white disabled:opacity-60 transition-all hover:brightness-110" style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)" }}>{loading ? "로그인 중..." : "입장"}</button>
                     <p className="text-[11px] text-center" style={{color:"#CBD5E1"}}>초기 비밀번호: 0000</p>
                 </div>
             </div>
