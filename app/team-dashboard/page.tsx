@@ -5423,9 +5423,9 @@ export default function DashboardPage() {
 {/* color dot removed */}
                                         <span>{tab.label}</span>
                                         {((unreadCounts[tab.id] || 0) > 0 || (discussionCounts[tab.id] || 0) > 0) && (
-                                            <div className="ml-auto flex items-center gap-1">
-                                                {(unreadCounts[tab.id] || 0) > 0 && <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-blue-500 text-white text-[11px] font-bold shadow-sm">{unreadCounts[tab.id]}</span>}
-                                                {(discussionCounts[tab.id] || 0) > 0 && <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-orange-500 text-white text-[11px] font-bold shadow-sm">{discussionCounts[tab.id]}</span>}
+                                            <div className="ml-auto flex items-center gap-1.5">
+                                                {(unreadCounts[tab.id] || 0) > 0 && <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 text-[11px] font-semibold">{unreadCounts[tab.id]}</span>}
+                                                {(discussionCounts[tab.id] || 0) > 0 && <span className="w-[6px] h-[6px] rounded-full bg-orange-400" />}
                                             </div>
                                         )}
                                     </button>
