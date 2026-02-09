@@ -35,6 +35,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
     exp_analysis: { label: "실험·해석", color: "#3b82f6" },
     writing: { label: "작성중", color: "#f59e0b" },
     under_review: { label: "심사중", color: "#10b981" },
+    completed: { label: "완료", color: "#059669" },
 };
 const STATUS_KEYS = ["planning", "exp_analysis", "writing", "under_review"];
 // Migration: map old statuses to merged ones
@@ -47,7 +48,7 @@ const REPORT_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
     review: { label: "심사중", color: "#3b82f6" },
     done: { label: "완료", color: "#059669" },
 };
-const REPORT_STATUS_KEYS = ["planning", "writing", "review", "done"];
+const REPORT_STATUS_KEYS = ["planning", "writing", "review"];
 const PRIORITY_ICON: Record<string, string> = { highest: "🔥", high: "🔴", mid: "🟡", low: "🔵", lowest: "⚪" };
 const PRIORITY_LABEL: Record<string, string> = { highest: "매우높음", high: "높음", mid: "중간", low: "낮음", lowest: "매우낮음" };
 const PRIORITY_KEYS = ["highest", "high", "mid", "low", "lowest"];
@@ -57,10 +58,11 @@ const EXP_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
     planning: { label: "기획중", color: "#94a3b8" },
     preparing: { label: "준비중", color: "#8b5cf6" },
     running: { label: "진행중", color: "#3b82f6" },
-    paused_done: { label: "중단·완료", color: "#059669" },
+    paused_done: { label: "중단", color: "#f97316" },
+    completed: { label: "완료", color: "#059669" },
 };
 const EXP_STATUS_KEYS = ["planning", "preparing", "running", "paused_done"];
-const EXP_STATUS_MIGRATE = (s: string) => (s === "paused" || s === "completed") ? "paused_done" : s;
+const EXP_STATUS_MIGRATE = (s: string) => s === "paused" ? "paused_done" : s;
 
 const CALENDAR_TYPES: Record<string, { label: string; color: string; short: string }> = {
     conference: { label: "학회", color: "#60a5fa", short: "학" },
@@ -115,6 +117,7 @@ const IP_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
     writing: { label: "작성중", color: "#f59e0b" },
     evaluation: { label: "평가중", color: "#3b82f6" },
     filed: { label: "출원", color: "#059669" },
+    completed: { label: "완료", color: "#22c55e" },
 };
 const IP_STATUS_KEYS = ["planning", "writing", "evaluation", "filed"];
 
@@ -122,10 +125,11 @@ const ANALYSIS_STATUS_CONFIG: Record<string, { label: string; color: string }> =
     planning: { label: "기획중", color: "#94a3b8" },
     preparing: { label: "준비중", color: "#8b5cf6" },
     running: { label: "진행중", color: "#3b82f6" },
-    paused_done: { label: "중단·완료", color: "#059669" },
+    paused_done: { label: "중단", color: "#f97316" },
+    completed: { label: "완료", color: "#059669" },
 };
 const ANALYSIS_STATUS_KEYS = ["planning", "preparing", "running", "paused_done"];
-const ANALYSIS_STATUS_MIGRATE = (s: string) => (s === "paused" || s === "completed") ? "paused_done" : s;
+const ANALYSIS_STATUS_MIGRATE = (s: string) => s === "paused" ? "paused_done" : s;
 const ANALYSIS_TOOLS = ["OpenFOAM", "ANSYS Fluent", "STAR-CCM+", "MARS-K", "CUPID", "GAMMA+", "Python/MATLAB", "기타"];
 
 type Patent = { id: number; title: string; deadline: string; status: string; assignees: string[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string };
@@ -283,7 +287,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
                     <div>
                         <label className="text-[11px] font-semibold text-slate-500 block mb-1">상태</label>
                         <div className="flex flex-wrap gap-1">
-                            {STATUS_KEYS.map(s => (
+                            {[...STATUS_KEYS, "completed"].map(s => (
                                 <button key={s} type="button" onClick={() => setStatus(s)}
                                     className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${status === s ? "text-white" : "bg-slate-100 text-slate-500"}`}
                                     style={status === s ? { background: STATUS_CONFIG[s].color } : undefined}>
@@ -355,11 +359,15 @@ function KanbanView({ papers, filter, onClickPaper, onAddPaper, onSavePaper, onR
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Paper | null>(null);
+    const [showCompleted, setShowCompleted] = useState(false);
+    const completedPapers = filtered.filter(p => PAPER_STATUS_MIGRATE(p.status) === "completed");
+    const kanbanFiltered = filtered.filter(p => PAPER_STATUS_MIGRATE(p.status) !== "completed");
     return (
         <div>
             <div className="mb-3 flex items-center gap-2">
                 <button onClick={onAddPaper} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 논문 등록</button>
                 <button onClick={() => setShowTagMgr(!showTagMgr)} className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200">🏷️ 논문 태그 관리</button>
+                <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-2 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedPapers.length})</button>
             </div>
             {teamNames && teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
             {showTagMgr && (
@@ -382,9 +390,10 @@ function KanbanView({ papers, filter, onClickPaper, onAddPaper, onSavePaper, onR
                     </div>
                 </div>
             )}
+            {!showCompleted && (
             <div className="flex gap-3 pb-2">
                 {STATUS_KEYS.map(status => {
-                    const col = filtered.filter(p => PAPER_STATUS_MIGRATE(p.status) === status);
+                    const col = kanbanFiltered.filter(p => PAPER_STATUS_MIGRATE(p.status) === status);
                     const st = STATUS_CONFIG[status];
                     return (
                         <div key={status} className="flex-1 min-w-0"
@@ -443,6 +452,32 @@ function KanbanView({ papers, filter, onClickPaper, onAddPaper, onSavePaper, onR
                     );
                 })}
             </div>
+            )}
+            {showCompleted && (
+                <div className="grid grid-cols-3 gap-3">
+                    {completedPapers.map(p => (
+                        <div key={p.id} onClick={() => onClickPaper(p)}
+                            className="bg-white rounded-lg p-3 cursor-pointer hover:shadow-md transition-all border border-emerald-200"
+                            style={{ borderLeft: "3px solid #059669" }}>
+                            <div className="text-[13px] font-semibold text-slate-800 mb-1 leading-snug break-words">{p.title}</div>
+                            {p.team && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{p.team}</span>}
+                            {p.journal !== "TBD" && <div className="text-[11px] text-slate-500 italic mb-1 truncate">{p.journal}</div>}
+                            <div className="flex gap-1 flex-wrap mb-1.5">
+                                {p.tags.map(t => <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">{t}</span>)}
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <div className="flex gap-1 flex-wrap">
+                                    {p.assignees.slice(0, 3).map(a => <span key={a} className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[a]?.emoji}{a}</span>)}
+                                    {p.assignees.length > 3 && <span className="text-[10px] text-slate-400">+{p.assignees.length - 3}</span>}
+                                </div>
+                                {p.deadline && <span className="text-[10px] text-red-500 font-semibold">~{p.deadline}</span>}
+                            </div>
+                            {p.creator && <div className="text-[9px] text-slate-400 text-right mt-1">by {MEMBERS[p.creator]?.emoji || ""}{p.creator}{p.createdAt ? ` · ${p.createdAt}` : ""}</div>}
+                        </div>
+                    ))}
+                    {completedPapers.length === 0 && <div className="col-span-3 text-center text-[12px] text-slate-400 py-8">완료된 논문이 없습니다</div>}
+                </div>
+            )}
         </div>
     );
 }
@@ -509,7 +544,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                         <div>
                             <label className="text-[11px] font-semibold text-slate-500 block mb-1">상태</label>
                             <div className="flex gap-1">
-                                {REPORT_STATUS_KEYS.map(s => {
+                                {[...REPORT_STATUS_KEYS, "done"].map(s => {
                                     const cfg = REPORT_STATUS_CONFIG[s];
                                     return (
                                         <button key={s} type="button" onClick={() => setStatus(s)}
@@ -600,16 +635,21 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Report | null>(null);
     const filteredReports = filterTeam === "전체" ? reports : reports.filter(r => r.team === filterTeam);
+    const [showCompleted, setShowCompleted] = useState(false);
+    const completedReports = filteredReports.filter(r => r.status === "done");
+    const kanbanFilteredReports = filteredReports.filter(r => r.status !== "done");
     return (
         <div>
             <div className="mb-3 flex gap-2">
                 <button onClick={() => setAddCategory("계획서")} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 계획서 등록</button>
                 <button onClick={() => setAddCategory("보고서")} className="px-4 py-2 bg-violet-500 text-white rounded-lg text-[13px] font-medium hover:bg-violet-600">+ 보고서 등록</button>
+                <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-2 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedReports.length})</button>
             </div>
             {teamNames && teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
+            {!showCompleted && (
             <div className="flex gap-3 pb-2">
                 {REPORT_STATUS_KEYS.map(status => {
-                    const col = filteredReports.filter(r => r.status === status);
+                    const col = kanbanFilteredReports.filter(r => r.status === status);
                     const cfg = REPORT_STATUS_CONFIG[status];
                     return (
                         <div key={status} className="flex-1 min-w-0"
@@ -682,6 +722,31 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                     );
                 })}
             </div>
+            )}
+            {showCompleted && (
+                <div className="grid grid-cols-3 gap-3">
+                    {completedReports.map(r => (
+                        <div key={r.id} onClick={() => setEditing(r)}
+                            className="bg-white rounded-lg p-3 cursor-pointer hover:shadow-md transition-all border border-emerald-200"
+                            style={{ borderLeft: "3px solid #059669" }}>
+                            <div className="flex items-center gap-1.5 mb-1">
+                                {r.category && <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${r.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`}>{r.category}</span>}
+                                {r.team && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{r.team}</span>}
+                            </div>
+                            <div className="text-[13px] font-semibold text-slate-800 mb-1 leading-snug break-words">{r.title}</div>
+                            <div className="flex justify-between items-center">
+                                <div className="flex gap-1 flex-wrap">
+                                    {r.assignees.slice(0, 3).map(a => <span key={a} className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[a]?.emoji}{a}</span>)}
+                                    {r.assignees.length > 3 && <span className="text-[10px] text-slate-400">+{r.assignees.length - 3}</span>}
+                                </div>
+                                {r.deadline && <span className="text-[10px] text-red-500 font-semibold">~{r.deadline}</span>}
+                            </div>
+                            {r.creator && <div className="text-[9px] text-slate-400 text-right mt-1">by {MEMBERS[r.creator]?.emoji || ""}{r.creator}{r.createdAt ? ` · ${r.createdAt}` : ""}</div>}
+                        </div>
+                    ))}
+                    {completedReports.length === 0 && <div className="col-span-3 text-center text-[12px] text-slate-400 py-8">완료된 계획서/보고서가 없습니다</div>}
+                </div>
+            )}
             {addCategory && <ReportFormModal report={null} initialCategory={addCategory} onSave={r => { onSave(r); setAddCategory(null); }} onClose={() => setAddCategory(null)} currentUser={currentUser} teamNames={teamNames} />}
             {editing && <ReportFormModal report={editing} onSave={r => { onSave(r); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} teamNames={teamNames} />}
         </div>
@@ -1260,7 +1325,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
                     <div>
                         <label className="text-[11px] font-semibold text-slate-500 block mb-1">상태</label>
                         <div className="flex flex-wrap gap-1">
-                            {EXP_STATUS_KEYS.map(s => {
+                            {[...EXP_STATUS_KEYS, "completed"].map(s => {
                                 const cfg = EXP_STATUS_CONFIG[s];
                                 return (
                                     <button key={s} type="button" onClick={() => setStatus(s)}
@@ -1333,11 +1398,15 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Experiment | null>(null);
     const filteredExperiments = filterTeam === "전체" ? experiments : experiments.filter(e => e.team === filterTeam);
+    const [showCompleted, setShowCompleted] = useState(false);
+    const completedExperiments = filteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) === "completed");
+    const kanbanFilteredExperiments = filteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) !== "completed");
     return (
         <div>
             <div className="mb-3 flex items-center gap-2">
                 <button onClick={() => setAdding(true)} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 실험 등록</button>
                 <button onClick={() => setShowEqMgr(!showEqMgr)} className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200">🔧 실험 장치 관리</button>
+                <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-2 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedExperiments.length})</button>
             </div>
             {showEqMgr && (
                 <div className="mb-4 p-3 bg-white border border-slate-200 rounded-lg">
@@ -1360,9 +1429,10 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                 </div>
             )}
             {teamNames && teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
+            {!showCompleted && (
             <div className="flex gap-3 pb-2">
                 {EXP_STATUS_KEYS.map(status => {
-                    const col = filteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) === status);
+                    const col = kanbanFilteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) === status);
                     const cfg = EXP_STATUS_CONFIG[status];
                     return (
                         <div key={status} className="flex-1 min-w-0"
@@ -1421,6 +1491,32 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                     );
                 })}
             </div>
+            )}
+            {showCompleted && (
+                <div className="grid grid-cols-3 gap-3">
+                    {completedExperiments.map(exp => (
+                        <div key={exp.id} onClick={() => setEditing(exp)}
+                            className="bg-white rounded-lg p-3 cursor-pointer hover:shadow-md transition-all border border-emerald-200"
+                            style={{ borderLeft: "3px solid #059669" }}>
+                            <div className="text-[13px] font-semibold text-slate-800 mb-1 leading-snug break-words">{exp.title}</div>
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <span className="text-[10px] text-slate-500">🔧 {exp.equipment}</span>
+                                {exp.team && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{exp.team}</span>}
+                            </div>
+                            {exp.goal && <div className="text-[10px] text-slate-400 mb-1.5 line-clamp-2">{exp.goal}</div>}
+                            <div className="flex justify-between items-center">
+                                <div className="flex gap-1 flex-wrap">
+                                    {exp.assignees.slice(0, 3).map(a => <span key={a} className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[a]?.emoji}{a}</span>)}
+                                    {exp.assignees.length > 3 && <span className="text-[10px] text-slate-400">+{exp.assignees.length - 3}</span>}
+                                </div>
+                                {exp.logs.length > 0 && <span className="text-[10px] text-slate-400">📝{exp.logs.length}</span>}
+                            </div>
+                            {exp.creator && <div className="text-[9px] text-slate-400 text-right mt-1">by {MEMBERS[exp.creator]?.emoji || ""}{exp.creator}{exp.createdAt ? ` · ${exp.createdAt}` : ""}</div>}
+                        </div>
+                    ))}
+                    {completedExperiments.length === 0 && <div className="col-span-3 text-center text-[12px] text-slate-400 py-8">완료된 실험이 없습니다</div>}
+                </div>
+            )}
             {adding && <ExperimentFormModal experiment={null} onSave={e => { onSave(e); setAdding(false); }} onClose={() => setAdding(false)} currentUser={currentUser} equipmentList={equipmentList} teamNames={teamNames} />}
             {editing && <ExperimentFormModal experiment={editing} onSave={e => { onSave(e); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} equipmentList={equipmentList} teamNames={teamNames} />}
         </div>
@@ -1490,7 +1586,7 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
                     <div>
                         <label className="text-[11px] font-semibold text-slate-500 block mb-1">상태</label>
                         <div className="flex flex-wrap gap-1">
-                            {ANALYSIS_STATUS_KEYS.map(s => {
+                            {[...ANALYSIS_STATUS_KEYS, "completed"].map(s => {
                                 const cfg = ANALYSIS_STATUS_CONFIG[s];
                                 return (
                                     <button key={s} type="button" onClick={() => setStatus(s)}
@@ -1562,11 +1658,15 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Analysis | null>(null);
     const filteredAnalyses = filterTeam === "전체" ? analyses : analyses.filter(a => a.team === filterTeam);
+    const [showCompleted, setShowCompleted] = useState(false);
+    const completedAnalyses = filteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) === "completed");
+    const kanbanFilteredAnalyses = filteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) !== "completed");
     return (
         <div>
             <div className="mb-3 flex items-center gap-2">
                 <button onClick={() => setAdding(true)} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 해석 등록</button>
                 <button onClick={() => setShowToolMgr(!showToolMgr)} className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200">🔧 해석 도구 관리</button>
+                <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-2 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedAnalyses.length})</button>
             </div>
             {showToolMgr && (
                 <div className="mb-4 p-3 bg-white border border-slate-200 rounded-lg">
@@ -1589,9 +1689,10 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                 </div>
             )}
             {teamNames && teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
+            {!showCompleted && (
             <div className="flex gap-3 pb-2">
                 {ANALYSIS_STATUS_KEYS.map(status => {
-                    const col = filteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) === status);
+                    const col = kanbanFilteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) === status);
                     const cfg = ANALYSIS_STATUS_CONFIG[status];
                     return (
                         <div key={status} className="flex-1 min-w-0"
@@ -1650,6 +1751,32 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                     );
                 })}
             </div>
+            )}
+            {showCompleted && (
+                <div className="grid grid-cols-3 gap-3">
+                    {completedAnalyses.map(a => (
+                        <div key={a.id} onClick={() => setEditing(a)}
+                            className="bg-white rounded-lg p-3 cursor-pointer hover:shadow-md transition-all border border-emerald-200"
+                            style={{ borderLeft: "3px solid #059669" }}>
+                            <div className="text-[13px] font-semibold text-slate-800 mb-1 leading-snug break-words">{a.title}</div>
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <span className="text-[10px] text-slate-500">🖥️ {a.tool}</span>
+                                {a.team && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{a.team}</span>}
+                            </div>
+                            {a.goal && <div className="text-[10px] text-slate-400 mb-1.5 line-clamp-2">{a.goal}</div>}
+                            <div className="flex justify-between items-center">
+                                <div className="flex gap-1 flex-wrap">
+                                    {a.assignees.slice(0, 3).map(n => <span key={n} className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[n]?.emoji}{n}</span>)}
+                                    {a.assignees.length > 3 && <span className="text-[10px] text-slate-400">+{a.assignees.length - 3}</span>}
+                                </div>
+                                {a.logs.length > 0 && <span className="text-[10px] text-slate-400">📝{a.logs.length}</span>}
+                            </div>
+                            {a.creator && <div className="text-[9px] text-slate-400 text-right mt-1">by {MEMBERS[a.creator]?.emoji || ""}{a.creator}{a.createdAt ? ` · ${a.createdAt}` : ""}</div>}
+                        </div>
+                    ))}
+                    {completedAnalyses.length === 0 && <div className="col-span-3 text-center text-[12px] text-slate-400 py-8">완료된 해석이 없습니다</div>}
+                </div>
+            )}
             {adding && <AnalysisFormModal analysis={null} onSave={a => { onSave(a); setAdding(false); }} onClose={() => setAdding(false)} currentUser={currentUser} toolList={toolList} teamNames={teamNames} />}
             {editing && <AnalysisFormModal analysis={editing} onSave={a => { onSave(a); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} toolList={toolList} teamNames={teamNames} />}
         </div>
@@ -2019,7 +2146,7 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
                     <div>
                         <label className="text-[11px] font-semibold text-slate-500 block mb-1">상태</label>
                         <div className="flex flex-wrap gap-1">
-                            {IP_STATUS_KEYS.map(s => {
+                            {[...IP_STATUS_KEYS, "completed"].map(s => {
                                 const cfg = IP_STATUS_CONFIG[s];
                                 return (
                                     <button key={s} type="button" onClick={() => setStatus(s)}
@@ -2058,15 +2185,20 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Patent | null>(null);
     const filteredPatents = filterTeam === "전체" ? patents : patents.filter(p => p.team === filterTeam);
+    const [showCompleted, setShowCompleted] = useState(false);
+    const completedPatents = filteredPatents.filter(p => p.status === "completed");
+    const kanbanFilteredPatents = filteredPatents.filter(p => p.status !== "completed");
     return (
         <div>
-            <div className="mb-3">
+            <div className="mb-3 flex items-center gap-2">
                 <button onClick={() => setAdding(true)} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 지재권 등록</button>
+                <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-2 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedPatents.length})</button>
             </div>
             {teamNames && teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
+            {!showCompleted && (
             <div className="flex gap-3 pb-2">
                 {IP_STATUS_KEYS.map(status => {
-                    const col = filteredPatents.filter(p => p.status === status);
+                    const col = kanbanFilteredPatents.filter(p => p.status === status);
                     const cfg = IP_STATUS_CONFIG[status];
                     return (
                         <div key={status} className="flex-1 min-w-0"
@@ -2117,6 +2249,27 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
                     );
                 })}
             </div>
+            )}
+            {showCompleted && (
+                <div className="grid grid-cols-3 gap-3">
+                    {completedPatents.map(p => (
+                        <div key={p.id} onClick={() => setEditing(p)}
+                            className="bg-white rounded-lg p-3 cursor-pointer hover:shadow-md transition-all border border-emerald-200"
+                            style={{ borderLeft: "3px solid #22c55e" }}>
+                            <div className="text-[13px] font-semibold text-slate-800 mb-1 leading-snug break-words">{p.title}</div>
+                            {p.team && <div className="mb-1"><span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{p.team}</span></div>}
+                            <div className="flex justify-between items-center">
+                                <div className="flex gap-1 flex-wrap">
+                                    {p.assignees.map(a => <span key={a} className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[a]?.emoji}{a}</span>)}
+                                </div>
+                                {p.deadline && <span className="text-[10px] text-red-500 font-semibold">~{p.deadline}</span>}
+                            </div>
+                            {p.creator && <div className="text-[9px] text-slate-400 text-right mt-1">by {MEMBERS[p.creator]?.emoji || ""}{p.creator}{p.createdAt ? ` · ${p.createdAt}` : ""}</div>}
+                        </div>
+                    ))}
+                    {completedPatents.length === 0 && <div className="col-span-3 text-center text-[12px] text-slate-400 py-8">완료된 지재권이 없습니다</div>}
+                </div>
+            )}
             {adding && <IPFormModal patent={null} onSave={p => { onSave(p); setAdding(false); }} onClose={() => setAdding(false)} currentUser={currentUser} teamNames={teamNames} />}
             {editing && <IPFormModal patent={editing} onSave={p => { onSave(p); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} teamNames={teamNames} />}
         </div>
@@ -2427,40 +2580,21 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
         <div>
             <button onClick={() => openAdd()} className="mb-3 px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 학회/출장 추가</button>
             <div className="grid grid-cols-3 gap-3">
-                {CONF_STATUSES.map(status => {
-                    const col = CONF_COL_COLORS[status];
-                    const colItems = items.filter(c => (c.status || "관심") === status);
-                    return (
-                        <div key={status}
-                            className={`${col.bg} ${col.border} border rounded-lg p-2 min-h-[200px]`}
-                            onDragOver={e => e.preventDefault()}
-                            onDrop={e => handleColumnDrop(status, e)}>
-                            <div className="flex items-center justify-between mb-2 px-1">
-                                <h4 className={`text-[13px] font-bold ${col.header}`}>{status}</h4>
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${col.count}`}>{colItems.length}</span>
+                {items.map(c => (
+                    <div key={c.id} onClick={() => openEdit(c)}
+                        className="bg-white rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow border border-slate-200">
+                        <div className="text-[14px] font-semibold text-slate-800 mb-1">{c.title}</div>
+                        {(c.startDate || c.endDate) && <div className="text-[11px] text-slate-500 mb-0.5">📅 {formatPeriod(c.startDate, c.endDate)}</div>}
+                        {c.homepage && <div className="text-[10px] text-blue-500 mb-0.5 truncate" onClick={e => { e.stopPropagation(); try { const u = new URL(c.homepage); if (["http:", "https:"].includes(u.protocol)) window.open(c.homepage, "_blank", "noopener"); } catch {} }}>🔗 {c.homepage}</div>}
+                        {c.fee && <div className="text-[11px] text-slate-500 mb-0.5">💰 {c.fee}</div>}
+                        {c.participants.length > 0 && (
+                            <div className="flex flex-wrap gap-0.5 mt-1.5">
+                                {c.participants.map(p => <span key={p} className="text-[9px] px-1 py-0.5 rounded bg-blue-50 text-blue-600">{MEMBERS[p]?.emoji || "👤"}{p}</span>)}
                             </div>
-                            <div className="space-y-2">
-                                {colItems.map(c => (
-                                    <div key={c.id} draggable
-                                        onDragStart={() => setDraggedId(c.id)}
-                                        onDragEnd={() => setDraggedId(null)}
-                                        onClick={() => openEdit(c)}
-                                        className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-shadow border border-slate-200 ${draggedId === c.id ? "opacity-50" : ""}`}>
-                                        <div className="text-[13px] font-semibold text-slate-800 mb-1">{c.title}</div>
-                                        {(c.startDate || c.endDate) && <div className="text-[11px] text-slate-500 mb-0.5">📅 {formatPeriod(c.startDate, c.endDate)}</div>}
-                                        {c.homepage && <div className="text-[10px] text-blue-500 mb-0.5 truncate" onClick={e => { e.stopPropagation(); try { const u = new URL(c.homepage); if (["http:", "https:"].includes(u.protocol)) window.open(c.homepage, "_blank", "noopener"); } catch {} }}>🔗 {c.homepage}</div>}
-                                        {c.fee && <div className="text-[11px] text-slate-500 mb-0.5">💰 {c.fee}</div>}
-                                        {c.participants.length > 0 && (
-                                            <div className="flex flex-wrap gap-0.5 mt-1.5">
-                                                {c.participants.map(p => <span key={p} className="text-[9px] px-1 py-0.5 rounded bg-blue-50 text-blue-600">{MEMBERS[p]?.emoji || "👤"}{p}</span>)}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    );
-                })}
+                        )}
+                    </div>
+                ))}
+                {items.length === 0 && <div className="text-center py-12 text-slate-400 text-[13px] col-span-full">등록된 학회/출장이 없습니다</div>}
             </div>
 
             {modal && (
@@ -2474,15 +2608,6 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
                             <div>
                                 <label className="text-[11px] font-semibold text-slate-500 block mb-1">학회/출장 이름 *</label>
                                 <input value={title} onChange={e => setTitle(e.target.value)} placeholder="예: NURETH-21" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-                            </div>
-                            <div>
-                                <label className="text-[11px] font-semibold text-slate-500 block mb-1">상태</label>
-                                <div className="flex gap-1.5">
-                                    {CONF_STATUSES.map(s => (
-                                        <button key={s} onClick={() => setFormStatus(s)}
-                                            className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${formStatus === s ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>{s}</button>
-                                    ))}
-                                </div>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
@@ -2892,32 +3017,33 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
 
     return (
         <div className="space-y-8">
-            {/* 공지사항 */}
+            {/* 📢 공지사항 */}
             <div>
-                <h3 className="text-[15px] font-bold text-slate-800 mb-3">공지사항</h3>
-                {isLeader && (
-                    <div className="mb-3 flex gap-2">
-                        <textarea value={newText} onChange={e => setNewText(e.target.value)} placeholder="공지사항 작성... (Shift+Enter로 줄바꿈)"
-                            className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none min-h-[40px]" rows={1}
-                            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && newText.trim()) { e.preventDefault(); onAdd(newText.trim()); setNewText(""); } }}
-                            onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }} />
-                        <button onClick={() => { if (newText.trim()) { onAdd(newText.trim()); setNewText(""); } }} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 self-end">게시</button>
-                    </div>
-                )}
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-[14px] font-bold text-slate-800">📢 공지사항</h3>
+                    {isLeader && (
+                        <div className="flex gap-2">
+                            <textarea value={newText} onChange={e => setNewText(e.target.value)} placeholder="공지사항 작성..."
+                                className="border border-slate-200 rounded-lg px-3 py-1.5 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none w-[300px]" rows={1}
+                                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && newText.trim()) { e.preventDefault(); onAdd(newText.trim()); setNewText(""); } }} />
+                            <button onClick={() => { if (newText.trim()) { onAdd(newText.trim()); setNewText(""); } }} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">게시</button>
+                        </div>
+                    )}
+                </div>
                 {announcements.length === 0 && <div className="text-center py-8 text-slate-400 text-[13px]">공지사항이 없습니다</div>}
-                <div className="space-y-2">{sorted.map((ann, idx) => (
+                <div className="grid grid-cols-3 gap-3">{sorted.map((ann, idx) => (
                     <div key={ann.id} draggable
                         onDragStart={() => { dragAnn.current = idx; }}
                         onDragOver={e => { e.preventDefault(); setDragOverAnn(idx); }}
                         onDragEnd={() => { dragAnn.current = null; setDragOverAnn(null); }}
                         onDrop={() => { if (dragAnn.current !== null && dragAnn.current !== idx) { const reordered = [...sorted]; const [moved] = reordered.splice(dragAnn.current, 1); reordered.splice(idx, 0, moved); onReorder(reordered); } dragAnn.current = null; setDragOverAnn(null); }}
                         onClick={() => { if ((currentUser === ann.author || isPI) && !dragAnn.current) openEditAnn(ann); }}
-                        className={`bg-white border rounded-lg p-4 cursor-grab transition-colors ${ann.pinned ? "border-amber-300 bg-amber-50/50" : "border-slate-200"} ${dragOverAnn === idx ? "bg-blue-50" : ""} ${(currentUser === ann.author || isPI) ? "hover:shadow-md" : ""}`}>
-                        <div className="flex items-start justify-between">
-                            <div className="flex-1">{ann.pinned && <span className="text-[10px] font-semibold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mr-2">📌</span>}<span className="text-[13px] text-slate-800 whitespace-pre-wrap">{ann.text}</span></div>
-                            {(currentUser === ann.author || isPI) && <button onClick={e => { e.stopPropagation(); onDelete(ann.id); }} className="text-slate-400 hover:text-red-500 text-[12px] ml-2">✕</button>}
+                        className={`bg-white border rounded-lg p-4 cursor-grab transition-colors flex flex-col ${ann.pinned ? "border-amber-300 bg-amber-50/50" : "border-slate-200"} ${dragOverAnn === idx ? "bg-blue-50" : ""} ${(currentUser === ann.author || isPI) ? "hover:shadow-md" : ""}`}>
+                        <div className="flex items-start justify-between mb-1">
+                            <div className="flex-1">{ann.pinned && <span className="text-[10px] font-semibold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mr-2">📌</span>}<span className="text-[13px] text-slate-800 whitespace-pre-wrap break-words">{ann.text}</span></div>
+                            {(currentUser === ann.author || isPI) && <button onClick={e => { e.stopPropagation(); onDelete(ann.id); }} className="text-slate-400 hover:text-red-500 text-[12px] ml-2 flex-shrink-0">✕</button>}
                         </div>
-                        <div className="mt-2 text-[11px] text-slate-400">{ann.author} · {ann.date}</div>
+                        <div className="mt-auto pt-2 text-[11px] text-slate-400">{ann.author} · {ann.date}</div>
                     </div>
                 ))}</div>
             </div>
@@ -2949,28 +3075,28 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
                 </div>
             )}
 
-            {/* 문화 */}
+            {/* 🧭 문화 */}
             <div>
-                <h3 className="text-[15px] font-bold text-slate-800 mb-1">🧭 문화</h3>
-                <p className="text-[11px] text-slate-400 mb-3">연구실 문화 및 핵심 가치</p>
-                {isLeader && (
-                    <div className="mb-3 flex gap-2">
-                        <textarea value={newPhil} onChange={e => setNewPhil(e.target.value)} placeholder="연구실 문화 작성... (Shift+Enter로 줄바꿈)"
-                            className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none min-h-[40px]" rows={1}
-                            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && newPhil.trim()) { e.preventDefault(); onAddPhilosophy(newPhil.trim()); setNewPhil(""); } }}
-                            onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }} />
-                        <button onClick={() => { if (newPhil.trim()) { onAddPhilosophy(newPhil.trim()); setNewPhil(""); } }} className="px-4 py-2 bg-violet-500 text-white rounded-lg text-[13px] font-medium hover:bg-violet-600 self-end">게시</button>
-                    </div>
-                )}
-                {philosophy.length === 0 && <div className="text-center py-8 text-slate-400 text-[13px]">등록된 내용이 없습니다</div>}
-                <div className="space-y-2">{philosophy.map(p => (
-                    <div key={p.id} className={`bg-violet-50/50 border border-violet-200 rounded-lg p-4 ${isPI ? "cursor-pointer hover:shadow-md" : ""}`}
-                        onClick={() => { if (isPI) openEditPhil(p); }}>
-                        <div className="flex items-start justify-between">
-                            <div className="flex-1"><span className="text-[13px] text-slate-800 whitespace-pre-wrap">{p.text}</span></div>
-                            {isPI && <button onClick={e => { e.stopPropagation(); onDeletePhilosophy(p.id); }} className="text-slate-400 hover:text-red-500 text-[12px] ml-2">✕</button>}
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-[14px] font-bold text-slate-800">🧭 문화</h3>
+                    {isLeader && (
+                        <div className="flex gap-2">
+                            <textarea value={newPhil} onChange={e => setNewPhil(e.target.value)} placeholder="연구실 문화 작성..."
+                                className="border border-slate-200 rounded-lg px-3 py-1.5 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none w-[300px]" rows={1}
+                                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && newPhil.trim()) { e.preventDefault(); onAddPhilosophy(newPhil.trim()); setNewPhil(""); } }} />
+                            <button onClick={() => { if (newPhil.trim()) { onAddPhilosophy(newPhil.trim()); setNewPhil(""); } }} className="px-3 py-1.5 bg-violet-500 text-white rounded-lg text-[12px] font-medium hover:bg-violet-600">게시</button>
                         </div>
-                        <div className="mt-2 text-[11px] text-slate-400">{p.author} · {p.date}</div>
+                    )}
+                </div>
+                {philosophy.length === 0 && <div className="text-center py-8 text-slate-400 text-[13px]">등록된 내용이 없습니다</div>}
+                <div className="grid grid-cols-3 gap-3">{philosophy.map(p => (
+                    <div key={p.id} className={`bg-violet-50/50 border border-violet-200 rounded-lg p-4 flex flex-col ${isPI ? "cursor-pointer hover:shadow-md" : ""}`}
+                        onClick={() => { if (isPI) openEditPhil(p); }}>
+                        <div className="flex items-start justify-between mb-1">
+                            <div className="flex-1"><span className="text-[13px] text-slate-800 whitespace-pre-wrap break-words">{p.text}</span></div>
+                            {isPI && <button onClick={e => { e.stopPropagation(); onDeletePhilosophy(p.id); }} className="text-slate-400 hover:text-red-500 text-[12px] ml-2 flex-shrink-0">✕</button>}
+                        </div>
+                        <div className="mt-auto pt-2 text-[11px] text-slate-400">{p.author} · {p.date}</div>
                     </div>
                 ))}</div>
             </div>
@@ -3223,24 +3349,40 @@ function PersonalMemoView({ memos, onSave, onDelete }: {
             </div>
             {memos.length === 0 && !adding && <div className="text-center py-12 text-slate-400 text-[13px]">노트가 없습니다</div>}
             <div className="grid grid-cols-3 gap-3">
-                {[...memos].sort((a, b) => b.id - a.id).map(m => (
-                    <div key={m.id} className={`rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow group relative ${m.needsDiscussion ? "ring-1 ring-orange-200" : ""}`}
-                        style={{ background: m.color, border: m.borderColor ? `2px solid ${m.borderColor}` : m.needsDiscussion ? "2px solid #fb923c" : "1px solid #e2e8f0" }}
-                        onClick={() => openDetail(m)}>
-                        <button onClick={e => { e.stopPropagation(); onDelete(m.id); }}
-                            className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                        <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
-                            <input type="checkbox" checked={!!m.needsDiscussion} onChange={() => onSave({ ...m, needsDiscussion: !m.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
-                            <span className={`text-[10px] font-medium ${m.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의</span>
-                        </label>
-                        <h4 className="text-[13px] font-bold text-slate-800 mb-1 truncate">{m.title}</h4>
-                        <p className="text-[12px] text-slate-600 whitespace-pre-wrap line-clamp-4">{m.content}</p>
-                        <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400">
-                            <span>{m.updatedAt}</span>
-                            {(m.comments?.length || 0) > 0 && <span>💬{m.comments!.length}</span>}
+                {[...memos].sort((a, b) => b.id - a.id).map(m => {
+                    const cmts = m.comments || [];
+                    return (
+                        <div key={m.id} className={`rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow flex flex-col group relative ${m.needsDiscussion && !m.borderColor ? "ring-1 ring-orange-200" : ""}`}
+                            style={{ background: m.color, border: m.borderColor ? `2px solid ${m.borderColor}` : m.needsDiscussion ? "2px solid #fb923c" : "1px solid #e2e8f0" }}
+                            onClick={() => openDetail(m)}>
+                            <button onClick={e => { e.stopPropagation(); onDelete(m.id); }}
+                                className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                            <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
+                                <input type="checkbox" checked={!!m.needsDiscussion} onChange={() => onSave({ ...m, needsDiscussion: !m.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
+                                <span className={`text-[10px] font-medium ${m.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                            </label>
+                            <div className="flex items-start justify-between mb-2">
+                                <div className="text-[14px] font-semibold text-slate-800 break-words flex-1">{m.title}</div>
+                                <span className="text-[10px] text-slate-400 ml-2 whitespace-nowrap">{m.updatedAt}</span>
+                            </div>
+                            {m.content && <div className="text-[12px] text-slate-600 mb-3 line-clamp-3 break-words">{m.content}</div>}
+                            {cmts.length > 0 ? (
+                                <div className="border-t border-slate-100 pt-2 mt-auto space-y-1">
+                                    <div className="text-[10px] font-semibold text-slate-400 mb-1">💬 댓글 {cmts.length}개</div>
+                                    {cmts.slice(-2).map(c => (
+                                        <div key={c.id} className="text-[11px] text-slate-500 truncate">
+                                            <span className="font-medium text-slate-600">{c.author}</span> {c.text}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="border-t border-slate-100 pt-2 mt-auto">
+                                    <div className="text-[10px] text-slate-300">💬 댓글 없음</div>
+                                </div>
+                            )}
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             {/* Add modal */}
@@ -3429,7 +3571,6 @@ function MeetingView({ meetings, onSave, onDelete, currentUser, teamNames }: {
     const [editing, setEditing] = useState<Meeting | null>(null);
     const [adding, setAdding] = useState(false);
     const [filterTeam, setFilterTeam] = useState("전체");
-    const [expandedId, setExpandedId] = useState<number | null>(null);
 
     const filtered = filterTeam === "전체" ? meetings : meetings.filter(m => m.team === filterTeam);
     const sorted = [...filtered].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -3441,50 +3582,43 @@ function MeetingView({ meetings, onSave, onDelete, currentUser, teamNames }: {
                 <span className="text-[12px] text-slate-400">총 {filtered.length}건</span>
             </div>
             {teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
-            <div className="space-y-2">
+            <div className="grid grid-cols-3 gap-3">
                 {sorted.map(m => (
-                    <div key={m.id} className={`bg-white rounded-lg overflow-hidden transition-all ${m.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}>
-                        <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => setExpandedId(expandedId === m.id ? null : m.id)}>
-                            <span className="text-[11px] text-slate-400 font-mono shrink-0">{m.date}</span>
-                            {m.team && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium shrink-0">{m.team}</span>}
-                            <span className="text-[13px] font-semibold text-slate-800 truncate flex-1">{m.title}</span>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                                {m.assignees.slice(0, 4).map(a => <span key={a} className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[a]?.emoji}{a}</span>)}
-                                {m.assignees.length > 4 && <span className="text-[10px] text-slate-400">+{m.assignees.length - 4}</span>}
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                                {m.comments.length > 0 && <span className="text-[10px] text-slate-400">💬{m.comments.length}</span>}
-                                <label className="flex items-center gap-1 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                    <input type="checkbox" checked={!!m.needsDiscussion} onChange={() => onSave({ ...m, needsDiscussion: !m.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
-                                    <span className={`text-[10px] font-medium ${m.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의</span>
-                                </label>
-                                <span className="text-[14px] text-slate-400 transition-transform" style={{ transform: expandedId === m.id ? "rotate(180deg)" : "" }}>▾</span>
-                            </div>
+                    <div key={m.id} onClick={() => setEditing(m)}
+                        className={`bg-white rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow flex flex-col ${m.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}>
+                        <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
+                            <input type="checkbox" checked={!!m.needsDiscussion} onChange={() => onSave({ ...m, needsDiscussion: !m.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
+                            <span className={`text-[10px] font-medium ${m.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                        </label>
+                        <div className="flex items-start justify-between mb-1">
+                            <div className="text-[14px] font-semibold text-slate-800 break-words flex-1">{m.title}</div>
+                            <span className="text-[10px] text-slate-400 ml-2 whitespace-nowrap">{m.date}</span>
                         </div>
-                        {expandedId === m.id && (
-                            <div className="px-4 pb-4 border-t border-slate-100">
-                                {m.goal && <div className="text-[12px] text-blue-600 mt-3 mb-1"><span className="font-semibold">목표:</span> {m.goal}</div>}
-                                {m.summary && <div className="text-[12px] text-slate-600 mt-2 whitespace-pre-wrap leading-relaxed bg-slate-50 rounded-lg p-3">{m.summary}</div>}
-                                {m.comments.length > 0 && (
-                                    <div className="mt-3 space-y-1.5">
-                                        <div className="text-[11px] font-semibold text-slate-500">댓글 ({m.comments.length})</div>
-                                        {m.comments.map(c => (
-                                            <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2 text-[12px]">
-                                                <div className="text-slate-700">{c.text}</div>
-                                                <div className="text-[10px] text-slate-400 mt-0.5">{c.author} · {c.date}</div>
-                                            </div>
-                                        ))}
+                        {m.team && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium self-start mb-1">{m.team}</span>}
+                        {m.goal && <div className="text-[11px] text-blue-600 mb-1 line-clamp-1"><span className="font-semibold">목표:</span> {m.goal}</div>}
+                        {m.summary && <div className="text-[12px] text-slate-600 mb-2 line-clamp-3 break-words">{m.summary}</div>}
+                        <div className="flex flex-wrap gap-0.5 mb-2">
+                            {m.assignees.slice(0, 5).map(a => <span key={a} className="text-[9px] px-1 py-0.5 rounded bg-slate-50 text-slate-600">{MEMBERS[a]?.emoji}{a}</span>)}
+                            {m.assignees.length > 5 && <span className="text-[9px] text-slate-400">+{m.assignees.length - 5}</span>}
+                        </div>
+                        <div className="text-[10px] text-slate-400 mb-1">{MEMBERS[m.creator]?.emoji || ""} {m.creator}</div>
+                        {m.comments.length > 0 ? (
+                            <div className="border-t border-slate-100 pt-2 mt-auto space-y-1">
+                                <div className="text-[10px] font-semibold text-slate-400 mb-1">💬 댓글 {m.comments.length}개</div>
+                                {m.comments.slice(-2).map(c => (
+                                    <div key={c.id} className="text-[11px] text-slate-500 truncate">
+                                        <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}
                                     </div>
-                                )}
-                                <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100">
-                                    <div className="text-[9px] text-slate-400">by {MEMBERS[m.creator]?.emoji || ""}{m.creator}{m.createdAt ? ` · ${m.createdAt}` : ""}</div>
-                                    <button onClick={() => setEditing(m)} className="text-[11px] text-blue-500 hover:text-blue-600 font-medium">수정</button>
-                                </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="border-t border-slate-100 pt-2 mt-auto">
+                                <div className="text-[10px] text-slate-300">💬 댓글 없음</div>
                             </div>
                         )}
                     </div>
                 ))}
-                {sorted.length === 0 && <div className="text-[13px] text-slate-400 text-center py-12">아직 회의록이 없습니다</div>}
+                {sorted.length === 0 && <div className="text-[13px] text-slate-400 text-center py-12 col-span-full">아직 회의록이 없습니다</div>}
             </div>
             {adding && <MeetingFormModal meeting={null} onSave={m => { onSave(m); setAdding(false); }} onClose={() => setAdding(false)} currentUser={currentUser} teamNames={teamNames} />}
             {editing && <MeetingFormModal meeting={editing} onSave={m => { onSave(m); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} teamNames={teamNames} />}
@@ -3508,6 +3642,7 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
     const [boardContent, setBoardContent] = useState("");
     const [boardColor, setBoardColor] = useState(MEMO_COLORS[0]);
     const [selectedCard, setSelectedCard] = useState<TeamMemoCard | null>(null);
+    const [boardComment, setBoardComment] = useState("");
 
     const send = () => {
         if (!text.trim()) return;
@@ -3531,17 +3666,41 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                     <button onClick={openBoardAdd} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[11px] font-medium hover:bg-blue-600">+ 추가</button>
                 </div>
                 <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
-                    {board.map(card => (
-                        <div key={card.id} onClick={() => setSelectedCard(card)}
-                            className="rounded-lg p-2.5 cursor-pointer hover:shadow-md transition-shadow group relative border border-slate-200"
-                            style={{ background: card.color || "#fff" }}>
-                            <button onClick={e => { e.stopPropagation(); onDeleteBoard(card.id); }}
-                                className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                            <h4 className="text-[12px] font-semibold text-slate-800 mb-0.5 break-words">{card.title}</h4>
-                            {card.content && <p className="text-[10px] text-slate-600 whitespace-pre-wrap line-clamp-3 mb-1">{card.content}</p>}
-                            <div className="text-[9px] text-slate-400">{MEMBERS[card.author]?.emoji || "👤"} {card.author}</div>
-                        </div>
-                    ))}
+                    {board.map(card => {
+                        const cmts = card.comments || [];
+                        return (
+                            <div key={card.id} onClick={() => setSelectedCard(card)}
+                                className={`rounded-lg p-2.5 cursor-pointer hover:shadow-md transition-shadow flex flex-col group relative ${card.needsDiscussion ? "ring-1 ring-orange-200" : ""}`}
+                                style={{ background: card.color || "#fff", border: card.needsDiscussion ? "2px solid #fb923c" : "1px solid #e2e8f0" }}>
+                                <button onClick={e => { e.stopPropagation(); onDeleteBoard(card.id); }}
+                                    className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                                <label className="flex items-center gap-1 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
+                                    <input type="checkbox" checked={!!card.needsDiscussion} onChange={() => onSaveBoard({ ...card, needsDiscussion: !card.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
+                                    <span className={`text-[9px] font-medium ${card.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                                </label>
+                                <div className="flex items-start justify-between mb-1">
+                                    <h4 className="text-[12px] font-semibold text-slate-800 break-words flex-1">{card.title}</h4>
+                                    <span className="text-[9px] text-slate-400 ml-1 whitespace-nowrap">{card.updatedAt}</span>
+                                </div>
+                                {card.content && <div className="text-[10px] text-slate-600 mb-2 line-clamp-2 break-words">{card.content}</div>}
+                                <div className="text-[9px] text-slate-400 mb-1">{MEMBERS[card.author]?.emoji || "👤"} {card.author}</div>
+                                {cmts.length > 0 ? (
+                                    <div className="border-t border-slate-100 pt-1.5 mt-auto space-y-0.5">
+                                        <div className="text-[9px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
+                                        {cmts.slice(-2).map(c => (
+                                            <div key={c.id} className="text-[9px] text-slate-500 truncate">
+                                                <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="border-t border-slate-100 pt-1.5 mt-auto">
+                                        <div className="text-[9px] text-slate-300">💬 댓글 없음</div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                     {board.length === 0 && (
                         <button onClick={openBoardAdd} className="w-full py-6 text-[11px] text-slate-400 hover:text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">+ 추가</button>
                     )}
@@ -3612,15 +3771,36 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
             )}
             {/* Board detail modal */}
             {selectedCard && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setSelectedCard(null)}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setSelectedCard(null); setBoardComment(""); }}>
                     <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800 break-words flex-1 pr-2">{selectedCard.title}</h3>
-                            <button onClick={() => setSelectedCard(null)} className="text-slate-400 hover:text-slate-600 text-lg flex-shrink-0">✕</button>
+                            <button onClick={() => { setSelectedCard(null); setBoardComment(""); }} className="text-slate-400 hover:text-slate-600 text-lg flex-shrink-0">✕</button>
                         </div>
                         <div className="p-4">
                             <div className="text-[11px] text-slate-400 mb-3">{MEMBERS[selectedCard.author]?.emoji || "👤"} {selectedCard.author} · {selectedCard.updatedAt}</div>
-                            {selectedCard.content && <div className="text-[13px] text-slate-700 whitespace-pre-wrap break-words">{selectedCard.content}</div>}
+                            {selectedCard.content && <div className="text-[13px] text-slate-700 mb-4 whitespace-pre-wrap break-words">{selectedCard.content}</div>}
+                            <div className="border-t border-slate-200 pt-4">
+                                <div className="text-[12px] font-semibold text-slate-600 mb-3">💬 댓글 ({(selectedCard.comments || []).length})</div>
+                                <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto">
+                                    {(selectedCard.comments || []).map(c => (
+                                        <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group/c relative">
+                                            <button onClick={() => { const updated = { ...selectedCard, comments: (selectedCard.comments || []).filter(x => x.id !== c.id) }; onSaveBoard(updated); setSelectedCard(updated); }}
+                                                className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
+                                            <div className="text-[12px] text-slate-700 pr-4 break-words">{c.text}</div>
+                                            <div className="text-[10px] text-slate-400 mt-1">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
+                                        </div>
+                                    ))}
+                                    {(selectedCard.comments || []).length === 0 && <div className="text-[11px] text-slate-300 py-3 text-center">아직 댓글이 없습니다</div>}
+                                </div>
+                                <div className="flex gap-2">
+                                    <input value={boardComment} onChange={e => setBoardComment(e.target.value)} placeholder="댓글 작성..."
+                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        onKeyDown={e => { if (e.key === "Enter" && boardComment.trim()) { const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: Date.now(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); } }} />
+                                    <button onClick={() => { if (!boardComment.trim()) return; const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: Date.now(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); }}
+                                        className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[12px] hover:bg-blue-600 font-medium">전송</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3831,29 +4011,46 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                         const reordered = reorderKanbanItems(kanban, dragged, dropTarget.col, dropTarget.idx, c => MEMO_COL_MIGRATE(c.status), (c, s) => ({ ...c, status: s }));
                         onReorderCards(reordered); setDraggedId(null); setDropTarget(null);
                     }}>
-                    {kanban.map((card, ci) => (
-                        <div key={card.id}>
-                            {dropTarget?.col === "left" && dropTarget?.idx === ci && draggedId !== card.id && <DropLine />}
-                            <div draggable onDragStart={() => setDraggedId(card.id)} onDragEnd={() => { setDraggedId(null); setDropTarget(null); }}
-                                onDragOver={e => { if (draggedId === card.id) return; e.stopPropagation(); e.preventDefault(); }}
-                                onClick={() => openDetail(card)}
-                                className={`rounded-lg p-2 cursor-pointer hover:shadow-md transition-shadow group relative ${card.needsDiscussion && !card.borderColor ? "ring-1 ring-orange-200" : ""} ${draggedId === card.id ? "opacity-40" : ""}`}
-                                style={{ background: card.color, border: card.borderColor ? `2px solid ${card.borderColor}` : card.needsDiscussion ? "2px solid #fb923c" : "1px solid #e2e8f0" }}>
-                                <button onClick={e => { e.stopPropagation(); onDeleteCard(card.id); }}
-                                    className="absolute top-1 right-1 text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                <label className="flex items-center gap-1 mb-0.5 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                    <input type="checkbox" checked={!!card.needsDiscussion} onChange={() => onSaveCard({ ...card, needsDiscussion: !card.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
-                                    <span className={`text-[9px] font-medium ${card.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의</span>
-                                </label>
-                                <h4 className="text-[11px] font-bold text-slate-800 mb-0.5 truncate">{card.title}</h4>
-                                <p className="text-[9px] text-slate-600 whitespace-pre-wrap line-clamp-2">{card.content}</p>
-                                <div className="mt-1 flex items-center justify-between text-[8px] text-slate-400">
-                                    <span>{card.author}</span>
-                                    <span>{(card.comments?.length || 0) > 0 ? `💬${card.comments!.length}` : ""}</span>
+                    {kanban.map((card, ci) => {
+                        const cmts = card.comments || [];
+                        return (
+                            <div key={card.id}>
+                                {dropTarget?.col === "left" && dropTarget?.idx === ci && draggedId !== card.id && <DropLine />}
+                                <div draggable onDragStart={() => setDraggedId(card.id)} onDragEnd={() => { setDraggedId(null); setDropTarget(null); }}
+                                    onDragOver={e => { if (draggedId === card.id) return; e.stopPropagation(); e.preventDefault(); }}
+                                    onClick={() => openDetail(card)}
+                                    className={`rounded-lg p-2.5 cursor-pointer hover:shadow-md transition-shadow flex flex-col group relative ${card.needsDiscussion && !card.borderColor ? "ring-1 ring-orange-200" : ""} ${draggedId === card.id ? "opacity-40" : ""}`}
+                                    style={{ background: card.color, border: card.borderColor ? `2px solid ${card.borderColor}` : card.needsDiscussion ? "2px solid #fb923c" : "1px solid #e2e8f0" }}>
+                                    <button onClick={e => { e.stopPropagation(); onDeleteCard(card.id); }}
+                                        className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                                    <label className="flex items-center gap-1 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
+                                        <input type="checkbox" checked={!!card.needsDiscussion} onChange={() => onSaveCard({ ...card, needsDiscussion: !card.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
+                                        <span className={`text-[9px] font-medium ${card.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                                    </label>
+                                    <div className="flex items-start justify-between mb-1">
+                                        <h4 className="text-[12px] font-semibold text-slate-800 break-words flex-1">{card.title}</h4>
+                                        <span className="text-[9px] text-slate-400 ml-1 whitespace-nowrap">{card.updatedAt}</span>
+                                    </div>
+                                    {card.content && <div className="text-[10px] text-slate-600 mb-2 line-clamp-2 break-words">{card.content}</div>}
+                                    <div className="text-[9px] text-slate-400 mb-1">{MEMBERS[card.author]?.emoji || "👤"} {card.author}</div>
+                                    {cmts.length > 0 ? (
+                                        <div className="border-t border-slate-100 pt-1.5 mt-auto space-y-0.5">
+                                            <div className="text-[9px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
+                                            {cmts.slice(-2).map(c => (
+                                                <div key={c.id} className="text-[9px] text-slate-500 truncate">
+                                                    <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="border-t border-slate-100 pt-1.5 mt-auto">
+                                            <div className="text-[9px] text-slate-300">💬 댓글 없음</div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                     {dropTarget?.col === "left" && dropTarget.idx >= kanban.length && draggedId != null && <DropLine />}
                     {kanban.length === 0 && !draggedId && (
                         <button onClick={() => openNew()} className="w-full py-6 text-[11px] text-slate-400 hover:text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">+ 추가</button>
@@ -4507,23 +4704,28 @@ export default function DashboardPage() {
         { id: "overview", label: "연구실 현황", icon: "🏠" },
         { id: "overview_me", label: `개별 현황 (${userName})`, icon: "👤" },
         { id: "labChat", label: "연구실 채팅", icon: "💬" },
+        // 운영
         { id: "announcements", label: "공지사항", icon: "📢" },
-        { id: "daily", label: "오늘 목표", icon: "🎯" },
         { id: "calendar", label: "일정/휴가", icon: "📅" },
+        { id: "daily", label: "오늘 목표", icon: "🎯" },
+        // 팀 워크
+        ...(userName === "박일웅" ? teamNames : teamNames.filter(t => teams[t]?.lead === userName || teams[t]?.members?.includes(userName))).map(t => ({ id: `teamMemo_${t}`, label: t, icon: teams[t]?.emoji || "📌", color: teams[t]?.color })),
+        // 내 노트
+        { id: "todos", label: "To-do", icon: "✅" },
+        ...(userName === "박일웅" ? memberNames : memberNames.filter(n => n === userName)).map(name => ({ id: `memo_${name}`, label: name, icon: customEmojis[name] || members[name]?.emoji || "👤" })),
+        // 연구
         { id: "papers", label: "논문 현황", icon: "📄" },
         { id: "reports", label: "계획서/보고서", icon: "📋" },
         { id: "ip", label: "지재권", icon: "💡" },
         { id: "experiments", label: "실험 현황", icon: "🧪" },
         { id: "analysis", label: "해석 현황", icon: "🖥️" },
-        { id: "todos", label: "To-do", icon: "✅" },
+        // 커뮤니케이션
         { id: "conferenceTrips", label: "학회/출장", icon: "✈️" },
         { id: "meetings", label: "회의록", icon: "📝" },
         { id: "resources", label: "자료", icon: "📁" },
         { id: "ideas", label: "아이디어", icon: "💡" },
         { id: "chat", label: "잡담", icon: "💬" },
         { id: "lectures", label: "수업", icon: "📚" },
-        ...(userName === "박일웅" ? teamNames : teamNames.filter(t => teams[t]?.lead === userName || teams[t]?.members?.includes(userName))).map(t => ({ id: `teamMemo_${t}`, label: t, icon: teams[t]?.emoji || "📌", color: teams[t]?.color })),
-        ...(userName === "박일웅" ? memberNames : memberNames.filter(n => n === userName)).map(name => ({ id: `memo_${name}`, label: name, icon: customEmojis[name] || members[name]?.emoji || "👤" })),
     ];
 
     const allPeople = useMemo(() => ["전체", ...memberNames], [memberNames]);
@@ -4913,10 +5115,10 @@ export default function DashboardPage() {
                 <div className="md:w-[210px] bg-white md:border-r border-b md:border-b-0 border-slate-200 md:min-h-[calc(100vh-56px)] flex-shrink-0">
                     <div className="flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto md:max-h-[calc(100vh-56px)] p-3 md:p-0 md:pt-3 md:pb-8 gap-0.5">
                         {tabs.map((tab, i) => {
-                            const sectionBreaks: Record<string, string> = { announcements: "운영", papers: "연구", todos: "커뮤니케이션" };
+                            const sectionBreaks: Record<string, string> = { announcements: "운영", todos: "내 노트", papers: "연구", conferenceTrips: "커뮤니케이션" };
                             const showBreak = !tab.id.startsWith("memo_") && !tab.id.startsWith("teamMemo_") && sectionBreaks[tab.id];
                             const showTeamMemoBreak = tab.id.startsWith("teamMemo_") && i > 0 && !tabs[i - 1].id.startsWith("teamMemo_");
-                            const showMemoBreak = tab.id.startsWith("memo_") && !tab.id.startsWith("teamMemo_") && i > 0 && !tabs[i - 1].id.startsWith("memo_");
+                            const showMemoBreak = false;
                             return (
                                 <div key={tab.id}>
                                     {showBreak && (
