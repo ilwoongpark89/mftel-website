@@ -1672,11 +1672,16 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const filtered = filterPeople.length === 0 ? todos : todos.filter(t => t.assignees.some(a => filterPeople.includes(a)));
-    const activeRaw = filtered.filter(t => !t.done);
-    const pinnedTodos = activeRaw.filter(t => t.priority === "highest");
-    const unpinnedTodos = activeRaw.filter(t => t.priority !== "highest");
-    const activeTodos = [...pinnedTodos, ...unpinnedTodos];
+    const getCol = (t: Todo) => t.done ? "completed" : (t.progress ?? 0) > 0 ? "inProgress" : "todo";
+    const setCol = (t: Todo, s: string): Todo => s === "todo" ? { ...t, done: false, progress: 0 } : s === "inProgress" ? { ...t, done: false, progress: Math.max(t.progress ?? 0, 5) } : { ...t, done: true };
+    const todoItems = filtered.filter(t => !t.done && (t.progress ?? 0) === 0);
+    const inProgressItems = filtered.filter(t => !t.done && (t.progress ?? 0) > 0);
     const completedTodos = filtered.filter(t => t.done);
+    const colData: { id: string; label: string; border: string; bgDrop: string; items: Todo[] }[] = [
+        { id: "todo", label: "할 일", border: "border-blue-500", bgDrop: "bg-blue-50/50", items: todoItems },
+        { id: "inProgress", label: "진행 중", border: "border-amber-500", bgDrop: "bg-amber-50/50", items: inProgressItems },
+        { id: "completed", label: "완료", border: "border-emerald-500", bgDrop: "bg-emerald-50/50", items: completedTodos },
+    ];
 
     const handleAdd = () => {
         if (!newText.trim()) return;
@@ -1744,104 +1749,65 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                     </div>
                 </div>
             )}
-            {/* Left-Right layout: Active | Completed */}
-            <div className="flex gap-4">
-                {/* Left: Active */}
-                <div className="flex-1 min-w-0"
-                    onDragOver={e => { e.preventDefault(); setDropTarget(calcDropIdx(e, "active")); }}
-                    onDragLeave={() => {}}
-                    onDrop={() => {
-                        if (dragItem.current && dropTarget) {
-                            if (dragItem.current.done) { onToggle(dragItem.current.id); }
-                            else { const reordered = reorderKanbanItems(todos, dragItem.current, "active", dropTarget.idx, t => t.done ? "completed" : "active", (t, s) => s === "active" ? { ...t, done: false } : { ...t, done: true }); onReorder(reordered); }
-                        } dragItem.current = null; setDraggedId(null); setDropTarget(null);
-                    }}>
-                    <div className="flex items-center gap-2 mb-2 pb-1.5 border-b-2 border-blue-500">
-                        <span className="text-[13px] font-bold text-slate-800">할 일</span>
-                        <span className="text-[11px] text-slate-400">{activeTodos.length}</span>
-                    </div>
-                    <div className={`space-y-1 min-h-[80px] rounded-lg transition-colors ${dropTarget?.col === "active" ? "bg-blue-50/50" : ""}`}>
-                        {activeTodos.map((todo, cardIdx) => (
-                        <div key={todo.id}>
-                        {dropTarget?.col === "active" && dropTarget?.idx === cardIdx && <DropLine />}
-                        <div draggable onDragStart={() => { dragItem.current = todo; setDraggedId(todo.id); }}
-                            onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
-                            onDragOver={e => { e.preventDefault(); if (draggedId === todo.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: "active", idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
-                            className={`flex items-start gap-2.5 p-2.5 rounded-md border transition-all bg-white hover:bg-slate-50 group cursor-grab ${draggedId === todo.id ? "opacity-40 scale-95" : ""} ${todo.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : todo.priority === "highest" ? "border-2 border-red-400 ring-1 ring-red-100 bg-red-50/30" : "border-slate-100"}`}>
-                            <div onClick={() => onToggle(todo.id)} className="w-[18px] h-[18px] rounded flex-shrink-0 mt-0.5 flex items-center justify-center transition-all cursor-pointer border-2 border-slate-300 hover:border-blue-400" />
-                            <div className="flex-1 cursor-pointer" onClick={() => { setEditingTodo(todo); setNewText(todo.text); setNewAssignees(todo.assignees); setNewPriority(todo.priority); setNewDeadline(todo.deadline); setNewProgress(todo.progress ?? 0); }}>
-                                <label className="flex items-center gap-1.5 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                    <input type="checkbox" checked={!!todo.needsDiscussion} onChange={() => onUpdate({ ...todo, needsDiscussion: !todo.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
-                                    <span className={`text-[10px] font-medium ${todo.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
-                                </label>
-                                <div className="text-[13px] text-slate-700 leading-relaxed">
-                                    {PRIORITY_ICON[todo.priority] || ""} {todo.text}
-                                    {todo.priority === "highest" && <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-bold align-middle">매우높음</span>}
-                                </div>
-                                {(todo.progress ?? 0) > 0 && (
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <div className="flex-1 bg-slate-100 rounded-full h-1.5"><div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${todo.progress}%` }} /></div>
-                                        <span className="text-[10px] font-semibold text-blue-500">{todo.progress}%</span>
+            {/* 3-column kanban */}
+            <div className="grid grid-cols-3 gap-3">
+                {colData.map(col => (
+                    <div key={col.id}
+                        onDragOver={e => { e.preventDefault(); setDropTarget(calcDropIdx(e, col.id)); }}
+                        onDragLeave={() => {}}
+                        onDrop={() => {
+                            if (dragItem.current && dropTarget) {
+                                const reordered = reorderKanbanItems(todos, dragItem.current, col.id, dropTarget.idx, getCol, setCol);
+                                onReorder(reordered);
+                            }
+                            dragItem.current = null; setDraggedId(null); setDropTarget(null);
+                        }}>
+                        <div className={`flex items-center gap-2 mb-2 pb-1.5 border-b-2 ${col.border}`}>
+                            <span className="text-[13px] font-bold text-slate-800">{col.label}</span>
+                            <span className="text-[11px] text-slate-400">{col.items.length}</span>
+                        </div>
+                        <div className={`space-y-1 min-h-[80px] rounded-lg transition-colors ${dropTarget?.col === col.id ? col.bgDrop : ""}`}>
+                            {col.items.map((todo, cardIdx) => (
+                                <div key={todo.id}>
+                                    {dropTarget?.col === col.id && dropTarget?.idx === cardIdx && <DropLine />}
+                                    <div draggable onDragStart={() => { dragItem.current = todo; setDraggedId(todo.id); }}
+                                        onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
+                                        onDragOver={e => { e.preventDefault(); if (draggedId === todo.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: col.id, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
+                                        className={`flex items-start gap-2 p-2.5 rounded-md border transition-all group cursor-grab ${draggedId === todo.id ? "opacity-40 scale-95" : ""} ${col.id === "completed" ? "bg-slate-50 border-slate-100 opacity-70" : todo.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200 bg-white" : todo.priority === "highest" ? "border-2 border-red-400 ring-1 ring-red-100 bg-red-50/30" : "bg-white border-slate-100"}`}>
+                                        <div onClick={() => onToggle(todo.id)} className={`w-[18px] h-[18px] rounded flex-shrink-0 mt-0.5 flex items-center justify-center transition-all cursor-pointer ${col.id === "completed" ? "bg-emerald-500" : "border-2 border-slate-300 hover:border-blue-400"}`}>
+                                            {col.id === "completed" && <span className="text-white text-[12px]">✓</span>}
+                                        </div>
+                                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { setEditingTodo(todo); setNewText(todo.text); setNewAssignees(todo.assignees); setNewPriority(todo.priority); setNewDeadline(todo.deadline); setNewProgress(todo.progress ?? 0); }}>
+                                            {col.id !== "completed" && (
+                                                <label className="flex items-center gap-1.5 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
+                                                    <input type="checkbox" checked={!!todo.needsDiscussion} onChange={() => onUpdate({ ...todo, needsDiscussion: !todo.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
+                                                    <span className={`text-[10px] font-medium ${todo.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                                                </label>
+                                            )}
+                                            <div className={`text-[13px] leading-relaxed ${col.id === "completed" ? "text-slate-500" : "text-slate-700"}`}>
+                                                {PRIORITY_ICON[todo.priority] || ""} {todo.text}
+                                                {col.id !== "completed" && todo.priority === "highest" && <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-bold align-middle">매우높음</span>}
+                                            </div>
+                                            {col.id !== "completed" && (todo.progress ?? 0) > 0 && (
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <div className="flex-1 bg-slate-100 rounded-full h-1.5"><div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${todo.progress}%` }} /></div>
+                                                    <span className="text-[10px] font-semibold text-blue-500">{todo.progress}%</span>
+                                                </div>
+                                            )}
+                                            <div className="flex gap-1 mt-1 flex-wrap items-center">
+                                                {todo.assignees.map(a => <span key={a} className={`text-[10px] px-1.5 py-0.5 rounded-lg bg-slate-100 ${col.id === "completed" ? "text-slate-400" : "text-slate-500"}`}>{MEMBERS[a]?.emoji || ""}{a}</span>)}
+                                                {col.id !== "completed" && todo.deadline && <span className="text-[10px] text-red-500 font-semibold ml-auto">~{todo.deadline}</span>}
+                                            </div>
+                                        </div>
+                                        <button onClick={() => onDelete(todo.id)} className="text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity mt-1">✕</button>
                                     </div>
-                                )}
-                                <div className="flex gap-1 mt-1 flex-wrap items-center">
-                                    {todo.assignees.map(a => <span key={a} className="text-[10px] px-1.5 py-0.5 rounded-lg bg-slate-100 text-slate-500">{MEMBERS[a]?.emoji || ""}{a}</span>)}
-                                    {todo.deadline && <span className="text-[10px] text-red-500 font-semibold ml-auto">~{todo.deadline}</span>}
                                 </div>
-                            </div>
-                            <button onClick={() => onDelete(todo.id)} className="text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity mt-1">✕</button>
+                            ))}
+                            {dropTarget?.col === col.id && dropTarget?.idx === col.items.length && <DropLine />}
                         </div>
-                        </div>
-                    ))}
-                    {dropTarget?.col === "active" && dropTarget?.idx === activeTodos.length && <DropLine />}
+                        {col.items.length === 0 && <div className="text-center py-8 text-slate-300 text-[12px]">{col.label} 없음</div>}
                     </div>
-                    {activeTodos.length === 0 && <div className="text-center py-8 text-slate-300 text-[12px]">할 일 없음</div>}
-                </div>
-                {/* Right: Completed */}
-                <div className="flex-1 min-w-0"
-                    onDragOver={e => { e.preventDefault(); setDropTarget(calcDropIdx(e, "completed")); }}
-                    onDragLeave={() => {}}
-                    onDrop={() => {
-                        if (dragItem.current && dropTarget) {
-                            if (!dragItem.current.done) { onToggle(dragItem.current.id); }
-                            else { const reordered = reorderKanbanItems(todos, dragItem.current, "completed", dropTarget.idx, t => t.done ? "completed" : "active", (t, s) => s === "active" ? { ...t, done: false } : { ...t, done: true }); onReorder(reordered); }
-                        } dragItem.current = null; setDraggedId(null); setDropTarget(null);
-                    }}>
-                    <div className="flex items-center gap-2 mb-2 pb-1.5 border-b-2 border-emerald-500">
-                        <span className="text-[13px] font-bold text-slate-800">완료</span>
-                        <span className="text-[11px] text-slate-400">{completedTodos.length}</span>
-                    </div>
-                    <div className={`space-y-1 min-h-[80px] rounded-lg transition-colors ${dropTarget?.col === "completed" ? "bg-emerald-50/50" : ""}`}>
-                        {completedTodos.map((todo, cardIdx) => (
-                        <div key={todo.id}>
-                        {dropTarget?.col === "completed" && dropTarget?.idx === cardIdx && <DropLine />}
-                        <div draggable onDragStart={() => { dragItem.current = todo; setDraggedId(todo.id); }}
-                            onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
-                            onDragOver={e => { e.preventDefault(); if (draggedId === todo.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: "completed", idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
-                            className={`flex items-start gap-2.5 p-2.5 rounded-md border transition-all bg-slate-50 border-slate-100 opacity-70 group cursor-grab ${draggedId === todo.id ? "opacity-40 scale-95" : ""}`}>
-                            <div onClick={() => onToggle(todo.id)} className="w-[18px] h-[18px] rounded flex-shrink-0 mt-0.5 flex items-center justify-center transition-all cursor-pointer bg-emerald-500"><span className="text-white text-[12px]">✓</span></div>
-                            <div className="flex-1 cursor-pointer" onClick={() => { setEditingTodo(todo); setNewText(todo.text); setNewAssignees(todo.assignees); setNewPriority(todo.priority); setNewDeadline(todo.deadline); setNewProgress(todo.progress ?? 0); }}>
-                                {todo.needsDiscussion && (
-                                    <label className="flex items-center gap-1.5 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                        <input type="checkbox" checked={true} onChange={() => onUpdate({ ...todo, needsDiscussion: false })} className="w-3 h-3 accent-orange-500" />
-                                        <span className="text-[10px] font-medium text-orange-500">논의 필요</span>
-                                    </label>
-                                )}
-                                <div className="text-[13px] text-slate-500 leading-relaxed">{PRIORITY_ICON[todo.priority] || ""} {todo.text}</div>
-                                <div className="flex gap-1 mt-1 flex-wrap items-center">
-                                    {todo.assignees.map(a => <span key={a} className="text-[10px] px-1.5 py-0.5 rounded-lg bg-slate-100 text-slate-400">{MEMBERS[a]?.emoji || ""}{a}</span>)}
-                                </div>
-                            </div>
-                            <div className="flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                                <button onClick={() => onDelete(todo.id)} className="text-slate-300 hover:text-red-500 text-[11px]">✕</button>
-                            </div>
-                        </div>
-                        </div>
-                    ))}
-                    {dropTarget?.col === "completed" && dropTarget?.idx === completedTodos.length && <DropLine />}
-                    </div>
-                    {completedTodos.length === 0 && <div className="text-center py-8 text-slate-300 text-[12px]">완료 항목 없음</div>}
-                </div>
+                ))}
             </div>
             {/* Edit modal */}
             {editingTodo && (
@@ -2597,7 +2563,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
     return (
         <div>
             <button onClick={openAdd} className="mb-3 px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 자료 추가</button>
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2"
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-3"
                 onDragOver={e => e.preventDefault()}
                 onDrop={() => { if (dragRes.current !== null && dragOverRes !== null && dragRes.current !== dragOverRes) { const reordered = [...resources]; const [moved] = reordered.splice(dragRes.current, 1); reordered.splice(dragOverRes, 0, moved); onReorder(reordered); } dragRes.current = null; setDragOverRes(null); }}>
                 {resources.map((r, idx) => {
@@ -2746,7 +2712,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
     return (
         <div>
             <button onClick={openAdd} className="mb-4 px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 새 글 작성</button>
-            <div className="grid gap-4 sm:grid-cols-2"
+            <div className="grid gap-3 sm:grid-cols-3"
                 onDragOver={e => e.preventDefault()}
                 onDrop={() => { if (dragIdea.current !== null && dragOverIdea !== null && dragIdea.current !== dragOverIdea) { const reordered = [...ideas]; const [moved] = reordered.splice(dragIdea.current, 1); reordered.splice(dragOverIdea, 0, moved); onReorder(reordered); } dragIdea.current = null; setDragOverIdea(null); }}>
                 {ideas.map((idea, idx) => (
@@ -2807,7 +2773,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                                 <textarea value={body} onChange={e => setBody(e.target.value)} rows={5}
                                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
                             </div>
-                            <ColorBorderPicker color={ideaColor} borderColor={ideaBorder} onColor={setIdeaColor} onBorder={setIdeaBorder} />
+                            <ColorPicker color={ideaColor} onColor={setIdeaColor} />
                         </div>
                         <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
                             <button onClick={closeAdd} className="px-4 py-2 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
@@ -2886,7 +2852,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                                 <textarea value={body} onChange={e => setBody(e.target.value)} rows={5}
                                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
                             </div>
-                            <ColorBorderPicker color={ideaColor} borderColor={ideaBorder} onColor={setIdeaColor} onBorder={setIdeaBorder} />
+                            <ColorPicker color={ideaColor} onColor={setIdeaColor} />
                         </div>
                         <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
                             <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
@@ -3201,24 +3167,13 @@ function SettingsView({ currentUser, customEmojis, onSaveEmoji, statusMessages, 
 const MEMO_COLORS = ["#f8fafc", "#fef3c7", "#dcfce7", "#dbeafe", "#fce7f3", "#f3e8ff", "#e0f2fe", "#fef9c3", "#fff1f2", "#ecfdf5", "#eff6ff", "#fdf4ff", "#fffbeb", "#f0fdfa", "#faf5ff", "#fff7ed"];
 const MEMO_BORDERS = ["", "#94a3b8", "#f59e0b", "#22c55e", "#3b82f6", "#ec4899", "#8b5cf6", "#ef4444", "#14b8a6", "#f97316"];
 
-function ColorBorderPicker({ color, borderColor, onColor, onBorder }: { color: string; borderColor: string; onColor: (c: string) => void; onBorder: (c: string) => void }) {
+function ColorPicker({ color, onColor, compact }: { color: string; onColor: (c: string) => void; compact?: boolean }) {
     return (
-        <div className="space-y-2">
-            <div>
-                <label className="text-[10px] font-semibold text-slate-400 block mb-1">배경색</label>
-                <div className="flex flex-wrap gap-1">{MEMO_COLORS.map(c => (
-                    <button key={c} onClick={() => onColor(c)} className={`w-6 h-6 rounded border-2 transition-all ${color === c ? "border-blue-500 scale-110" : "border-slate-200"}`} style={{ background: c }} />
-                ))}</div>
-            </div>
-            <div>
-                <label className="text-[10px] font-semibold text-slate-400 block mb-1">테두리</label>
-                <div className="flex flex-wrap gap-1">{MEMO_BORDERS.map(c => (
-                    <button key={c || "none"} onClick={() => onBorder(c)} className={`w-6 h-6 rounded transition-all ${borderColor === c ? "ring-2 ring-blue-500 scale-110" : ""}`}
-                        style={{ background: c || "#f8fafc", border: c ? `2px solid ${c}` : "2px dashed #cbd5e1" }}>
-                        {!c && <span className="text-[8px] text-slate-400">X</span>}
-                    </button>
-                ))}</div>
-            </div>
+        <div>
+            <label className="text-[10px] font-semibold text-slate-400 block mb-1">배경색</label>
+            <div className="flex flex-wrap gap-1">{MEMO_COLORS.map(c => (
+                <button key={c} onClick={() => onColor(c)} className={`${compact ? "w-5 h-5" : "w-6 h-6"} rounded border-2 transition-all ${color === c ? "border-blue-500 scale-110" : "border-slate-200"}`} style={{ background: c }} />
+            ))}</div>
         </div>
     );
 }
@@ -3299,7 +3254,7 @@ function PersonalMemoView({ memos, onSave, onDelete }: {
                         <div className="p-4 space-y-3">
                             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                             <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용..." rows={5} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
-                            <ColorBorderPicker color={color} borderColor={borderColor} onColor={setColor} onBorder={setBorderColor} />
+                            <ColorPicker color={color} onColor={setColor} />
                         </div>
                         <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
                             <button onClick={() => setAdding(false)} className="px-4 py-2 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
@@ -3359,7 +3314,7 @@ function PersonalMemoView({ memos, onSave, onDelete }: {
                         <div className="p-4 space-y-3">
                             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                             <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용..." rows={5} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
-                            <ColorBorderPicker color={color} borderColor={borderColor} onColor={setColor} onBorder={setBorderColor} />
+                            <ColorPicker color={color} onColor={setColor} />
                         </div>
                         <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
                             <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
@@ -3548,10 +3503,10 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
     const [text, setText] = useState("");
     const endRef = useRef<HTMLDivElement>(null);
     const composingRef = useRef(false);
-    const [boardForm, setBoardForm] = useState(false);
+    const [boardAdding, setBoardAdding] = useState(false);
     const [boardTitle, setBoardTitle] = useState("");
     const [boardContent, setBoardContent] = useState("");
-    const [boardColor, setBoardColor] = useState(TEAM_MEMO_COLORS[0]);
+    const [boardColor, setBoardColor] = useState(MEMO_COLORS[0]);
     const [selectedCard, setSelectedCard] = useState<TeamMemoCard | null>(null);
 
     const send = () => {
@@ -3559,9 +3514,10 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
         onAdd({ id: Date.now(), author: currentUser, text: text.trim(), date: new Date().toLocaleString("ko-KR") });
         setText("");
     };
+    const openBoardAdd = () => { setBoardAdding(true); setBoardTitle(""); setBoardContent(""); setBoardColor(MEMO_COLORS[0]); };
     const saveBoard = () => {
         onSaveBoard({ id: Date.now(), title: boardTitle.trim() || "제목 없음", content: boardContent, status: "left", color: boardColor, author: currentUser, updatedAt: new Date().toISOString().split("T")[0] });
-        setBoardForm(false); setBoardTitle(""); setBoardContent("");
+        setBoardAdding(false);
     };
 
     useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chat.length]);
@@ -3572,36 +3528,22 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
             <div className="w-1/4 flex flex-col">
                 <div className="flex items-center justify-between mb-2">
                     <h3 className="text-[13px] font-bold text-slate-700">📌 보드</h3>
-                    <button onClick={() => setBoardForm(true)} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[11px] font-medium hover:bg-blue-600">+ 추가</button>
+                    <button onClick={openBoardAdd} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[11px] font-medium hover:bg-blue-600">+ 추가</button>
                 </div>
-                {boardForm && (
-                    <div className="bg-white border border-blue-200 rounded-lg p-2.5 mb-2 space-y-1.5 flex-shrink-0">
-                        <input value={boardTitle} onChange={e => setBoardTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-[12px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-                        <textarea value={boardContent} onChange={e => setBoardContent(e.target.value)} placeholder="내용..." rows={2} className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
-                        <div className="flex items-center gap-2">
-                            <div className="flex gap-0.5">{TEAM_MEMO_COLORS.map(c => (
-                                <button key={c} type="button" onClick={() => setBoardColor(c)} className={`w-4 h-4 rounded border-2 transition-all ${boardColor === c ? "border-blue-500 scale-110" : "border-slate-200"}`} style={{ background: c }} />
-                            ))}</div>
-                            <div className="flex-1" />
-                            <button onClick={() => setBoardForm(false)} className="px-2 py-1 text-[11px] text-slate-500">취소</button>
-                            <button onClick={saveBoard} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[11px] font-medium hover:bg-blue-600">저장</button>
-                        </div>
-                    </div>
-                )}
                 <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
                     {board.map(card => (
                         <div key={card.id} onClick={() => setSelectedCard(card)}
-                            className="rounded-lg p-2 cursor-pointer hover:shadow-md transition-shadow group relative border border-slate-200"
-                            style={{ background: card.color }}>
+                            className="rounded-lg p-2.5 cursor-pointer hover:shadow-md transition-shadow group relative border border-slate-200"
+                            style={{ background: card.color || "#fff" }}>
                             <button onClick={e => { e.stopPropagation(); onDeleteBoard(card.id); }}
-                                className="absolute top-1 right-1 text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                            <h4 className="text-[11px] font-bold text-slate-800 mb-0.5 truncate">{card.title}</h4>
-                            <p className="text-[9px] text-slate-600 whitespace-pre-wrap line-clamp-2">{card.content}</p>
-                            <div className="mt-1 text-[8px] text-slate-400">{card.author} · {card.updatedAt}</div>
+                                className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                            <h4 className="text-[12px] font-semibold text-slate-800 mb-0.5 break-words">{card.title}</h4>
+                            {card.content && <p className="text-[10px] text-slate-600 whitespace-pre-wrap line-clamp-3 mb-1">{card.content}</p>}
+                            <div className="text-[9px] text-slate-400">{MEMBERS[card.author]?.emoji || "👤"} {card.author}</div>
                         </div>
                     ))}
-                    {board.length === 0 && !boardForm && (
-                        <button onClick={() => setBoardForm(true)} className="w-full py-6 text-[11px] text-slate-400 hover:text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">+ 추가</button>
+                    {board.length === 0 && (
+                        <button onClick={openBoardAdd} className="w-full py-6 text-[11px] text-slate-400 hover:text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">+ 추가</button>
                     )}
                 </div>
             </div>
@@ -3648,10 +3590,30 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                     </div>
                 </div>
             </div>
+            {/* Board add modal */}
+            {boardAdding && (
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setBoardAdding(false)}>
+                    <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-4 border-b border-slate-200">
+                            <h3 className="text-[15px] font-bold text-slate-800">새 글 작성</h3>
+                            <button onClick={() => setBoardAdding(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            <input value={boardTitle} onChange={e => setBoardTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                            <textarea value={boardContent} onChange={e => setBoardContent(e.target.value)} placeholder="내용..." rows={4} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                            <ColorPicker color={boardColor} onColor={setBoardColor} />
+                        </div>
+                        <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
+                            <button onClick={() => setBoardAdding(false)} className="px-4 py-2 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                            <button onClick={saveBoard} className="px-4 py-2 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">게시</button>
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* Board detail modal */}
             {selectedCard && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setSelectedCard(null)}>
-                    <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                    <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800 break-words flex-1 pr-2">{selectedCard.title}</h3>
                             <button onClick={() => setSelectedCard(null)} className="text-slate-400 hover:text-slate-600 text-lg flex-shrink-0">✕</button>
@@ -3852,7 +3814,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                     <div className="bg-white border border-blue-200 rounded-lg p-2.5 mb-2 space-y-1.5 flex-shrink-0">
                         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-[12px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                         <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용..." rows={2} className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
-                        <ColorBorderPicker color={color} borderColor={borderClr} onColor={setColor} onBorder={setBorderClr} />
+                        <ColorPicker color={color} onColor={setColor} />
                         <div className="flex justify-end gap-2">
                             <button onClick={() => setShowForm(false)} className="px-2 py-1 text-[11px] text-slate-500">취소</button>
                             <button onClick={saveNew} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[11px] font-medium hover:bg-blue-600">저장</button>
@@ -3994,7 +3956,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                         <div className="p-4 space-y-3">
                             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                             <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용..." rows={5} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
-                            <ColorBorderPicker color={color} borderColor={borderClr} onColor={setColor} onBorder={setBorderClr} />
+                            <ColorPicker color={color} onColor={setColor} />
                         </div>
                         <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
                             <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
