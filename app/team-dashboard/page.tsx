@@ -3451,10 +3451,10 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
         }
     };
 
-    useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chat.length]);
+    useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [chat.length]);
 
     return (
-        <div className="grid gap-3 h-[calc(100vh-140px)]" style={{gridTemplateColumns:"1.2fr 0.8fr 1fr"}}>
+        <div className="grid gap-3 h-[calc(100vh-90px)]" style={{gridTemplateColumns:"1.2fr 0.8fr 1fr"}}>
             {/* Board */}
             <div className="flex flex-col min-w-0">
                 <div className="flex items-center justify-between mb-2">
@@ -3846,10 +3846,10 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
         setBoardAdding(false);
     };
 
-    useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chat.length]);
+    useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [chat.length]);
 
     return (
-        <div className="grid gap-3 h-[calc(100vh-140px)]" style={{gridTemplateColumns:"1fr 0.8fr 1.2fr"}}>
+        <div className="grid gap-3 h-[calc(100vh-90px)]" style={{gridTemplateColumns:"1fr 0.8fr 1.2fr"}}>
             {/* Board */}
             <div className="flex flex-col min-w-0">
                 <div className="flex items-center justify-between mb-2">
@@ -4202,10 +4202,10 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
         }
     };
 
-    useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chat.length]);
+    useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [chat.length]);
 
     return (
-        <div className="grid gap-3 h-[calc(100vh-140px)]" style={{gridTemplateColumns:"1fr 0.8fr 1.2fr"}}>
+        <div className="grid gap-3 h-[calc(100vh-90px)]" style={{gridTemplateColumns:"1fr 0.8fr 1.2fr"}}>
             {/* Board */}
             <div className="flex flex-col min-w-0">
                 <div className="flex items-center justify-between mb-2">
