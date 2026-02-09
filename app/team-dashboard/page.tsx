@@ -5364,6 +5364,7 @@ export default function DashboardPage() {
     const [userName, setUserName] = useState("");
     const [authChecked, setAuthChecked] = useState(false);
     const [activeTab, setActiveTab] = useState("overview");
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [selectedPerson, setSelectedPerson] = useState("전체");
     const [onlineUsers, setOnlineUsers] = useState<Array<{ name: string; timestamp: number }>>([]);
     const [members, setMembers] = useState<Record<string, { team: string; role: string; emoji: string }>>(DEFAULT_MEMBERS);
@@ -5842,11 +5843,67 @@ export default function DashboardPage() {
         <MembersContext.Provider value={displayMembers}>
         <div className="min-h-screen bg-[#F8FAFC] text-slate-800 leading-normal" style={{ fontFamily: "'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif" }}>
 
-            <div className="flex flex-col md:flex-row md:h-screen md:overflow-hidden">
-                {/* Sidebar */}
-                <div className="md:w-[240px] md:h-screen flex-shrink-0 flex flex-col" style={{background:"#0F172A", borderRight:"1px solid #1E293B", boxShadow:"2px 0 8px rgba(0,0,0,0.1)"}}>
+            {/* Mobile top header */}
+            <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-[56px] px-4" style={{background:"#0F172A", boxShadow:"0 1px 4px rgba(0,0,0,0.2)"}}>
+                <button onClick={() => setMobileMenuOpen(true)} className="text-[22px] text-white w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/10">☰</button>
+                <span className="text-[15px] font-bold text-white truncate">{(() => { const found = tabs.find(t => t.id === activeTab); const extra: Record<string, string> = { teams: "팀 관리", settings: "설정" }; return found ? `${found.icon} ${found.label}` : extra[activeTab] || "대시보드"; })()}</span>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-[16px] flex-shrink-0" style={{background:"rgba(59,130,246,0.1)", border:"1.5px solid rgba(59,130,246,0.25)"}}>{displayMembers[userName]?.emoji || "👤"}</div>
+            </div>
+            {/* Mobile slide menu */}
+            {mobileMenuOpen && (
+                <div className="md:hidden fixed inset-0 z-50" onClick={() => setMobileMenuOpen(false)}>
+                    <div className="absolute inset-0" style={{background:"rgba(0,0,0,0.5)"}} />
+                    <div className="absolute left-0 top-0 bottom-0 w-[280px] flex flex-col overflow-y-auto dark-scrollbar" style={{background:"#0F172A"}} onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-3 px-5 pt-5 pb-4 flex-shrink-0" style={{borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
+                            <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-[17px] font-extrabold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", boxShadow: "0 2px 8px rgba(59,130,246,0.3)" }}>M</div>
+                            <div className="min-w-0">
+                                <div className="text-[15px] tracking-tight text-white" style={{fontWeight:750}}>MFTEL</div>
+                                <div className="text-[10.5px] truncate" style={{color:"#64748B"}}>Multiphase Flow & Thermal Energy</div>
+                            </div>
+                        </div>
+                        <div className="flex-1 min-h-0 overflow-y-auto pt-2 pb-2 dark-scrollbar">
+                            {tabs.map((tab, i) => {
+                                const sectionBreaks: Record<string, string> = { announcements: "운영", todos: "내 노트", papers: "연구", conferenceTrips: "커뮤니케이션" };
+                                const showBreak = !tab.id.startsWith("memo_") && !tab.id.startsWith("teamMemo_") && sectionBreaks[tab.id];
+                                const showTeamMemoBreak = tab.id.startsWith("teamMemo_") && i > 0 && !tabs[i - 1].id.startsWith("teamMemo_");
+                                const isActive = activeTab === tab.id;
+                                return (
+                                    <div key={tab.id}>
+                                        {showBreak && <div className="mt-5 mb-1.5 px-4"><div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>{sectionBreaks[tab.id]}</div></div>}
+                                        {showTeamMemoBreak && <div className="mt-5 mb-1.5 px-4"><div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>팀 워크</div></div>}
+                                        <button onClick={() => { setActiveTab(tab.id); setMobileMenuOpen(false); }}
+                                            className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13.5px] whitespace-nowrap transition-all"
+                                            style={{ fontWeight: isActive ? 600 : 450, color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}>
+                                            {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-blue-400" />}
+                                            <span className="text-[15px]">{tab.icon}</span><span>{tab.label}</span>
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                            {userName === "박일웅" && <div className="mt-5 mb-1.5 px-4"><div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>관리</div></div>}
+                            {userName === "박일웅" && <button onClick={() => { setActiveTab("teams"); setMobileMenuOpen(false); }} className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13.5px] whitespace-nowrap" style={{ fontWeight: activeTab === "teams" ? 600 : 450, color: activeTab === "teams" ? "#FFFFFF" : "#94A3B8", background: activeTab === "teams" ? "rgba(59,130,246,0.15)" : "transparent" }}>
+                                <span className="text-[15px]">👥</span><span>팀 관리</span>
+                            </button>}
+                            <button onClick={() => { setActiveTab("settings"); setMobileMenuOpen(false); }} className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13.5px] whitespace-nowrap" style={{ fontWeight: activeTab === "settings" ? 600 : 450, color: activeTab === "settings" ? "#FFFFFF" : "#94A3B8", background: activeTab === "settings" ? "rgba(59,130,246,0.15)" : "transparent" }}>
+                                <span className="text-[15px]">⚙️</span><span>설정</span>
+                            </button>
+                        </div>
+                        <div className="flex items-center gap-2.5 px-4 py-3.5 flex-shrink-0" style={{borderTop:"1px solid rgba(255,255,255,0.08)"}}>
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-[16px] flex-shrink-0" style={{background:"rgba(59,130,246,0.1)", border:"1.5px solid rgba(59,130,246,0.25)"}}>{displayMembers[userName]?.emoji || "👤"}</div>
+                            <div className="flex-1 min-w-0">
+                                <div className="text-[13px] truncate text-white" style={{fontWeight:650}}>{userName}</div>
+                                <div className="text-[10.5px]" style={{color:"#64748B"}}>{displayMembers[userName]?.role || "학생"}</div>
+                            </div>
+                            <button onClick={handleLogout} className="text-[16px]" style={{color:"#64748B"}} title="로그아웃">⏻</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            <div className="flex flex-col md:flex-row md:h-screen md:overflow-hidden pt-[56px] md:pt-0">
+                {/* Desktop Sidebar */}
+                <div className="hidden md:flex md:w-[240px] md:h-screen flex-shrink-0 flex-col" style={{background:"#0F172A", borderRight:"1px solid #1E293B", boxShadow:"2px 0 8px rgba(0,0,0,0.1)"}}>
                     {/* Sidebar top: MFTEL logo */}
-                    <div className="hidden md:flex items-center gap-3 px-5 pt-5 pb-4 relative z-10 flex-shrink-0" style={{borderBottom:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
+                    <div className="flex items-center gap-3 px-5 pt-5 pb-4 relative z-10 flex-shrink-0" style={{borderBottom:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
                         <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-[17px] font-extrabold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", boxShadow: "0 2px 8px rgba(59,130,246,0.3)" }}>M</div>
                         <div className="min-w-0">
                             <div className="text-[15px] tracking-tight text-white" style={{fontWeight:750}}>MFTEL</div>
