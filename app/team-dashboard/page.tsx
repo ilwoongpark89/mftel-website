@@ -102,7 +102,7 @@ type Resource = { id: number; title: string; link: string; nasPath: string; auth
 type IdeaPost = { id: number; title: string; body: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean; color?: string; borderColor?: string };
 type Memo = { id: number; title: string; content: string; color: string; borderColor?: string; updatedAt: string; needsDiscussion?: boolean; comments?: Comment[] };
 type TeamMemoCard = { id: number; title: string; content: string; status: string; color: string; borderColor?: string; author: string; updatedAt: string; comments?: Comment[]; needsDiscussion?: boolean };
-type TeamChatMsg = { id: number; author: string; text: string; date: string };
+type TeamChatMsg = { id: number; author: string; text: string; date: string; imageUrl?: string };
 type LabFile = { id: number; name: string; size: number; url: string; type: string; uploader: string; date: string };
 type ConferenceTrip = { id: number; title: string; startDate: string; endDate: string; homepage: string; fee: string; participants: string[]; creator: string; createdAt: string; status?: string; comments?: Comment[]; needsDiscussion?: boolean };
 type Meeting = { id: number; title: string; goal: string; summary: string; date: string; assignees: string[]; status: string; creator: string; createdAt: string; comments: Comment[]; team?: string; needsDiscussion?: boolean };
@@ -3394,6 +3394,9 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
     const [borderColor, setBorderColor] = useState("");
     const [newComment, setNewComment] = useState("");
     const [chatText, setChatText] = useState("");
+    const [chatImg, setChatImg] = useState("");
+    const [imgUploading, setImgUploading] = useState(false);
+    const chatFileRef = useRef<HTMLInputElement>(null);
     const composingRef = useRef(false);
     const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -3422,9 +3425,15 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
         onSave(updated); setSelected(updated);
     };
     const sendChat = () => {
-        if (!chatText.trim()) return;
-        onAddChat({ id: Date.now(), author: currentUser, text: chatText.trim(), date: new Date().toLocaleString("ko-KR") });
-        setChatText("");
+        if (!chatText.trim() && !chatImg) return;
+        onAddChat({ id: Date.now(), author: currentUser, text: chatText.trim(), date: new Date().toLocaleString("ko-KR"), imageUrl: chatImg || undefined });
+        setChatText(""); setChatImg("");
+    };
+    const handleChatImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]; if (!file) return;
+        setImgUploading(true);
+        try { const url = await uploadFile(file); setChatImg(url); } catch {}
+        setImgUploading(false); e.target.value = "";
     };
 
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chat.length]);
@@ -3499,7 +3508,8 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                         <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`}>
                             <div className={`inline-block max-w-[90%] rounded-lg px-3 py-2 text-[13px] ${msg.author === currentUser ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-700"}`}>
                                 {msg.author !== currentUser && <div className="text-[11px] font-bold mb-0.5">{MEMBERS[msg.author]?.emoji || "👤"} {msg.author}</div>}
-                                <div className="whitespace-pre-wrap">{msg.text}</div>
+                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mb-1 cursor-pointer" onClick={() => window.open(msg.imageUrl, "_blank")} />}
+                                {msg.text && <div className="whitespace-pre-wrap">{msg.text}</div>}
                                 <div className={`text-[10px] mt-0.5 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>{msg.date}</div>
                             </div>
                             {msg.author === currentUser && (
@@ -3510,11 +3520,14 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                     <div ref={chatEndRef} />
                 </div>
                 <div className="p-2.5 border-t border-slate-100">
-                    <div className="flex gap-2">
+                    {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[80px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">✕</button></div>}
+                    <div className="flex gap-2 items-end">
+                        <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
+                        <button onClick={() => chatFileRef.current?.click()} className="px-2 py-2 text-slate-400 hover:text-blue-500 transition-colors flex-shrink-0" title="사진 첨부">{imgUploading ? "⏳" : "📷"}</button>
                         <textarea value={chatText} onChange={e => setChatText(e.target.value)}
                             placeholder="메시지 입력..." rows={2}
                             className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
-                        <button onClick={sendChat} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0 self-end">전송</button>
+                        <button onClick={sendChat} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">전송</button>
                     </div>
                 </div>
             </div>
@@ -3769,6 +3782,9 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
 }) {
     const MEMBERS = useContext(MembersContext);
     const [text, setText] = useState("");
+    const [chatImg, setChatImg] = useState("");
+    const [imgUploading, setImgUploading] = useState(false);
+    const chatFileRef = useRef<HTMLInputElement>(null);
     const endRef = useRef<HTMLDivElement>(null);
     const composingRef = useRef(false);
     const [boardAdding, setBoardAdding] = useState(false);
@@ -3779,9 +3795,15 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
     const [boardComment, setBoardComment] = useState("");
 
     const send = () => {
-        if (!text.trim()) return;
-        onAdd({ id: Date.now(), author: currentUser, text: text.trim(), date: new Date().toLocaleString("ko-KR") });
-        setText("");
+        if (!text.trim() && !chatImg) return;
+        onAdd({ id: Date.now(), author: currentUser, text: text.trim(), date: new Date().toLocaleString("ko-KR"), imageUrl: chatImg || undefined });
+        setText(""); setChatImg("");
+    };
+    const handleChatImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]; if (!file) return;
+        setImgUploading(true);
+        try { const url = await uploadFile(file); setChatImg(url); } catch {}
+        setImgUploading(false); e.target.value = "";
     };
     const openBoardAdd = () => { setBoardAdding(true); setBoardTitle(""); setBoardContent(""); setBoardColor(MEMO_COLORS[0]); };
     const saveBoard = () => {
@@ -3862,7 +3884,8 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                         <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`}>
                             <div className={`inline-block max-w-[75%] rounded-lg px-3.5 py-2.5 text-[14px] ${msg.author === currentUser ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-700"}`}>
                                 {msg.author !== currentUser && <div className="text-[12px] font-bold mb-0.5">{MEMBERS[msg.author]?.emoji || "👤"} {msg.author}</div>}
-                                <div className="whitespace-pre-wrap">{msg.text}</div>
+                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[300px] rounded-md mb-1.5 cursor-pointer" onClick={() => window.open(msg.imageUrl, "_blank")} />}
+                                {msg.text && <div className="whitespace-pre-wrap">{msg.text}</div>}
                                 <div className={`text-[11px] mt-1 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>{msg.date}</div>
                             </div>
                             {msg.author === currentUser && (
@@ -3873,11 +3896,14 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                     <div ref={endRef} />
                 </div>
                 <div className="p-3 border-t border-slate-100">
-                    <div className="flex gap-2">
+                    {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[100px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center">✕</button></div>}
+                    <div className="flex gap-2 items-end">
+                        <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
+                        <button onClick={() => chatFileRef.current?.click()} className="px-2 py-2.5 text-slate-400 hover:text-blue-500 transition-colors flex-shrink-0 text-[18px]" title="사진 첨부">{imgUploading ? "⏳" : "📷"}</button>
                         <textarea value={text} onChange={e => setText(e.target.value)}
                             placeholder="메시지 입력... (엔터로 줄바꿈)" rows={2}
                             className="flex-1 border border-slate-200 rounded-lg px-3 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
-                        <button onClick={send} className="px-4 py-2.5 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600 flex-shrink-0 self-end">전송</button>
+                        <button onClick={send} className="px-4 py-2.5 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600 flex-shrink-0">전송</button>
                     </div>
                 </div>
             </div>
@@ -4073,6 +4099,9 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     const [color, setColor] = useState(TEAM_MEMO_COLORS[0]);
     const [borderClr, setBorderClr] = useState("");
     const [chatText, setChatText] = useState("");
+    const [chatImg, setChatImg] = useState("");
+    const [imgUploading, setImgUploading] = useState(false);
+    const chatFileRef = useRef<HTMLInputElement>(null);
     const [newComment, setNewComment] = useState("");
     const chatEndRef = useRef<HTMLDivElement>(null);
     const composingRef = useRef(false);
@@ -4107,9 +4136,15 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
         onSaveCard(updated); setSelected(updated);
     };
     const sendChat = () => {
-        if (!chatText.trim()) return;
-        onAddChat({ id: Date.now(), author: currentUser, text: chatText.trim(), date: new Date().toLocaleString("ko-KR") });
-        setChatText("");
+        if (!chatText.trim() && !chatImg) return;
+        onAddChat({ id: Date.now(), author: currentUser, text: chatText.trim(), date: new Date().toLocaleString("ko-KR"), imageUrl: chatImg || undefined });
+        setChatText(""); setChatImg("");
+    };
+    const handleChatImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]; if (!file) return;
+        setImgUploading(true);
+        try { const url = await uploadFile(file); setChatImg(url); } catch {}
+        setImgUploading(false); e.target.value = "";
     };
 
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chat.length]);
@@ -4212,7 +4247,8 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                         <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`}>
                             <div className={`inline-block max-w-[85%] rounded-lg px-3 py-2 text-[13px] ${msg.author === currentUser ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-700"}`}>
                                 {msg.author !== currentUser && <div className="text-[11px] font-bold mb-0.5">{MEMBERS[msg.author]?.emoji || "👤"}{msg.author}</div>}
-                                <div className="whitespace-pre-wrap">{msg.text}</div>
+                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[250px] rounded-md mb-1 cursor-pointer" onClick={() => window.open(msg.imageUrl, "_blank")} />}
+                                {msg.text && <div className="whitespace-pre-wrap">{msg.text}</div>}
                                 <div className={`text-[10px] mt-1 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>{msg.date}</div>
                             </div>
                             {msg.author === currentUser && (
@@ -4223,11 +4259,14 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                     <div ref={chatEndRef} />
                 </div>
                 <div className="p-2.5 border-t border-slate-100">
-                    <div className="flex gap-2">
+                    {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[80px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">✕</button></div>}
+                    <div className="flex gap-2 items-end">
+                        <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
+                        <button onClick={() => chatFileRef.current?.click()} className="px-2 py-2 text-slate-400 hover:text-blue-500 transition-colors flex-shrink-0" title="사진 첨부">{imgUploading ? "⏳" : "📷"}</button>
                         <textarea value={chatText} onChange={e => setChatText(e.target.value)}
                             placeholder="메시지 입력... (엔터로 줄바꿈)" rows={2}
                             className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
-                        <button onClick={sendChat} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 flex-shrink-0 self-end">전송</button>
+                        <button onClick={sendChat} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 flex-shrink-0">전송</button>
                     </div>
                 </div>
             </div>
