@@ -3435,6 +3435,19 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
         try { const url = await uploadFile(file); setChatImg(url); } catch {}
         setImgUploading(false); e.target.value = "";
     };
+    const handlePaste = async (e: React.ClipboardEvent) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (const item of Array.from(items)) {
+            if (item.type.startsWith("image/")) {
+                e.preventDefault();
+                const file = item.getAsFile(); if (!file) return;
+                setImgUploading(true);
+                try { const url = await uploadFile(file); setChatImg(url); } catch {}
+                setImgUploading(false); return;
+            }
+        }
+    };
 
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chat.length]);
 
@@ -3521,11 +3534,11 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                 </div>
                 <div className="p-2.5 border-t border-slate-100">
                     {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[80px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">✕</button></div>}
-                    <div className="flex gap-2 items-end">
+                    <div className="flex gap-1.5 items-center">
                         <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
-                        <button onClick={() => chatFileRef.current?.click()} className="px-2 py-2 text-slate-400 hover:text-blue-500 transition-colors flex-shrink-0" title="사진 첨부">{imgUploading ? "⏳" : "📷"}</button>
-                        <textarea value={chatText} onChange={e => setChatText(e.target.value)}
-                            placeholder="메시지 입력..." rows={2}
+                        <button onClick={() => chatFileRef.current?.click()} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-500 transition-colors flex-shrink-0 text-[16px]" title="사진 첨부">{imgUploading ? "⏳" : "📷"}</button>
+                        <textarea value={chatText} onChange={e => setChatText(e.target.value)} onPaste={handlePaste}
+                            placeholder="메시지 입력..." rows={1}
                             className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
                         <button onClick={sendChat} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">전송</button>
                     </div>
@@ -3805,6 +3818,19 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
         try { const url = await uploadFile(file); setChatImg(url); } catch {}
         setImgUploading(false); e.target.value = "";
     };
+    const handlePaste = async (e: React.ClipboardEvent) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (const item of Array.from(items)) {
+            if (item.type.startsWith("image/")) {
+                e.preventDefault();
+                const file = item.getAsFile(); if (!file) return;
+                setImgUploading(true);
+                try { const url = await uploadFile(file); setChatImg(url); } catch {}
+                setImgUploading(false); return;
+            }
+        }
+    };
     const openBoardAdd = () => { setBoardAdding(true); setBoardTitle(""); setBoardContent(""); setBoardColor(MEMO_COLORS[0]); };
     const saveBoard = () => {
         onSaveBoard({ id: Date.now(), title: boardTitle.trim() || "제목 없음", content: boardContent, status: "left", color: boardColor, author: currentUser, updatedAt: new Date().toISOString().split("T")[0] });
@@ -3897,11 +3923,11 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                 </div>
                 <div className="p-3 border-t border-slate-100">
                     {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[100px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center">✕</button></div>}
-                    <div className="flex gap-2 items-end">
+                    <div className="flex gap-2 items-center">
                         <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
-                        <button onClick={() => chatFileRef.current?.click()} className="px-2 py-2.5 text-slate-400 hover:text-blue-500 transition-colors flex-shrink-0 text-[18px]" title="사진 첨부">{imgUploading ? "⏳" : "📷"}</button>
-                        <textarea value={text} onChange={e => setText(e.target.value)}
-                            placeholder="메시지 입력... (엔터로 줄바꿈)" rows={2}
+                        <button onClick={() => chatFileRef.current?.click()} className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-500 transition-colors flex-shrink-0 text-[18px]" title="사진 첨부">{imgUploading ? "⏳" : "📷"}</button>
+                        <textarea value={text} onChange={e => setText(e.target.value)} onPaste={handlePaste}
+                            placeholder="메시지 입력..." rows={1}
                             className="flex-1 border border-slate-200 rounded-lg px-3 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
                         <button onClick={send} className="px-4 py-2.5 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600 flex-shrink-0">전송</button>
                     </div>
@@ -4146,6 +4172,19 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
         try { const url = await uploadFile(file); setChatImg(url); } catch {}
         setImgUploading(false); e.target.value = "";
     };
+    const handlePaste = async (e: React.ClipboardEvent) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (const item of Array.from(items)) {
+            if (item.type.startsWith("image/")) {
+                e.preventDefault();
+                const file = item.getAsFile(); if (!file) return;
+                setImgUploading(true);
+                try { const url = await uploadFile(file); setChatImg(url); } catch {}
+                setImgUploading(false); return;
+            }
+        }
+    };
 
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chat.length]);
 
@@ -4260,11 +4299,11 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                 </div>
                 <div className="p-2.5 border-t border-slate-100">
                     {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[80px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">✕</button></div>}
-                    <div className="flex gap-2 items-end">
+                    <div className="flex gap-1.5 items-center">
                         <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
-                        <button onClick={() => chatFileRef.current?.click()} className="px-2 py-2 text-slate-400 hover:text-blue-500 transition-colors flex-shrink-0" title="사진 첨부">{imgUploading ? "⏳" : "📷"}</button>
-                        <textarea value={chatText} onChange={e => setChatText(e.target.value)}
-                            placeholder="메시지 입력... (엔터로 줄바꿈)" rows={2}
+                        <button onClick={() => chatFileRef.current?.click()} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-500 transition-colors flex-shrink-0 text-[16px]" title="사진 첨부">{imgUploading ? "⏳" : "📷"}</button>
+                        <textarea value={chatText} onChange={e => setChatText(e.target.value)} onPaste={handlePaste}
+                            placeholder="메시지 입력..." rows={1}
                             className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
                         <button onClick={sendChat} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 flex-shrink-0">전송</button>
                     </div>
