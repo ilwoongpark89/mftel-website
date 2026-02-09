@@ -1055,8 +1055,75 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
 
     const scheduleTypeKeys = Object.keys(types).filter(k => k !== "vacation" && k !== "wfh");
 
+    // Mobile list view state
+    const [mobileOffset, setMobileOffset] = useState(0); // 0 = today-based, increments of 7
+
     return (
         <div>
+            {/* Mobile list view */}
+            <div className="md:hidden">
+                <div className="flex items-center justify-between mb-3">
+                    <button onClick={() => setMobileOffset(p => p - 7)} className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 text-[14px]">◀</button>
+                    <span className="text-[15px] font-bold text-slate-800">{month.y}년 {month.m + 1}월</span>
+                    <div className="flex items-center gap-1.5">
+                        {mobileOffset !== 0 && <button onClick={() => setMobileOffset(0)} className="px-2 py-1 rounded-md bg-slate-100 text-slate-600 text-[12px] font-medium">오늘</button>}
+                        <button onClick={() => setMobileOffset(p => p + 7)} className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 text-[14px]">▶</button>
+                    </div>
+                </div>
+                <div className="space-y-1">
+                    {Array.from({ length: 7 }, (_, i) => {
+                        const d = new Date(); d.setDate(d.getDate() + mobileOffset + i);
+                        const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                        const dayItems = data.filter(v => v.date === ds);
+                        const dispatchItems = (dispatches || []).filter(dp => dp.start <= ds && dp.end >= ds);
+                        const isToday = ds === todayStr;
+                        const isTomorrow = (() => { const t = new Date(); t.setDate(t.getDate() + 1); return ds === `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; })();
+                        const dow = d.getDay();
+                        const we = dow === 0 || dow === 6;
+                        return (
+                            <div key={ds} className={`rounded-xl p-3 ${isToday ? "bg-blue-50 border border-blue-200" : "bg-white border border-slate-200"}`}>
+                                <div className="flex items-center gap-2 mb-2">
+                                    {isToday && <span className="text-[11px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">오늘</span>}
+                                    {isTomorrow && <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">내일</span>}
+                                    <span className={`text-[14px] font-semibold ${we ? (dow === 0 ? "text-red-500" : "text-blue-500") : "text-slate-800"}`}>
+                                        {d.getMonth() + 1}월 {d.getDate()}일 ({dayL[dow]})
+                                    </span>
+                                    {(isPI || true) && <button onClick={() => { setEditCell({ name: currentUser, date: ds }); setEditDesc(""); }} className="ml-auto text-[18px] text-slate-300 hover:text-blue-500">+</button>}
+                                </div>
+                                {dayItems.length === 0 && dispatchItems.length === 0 ? (
+                                    <div className="text-[13px] text-slate-300 pl-1">일정 없음</div>
+                                ) : (
+                                    <div className="space-y-1">
+                                        {dayItems.map(v => {
+                                            const vt = types[v.type];
+                                            return (
+                                                <div key={`${v.name}-${v.type}`} className="flex items-center gap-2 px-2 py-1.5 rounded-lg" style={{ background: `${vt?.color || "#94A3B8"}15` }}
+                                                    onClick={() => { if (v.name === currentUser || isPI) { setSelType(v.type); setEditDesc(v.description || ""); setEditCell({ name: v.name, date: ds, existing: { type: v.type, description: v.description } }); } }}>
+                                                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: vt?.color || "#94A3B8" }} />
+                                                    <span className="text-[13px]"><span className="font-semibold text-slate-700">{MEMBERS[v.name]?.emoji || "👤"}{v.name}</span> <span className="text-slate-500">{vt?.label}{v.description ? ` · ${v.description}` : ""}</span></span>
+                                                </div>
+                                            );
+                                        })}
+                                        {dispatchItems.map(dp => (
+                                            <div key={dp.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-violet-50">
+                                                <span className="w-2 h-2 rounded-full flex-shrink-0 bg-violet-400" />
+                                                <span className="text-[13px]"><span className="font-semibold text-slate-700">{MEMBERS[dp.name]?.emoji || "👤"}{dp.name}</span> <span className="text-violet-500">파견 · {dp.description}</span></span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+                {/* Dispatch section mobile */}
+                <div className="mt-4">
+                    <DispatchPanel dispatches={dispatches || []} currentUser={currentUser} onSave={onDispatchSave} onDelete={onDispatchDelete} />
+                </div>
+            </div>
+
+            {/* Desktop grid view */}
+            <div className="hidden md:block">
             <div className="flex items-center mb-2">
                 <div className="flex items-center gap-2">
                     <button onClick={() => setMonth(p => p.m === 0 ? { y: p.y - 1, m: 11 } : { ...p, m: p.m - 1 })} className="px-2 py-1 rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-[14px]">◀</button>
@@ -1285,6 +1352,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                 })()}
                 {/* 파견 관리 패널 – 모두 열람, 박일웅만 편집 */}
                 <DispatchPanel dispatches={dispatches || []} currentUser={currentUser} onSave={onDispatchSave} onDelete={onDispatchDelete} />
+            </div>
             </div>
             </div>
             {/* Inline event form for schedule mode */}
