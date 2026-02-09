@@ -2216,6 +2216,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
     const [newDeadline, setNewDeadline] = useState("");
     const [newProgress, setNewProgress] = useState(0);
     const [filterPeople, setFilterPeople] = useState<string[]>([currentUser]);
+    const [mobileCol, setMobileCol] = useState("todo");
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Todo | null>(null);
@@ -2248,61 +2249,165 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
     return (
         <div>
             {/* Person filter */}
-            <div className="flex flex-wrap gap-1 mb-3">
-                <button onClick={() => setFilterPeople([])} className={`px-2 py-0.5 rounded-full text-[12px] font-medium ${filterPeople.length === 0 ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>전체</button>
+            <div className="flex flex-nowrap overflow-x-auto gap-1 mb-3 md:flex-wrap md:overflow-visible">
+                <button onClick={() => setFilterPeople([])} className={`px-2 py-0.5 rounded-full text-[12px] font-medium shrink-0 ${filterPeople.length === 0 ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>전체</button>
                 {MEMBER_NAMES.map(name => (
                     <button key={name} onClick={() => setFilterPeople(filterPeople.includes(name) ? filterPeople.filter(n => n !== name) : [...filterPeople, name])}
-                        className={`px-2 py-0.5 rounded-full text-[12px] font-medium ${filterPeople.includes(name) ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
+                        className={`px-2 py-0.5 rounded-full text-[12px] font-medium shrink-0 ${filterPeople.includes(name) ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
                         {MEMBERS[name]?.emoji} {name}
                     </button>
                 ))}
             </div>
             {/* Stats + Add button */}
             <div className="flex items-center gap-3 mb-3">
-                <button onClick={() => setShowForm(!showForm)} className="px-4 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 할 일 추가</button>
+                <button onClick={() => setShowForm(!showForm)} className="hidden md:inline-flex px-4 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 할 일 추가</button>
                 <span className="text-[13px] text-slate-400">{doneCount}/{totalCount} 완료</span>
             </div>
-            {/* Add form */}
+            {/* Add form — inline on desktop, modal on mobile */}
             {showForm && (
-                <div className="bg-white border border-blue-200 rounded-lg p-3 mb-3 space-y-2">
-                    <input value={newText} onChange={e => setNewText(e.target.value)} placeholder="할 일 내용..."
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                        onKeyDown={e => e.key === "Enter" && handleAdd()} autoFocus />
-                    <div>
-                        <label className="text-[11px] font-semibold text-slate-400 block mb-1">담당자 (미선택시 본인)</label>
-                        <PillSelect options={MEMBER_NAMES} selected={newAssignees} onToggle={v => setNewAssignees(toggleArr(newAssignees, v))}
-                            emojis={Object.fromEntries(Object.entries(MEMBERS).map(([k, v]) => [k, v.emoji]))} />
-                    </div>
-                    <div className="flex gap-3 items-end">
+                <div className="hidden md:block">
+                    <div className="bg-white border border-blue-200 rounded-lg p-3 mb-3 space-y-2">
+                        <input value={newText} onChange={e => setNewText(e.target.value)} placeholder="할 일 내용..."
+                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            onKeyDown={e => e.key === "Enter" && handleAdd()} autoFocus />
                         <div>
-                            <label className="text-[11px] font-semibold text-slate-400 block mb-1">우선순위</label>
-                            <div className="flex gap-1">
-                                {PRIORITY_KEYS.map(p => (
-                                    <button key={p} type="button" onClick={() => setNewPriority(p)}
-                                        className={`px-2 py-0.5 rounded text-[12px] ${newPriority === p ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500"}`}>
-                                        {PRIORITY_ICON[p]} {PRIORITY_LABEL[p]}
-                                    </button>
-                                ))}
+                            <label className="text-[11px] font-semibold text-slate-400 block mb-1">담당자 (미선택시 본인)</label>
+                            <PillSelect options={MEMBER_NAMES} selected={newAssignees} onToggle={v => setNewAssignees(toggleArr(newAssignees, v))}
+                                emojis={Object.fromEntries(Object.entries(MEMBERS).map(([k, v]) => [k, v.emoji]))} />
+                        </div>
+                        <div className="flex gap-3 items-end">
+                            <div>
+                                <label className="text-[11px] font-semibold text-slate-400 block mb-1">우선순위</label>
+                                <div className="flex gap-1">
+                                    {PRIORITY_KEYS.map(p => (
+                                        <button key={p} type="button" onClick={() => setNewPriority(p)}
+                                            className={`px-2 py-0.5 rounded text-[12px] ${newPriority === p ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500"}`}>
+                                            {PRIORITY_ICON[p]} {PRIORITY_LABEL[p]}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                        <div>
-                            <label className="text-[11px] font-semibold text-slate-400 block mb-1">기한</label>
-                            <input value={newDeadline} onChange={e => setNewDeadline(e.target.value)} placeholder="예: 2/28"
-                                className="border border-slate-200 rounded-lg px-2 py-1 text-[13px] w-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-                        </div>
-                        <div>
-                            <label className="text-[11px] font-semibold text-slate-400 block mb-1">달성도 {newProgress}%</label>
-                            <input type="range" min={0} max={100} step={5} value={newProgress} onChange={e => setNewProgress(Number(e.target.value))} className="w-[120px] accent-blue-500" />
-                        </div>
-                        <div className="flex gap-1 ml-auto">
-                            <button onClick={() => setShowForm(false)} className="px-3 py-1.5 text-[13px] text-slate-400 hover:text-slate-600">취소</button>
-                            <button onClick={handleAdd} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">추가</button>
+                            <div>
+                                <label className="text-[11px] font-semibold text-slate-400 block mb-1">기한</label>
+                                <input value={newDeadline} onChange={e => setNewDeadline(e.target.value)} placeholder="예: 2/28"
+                                    className="border border-slate-200 rounded-lg px-2 py-1 text-[13px] w-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                            </div>
+                            <div>
+                                <label className="text-[11px] font-semibold text-slate-400 block mb-1">달성도 {newProgress}%</label>
+                                <input type="range" min={0} max={100} step={5} value={newProgress} onChange={e => setNewProgress(Number(e.target.value))} className="w-[120px] accent-blue-500" />
+                            </div>
+                            <div className="flex gap-1 ml-auto">
+                                <button onClick={() => setShowForm(false)} className="px-3 py-1.5 text-[13px] text-slate-400 hover:text-slate-600">취소</button>
+                                <button onClick={handleAdd} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">추가</button>
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
-            {/* 3-column kanban */}
-            <div className="grid grid-cols-3 gap-3">
+            {/* Mobile add modal */}
+            {showForm && (
+                <div className="md:hidden fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={() => setShowForm(false)}>
+                    <div className="bg-white rounded-t-2xl w-full max-w-lg shadow-2xl p-4 space-y-3" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-1">
+                            <h3 className="text-[15px] font-bold text-slate-800">할 일 추가</h3>
+                            <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                        </div>
+                        <input value={newText} onChange={e => setNewText(e.target.value)} placeholder="할 일 내용..."
+                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" autoFocus />
+                        <div>
+                            <label className="text-[11px] font-semibold text-slate-400 block mb-1">담당자</label>
+                            <div className="flex flex-nowrap overflow-x-auto gap-1">
+                                {MEMBER_NAMES.map(name => (
+                                    <button key={name} type="button" onClick={() => setNewAssignees(toggleArr(newAssignees, name))}
+                                        className={`px-2 py-0.5 rounded-full text-[12px] font-medium shrink-0 ${newAssignees.includes(name) ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500"}`}>
+                                        {MEMBERS[name]?.emoji} {name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="flex gap-3 items-end">
+                            <div>
+                                <label className="text-[11px] font-semibold text-slate-400 block mb-1">우선순위</label>
+                                <div className="flex gap-1">
+                                    {PRIORITY_KEYS.map(p => (
+                                        <button key={p} type="button" onClick={() => setNewPriority(p)}
+                                            className={`px-2 py-0.5 rounded text-[12px] ${newPriority === p ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500"}`}>
+                                            {PRIORITY_ICON[p]}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[11px] font-semibold text-slate-400 block mb-1">기한</label>
+                                <input value={newDeadline} onChange={e => setNewDeadline(e.target.value)} placeholder="예: 2/28"
+                                    className="border border-slate-200 rounded-lg px-2 py-1 text-[13px] w-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                            </div>
+                            <div className="flex-1">
+                                <label className="text-[11px] font-semibold text-slate-400 block mb-1">달성도 {newProgress}%</label>
+                                <input type="range" min={0} max={100} step={5} value={newProgress} onChange={e => setNewProgress(Number(e.target.value))} className="w-full accent-blue-500" />
+                            </div>
+                        </div>
+                        <button onClick={handleAdd} className="w-full py-2.5 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">추가</button>
+                    </div>
+                </div>
+            )}
+            {/* Mobile tab bar */}
+            <div className="md:hidden flex border-b border-slate-200 mb-3 -mx-1">
+                {colData.map(col => (
+                    <button key={col.id} onClick={() => setMobileCol(col.id)}
+                        className={`flex-1 text-center py-2 text-[13px] font-semibold transition-colors ${mobileCol === col.id ? `border-b-2 ${col.border} text-slate-800` : "text-slate-400"}`}>
+                        {col.label} <span className="text-[11px] font-normal">{col.items.length}</span>
+                    </button>
+                ))}
+            </div>
+            {/* Mobile single column */}
+            <div className="md:hidden space-y-1.5">
+                {colData.filter(c => c.id === mobileCol).map(col => (
+                    <div key={col.id}>
+                        {col.items.map(todo => (
+                            <div key={todo.id} className={`flex items-start gap-2 p-2.5 rounded-md border transition-all mb-1.5 ${col.id === "completed" ? "bg-slate-50 border-slate-100 opacity-70" : todo.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200 bg-white" : todo.priority === "highest" ? "border-2 border-red-400 ring-1 ring-red-100 bg-red-50/30" : "bg-white border-slate-100"}`}>
+                                <div onClick={() => onToggle(todo.id)} className={`w-[18px] h-[18px] rounded flex-shrink-0 mt-0.5 flex items-center justify-center transition-all cursor-pointer ${col.id === "completed" ? "bg-emerald-500" : "border-2 border-slate-300 hover:border-blue-400"}`}>
+                                    {col.id === "completed" && <span className="text-white text-[13px]">✓</span>}
+                                </div>
+                                <div className="flex-1 min-w-0" onClick={() => { setEditingTodo(todo); setNewText(todo.text); setNewAssignees(todo.assignees); setNewPriority(todo.priority); setNewDeadline(todo.deadline); setNewProgress(todo.progress ?? 0); setEditComments(todo.comments || []); setEditNewComment(""); }}>
+                                    {col.id !== "completed" && (
+                                        <label className="flex items-center gap-1.5 mb-1" onClick={e => e.stopPropagation()}>
+                                            <input type="checkbox" checked={!!todo.needsDiscussion} onChange={() => onUpdate({ ...todo, needsDiscussion: !todo.needsDiscussion })} className="w-3 h-3 accent-red-500" />
+                                            <span className={`text-[11px] font-medium ${todo.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
+                                        </label>
+                                    )}
+                                    <div className={`text-[14px] leading-relaxed ${col.id === "completed" ? "text-slate-500" : "text-slate-700"}`}>
+                                        {PRIORITY_ICON[todo.priority] || ""} {todo.text}
+                                        {col.id !== "completed" && todo.priority === "highest" && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-bold align-middle">매우높음</span>}
+                                    </div>
+                                    {col.id !== "completed" && (todo.progress ?? 0) > 0 && (
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <div className="flex-1 bg-slate-100 rounded-full h-1.5"><div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${todo.progress}%` }} /></div>
+                                            <span className="text-[11px] font-semibold text-blue-500">{todo.progress}%</span>
+                                        </div>
+                                    )}
+                                    <div className="flex gap-1 mt-1 flex-wrap items-center">
+                                        {todo.assignees.map(a => <span key={a} className={`text-[11px] px-1.5 py-0.5 rounded-lg bg-slate-100 ${col.id === "completed" ? "text-slate-400" : "text-slate-500"}`}>{MEMBERS[a]?.emoji || ""}{a}</span>)}
+                                        {col.id !== "completed" && todo.deadline && <span className="text-[11px] text-red-500 font-semibold ml-auto">~{todo.deadline}</span>}
+                                    </div>
+                                    <div className="border-t border-slate-100 pt-1 mt-1.5">
+                                        {(todo.comments || []).length > 0 ? (
+                                            <div className="text-[11px] text-slate-500 truncate">
+                                                <span className="font-medium text-slate-600">{MEMBERS[(todo.comments || []).slice(-1)[0]?.author]?.emoji}{(todo.comments || []).slice(-1)[0]?.author}</span> {(todo.comments || []).slice(-1)[0]?.text}
+                                            </div>
+                                        ) : (
+                                            <div className="text-[11px] text-slate-300">💬 댓글 없음</div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        {col.items.length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">{col.label} 없음</div>}
+                    </div>
+                ))}
+            </div>
+            {/* Desktop 3-column kanban */}
+            <div className="hidden md:grid grid-cols-3 gap-3">
                 {colData.map(col => (
                     <div key={col.id}
                         onDragOver={e => { e.preventDefault(); setDropTarget(calcDropIdx(e, col.id)); }}
@@ -2371,6 +2476,10 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                     </div>
                 ))}
             </div>
+            {/* Mobile FAB */}
+            {!showForm && !editingTodo && (
+                <button onClick={() => setShowForm(true)} className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-blue-600 active:scale-95 transition-transform">+</button>
+            )}
             {/* Edit modal */}
             {editingTodo && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditingTodo(null)}>
