@@ -4220,6 +4220,7 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
     const [selectedCard, setSelectedCard] = useState<TeamMemoCard | null>(null);
     const [boardComment, setBoardComment] = useState("");
     const [boardEditing, setBoardEditing] = useState(false);
+    const [mobileTab, setMobileTab] = useState<"chat"|"board"|"files">("chat");
 
     const send = () => {
         if (!text.trim() && !chatImg) return;
@@ -4254,9 +4255,18 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
     useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [chat.length]);
 
     return (
-        <div className="grid gap-3 flex-1 min-h-0" style={{gridTemplateColumns:"1fr 0.8fr 1.2fr"}}>
+        <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{gridTemplateColumns:"1fr 0.8fr 1.2fr"}}>
+            {/* Mobile tab bar */}
+            <div className="md:hidden flex border-b border-slate-200 bg-white flex-shrink-0 -mt-1">
+                {([["chat","💬","채팅"],["board","📌","보드"],["files","📎","파일"]] as const).map(([id,icon,label]) => (
+                    <button key={id} onClick={() => setMobileTab(id as typeof mobileTab)}
+                        className={`flex-1 py-2.5 text-[13px] font-semibold transition-colors ${mobileTab === id ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400"}`}>
+                        {icon} {label}
+                    </button>
+                ))}
+            </div>
             {/* Board */}
-            <div className="flex flex-col min-w-0">
+            <div className={`flex-col min-w-0 ${mobileTab === "board" ? "flex flex-1 min-h-0" : "hidden"} md:flex`}>
                 <div className="flex items-center justify-between mb-2">
                     <h3 className="text-[14px] font-bold text-slate-700">📌 보드</h3>
                     <button onClick={openBoardAdd} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
@@ -4303,7 +4313,7 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                 </div>
             </div>
             {/* Files */}
-            <div className="flex flex-col min-w-0 bg-white border border-slate-200 rounded-xl">
+            <div className={`flex-col min-w-0 bg-white border border-slate-200 rounded-xl ${mobileTab === "files" ? "flex flex-1 min-h-0" : "hidden"} md:flex`}>
                 <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
                     <h3 className="text-[14px] font-bold text-slate-700">📎 파일</h3>
                     <span className="text-[12px] text-slate-400">{files.length}개</span>
@@ -4311,7 +4321,7 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                 <FileBox files={files} currentUser={currentUser} onAddFile={onAddFile} onDeleteFile={onDeleteFile} />
             </div>
             {/* Chat */}
-            <div className="flex flex-col min-w-0 bg-white border border-slate-200 rounded-xl">
+            <div className={`flex-col min-w-0 bg-white border border-slate-200 rounded-xl md:rounded-xl ${mobileTab === "chat" ? "flex flex-1 min-h-0 md:border" : "hidden"} md:flex`}>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
                     <h3 className="text-[15px] font-bold text-slate-700">💬 연구실 채팅</h3>
                     {currentUser === "박일웅" && (
@@ -4592,6 +4602,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     const composingRef = useRef(false);
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
+    const [mobileTab, setMobileTab] = useState<"chat"|"board"|"files">("chat");
 
     const openNew = (c = "left") => { setEditing(null); setTitle(""); setContent(""); setCol(c); setColor(TEAM_MEMO_COLORS[0]); setBorderClr(""); setShowForm(true); };
     const openDetail = (c: TeamMemoCard) => { setSelected(c); setIsEditing(false); setNewComment(""); };
@@ -4648,9 +4659,18 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [chat.length]);
 
     return (
-        <div className="grid gap-3 flex-1 min-h-0" style={{gridTemplateColumns:"1fr 0.8fr 1.2fr"}}>
+        <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{gridTemplateColumns:"1fr 0.8fr 1.2fr"}}>
+            {/* Mobile tab bar */}
+            <div className="md:hidden flex border-b border-slate-200 bg-white flex-shrink-0 -mt-1">
+                {([["chat","💬","채팅"],["board","📌","보드"],["files","📎","파일"]] as const).map(([id,icon,label]) => (
+                    <button key={id} onClick={() => setMobileTab(id as typeof mobileTab)}
+                        className={`flex-1 py-2.5 text-[13px] font-semibold transition-colors ${mobileTab === id ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400"}`}>
+                        {icon} {label}
+                    </button>
+                ))}
+            </div>
             {/* Board */}
-            <div className="flex flex-col min-w-0">
+            <div className={`flex-col min-w-0 ${mobileTab === "board" ? "flex flex-1 min-h-0" : "hidden"} md:flex`}>
                 <div className="flex items-center justify-between mb-2">
                     <h3 className="text-[14px] font-bold text-slate-700">📌 보드</h3>
                     <button onClick={() => openNew()} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
@@ -4724,7 +4744,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
             </div>
 
             {/* Files */}
-            <div className="flex flex-col min-w-0 bg-white border border-slate-200 rounded-xl">
+            <div className={`flex-col min-w-0 bg-white border border-slate-200 rounded-xl ${mobileTab === "files" ? "flex flex-1 min-h-0" : "hidden"} md:flex`}>
                 <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
                     <h4 className="text-[14px] font-bold text-slate-700">📎 파일</h4>
                     <span className="text-[12px] text-slate-400">{files.length}개</span>
@@ -4732,7 +4752,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                 <FileBox files={files} currentUser={currentUser} onAddFile={onAddFile} onDeleteFile={onDeleteFile} compact />
             </div>
             {/* Chat */}
-            <div className="flex flex-col min-w-0 bg-white border border-slate-200 rounded-xl min-h-0">
+            <div className={`flex-col min-w-0 bg-white border border-slate-200 rounded-xl md:rounded-xl min-h-0 ${mobileTab === "chat" ? "flex flex-1" : "hidden"} md:flex`}>
                 <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
                     <h4 className="text-[14px] font-bold text-slate-700">💬 채팅</h4>
                     {currentUser === "박일웅" && (
