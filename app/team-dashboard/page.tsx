@@ -3396,6 +3396,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
     const [chatText, setChatText] = useState("");
     const [chatImg, setChatImg] = useState("");
     const [imgUploading, setImgUploading] = useState(false);
+    const [previewImg, setPreviewImg] = useState("");
     const chatFileRef = useRef<HTMLInputElement>(null);
     const composingRef = useRef(false);
     const chatEndRef = useRef<HTMLDivElement>(null);
@@ -3521,7 +3522,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                         <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`}>
                             <div className={`inline-block max-w-[90%] rounded-lg px-3 py-2 text-[13px] ${msg.author === currentUser ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-700"}`}>
                                 {msg.author !== currentUser && <div className="text-[11px] font-bold mb-0.5">{MEMBERS[msg.author]?.emoji || "👤"} {msg.author}</div>}
-                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mb-1 cursor-pointer" onClick={() => window.open(msg.imageUrl, "_blank")} />}
+                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mb-1 cursor-pointer" onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                 {msg.text && <div className="whitespace-pre-wrap">{msg.text}</div>}
                                 <div className={`text-[10px] mt-0.5 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>{msg.date}</div>
                             </div>
@@ -3623,6 +3624,12 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                             <button onClick={saveEdit} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {previewImg && (
+                <div className="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center p-4 cursor-pointer" onClick={() => setPreviewImg("")}>
+                    <img src={previewImg} alt="" className="max-w-[90vw] max-h-[85vh] rounded-lg shadow-2xl object-contain" />
                 </div>
             )}
         </div>
@@ -3797,6 +3804,7 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
     const [text, setText] = useState("");
     const [chatImg, setChatImg] = useState("");
     const [imgUploading, setImgUploading] = useState(false);
+    const [previewImg, setPreviewImg] = useState("");
     const chatFileRef = useRef<HTMLInputElement>(null);
     const endRef = useRef<HTMLDivElement>(null);
     const composingRef = useRef(false);
@@ -3910,7 +3918,7 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                         <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`}>
                             <div className={`inline-block max-w-[75%] rounded-lg px-3.5 py-2.5 text-[14px] ${msg.author === currentUser ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-700"}`}>
                                 {msg.author !== currentUser && <div className="text-[12px] font-bold mb-0.5">{MEMBERS[msg.author]?.emoji || "👤"} {msg.author}</div>}
-                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[300px] rounded-md mb-1.5 cursor-pointer" onClick={() => window.open(msg.imageUrl, "_blank")} />}
+                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[300px] rounded-md mb-1.5 cursor-pointer" onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                 {msg.text && <div className="whitespace-pre-wrap">{msg.text}</div>}
                                 <div className={`text-[11px] mt-1 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>{msg.date}</div>
                             </div>
@@ -3987,6 +3995,12 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                             </div>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {previewImg && (
+                <div className="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center p-4 cursor-pointer" onClick={() => setPreviewImg("")}>
+                    <img src={previewImg} alt="" className="max-w-[90vw] max-h-[85vh] rounded-lg shadow-2xl object-contain" />
                 </div>
             )}
         </div>
@@ -4127,6 +4141,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     const [chatText, setChatText] = useState("");
     const [chatImg, setChatImg] = useState("");
     const [imgUploading, setImgUploading] = useState(false);
+    const [previewImg, setPreviewImg] = useState("");
     const chatFileRef = useRef<HTMLInputElement>(null);
     const [newComment, setNewComment] = useState("");
     const chatEndRef = useRef<HTMLDivElement>(null);
@@ -4286,7 +4301,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                         <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`}>
                             <div className={`inline-block max-w-[85%] rounded-lg px-3 py-2 text-[13px] ${msg.author === currentUser ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-700"}`}>
                                 {msg.author !== currentUser && <div className="text-[11px] font-bold mb-0.5">{MEMBERS[msg.author]?.emoji || "👤"}{msg.author}</div>}
-                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[250px] rounded-md mb-1 cursor-pointer" onClick={() => window.open(msg.imageUrl, "_blank")} />}
+                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[250px] rounded-md mb-1 cursor-pointer" onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                 {msg.text && <div className="whitespace-pre-wrap">{msg.text}</div>}
                                 <div className={`text-[10px] mt-1 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>{msg.date}</div>
                             </div>
@@ -4369,6 +4384,12 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                             <button onClick={saveEdit} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {previewImg && (
+                <div className="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center p-4 cursor-pointer" onClick={() => setPreviewImg("")}>
+                    <img src={previewImg} alt="" className="max-w-[90vw] max-h-[85vh] rounded-lg shadow-2xl object-contain" />
                 </div>
             )}
         </div>
