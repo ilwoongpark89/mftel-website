@@ -207,7 +207,7 @@ function TeamFilterBar({ teamNames, selected, onSelect }: { teamNames: string[];
             <span className="text-[12px] font-semibold text-slate-400 mr-1">팀:</span>
             {["전체", ...teamNames].map(t => (
                 <button key={t} onClick={() => onSelect(t)}
-                    className={`px-2.5 py-1 rounded-full text-[12px] font-medium transition-all border ${selected === t ? "bg-blue-500 text-white border-blue-500 shadow-sm" : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:border-slate-300"}`}>
+                    className={`px-3.5 py-1.5 rounded-lg text-[13px] font-medium transition-all border ${selected === t ? "bg-blue-500 text-white border-blue-500" : "text-slate-500 border-transparent hover:bg-slate-50 hover:border-slate-200"}`}>
                     {t}
                 </button>
             ))}
@@ -223,7 +223,7 @@ function TeamSelect({ teamNames, selected, onSelect }: { teamNames: string[]; se
             <div className="flex flex-wrap gap-1">
                 {teamNames.map(t => (
                     <button key={t} type="button" onClick={() => onSelect(selected === t ? "" : t)}
-                        className={`px-2.5 py-1 rounded-full text-[12px] font-medium transition-all border ${selected === t ? "bg-blue-500 text-white border-blue-500 shadow-sm" : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:border-slate-300"}`}>
+                        className={`px-3.5 py-1.5 rounded-lg text-[13px] font-medium transition-all border ${selected === t ? "bg-blue-500 text-white border-blue-500" : "text-slate-500 border-transparent hover:bg-slate-50 hover:border-slate-200"}`}>
                         {t}
                     </button>
                 ))}
@@ -403,7 +403,7 @@ function KanbanView({ papers, filter, onClickPaper, onAddPaper, onSavePaper, onR
                             onDrop={() => { if (dragItem.current && dropTarget) { const reordered = reorderKanbanItems(papers, dragItem.current, status, dropTarget.idx, p => PAPER_STATUS_MIGRATE(p.status), (p, s) => ({ ...p, status: s })); onReorder(reordered); } dragItem.current = null; setDraggedId(null); setDropTarget(null); }}>
                             <div className="flex items-center gap-2 mb-3 pb-1.5" style={{ borderBottom: `2px solid ${st.color}` }}>
                                 <span className="w-2 h-2 rounded-full inline-block" style={{ background: st.color }} />
-                                <span className="text-[14px] font-bold text-slate-800">{st.label}</span>
+                                <span className="text-[14px]" style={{fontWeight:650, color:"#334155"}}>{st.label}</span>
                                 <span className="text-[12px] text-slate-400">{col.length}</span>
                             </div>
                             <div className={`min-h-[80px] space-y-2 rounded-lg transition-colors ${dropTarget?.col === status ? "bg-blue-50/50" : ""}`}>
@@ -414,14 +414,14 @@ function KanbanView({ papers, filter, onClickPaper, onAddPaper, onSavePaper, onR
                                         onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
                                         onDragOver={e => { e.preventDefault(); if (draggedId === p.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
                                         onClick={() => onClickPaper(p)}
-                                        className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-all overflow-hidden ${draggedId === p.id ? "opacity-40 scale-95" : ""} ${p.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
+                                        className={`bg-white rounded-xl p-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === p.id ? "opacity-40 scale-95" : ""} ${p.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}
                                         style={{ borderLeft: `3px solid ${st.color}` }}>
                                         <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                            <input type="checkbox" checked={!!p.needsDiscussion} onChange={() => onSavePaper({ ...p, needsDiscussion: !p.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
-                                            <span className={`text-[11px] font-medium ${p.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                                            <input type="checkbox" checked={!!p.needsDiscussion} onChange={() => onSavePaper({ ...p, needsDiscussion: !p.needsDiscussion })} className="w-3 h-3 accent-red-500" />
+                                            <span className={`text-[11px] font-medium ${p.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                                         </label>
                                         <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words overflow-hidden">{p.title}</div>
-                                        {p.team && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{p.team}</span>}
+                                        {p.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{p.team}</span>}
                                         {p.journal !== "TBD" && <div className="text-[12px] text-slate-500 italic mb-1 truncate">{p.journal}</div>}
                                         <div className="flex items-center gap-2 mb-2">
                                             <div className="flex-1 bg-slate-100 rounded-full h-1.5">
@@ -458,10 +458,10 @@ function KanbanView({ papers, filter, onClickPaper, onAddPaper, onSavePaper, onR
                 <div className="grid grid-cols-3 gap-3">
                     {completedPapers.map(p => (
                         <div key={p.id} onClick={() => onClickPaper(p)}
-                            className="bg-white rounded-lg p-3 cursor-pointer hover:shadow-md transition-all border border-emerald-200"
+                            className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
                             style={{ borderLeft: "3px solid #059669" }}>
                             <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{p.title}</div>
-                            {p.team && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{p.team}</span>}
+                            {p.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{p.team}</span>}
                             {p.journal !== "TBD" && <div className="text-[12px] text-slate-500 italic mb-1 truncate">{p.journal}</div>}
                             <div className="flex gap-1 flex-wrap mb-1.5">
                                 {p.tags.map(t => <span key={t} className="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">{t}</span>)}
@@ -659,7 +659,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                             onDrop={() => { if (dragItem.current && dropTarget) { const reordered = reorderKanbanItems(reports, dragItem.current, status, dropTarget.idx, r => r.status, (r, s) => ({ ...r, status: s })); onReorder(reordered); } dragItem.current = null; setDraggedId(null); setDropTarget(null); }}>
                             <div className="flex items-center gap-2 mb-3 pb-1.5" style={{ borderBottom: `2px solid ${cfg.color}` }}>
                                 <span className="w-2 h-2 rounded-full inline-block" style={{ background: cfg.color }} />
-                                <span className="text-[14px] font-bold text-slate-800">{cfg.label}</span>
+                                <span className="text-[14px]" style={{fontWeight:650, color:"#334155"}}>{cfg.label}</span>
                                 <span className="text-[12px] text-slate-400">{col.length}</span>
                             </div>
                             <div className={`min-h-[80px] space-y-2 rounded-lg transition-colors ${dropTarget?.col === status ? "bg-blue-50/50" : ""}`}>
@@ -673,15 +673,15 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                                             onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
                                             onDragOver={e => { e.preventDefault(); if (draggedId === r.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
                                             onClick={() => setEditing(r)}
-                                            className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-all overflow-hidden ${draggedId === r.id ? "opacity-40 scale-95" : ""} ${r.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
+                                            className={`bg-white rounded-xl p-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === r.id ? "opacity-40 scale-95" : ""} ${r.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}
                                             style={{ borderLeft: `3px solid ${cfg.color}` }}>
                                             <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                                <input type="checkbox" checked={!!r.needsDiscussion} onChange={() => onToggleDiscussion(r)} className="w-3 h-3 accent-orange-500" />
-                                                <span className={`text-[11px] font-medium ${r.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                                                <input type="checkbox" checked={!!r.needsDiscussion} onChange={() => onToggleDiscussion(r)} className="w-3 h-3 accent-red-500" />
+                                                <span className={`text-[11px] font-medium ${r.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                                             </label>
                                             <div className="flex items-center gap-1.5 mb-1">
                                                 {r.category && <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${r.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`}>{r.category}</span>}
-                                                {r.team && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{r.team}</span>}
+                                                {r.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{r.team}</span>}
                                                 <span className="text-[14px] font-semibold text-slate-800 leading-snug break-words">{r.title}</span>
                                             </div>
                                             <div className="flex items-center gap-2 mb-1">
@@ -728,11 +728,11 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                 <div className="grid grid-cols-3 gap-3">
                     {completedReports.map(r => (
                         <div key={r.id} onClick={() => setEditing(r)}
-                            className="bg-white rounded-lg p-3 cursor-pointer hover:shadow-md transition-all border border-emerald-200"
+                            className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
                             style={{ borderLeft: "3px solid #059669" }}>
                             <div className="flex items-center gap-1.5 mb-1">
                                 {r.category && <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${r.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`}>{r.category}</span>}
-                                {r.team && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{r.team}</span>}
+                                {r.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{r.team}</span>}
                             </div>
                             <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{r.title}</div>
                             <div className="flex justify-between items-center">
@@ -1105,7 +1105,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
             {editCell && (
                 <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={() => setEditCell(null)}>
                     <div className="bg-white rounded-xl p-4 w-full max-w-xs shadow-xl" onClick={e => e.stopPropagation()}>
-                        <h4 className="text-[14px] font-bold text-slate-800 mb-3">
+                        <h4 className="text-[16px] font-bold text-slate-900 mb-4">
                             {editCell.existing ? `${editCell.date} 수정` : editCell.date.includes(",") ? `${editCell.date.split(",").length}일 추가` : `${editCell.date} 추가`}
                         </h4>
                         <div className="mb-3">
@@ -1243,7 +1243,7 @@ function TimetableView({ blocks, onSave, onDelete }: {
             {(showForm || editBlock) && (
                 <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={() => { setShowForm(null); setEditBlock(null); }}>
                     <div className="bg-white rounded-xl p-4 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
-                        <h4 className="text-[14px] font-bold text-slate-800 mb-1">{editBlock ? "수업 수정" : "수업 추가"}</h4>
+                        <h4 className="text-[14px] mb-1" style={{fontWeight:650, color:"#334155"}}>{editBlock ? "수업 수정" : "수업 추가"}</h4>
                         <p className="text-[12px] text-slate-400 mb-3">
                             {DAY_LABELS[showForm?.day ?? editBlock?.day ?? 0]} {slotToTime(showForm?.start ?? editBlock?.startSlot ?? 0)} ~ {slotToTime(showForm?.end ?? editBlock?.endSlot ?? 0)}
                         </p>
@@ -1444,7 +1444,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                             onDrop={() => { if (dragItem.current && dropTarget) { const reordered = reorderKanbanItems(experiments, dragItem.current, status, dropTarget.idx, e => EXP_STATUS_MIGRATE(e.status), (e, s) => ({ ...e, status: s })); onReorder(reordered); } dragItem.current = null; setDraggedId(null); setDropTarget(null); }}>
                             <div className="flex items-center gap-2 mb-3 pb-1.5" style={{ borderBottom: `2px solid ${cfg.color}` }}>
                                 <span className="w-2 h-2 rounded-full inline-block" style={{ background: cfg.color }} />
-                                <span className="text-[14px] font-bold text-slate-800">{cfg.label}</span>
+                                <span className="text-[14px]" style={{fontWeight:650, color:"#334155"}}>{cfg.label}</span>
                                 <span className="text-[12px] text-slate-400">{col.length}</span>
                             </div>
                             <div className={`min-h-[80px] space-y-2 rounded-lg transition-colors ${dropTarget?.col === status ? "bg-blue-50/50" : ""}`}>
@@ -1455,16 +1455,16 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                                         onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
                                         onDragOver={e => { e.preventDefault(); if (draggedId === exp.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
                                         onClick={() => setEditing(exp)}
-                                        className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-all overflow-hidden ${draggedId === exp.id ? "opacity-40 scale-95" : ""} ${exp.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
+                                        className={`bg-white rounded-xl p-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === exp.id ? "opacity-40 scale-95" : ""} ${exp.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}
                                         style={{ borderLeft: `3px solid ${cfg.color}` }}>
                                         <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                            <input type="checkbox" checked={!!exp.needsDiscussion} onChange={() => onToggleDiscussion(exp)} className="w-3 h-3 accent-orange-500" />
-                                            <span className={`text-[11px] font-medium ${exp.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                                            <input type="checkbox" checked={!!exp.needsDiscussion} onChange={() => onToggleDiscussion(exp)} className="w-3 h-3 accent-red-500" />
+                                            <span className={`text-[11px] font-medium ${exp.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                                         </label>
                                         <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{exp.title}</div>
                                         <div className="flex items-center gap-1.5 mb-1">
                                             <span className="text-[11px] text-slate-500">🔧 {exp.equipment}</span>
-                                            {exp.team && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{exp.team}</span>}
+                                            {exp.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{exp.team}</span>}
                                         </div>
                                         {(exp.progress ?? 0) > 0 && (
                                             <div className="flex items-center gap-2 mb-1">
@@ -1499,12 +1499,12 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                 <div className="grid grid-cols-3 gap-3">
                     {completedExperiments.map(exp => (
                         <div key={exp.id} onClick={() => setEditing(exp)}
-                            className="bg-white rounded-lg p-3 cursor-pointer hover:shadow-md transition-all border border-emerald-200"
+                            className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
                             style={{ borderLeft: "3px solid #059669" }}>
                             <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{exp.title}</div>
                             <div className="flex items-center gap-1.5 mb-1">
                                 <span className="text-[11px] text-slate-500">🔧 {exp.equipment}</span>
-                                {exp.team && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{exp.team}</span>}
+                                {exp.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{exp.team}</span>}
                             </div>
                             {exp.goal && <div className="text-[11px] text-slate-400 mb-1.5 line-clamp-2">{exp.goal}</div>}
                             <div className="flex justify-between items-center">
@@ -1704,7 +1704,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                             onDrop={() => { if (dragItem.current && dropTarget) { const reordered = reorderKanbanItems(analyses, dragItem.current, status, dropTarget.idx, a => ANALYSIS_STATUS_MIGRATE(a.status), (a, s) => ({ ...a, status: s })); onReorder(reordered); } dragItem.current = null; setDraggedId(null); setDropTarget(null); }}>
                             <div className="flex items-center gap-2 mb-3 pb-1.5" style={{ borderBottom: `2px solid ${cfg.color}` }}>
                                 <span className="w-2 h-2 rounded-full inline-block" style={{ background: cfg.color }} />
-                                <span className="text-[14px] font-bold text-slate-800">{cfg.label}</span>
+                                <span className="text-[14px]" style={{fontWeight:650, color:"#334155"}}>{cfg.label}</span>
                                 <span className="text-[12px] text-slate-400">{col.length}</span>
                             </div>
                             <div className={`min-h-[80px] space-y-2 rounded-lg transition-colors ${dropTarget?.col === status ? "bg-blue-50/50" : ""}`}>
@@ -1715,16 +1715,16 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                                         onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
                                         onDragOver={e => { e.preventDefault(); if (draggedId === a.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
                                         onClick={() => setEditing(a)}
-                                        className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-all overflow-hidden ${draggedId === a.id ? "opacity-40 scale-95" : ""} ${a.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
+                                        className={`bg-white rounded-xl p-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === a.id ? "opacity-40 scale-95" : ""} ${a.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}
                                         style={{ borderLeft: `3px solid ${cfg.color}` }}>
                                         <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                            <input type="checkbox" checked={!!a.needsDiscussion} onChange={() => onToggleDiscussion(a)} className="w-3 h-3 accent-orange-500" />
-                                            <span className={`text-[11px] font-medium ${a.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                                            <input type="checkbox" checked={!!a.needsDiscussion} onChange={() => onToggleDiscussion(a)} className="w-3 h-3 accent-red-500" />
+                                            <span className={`text-[11px] font-medium ${a.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                                         </label>
                                         <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{a.title}</div>
                                         <div className="flex items-center gap-1.5 mb-1">
                                             <span className="text-[11px] text-slate-500">🖥️ {a.tool}</span>
-                                            {a.team && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{a.team}</span>}
+                                            {a.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{a.team}</span>}
                                         </div>
                                         {(a.progress ?? 0) > 0 && (
                                             <div className="flex items-center gap-2 mb-1">
@@ -1759,12 +1759,12 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                 <div className="grid grid-cols-3 gap-3">
                     {completedAnalyses.map(a => (
                         <div key={a.id} onClick={() => setEditing(a)}
-                            className="bg-white rounded-lg p-3 cursor-pointer hover:shadow-md transition-all border border-emerald-200"
+                            className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
                             style={{ borderLeft: "3px solid #059669" }}>
                             <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{a.title}</div>
                             <div className="flex items-center gap-1.5 mb-1">
                                 <span className="text-[11px] text-slate-500">🖥️ {a.tool}</span>
-                                {a.team && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{a.team}</span>}
+                                {a.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{a.team}</span>}
                             </div>
                             {a.goal && <div className="text-[11px] text-slate-400 mb-1.5 line-clamp-2">{a.goal}</div>}
                             <div className="flex justify-between items-center">
@@ -1895,7 +1895,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                             dragItem.current = null; setDraggedId(null); setDropTarget(null);
                         }}>
                         <div className={`flex items-center gap-2 mb-2 pb-1.5 border-b-2 ${col.border}`}>
-                            <span className="text-[14px] font-bold text-slate-800">{col.label}</span>
+                            <span className="text-[14px]" style={{fontWeight:650, color:"#334155"}}>{col.label}</span>
                             <span className="text-[12px] text-slate-400">{col.items.length}</span>
                         </div>
                         <div className={`space-y-1 min-h-[80px] rounded-lg transition-colors ${dropTarget?.col === col.id ? col.bgDrop : ""}`}>
@@ -1912,8 +1912,8 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                                         <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { setEditingTodo(todo); setNewText(todo.text); setNewAssignees(todo.assignees); setNewPriority(todo.priority); setNewDeadline(todo.deadline); setNewProgress(todo.progress ?? 0); setEditComments(todo.comments || []); setEditNewComment(""); }}>
                                             {col.id !== "completed" && (
                                                 <label className="flex items-center gap-1.5 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                                    <input type="checkbox" checked={!!todo.needsDiscussion} onChange={() => onUpdate({ ...todo, needsDiscussion: !todo.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
-                                                    <span className={`text-[11px] font-medium ${todo.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                                                    <input type="checkbox" checked={!!todo.needsDiscussion} onChange={() => onUpdate({ ...todo, needsDiscussion: !todo.needsDiscussion })} className="w-3 h-3 accent-red-500" />
+                                                    <span className={`text-[11px] font-medium ${todo.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                                                 </label>
                                             )}
                                             <div className={`text-[14px] leading-relaxed ${col.id === "completed" ? "text-slate-500" : "text-slate-700"}`}>
@@ -2244,7 +2244,7 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
                             onDrop={() => { if (dragItem.current && dropTarget) { const reordered = reorderKanbanItems(patents, dragItem.current, status, dropTarget.idx, p => p.status, (p, s) => ({ ...p, status: s })); onReorder(reordered); } dragItem.current = null; setDraggedId(null); setDropTarget(null); }}>
                             <div className="flex items-center gap-2 mb-3 pb-1.5" style={{ borderBottom: `2px solid ${cfg.color}` }}>
                                 <span className="w-2 h-2 rounded-full inline-block" style={{ background: cfg.color }} />
-                                <span className="text-[14px] font-bold text-slate-800">{cfg.label}</span>
+                                <span className="text-[14px]" style={{fontWeight:650, color:"#334155"}}>{cfg.label}</span>
                                 <span className="text-[12px] text-slate-400">{col.length}</span>
                             </div>
                             <div className={`min-h-[80px] space-y-2 rounded-lg transition-colors ${dropTarget?.col === status ? "bg-blue-50/50" : ""}`}>
@@ -2255,14 +2255,14 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
                                         onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
                                         onDragOver={e => { e.preventDefault(); if (draggedId === p.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
                                         onClick={() => setEditing(p)}
-                                        className={`bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-all overflow-hidden ${draggedId === p.id ? "opacity-40 scale-95" : ""} ${p.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}
+                                        className={`bg-white rounded-xl p-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === p.id ? "opacity-40 scale-95" : ""} ${p.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}
                                         style={{ borderLeft: `3px solid ${cfg.color}` }}>
                                         <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                            <input type="checkbox" checked={!!p.needsDiscussion} onChange={() => onToggleDiscussion(p)} className="w-3 h-3 accent-orange-500" />
-                                            <span className={`text-[11px] font-medium ${p.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                                            <input type="checkbox" checked={!!p.needsDiscussion} onChange={() => onToggleDiscussion(p)} className="w-3 h-3 accent-red-500" />
+                                            <span className={`text-[11px] font-medium ${p.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                                         </label>
                                         <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{p.title}</div>
-                                        {p.team && <div className="mb-1"><span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{p.team}</span></div>}
+                                        {p.team && <div className="mb-1"><span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{p.team}</span></div>}
                                         <div className="flex items-center gap-2 mb-1.5">
                                             <div className="flex-1 bg-slate-100 rounded-full h-1.5">
                                                 <div className="h-1.5 rounded-full bg-blue-500 transition-all" style={{ width: `${p.progress || 0}%` }} />
@@ -2291,10 +2291,10 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
                 <div className="grid grid-cols-3 gap-3">
                     {completedPatents.map(p => (
                         <div key={p.id} onClick={() => setEditing(p)}
-                            className="bg-white rounded-lg p-3 cursor-pointer hover:shadow-md transition-all border border-emerald-200"
+                            className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
                             style={{ borderLeft: "3px solid #22c55e" }}>
                             <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{p.title}</div>
-                            {p.team && <div className="mb-1"><span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{p.team}</span></div>}
+                            {p.team && <div className="mb-1"><span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{p.team}</span></div>}
                             <div className="flex justify-between items-center">
                                 <div className="flex gap-1 flex-wrap">
                                     {p.assignees.map(a => <span key={a} className="text-[11px] px-1.5 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[a]?.emoji}{a}</span>)}
@@ -2539,7 +2539,7 @@ function DailyTargetView({ targets, onSave, currentUser }: { targets: DailyTarge
             {editCell && (
                 <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={() => setEditCell(null)}>
                     <div className="bg-white rounded-xl p-4 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
-                        <h4 className="text-[14px] font-bold text-slate-800 mb-1">{editCell.date === todayStr ? "오늘 목표" : `${editCell.date} 목표`}</h4>
+                        <h4 className="text-[14px] mb-1" style={{fontWeight:650, color:"#334155"}}>{editCell.date === todayStr ? "오늘 목표" : `${editCell.date} 목표`}</h4>
                         <p className="text-[12px] text-slate-400 mb-3">{editCell.name}</p>
                         <textarea value={editText} onChange={e => setEditText(e.target.value)} placeholder="오늘의 목표를 작성하세요..."
                             className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20" autoFocus />
@@ -2623,10 +2623,10 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
                     const cmt = c.comments || [];
                     return (
                     <div key={c.id} onClick={() => openEdit(c)}
-                        className={`bg-white rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow ${c.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}>
+                        className={`bg-white rounded-xl p-4 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${c.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}>
                         <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
-                            <input type="checkbox" checked={!!c.needsDiscussion} onChange={() => onSave({ ...c, needsDiscussion: !c.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
-                            <span className={`text-[11px] font-medium ${c.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                            <input type="checkbox" checked={!!c.needsDiscussion} onChange={() => onSave({ ...c, needsDiscussion: !c.needsDiscussion })} className="w-3 h-3 accent-red-500" />
+                            <span className={`text-[11px] font-medium ${c.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                         </label>
                         <div className="text-[14px] font-semibold text-slate-800 mb-1">{c.title}</div>
                         {(c.startDate || c.endDate) && <div className="text-[12px] text-slate-500 mb-0.5">📅 {formatPeriod(c.startDate, c.endDate)}</div>}
@@ -2776,10 +2776,10 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
                             onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDragOverRes(idx); }}
                             onDragEnd={() => { dragRes.current = null; setDragOverRes(null); }}
                             onDrop={e => { e.stopPropagation(); if (dragRes.current !== null && dragRes.current !== idx) { const reordered = [...resources]; const [moved] = reordered.splice(dragRes.current, 1); reordered.splice(idx, 0, moved); onReorder(reordered); } dragRes.current = null; setDragOverRes(null); }}
-                            onClick={() => openEdit(r)} className={`bg-white rounded-lg p-4 cursor-grab hover:shadow-md transition-shadow ${dragOverRes === idx ? "ring-2 ring-blue-300" : ""} ${r.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}>
+                            onClick={() => openEdit(r)} className={`bg-white rounded-xl p-4 cursor-grab transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${dragOverRes === idx ? "ring-2 ring-blue-300" : ""} ${r.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}>
                             <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                <input type="checkbox" checked={!!r.needsDiscussion} onChange={() => onSave({ ...r, needsDiscussion: !r.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
-                                <span className={`text-[11px] font-medium ${r.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                                <input type="checkbox" checked={!!r.needsDiscussion} onChange={() => onSave({ ...r, needsDiscussion: !r.needsDiscussion })} className="w-3 h-3 accent-red-500" />
+                                <span className={`text-[11px] font-medium ${r.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                             </label>
                             <div className="text-[14px] font-semibold text-slate-800 mb-2 break-words">{r.title}</div>
                             {r.link && (
@@ -2926,11 +2926,11 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                         onDragEnd={() => { dragIdea.current = null; setDragOverIdea(null); }}
                         onDrop={e => { e.stopPropagation(); if (dragIdea.current !== null && dragIdea.current !== idx) { const reordered = [...ideas]; const [moved] = reordered.splice(dragIdea.current, 1); reordered.splice(idx, 0, moved); onReorder(reordered); } dragIdea.current = null; setDragOverIdea(null); }}
                         onClick={() => openDetail(idea)}
-                        className={`rounded-lg p-4 cursor-grab hover:shadow-md transition-shadow flex flex-col ${dragOverIdea === idx ? "ring-2 ring-blue-300" : ""} ${idea.needsDiscussion && !idea.borderColor ? "ring-1 ring-orange-200" : ""}`}
-                        style={{ background: idea.color || "#fff", border: idea.borderColor ? `2px solid ${idea.borderColor}` : idea.needsDiscussion ? "2px solid #fb923c" : "1px solid #e2e8f0" }}>
+                        className={`rounded-xl p-4 cursor-grab transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col ${dragOverIdea === idx ? "ring-2 ring-blue-300" : ""}`}
+                        style={{ background: idea.color || "#fff", border: idea.borderColor ? `2px solid ${idea.borderColor}` : "1px solid #E2E8F0", borderLeft: idea.needsDiscussion && !idea.borderColor ? "3px solid #EF4444" : undefined }}>
                         <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
-                            <input type="checkbox" checked={!!idea.needsDiscussion} onChange={() => onSave({ ...idea, needsDiscussion: !idea.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
-                            <span className={`text-[11px] font-medium ${idea.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                            <input type="checkbox" checked={!!idea.needsDiscussion} onChange={() => onSave({ ...idea, needsDiscussion: !idea.needsDiscussion })} className="w-3 h-3 accent-red-500" />
+                            <span className={`text-[11px] font-medium ${idea.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                         </label>
                         <div className="flex items-start justify-between mb-2">
                             <div className="text-[14px] font-semibold text-slate-800 break-words flex-1">{idea.title}</div>
@@ -3098,7 +3098,7 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
         <div className="space-y-8">
             {/* 📢 공지사항 */}
             <div>
-                <h3 className="text-[14px] font-bold text-slate-800 mb-3">📢 공지사항</h3>
+                <h3 className="text-[16px] font-bold text-slate-900 mb-4">📢 공지사항</h3>
                 {isLeader && (
                     <div className="flex gap-2 mb-3">
                         <textarea value={newText} onChange={e => setNewText(e.target.value)} placeholder="공지사항 작성..."
@@ -3154,7 +3154,7 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
 
             {/* 🧭 문화 */}
             <div>
-                <h3 className="text-[14px] font-bold text-slate-800 mb-3">🧭 문화</h3>
+                <h3 className="text-[16px] font-bold text-slate-900 mb-4">🧭 문화</h3>
                 {isLeader && (
                     <div className="flex gap-2 mb-3">
                         <textarea value={newPhil} onChange={e => setNewPhil(e.target.value)} placeholder="연구실 문화 작성..."
@@ -3239,7 +3239,7 @@ function PasswordChangeSection({ currentUser }: { currentUser: string }) {
     return (
         <div className="bg-white border border-slate-200 rounded-lg">
             <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between p-5 text-left hover:bg-slate-50 transition-colors rounded-lg">
-                <h3 className="text-[14px] font-bold text-slate-800">비밀번호 변경</h3>
+                <h3 className="text-[14px]" style={{fontWeight:650, color:"#334155"}}>비밀번호 변경</h3>
                 <span className={`text-slate-400 text-[13px] transition-transform ${open ? "rotate-180" : ""}`}>▼</span>
             </button>
             {open && <div className="px-5 pb-5 space-y-3 max-w-[360px]">
@@ -3277,7 +3277,7 @@ function AdminLogSection() {
 
     return (
         <div className="bg-white border border-slate-200 rounded-lg p-5">
-            <h3 className="text-[14px] font-bold text-slate-800 mb-3">수정 로그</h3>
+            <h3 className="text-[16px] font-bold text-slate-900 mb-4">수정 로그</h3>
             {loading ? <p className="text-[13px] text-slate-400">로딩 중...</p> : (
                 <>
                     <div className="flex flex-wrap gap-1.5 mb-3">
@@ -3319,7 +3319,7 @@ function SettingsView({ currentUser, customEmojis, onSaveEmoji, statusMessages, 
             <PasswordChangeSection currentUser={currentUser} />
             {/* 한마디 */}
             <div className="bg-white border border-slate-200 rounded-lg p-5">
-                <h3 className="text-[14px] font-bold text-slate-800 mb-3">하고 싶은 말 한마디</h3>
+                <h3 className="text-[16px] font-bold text-slate-900 mb-4">하고 싶은 말 한마디</h3>
                 <p className="text-[12px] text-slate-400 mb-3">팀 Overview에 표시됩니다</p>
                 {statusMessages[currentUser] && (
                     <div className="mb-3 px-3 py-2 bg-blue-50 rounded-lg text-[13px] text-blue-700 italic">&ldquo;{statusMessages[currentUser]}&rdquo;</div>
@@ -3332,7 +3332,7 @@ function SettingsView({ currentUser, customEmojis, onSaveEmoji, statusMessages, 
             </div>
             {/* 이모지 */}
             <div className="bg-white border border-slate-200 rounded-lg p-5">
-                <h3 className="text-[14px] font-bold text-slate-800 mb-4">내 이모지 설정</h3>
+                <h3 className="text-[16px] font-bold text-slate-900 mb-4">내 이모지 설정</h3>
                 <div className="flex items-center gap-3 mb-3">
                     <div>
                         <span className="text-[13px] text-slate-500">현재: </span>
@@ -3467,14 +3467,14 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                         {[...memos].sort((a, b) => b.id - a.id).map(m => {
                             const cmts = m.comments || [];
                             return (
-                                <div key={m.id} className={`rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow flex flex-col group relative ${m.needsDiscussion && !m.borderColor ? "ring-1 ring-orange-200" : ""}`}
-                                    style={{ background: m.color, border: m.borderColor ? `2px solid ${m.borderColor}` : m.needsDiscussion ? "2px solid #fb923c" : "1px solid #e2e8f0" }}
+                                <div key={m.id} className={`rounded-xl p-4 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col group relative`}
+                                    style={{ background: m.color || "#fff", border: m.borderColor ? `2px solid ${m.borderColor}` : m.needsDiscussion ? "1px solid #E2E8F0" : "1px solid #E2E8F0", borderLeft: m.needsDiscussion && !m.borderColor ? "3px solid #EF4444" : undefined }}
                                     onClick={() => openDetail(m)}>
                                     <button onClick={e => { e.stopPropagation(); onDelete(m.id); }}
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                     <label className="flex items-center gap-1.5 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                        <input type="checkbox" checked={!!m.needsDiscussion} onChange={() => onSave({ ...m, needsDiscussion: !m.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
-                                        <span className={`text-[10px] font-medium ${m.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                                        <input type="checkbox" checked={!!m.needsDiscussion} onChange={() => onSave({ ...m, needsDiscussion: !m.needsDiscussion })} className="w-3 h-3 accent-red-500" />
+                                        <span className={`text-[10px] font-medium ${m.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                                     </label>
                                     <div className="flex items-start justify-between mb-1">
                                         <div className="text-[13px] font-semibold text-slate-800 break-words flex-1">{m.title}</div>
@@ -3521,7 +3521,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                     {chat.length === 0 && <div className="text-center py-12 text-slate-400 text-[12px]">PI와 대화를 시작하세요</div>}
                     {chat.map(msg => (
                         <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`}>
-                            <div className={`inline-block max-w-[90%] rounded-lg px-3 py-2 text-[13px] ${msg.author === currentUser ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-700"}`}>
+                            <div className={`inline-block max-w-[90%] px-3.5 py-2.5 text-[13.5px] leading-relaxed ${msg.author === currentUser ? "text-white rounded-[16px_16px_4px_16px]" : "text-slate-700 rounded-[16px_16px_16px_4px]"}`} style={{background: msg.author === currentUser ? "#3B82F6" : "#F1F5F9"}}>
                                 {msg.author !== currentUser && <div className="text-[11px] font-bold mb-0.5">{MEMBERS[msg.author]?.emoji || "👤"} {msg.author}</div>}
                                 {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mb-1 cursor-pointer" onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                 {msg.text && <div className="whitespace-pre-wrap">{msg.text}</div>}
@@ -3753,16 +3753,16 @@ function MeetingView({ meetings, onSave, onDelete, currentUser, teamNames }: {
             <div className="grid grid-cols-3 gap-3">
                 {sorted.map(m => (
                     <div key={m.id} onClick={() => setEditing(m)}
-                        className={`bg-white rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow flex flex-col ${m.needsDiscussion ? "border-2 border-orange-400 ring-1 ring-orange-200" : "border border-slate-200"}`}>
+                        className={`bg-white rounded-xl p-4 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col ${m.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}>
                         <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
-                            <input type="checkbox" checked={!!m.needsDiscussion} onChange={() => onSave({ ...m, needsDiscussion: !m.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
-                            <span className={`text-[11px] font-medium ${m.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                            <input type="checkbox" checked={!!m.needsDiscussion} onChange={() => onSave({ ...m, needsDiscussion: !m.needsDiscussion })} className="w-3 h-3 accent-red-500" />
+                            <span className={`text-[11px] font-medium ${m.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                         </label>
                         <div className="flex items-start justify-between mb-1">
                             <div className="text-[14px] font-semibold text-slate-800 break-words flex-1">{m.title}</div>
                             <span className="text-[11px] text-slate-400 ml-2 whitespace-nowrap">{m.date}</span>
                         </div>
-                        {m.team && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium self-start mb-1">{m.team}</span>}
+                        {m.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold self-start mb-1">{m.team}</span>}
                         {m.goal && <div className="text-[12px] text-blue-600 mb-1 line-clamp-1"><span className="font-semibold">목표:</span> {m.goal}</div>}
                         {m.summary && <div className="text-[13px] text-slate-600 mb-2 line-clamp-3 break-words">{m.summary}</div>}
                         <div className="flex flex-wrap gap-0.5 mb-2">
@@ -3861,13 +3861,13 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                         const cmts = card.comments || [];
                         return (
                             <div key={card.id} onClick={() => setSelectedCard(card)}
-                                className={`rounded-lg p-2.5 cursor-pointer hover:shadow-md transition-shadow flex flex-col group relative ${card.needsDiscussion ? "ring-1 ring-orange-200" : ""}`}
-                                style={{ background: card.color || "#fff", border: card.needsDiscussion ? "2px solid #fb923c" : "1px solid #e2e8f0" }}>
+                                className={`rounded-xl p-3 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col group relative`}
+                                style={{ background: card.color || "#fff", border: "1px solid #E2E8F0", borderLeft: card.needsDiscussion ? "3px solid #EF4444" : undefined }}>
                                 <button onClick={e => { e.stopPropagation(); onDeleteBoard(card.id); }}
                                     className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                 <label className="flex items-center gap-1 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                    <input type="checkbox" checked={!!card.needsDiscussion} onChange={() => onSaveBoard({ ...card, needsDiscussion: !card.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
-                                    <span className={`text-[10px] font-medium ${card.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                                    <input type="checkbox" checked={!!card.needsDiscussion} onChange={() => onSaveBoard({ ...card, needsDiscussion: !card.needsDiscussion })} className="w-3 h-3 accent-red-500" />
+                                    <span className={`text-[10px] font-medium ${card.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                                 </label>
                                 <div className="flex items-start justify-between mb-1">
                                     <h4 className="text-[13px] font-semibold text-slate-800 break-words flex-1">{card.title}</h4>
@@ -3917,7 +3917,7 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                     {chat.length === 0 && <div className="text-center py-16 text-slate-400 text-[14px]">메시지가 없습니다. 자유롭게 대화해 보세요!</div>}
                     {chat.map(msg => (
                         <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`}>
-                            <div className={`inline-block max-w-[75%] rounded-lg px-3.5 py-2.5 text-[14px] ${msg.author === currentUser ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-700"}`}>
+                            <div className={`inline-block max-w-[75%] px-3.5 py-2.5 text-[13.5px] leading-relaxed ${msg.author === currentUser ? "text-white rounded-[16px_16px_4px_16px]" : "text-slate-700 rounded-[16px_16px_16px_4px]"}`} style={{background: msg.author === currentUser ? "#3B82F6" : "#F1F5F9"}}>
                                 {msg.author !== currentUser && <div className="text-[12px] font-bold mb-0.5">{MEMBERS[msg.author]?.emoji || "👤"} {msg.author}</div>}
                                 {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[300px] rounded-md mb-1.5 cursor-pointer" onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                 {msg.text && <div className="whitespace-pre-wrap">{msg.text}</div>}
@@ -4036,7 +4036,7 @@ function FilePreviewModal({ file, onClose }: { file: LabFile; onClose: () => voi
         <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
             <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b">
-                    <span className="text-[14px] font-bold text-slate-800 truncate flex-1 pr-4">{file.name}</span>
+                    <span className="text-[14px] truncate flex-1 pr-4" style={{fontWeight:650, color:"#334155"}}>{file.name}</span>
                     <div className="flex items-center gap-3 shrink-0">
                         <a href={file.url} download={file.name} className="text-[13px] text-blue-500 hover:text-blue-600 font-medium">다운로드</a>
                         <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
@@ -4241,13 +4241,13 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                 <div draggable onDragStart={() => setDraggedId(card.id)} onDragEnd={() => { setDraggedId(null); setDropTarget(null); }}
                                     onDragOver={e => { if (draggedId === card.id) return; e.stopPropagation(); e.preventDefault(); }}
                                     onClick={() => openDetail(card)}
-                                    className={`rounded-lg p-2.5 cursor-pointer hover:shadow-md transition-shadow flex flex-col group relative ${card.needsDiscussion && !card.borderColor ? "ring-1 ring-orange-200" : ""} ${draggedId === card.id ? "opacity-40" : ""}`}
-                                    style={{ background: card.color, border: card.borderColor ? `2px solid ${card.borderColor}` : card.needsDiscussion ? "2px solid #fb923c" : "1px solid #e2e8f0" }}>
+                                    className={`rounded-xl p-3 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col group relative ${draggedId === card.id ? "opacity-40" : ""}`}
+                                    style={{ background: card.color || "#fff", border: card.borderColor ? `2px solid ${card.borderColor}` : "1px solid #E2E8F0", borderLeft: card.needsDiscussion && !card.borderColor ? "3px solid #EF4444" : undefined }}>
                                     <button onClick={e => { e.stopPropagation(); onDeleteCard(card.id); }}
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                     <label className="flex items-center gap-1 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                        <input type="checkbox" checked={!!card.needsDiscussion} onChange={() => onSaveCard({ ...card, needsDiscussion: !card.needsDiscussion })} className="w-3 h-3 accent-orange-500" />
-                                        <span className={`text-[10px] font-medium ${card.needsDiscussion ? "text-orange-500" : "text-slate-400"}`}>논의 필요</span>
+                                        <input type="checkbox" checked={!!card.needsDiscussion} onChange={() => onSaveCard({ ...card, needsDiscussion: !card.needsDiscussion })} className="w-3 h-3 accent-red-500" />
+                                        <span className={`text-[10px] font-medium ${card.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                                     </label>
                                     <div className="flex items-start justify-between mb-1">
                                         <h4 className="text-[13px] font-semibold text-slate-800 break-words flex-1">{card.title}</h4>
@@ -4300,7 +4300,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                     {chat.length === 0 && <div className="text-center py-6 text-slate-400 text-[12px]">메시지가 없습니다</div>}
                     {chat.map(msg => (
                         <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`}>
-                            <div className={`inline-block max-w-[85%] rounded-lg px-3 py-2 text-[13px] ${msg.author === currentUser ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-700"}`}>
+                            <div className={`inline-block max-w-[85%] px-3.5 py-2.5 text-[13.5px] leading-relaxed ${msg.author === currentUser ? "text-white rounded-[16px_16px_4px_16px]" : "text-slate-700 rounded-[16px_16px_16px_4px]"}`} style={{background: msg.author === currentUser ? "#3B82F6" : "#F1F5F9"}}>
                                 {msg.author !== currentUser && <div className="text-[11px] font-bold mb-0.5">{MEMBERS[msg.author]?.emoji || "👤"}{msg.author}</div>}
                                 {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[250px] rounded-md mb-1 cursor-pointer" onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                 {msg.text && <div className="whitespace-pre-wrap">{msg.text}</div>}
@@ -4436,12 +4436,12 @@ function MiniBar({ items, maxVal }: { items: Array<{ label: string; count: numbe
     return (
         <div className="space-y-1.5">
             {items.map(item => (
-                <div key={item.label} className="flex items-center gap-2">
-                    <span className="text-[12px] text-slate-500 w-[52px] text-right truncate">{item.label}</span>
-                    <div className="flex-1 bg-slate-100 rounded-full h-[6px] overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-500" style={{ width: maxVal > 0 ? `${Math.max(4, (item.count / maxVal) * 100)}%` : "0%", background: item.color, opacity: item.count > 0 ? 1 : 0.2 }} />
+                <div key={item.label} className="flex items-center gap-2.5">
+                    <span className="text-[12px] w-[52px] text-right truncate" style={{color:"#94A3B8"}}>{item.label}</span>
+                    <div className="flex-1 rounded-[3px] h-[6px] overflow-hidden" style={{background:"#F1F5F9"}}>
+                        <div className="h-full rounded-[3px]" style={{ width: maxVal > 0 ? `${Math.max(4, (item.count / maxVal) * 100)}%` : "0%", background: item.color, opacity: item.count > 0 ? 1 : 0.2, transition: "width 0.8s cubic-bezier(0.4, 0, 0.2, 1)" }} />
                     </div>
-                    <span className="text-[12px] font-semibold text-slate-600 w-[20px]">{item.count}</span>
+                    <span className="w-[16px] text-[12px]" style={{fontWeight: 600, color: item.count > 0 ? "#334155" : "#CBD5E1"}}>{item.count}</span>
                 </div>
             ))}
         </div>
@@ -4550,36 +4550,36 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
             )}
 
             {/* Row 1: 연구 파이프라인 5개 한 줄 */}
-            <div className="bg-white border border-slate-200 rounded-xl p-5">
-                <h3 className="text-[14px] font-bold text-slate-800 mb-4">{isPersonal ? "내 연구 파이프라인" : "연구 파이프라인"}</h3>
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+                <h3 className="text-[16px] font-bold text-slate-900 mb-4">{isPersonal ? "내 연구 파이프라인" : "연구 파이프라인"}</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
                     <button onClick={() => onNavigate("papers")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
                         <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-blue-500" />논문 <span className="text-slate-700 font-bold">({fp.length})</span>
+                            <span className="w-2 h-2 rounded-full" style={{background:"#3B82F6"}} />논문 <span className="font-bold" style={{color:"#334155"}}>({fp.length})</span>
                         </div>
                         <MiniBar items={papersByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...papersByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("reports")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
                         <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-blue-400" />계획서/보고서 <span className="text-slate-700 font-bold">({fr.length})</span>
+                            <span className="w-2 h-2 rounded-full" style={{background:"#F59E0B"}} />계획서/보고서 <span className="font-bold" style={{color:"#334155"}}>({fr.length})</span>
                         </div>
                         <MiniBar items={reportsByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...reportsByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("experiments")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
                         <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-indigo-400" />실험 <span className="text-slate-700 font-bold">({fe.length})</span>
+                            <span className="w-2 h-2 rounded-full" style={{background:"#EF4444"}} />실험 <span className="font-bold" style={{color:"#334155"}}>({fe.length})</span>
                         </div>
                         <MiniBar items={expByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...expByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("analysis")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
                         <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-slate-400" />해석 <span className="text-slate-700 font-bold">({fa.length})</span>
+                            <span className="w-2 h-2 rounded-full" style={{background:"#8B5CF6"}} />해석 <span className="font-bold" style={{color:"#334155"}}>({fa.length})</span>
                         </div>
                         <MiniBar items={analysisByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...analysisByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("ip")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
                         <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-slate-300" />지식재산권 <span className="text-slate-700 font-bold">({fip.length})</span>
+                            <span className="w-2 h-2 rounded-full" style={{background:"#10B981"}} />지식재산권 <span className="font-bold" style={{color:"#334155"}}>({fip.length})</span>
                         </div>
                         <MiniBar items={patentsByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...patentsByStatus.map(s => s.count))} />
                     </button>
@@ -4589,21 +4589,21 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
             {/* Row 2: 논의 필요 + (오늘목표 현황 or 투두) + 최근 공지 */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* 논의 필요 */}
-                <div className="bg-white border border-slate-200 rounded-xl p-5">
-                    <h3 className="text-[14px] font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+                    <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
                         {isPersonal ? "내 논의 필요" : "논의 필요"}
-                        {discussionItems.length > 0 && <span className="min-w-[20px] h-[20px] flex items-center justify-center rounded-full bg-orange-500 text-white text-[12px] font-bold">{discussionItems.length}</span>}
+                        {discussionItems.length > 0 && <span className="px-1.5 py-0.5 rounded-md bg-orange-50 text-orange-500 text-[11px] font-semibold">{discussionItems.length}</span>}
                     </h3>
                     {discussionItems.length === 0 ? (
                         <div className="text-[13px] text-slate-300 text-center py-6">논의 필요 항목 없음</div>
                     ) : (
                         <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
                             {discussionItems.slice(0, 10).map((item, i) => (
-                                <button key={i} onClick={() => onNavigate(item.tab)} className="w-full flex items-start gap-2 p-2 rounded-lg hover:bg-orange-50 text-left transition-colors group">
+                                <button key={i} onClick={() => onNavigate(item.tab)} className="w-full flex items-start gap-2.5 p-3.5 rounded-xl text-left transition-all group" style={{background:"#FEF2F2", borderLeft:"3px solid #EF4444"}}>
                                     <span className="text-[13px] mt-0.5">{item.icon}</span>
                                     <div className="flex-1 min-w-0">
-                                        <div className="text-[13px] text-slate-700 leading-snug truncate group-hover:text-orange-600 transition-colors">{item.title}</div>
-                                        <div className="text-[11px] text-slate-400">{item.section}</div>
+                                        <div className="text-[13.5px] text-slate-800 leading-snug truncate group-hover:text-red-600 transition-colors" style={{fontWeight:600}}>{item.title}</div>
+                                        <div className="text-[11px] text-slate-400 mt-0.5">{item.section}</div>
                                     </div>
                                 </button>
                             ))}
@@ -4614,9 +4614,9 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
 
                 {/* 오늘 목표 현황 (team) / 투두 리스트 (personal) */}
                 {isPersonal ? (
-                    <div className="bg-white border border-slate-200 rounded-xl p-5">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
                         <button onClick={() => onNavigate("todos")} className="w-full text-left">
-                            <h3 className="text-[14px] font-bold text-slate-800 mb-3 flex items-center gap-2">
+                            <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
                                 내 To-do
                                 {myTodos.length > 0 && <span className="min-w-[20px] h-[20px] flex items-center justify-center rounded-full bg-red-500 text-white text-[12px] font-bold">{myTodos.length}</span>}
                             </h3>
@@ -4635,16 +4635,16 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                         )}
                     </div>
                 ) : (
-                    <div className="bg-white border border-slate-200 rounded-xl p-5">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
                         <button onClick={() => onNavigate("daily")} className="w-full text-left">
-                            <h3 className="text-[14px] font-bold text-slate-800 mb-3 flex items-center gap-2">
+                            <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
                                 오늘 목표 현황
                                 <span className="text-[12px] font-medium text-slate-400">{targetsWritten}/{MEMBER_NAMES.length}</span>
                             </h3>
                         </button>
                         <div className="mb-3">
-                            <div className="w-full bg-slate-100 rounded-full h-2">
-                                <div className="h-2 rounded-full bg-blue-500 transition-all duration-500" style={{ width: `${MEMBER_NAMES.length > 0 ? (targetsWritten / MEMBER_NAMES.length) * 100 : 0}%` }} />
+                            <div className="w-full rounded-[3px] h-[6px]" style={{background:"#F1F5F9"}}>
+                                <div className="h-[6px] rounded-[3px]" style={{ width: `${MEMBER_NAMES.length > 0 ? (targetsWritten / MEMBER_NAMES.length) * 100 : 0}%`, background: "linear-gradient(90deg, #3B82F6, #22C55E)", transition: "width 1s cubic-bezier(0.4, 0, 0.2, 1)" }} />
                             </div>
                         </div>
                         {targetsMissing.length > 0 ? (
@@ -4673,18 +4673,18 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                 )}
 
                 {/* 최근 공지 */}
-                <div className="bg-white border border-slate-200 rounded-xl p-5">
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
                     <button onClick={() => onNavigate("announcements")} className="w-full text-left">
-                        <h3 className="text-[14px] font-bold text-slate-800 mb-3">최근 공지</h3>
+                        <h3 className="text-[16px] font-bold text-slate-900 mb-4">최근 공지</h3>
                     </button>
                     {recentAnn.length === 0 ? (
                         <div className="text-[13px] text-slate-300 text-center py-6">공지 없음</div>
                     ) : (
                         <div className="space-y-2">
                             {recentAnn.map(ann => (
-                                <div key={ann.id} className="p-2.5 bg-slate-50 rounded-lg">
-                                    <div className="text-[13px] text-slate-700 leading-relaxed">{ann.text.length > 60 ? ann.text.slice(0, 60) + "..." : ann.text}</div>
-                                    <div className="text-[11px] text-slate-400 mt-1">{members[ann.author]?.emoji} {ann.author} · {ann.date}</div>
+                                <div key={ann.id} className="p-3.5 rounded-[10px] cursor-pointer transition-colors" style={{background:"#F8FAFC"}} onMouseEnter={e => (e.currentTarget.style.background = "#F1F5F9")} onMouseLeave={e => (e.currentTarget.style.background = "#F8FAFC")}>
+                                    <div className="text-[13px] leading-relaxed" style={{color:"#334155", fontWeight:500}}>{ann.text.length > 60 ? ann.text.slice(0, 60) + "..." : ann.text}</div>
+                                    <div className="text-[11px] mt-1.5" style={{color:"#94A3B8"}}>{members[ann.author]?.emoji} {ann.author} · {ann.date}</div>
                                 </div>
                             ))}
                         </div>
@@ -4694,8 +4694,8 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
 
             {/* Row 3: 멤버별 현황 (team) / 내 현황 (personal) */}
             {isPersonal ? (
-                <div className="bg-white border border-slate-200 rounded-xl p-5">
-                    <h3 className="text-[14px] font-bold text-slate-800 mb-3">내 전체 현황</h3>
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+                    <h3 className="text-[16px] font-bold text-slate-900 mb-4">내 전체 현황</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                         <div>
                             <div className="text-[12px] font-semibold text-slate-400 mb-2">내 논문 ({myPapers.length})</div>
@@ -4765,8 +4765,8 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                     </div>
                 </div>
             ) : (
-                <div className="bg-white border border-slate-200 rounded-xl p-5">
-                    <h3 className="text-[14px] font-bold text-slate-800 mb-3">멤버별 현황</h3>
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+                    <h3 className="text-[16px] font-bold text-slate-900 mb-4">멤버별 현황</h3>
                     <div className="overflow-x-auto">
                         <table className="w-full text-[12px]">
                             <thead>
@@ -4828,8 +4828,8 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                         color: "#94a3b8",
                     }));
                 return (
-                    <div className="bg-white border border-slate-200 rounded-xl p-5">
-                        <h3 className="text-[14px] font-bold text-slate-800 mb-3">팀별 연구 현황</h3>
+                    <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+                        <h3 className="text-[16px] font-bold text-slate-900 mb-4">팀별 연구 현황</h3>
                         {(() => {
                             const teamStats = teamEntries.map(team => {
                                 const tPapers = papers.filter(p => p.team === team.name).length;
@@ -5359,7 +5359,7 @@ export default function DashboardPage() {
 
     return (
         <MembersContext.Provider value={displayMembers}>
-        <div className="min-h-screen bg-slate-50 text-slate-800 leading-normal" style={{ fontFamily: "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+        <div className="min-h-screen bg-[#F8FAFC] text-slate-800 leading-normal" style={{ fontFamily: "'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif" }}>
             {/* Header */}
             <div className="bg-slate-900 px-4 md:px-7 py-3.5 flex items-center justify-between border-b border-slate-800 shadow-lg shadow-slate-900/20">
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab("overview")}>
@@ -5393,8 +5393,8 @@ export default function DashboardPage() {
 
             <div className="flex flex-col md:flex-row">
                 {/* Sidebar */}
-                <div className="md:w-[210px] bg-white md:border-r border-b md:border-b-0 border-slate-200 md:min-h-[calc(100vh-56px)] flex-shrink-0">
-                    <div className="flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto md:max-h-[calc(100vh-56px)] p-3 md:p-0 md:pt-3 md:pb-8 gap-px">
+                <div className="md:w-[240px] bg-white md:border-r border-b md:border-b-0 border-slate-200 md:min-h-[calc(100vh-56px)] flex-shrink-0">
+                    <div className="flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto md:max-h-[calc(100vh-56px)] p-3 md:p-0 md:pt-2 md:pb-8 gap-px">
                         {tabs.map((tab, i) => {
                             const sectionBreaks: Record<string, string> = { announcements: "운영", todos: "내 노트", papers: "연구", conferenceTrips: "커뮤니케이션" };
                             const showBreak = !tab.id.startsWith("memo_") && !tab.id.startsWith("teamMemo_") && sectionBreaks[tab.id];
@@ -5403,27 +5403,28 @@ export default function DashboardPage() {
                             return (
                                 <div key={tab.id}>
                                     {showBreak && (
-                                        <div className="hidden md:block mt-5 mb-1.5 mx-3">
-                                            <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.15em] border-b border-slate-100 pb-1">{sectionBreaks[tab.id]}</div>
+                                        <div className="hidden md:block mt-5 mb-1.5 px-4">
+                                            <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-[0.08em]">{sectionBreaks[tab.id]}</div>
                                         </div>
                                     )}
                                     {showTeamMemoBreak && (
-                                        <div className="hidden md:block mt-5 mb-1.5 mx-3">
-                                            <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.15em] border-b border-slate-100 pb-1">팀 워크</div>
+                                        <div className="hidden md:block mt-5 mb-1.5 px-4">
+                                            <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-[0.08em]">팀 워크</div>
                                         </div>
                                     )}
                                     {showMemoBreak && (
-                                        <div className="hidden md:block mt-5 mb-1.5 mx-3">
-                                            <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.15em] border-b border-slate-100 pb-1">내 노트</div>
+                                        <div className="hidden md:block mt-5 mb-1.5 px-4">
+                                            <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-[0.08em]">내 노트</div>
                                         </div>
                                     )}
                                     <button onClick={() => setActiveTab(tab.id)}
-                                        className={`w-full flex items-center gap-2 px-3 py-1 rounded-md text-[13px] whitespace-nowrap transition-all ${activeTab === tab.id ? "font-semibold text-blue-700 bg-blue-50/80" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"}`}>
-                                        <span className="text-[14px]">{tab.icon}</span>
-{/* color dot removed */}
+                                        className={`relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13.5px] whitespace-nowrap transition-all ${activeTab === tab.id ? "font-semibold text-blue-800 bg-blue-50" : "text-slate-600 hover:bg-slate-50"}`}
+                                        style={{ fontWeight: activeTab === tab.id ? 600 : 450, letterSpacing: "-0.01em" }}>
+                                        {activeTab === tab.id && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-blue-500" />}
+                                        <span className="text-[15px]">{tab.icon}</span>
                                         <span>{tab.label}</span>
                                         {((unreadCounts[tab.id] || 0) > 0 || (discussionCounts[tab.id] || 0) > 0) && (
-                                            <div className="ml-auto flex items-center gap-1.5">
+                                            <div className="flex items-center gap-1.5">
                                                 {(unreadCounts[tab.id] || 0) > 0 && <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 text-[11px] font-semibold">{unreadCounts[tab.id]}</span>}
                                                 {(discussionCounts[tab.id] || 0) > 0 && <span className="w-[6px] h-[6px] rounded-full bg-orange-400" />}
                                             </div>
@@ -5434,12 +5435,12 @@ export default function DashboardPage() {
                         })}
                     </div>
                     {activeTab === "papers" && (
-                        <div className="hidden md:block px-3 mt-4">
-                            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-3 mb-2">필터</div>
+                        <div className="hidden md:block px-4 mt-4">
+                            <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-[0.08em] px-4 mb-2">필터</div>
                             <div className="max-h-[360px] overflow-y-auto space-y-0.5">
                                 {allPeople.map(person => (
                                     <button key={person} onClick={() => setSelectedPerson(person)}
-                                        className={`flex items-center gap-1.5 w-full px-3 py-1.5 rounded-md text-[13px] transition-all ${selectedPerson === person ? "font-semibold text-slate-800 bg-blue-50" : "text-slate-500 hover:bg-slate-50"}`}>
+                                        className={`flex items-center gap-1.5 w-full px-4 py-1.5 rounded-[10px] text-[13px] transition-all ${selectedPerson === person ? "font-semibold text-slate-800 bg-blue-50" : "text-slate-500 hover:bg-slate-50"}`}>
                                         {person !== "전체" && <span>{displayMembers[person]?.emoji}</span>}{person}
                                     </button>
                                 ))}
@@ -5449,10 +5450,10 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 p-4 md:p-5 overflow-x-auto">
+                <div className="flex-1 p-4 md:py-7 md:px-9 overflow-x-auto">
                     {activeTab !== "overview" && activeTab !== "overview_me" && (
-                        <div className="mb-4">
-                            <h2 className="text-[18px] font-bold text-slate-900">
+                        <div className="mb-6">
+                            <h2 className="text-[26px] font-extrabold tracking-tight" style={{color:"#0F172A", letterSpacing:"-0.03em"}}>
                                 {tabs.find(t => t.id === activeTab)?.icon} {tabs.find(t => t.id === activeTab)?.label}
                                 {activeTab === "papers" && selectedPerson !== "전체" && <span className="text-[14px] font-normal text-slate-500 ml-2">— {displayMembers[selectedPerson]?.emoji} {selectedPerson}</span>}
                             </h2>
