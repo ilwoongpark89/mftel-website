@@ -350,7 +350,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
     );
 }
 
-function KanbanView({ papers, filter, onClickPaper, onAddPaper, onSavePaper, onReorder, tagList, onSaveTags, teamNames }: { papers: Paper[]; filter: string; onClickPaper: (p: Paper) => void; onAddPaper: () => void; onSavePaper: (p: Paper) => void; onReorder: (list: Paper[]) => void; tagList: string[]; onSaveTags: (list: string[]) => void; teamNames?: string[] }) {
+function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, onAddPaper, onSavePaper, onReorder, tagList, onSaveTags, teamNames }: { papers: Paper[]; filter: string; onFilterPerson?: (name: string) => void; allPeople?: string[]; onClickPaper: (p: Paper) => void; onAddPaper: () => void; onSavePaper: (p: Paper) => void; onReorder: (list: Paper[]) => void; tagList: string[]; onSaveTags: (list: string[]) => void; teamNames?: string[] }) {
     const MEMBERS = useContext(MembersContext);
     const [filterTeam, setFilterTeam] = useState("전체");
     const personFiltered = filter === "전체" ? papers : papers.filter(p => p.assignees.includes(filter) || p.tags.some(t => t === filter));
@@ -371,6 +371,18 @@ function KanbanView({ papers, filter, onClickPaper, onAddPaper, onSavePaper, onR
                 <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedPapers.length})</button>
             </div>
             {teamNames && teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
+            {allPeople && onFilterPerson && (
+                <div className="flex items-center gap-1 mb-3 flex-wrap">
+                    <span className="text-[11px] font-semibold mr-1" style={{color:"#94A3B8"}}>멤버:</span>
+                    {allPeople.map(p => (
+                        <button key={p} onClick={() => onFilterPerson(p)}
+                            className={`px-2.5 py-1 rounded-md text-[12px] font-medium transition-all ${filter === p ? "text-white" : "hover:bg-slate-50"}`}
+                            style={{ background: filter === p ? "#3B82F6" : "transparent", color: filter === p ? "#FFFFFF" : "#64748B" }}>
+                            {p !== "전체" && <span className="mr-0.5">{MEMBERS[p]?.emoji}</span>}{p}
+                        </button>
+                    ))}
+                </div>
+            )}
             {showTagMgr && (
                 <div className="mb-4 p-3 bg-white border border-slate-200 rounded-lg">
                     <div className="text-[13px] font-semibold text-slate-600 mb-2">논문 태그 목록</div>
@@ -5478,23 +5490,6 @@ export default function DashboardPage() {
                             );
                         })()}
                     </div>
-                    {activeTab === "papers" && (
-                        <div className="hidden md:block px-4 mt-4">
-                            <div className="text-[10.5px] font-bold uppercase tracking-[0.08em] px-4 mb-2" style={{color:"#475569"}}>필터</div>
-                            <div className="max-h-[360px] overflow-y-auto space-y-0.5">
-                                {allPeople.map(person => {
-                                    const isActive = selectedPerson === person;
-                                    return (
-                                        <button key={person} onClick={() => setSelectedPerson(person)}
-                                            className="flex items-center gap-1.5 w-full px-4 py-1.5 rounded-[10px] text-[13px] transition-all"
-                                            style={{ fontWeight: isActive ? 600 : 400, color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}>
-                                            {person !== "전체" && <span>{displayMembers[person]?.emoji}</span>}{person}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
                     {/* Sidebar bottom: user profile */}
                     <div className="hidden md:flex items-center gap-2.5 px-4 py-3.5 mt-auto" style={{borderTop:"1px solid rgba(255,255,255,0.08)"}}>
                         <div className="w-8 h-8 rounded-full flex items-center justify-center text-[16px] flex-shrink-0" style={{background:"rgba(59,130,246,0.1)", border:"1.5px solid rgba(59,130,246,0.25)"}}>{displayMembers[userName]?.emoji || "👤"}</div>
@@ -5518,7 +5513,6 @@ export default function DashboardPage() {
                             <div className="mb-6 flex-shrink-0">
                                 <h2 className="text-[26px] font-extrabold tracking-tight" style={{color:"#0F172A", letterSpacing:"-0.03em"}}>
                                     {found.icon} {found.label}
-                                    {activeTab === "papers" && selectedPerson !== "전체" && <span className="text-[14px] font-normal text-slate-500 ml-2">— {displayMembers[selectedPerson]?.emoji} {selectedPerson}</span>}
                                 </h2>
                             </div>
                         ) : null;
@@ -5528,7 +5522,7 @@ export default function DashboardPage() {
                     {activeTab === "overview_me" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} chatPosts={chatPosts} personalMemos={personalMemos} teamMemos={teamMemos} meetings={meetings} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="personal" statusMessages={statusMessages} members={displayMembers} teams={teams} />}
                     {activeTab === "announcements" && <AnnouncementView announcements={announcements} onAdd={handleAddAnn} onDelete={handleDelAnn} onUpdate={handleUpdateAnn} onReorder={list => { setAnnouncements(list); saveSection("announcements", list); }} philosophy={philosophy} onAddPhilosophy={handleAddPhil} onDeletePhilosophy={handleDelPhil} onUpdatePhilosophy={handleUpdatePhil} currentUser={userName} />}
                     {activeTab === "daily" && <DailyTargetView targets={dailyTargets} onSave={handleSaveDailyTargets} currentUser={userName} />}
-                    {activeTab === "papers" && <KanbanView papers={papers} filter={selectedPerson} onClickPaper={p => setPaperModal({ paper: p, mode: "edit" })} onAddPaper={() => setPaperModal({ paper: null, mode: "add" })} onSavePaper={handleSavePaper} onReorder={list => { setPapers(list); saveSection("papers", list); }} tagList={paperTagList} onSaveTags={handleSavePaperTags} teamNames={teamNames} />}
+                    {activeTab === "papers" && <KanbanView papers={papers} filter={selectedPerson} onFilterPerson={setSelectedPerson} allPeople={allPeople} onClickPaper={p => setPaperModal({ paper: p, mode: "edit" })} onAddPaper={() => setPaperModal({ paper: null, mode: "add" })} onSavePaper={handleSavePaper} onReorder={list => { setPapers(list); saveSection("papers", list); }} tagList={paperTagList} onSaveTags={handleSavePaperTags} teamNames={teamNames} />}
                     {activeTab === "reports" && <ReportView reports={reports} currentUser={userName} onSave={handleSaveReport} onDelete={handleDeleteReport} onToggleDiscussion={r => handleSaveReport({ ...r, needsDiscussion: !r.needsDiscussion })} onReorder={list => { setReports(list); saveSection("reports", list); }} teamNames={teamNames} />}
                     {activeTab === "experiments" && <ExperimentView experiments={experiments} onSave={handleSaveExperiment} onDelete={handleDeleteExperiment} currentUser={userName} equipmentList={equipmentList} onSaveEquipment={handleSaveEquipment} onToggleDiscussion={e => handleSaveExperiment({ ...e, needsDiscussion: !e.needsDiscussion })} onReorder={list => { setExperiments(list); saveSection("experiments", list); }} teamNames={teamNames} />}
                     {activeTab === "analysis" && <AnalysisView analyses={analyses} onSave={handleSaveAnalysis} onDelete={handleDeleteAnalysis} currentUser={userName} toolList={analysisToolList} onSaveTools={handleSaveAnalysisTools} onToggleDiscussion={a => handleSaveAnalysis({ ...a, needsDiscussion: !a.needsDiscussion })} onReorder={list => { setAnalyses(list); saveSection("analyses", list); }} teamNames={teamNames} />}
