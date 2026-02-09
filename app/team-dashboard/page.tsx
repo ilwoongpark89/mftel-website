@@ -45,10 +45,11 @@ const PAPER_TAGS = ["안전예타", "생애첫", "TES", "액침냉각", "이상�
 const REPORT_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
     planning: { label: "기획", color: "#94a3b8" },
     writing: { label: "작성중", color: "#f59e0b" },
+    checking: { label: "검토중", color: "#8b5cf6" },
     review: { label: "심사중", color: "#3b82f6" },
     done: { label: "완료", color: "#059669" },
 };
-const REPORT_STATUS_KEYS = ["planning", "writing", "review"];
+const REPORT_STATUS_KEYS = ["planning", "writing", "checking", "review"];
 const PRIORITY_ICON: Record<string, string> = { highest: "🔥", high: "🔴", mid: "🟡", low: "🔵", lowest: "⚪" };
 const PRIORITY_LABEL: Record<string, string> = { highest: "매우높음", high: "높음", mid: "중간", low: "낮음", lowest: "매우낮음" };
 const PRIORITY_KEYS = ["highest", "high", "mid", "low", "lowest"];
