@@ -3509,8 +3509,8 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                 </div>
                 <FileBox files={files} currentUser={currentUser} onAddFile={onAddFile} onDeleteFile={onDeleteFile} />
             </div>
-            {/* PI Chat (1/4) */}
-            <div className="w-1/4 flex flex-col bg-white border border-slate-200 rounded-lg">
+            {/* PI Chat */}
+            <div className="flex flex-col min-w-0 bg-white border border-slate-200 rounded-xl min-h-0">
                 <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
                     <h3 className="text-[14px] font-bold text-slate-700">💬 PI 채팅</h3>
                     {currentUser === "박일웅" && (
