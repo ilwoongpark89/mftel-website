@@ -207,7 +207,7 @@ function TeamFilterBar({ teamNames, selected, onSelect }: { teamNames: string[];
             <span className="text-[12px] font-semibold text-slate-400 mr-1">팀:</span>
             {["전체", ...teamNames].map(t => (
                 <button key={t} onClick={() => onSelect(t)}
-                    className={`px-2.5 py-1 rounded-full text-[12px] font-medium transition-all ${selected === t ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
+                    className={`px-2.5 py-1 rounded-full text-[12px] font-medium transition-all border ${selected === t ? "bg-blue-500 text-white border-blue-500 shadow-sm" : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:border-slate-300"}`}>
                     {t}
                 </button>
             ))}
@@ -223,7 +223,7 @@ function TeamSelect({ teamNames, selected, onSelect }: { teamNames: string[]; se
             <div className="flex flex-wrap gap-1">
                 {teamNames.map(t => (
                     <button key={t} type="button" onClick={() => onSelect(selected === t ? "" : t)}
-                        className={`px-2.5 py-1 rounded-full text-[12px] font-medium transition-all ${selected === t ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
+                        className={`px-2.5 py-1 rounded-full text-[12px] font-medium transition-all border ${selected === t ? "bg-blue-500 text-white border-blue-500 shadow-sm" : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:border-slate-300"}`}>
                         {t}
                     </button>
                 ))}
@@ -5404,21 +5404,21 @@ export default function DashboardPage() {
                                 <div key={tab.id}>
                                     {showBreak && (
                                         <div className="hidden md:block mt-5 mb-1.5 mx-3">
-                                            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100 pb-1">{sectionBreaks[tab.id]}</div>
+                                            <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.15em] border-b border-slate-100 pb-1">{sectionBreaks[tab.id]}</div>
                                         </div>
                                     )}
                                     {showTeamMemoBreak && (
                                         <div className="hidden md:block mt-5 mb-1.5 mx-3">
-                                            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100 pb-1">팀 워크</div>
+                                            <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.15em] border-b border-slate-100 pb-1">팀 워크</div>
                                         </div>
                                     )}
                                     {showMemoBreak && (
                                         <div className="hidden md:block mt-5 mb-1.5 mx-3">
-                                            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100 pb-1">내 노트</div>
+                                            <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.15em] border-b border-slate-100 pb-1">내 노트</div>
                                         </div>
                                     )}
                                     <button onClick={() => setActiveTab(tab.id)}
-                                        className={`w-full flex items-center gap-2 px-3 py-1 rounded-md text-[13px] whitespace-nowrap transition-all ${activeTab === tab.id ? "font-semibold text-blue-700 bg-blue-50/80" : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"}`}>
+                                        className={`w-full flex items-center gap-2 px-3 py-1 rounded-md text-[13px] whitespace-nowrap transition-all ${activeTab === tab.id ? "font-semibold text-blue-700 bg-blue-50/80" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"}`}>
                                         <span className="text-[14px]">{tab.icon}</span>
 {/* color dot removed */}
                                         <span>{tab.label}</span>
