@@ -4518,7 +4518,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
     const myTarget = todayTargets.find(t => t.name === currentUser);
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-5">
             {/* Personal mode header */}
             {isPersonal && (
                 <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-5 text-white">
@@ -4550,36 +4550,36 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
             )}
 
             {/* Row 1: 연구 파이프라인 5개 한 줄 */}
-            <div className="bg-white border border-slate-200 rounded-xl p-4">
+            <div className="bg-white border border-slate-200 rounded-xl p-5">
                 <h3 className="text-[14px] font-bold text-slate-800 mb-4">{isPersonal ? "내 연구 파이프라인" : "연구 파이프라인"}</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
                     <button onClick={() => onNavigate("papers")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
                         <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-blue-500" />논문 <span className="text-blue-600 font-bold">({fp.length})</span>
+                            <span className="w-2 h-2 rounded-full bg-blue-500" />논문 <span className="text-slate-700 font-bold">({fp.length})</span>
                         </div>
                         <MiniBar items={papersByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...papersByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("reports")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
                         <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-amber-500" />계획서/보고서 <span className="text-amber-600 font-bold">({fr.length})</span>
+                            <span className="w-2 h-2 rounded-full bg-blue-400" />계획서/보고서 <span className="text-slate-700 font-bold">({fr.length})</span>
                         </div>
                         <MiniBar items={reportsByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...reportsByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("experiments")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
                         <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500" />실험 <span className="text-emerald-600 font-bold">({fe.length})</span>
+                            <span className="w-2 h-2 rounded-full bg-indigo-400" />실험 <span className="text-slate-700 font-bold">({fe.length})</span>
                         </div>
                         <MiniBar items={expByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...expByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("analysis")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
                         <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-violet-500" />해석 <span className="text-violet-600 font-bold">({fa.length})</span>
+                            <span className="w-2 h-2 rounded-full bg-slate-400" />해석 <span className="text-slate-700 font-bold">({fa.length})</span>
                         </div>
                         <MiniBar items={analysisByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...analysisByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("ip")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
                         <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-teal-500" />지식재산권 <span className="text-teal-600 font-bold">({fip.length})</span>
+                            <span className="w-2 h-2 rounded-full bg-slate-300" />지식재산권 <span className="text-slate-700 font-bold">({fip.length})</span>
                         </div>
                         <MiniBar items={patentsByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...patentsByStatus.map(s => s.count))} />
                     </button>
@@ -4587,9 +4587,9 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
             </div>
 
             {/* Row 2: 논의 필요 + (오늘목표 현황 or 투두) + 최근 공지 */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* 논의 필요 */}
-                <div className="bg-white border border-slate-200 rounded-xl p-4">
+                <div className="bg-white border border-slate-200 rounded-xl p-5">
                     <h3 className="text-[14px] font-bold text-slate-800 mb-3 flex items-center gap-2">
                         {isPersonal ? "내 논의 필요" : "논의 필요"}
                         {discussionItems.length > 0 && <span className="min-w-[20px] h-[20px] flex items-center justify-center rounded-full bg-orange-500 text-white text-[12px] font-bold">{discussionItems.length}</span>}
@@ -4614,7 +4614,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
 
                 {/* 오늘 목표 현황 (team) / 투두 리스트 (personal) */}
                 {isPersonal ? (
-                    <div className="bg-white border border-slate-200 rounded-xl p-4">
+                    <div className="bg-white border border-slate-200 rounded-xl p-5">
                         <button onClick={() => onNavigate("todos")} className="w-full text-left">
                             <h3 className="text-[14px] font-bold text-slate-800 mb-3 flex items-center gap-2">
                                 내 To-do
@@ -4635,7 +4635,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                         )}
                     </div>
                 ) : (
-                    <div className="bg-white border border-slate-200 rounded-xl p-4">
+                    <div className="bg-white border border-slate-200 rounded-xl p-5">
                         <button onClick={() => onNavigate("daily")} className="w-full text-left">
                             <h3 className="text-[14px] font-bold text-slate-800 mb-3 flex items-center gap-2">
                                 오늘 목표 현황
@@ -4673,7 +4673,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                 )}
 
                 {/* 최근 공지 */}
-                <div className="bg-white border border-slate-200 rounded-xl p-4">
+                <div className="bg-white border border-slate-200 rounded-xl p-5">
                     <button onClick={() => onNavigate("announcements")} className="w-full text-left">
                         <h3 className="text-[14px] font-bold text-slate-800 mb-3">최근 공지</h3>
                     </button>
@@ -4694,7 +4694,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
 
             {/* Row 3: 멤버별 현황 (team) / 내 현황 (personal) */}
             {isPersonal ? (
-                <div className="bg-white border border-slate-200 rounded-xl p-4">
+                <div className="bg-white border border-slate-200 rounded-xl p-5">
                     <h3 className="text-[14px] font-bold text-slate-800 mb-3">내 전체 현황</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                         <div>
@@ -4765,7 +4765,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                     </div>
                 </div>
             ) : (
-                <div className="bg-white border border-slate-200 rounded-xl p-4">
+                <div className="bg-white border border-slate-200 rounded-xl p-5">
                     <h3 className="text-[14px] font-bold text-slate-800 mb-3">멤버별 현황</h3>
                     <div className="overflow-x-auto">
                         <table className="w-full text-[12px]">
@@ -4828,7 +4828,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                         color: "#94a3b8",
                     }));
                 return (
-                    <div className="bg-white border border-slate-200 rounded-xl p-4">
+                    <div className="bg-white border border-slate-200 rounded-xl p-5">
                         <h3 className="text-[14px] font-bold text-slate-800 mb-3">팀별 연구 현황</h3>
                         {(() => {
                             const teamStats = teamEntries.map(team => {
@@ -5359,9 +5359,9 @@ export default function DashboardPage() {
 
     return (
         <MembersContext.Provider value={displayMembers}>
-        <div className="min-h-screen bg-slate-50 text-slate-800 leading-tight" style={{ fontFamily: "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+        <div className="min-h-screen bg-slate-50 text-slate-800 leading-normal" style={{ fontFamily: "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
             {/* Header */}
-            <div className="bg-slate-900 px-4 md:px-7 py-3.5 flex items-center justify-between border-b border-slate-800">
+            <div className="bg-slate-900 px-4 md:px-7 py-3.5 flex items-center justify-between border-b border-slate-800 shadow-lg shadow-slate-900/20">
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab("overview")}>
                     <div className="w-9 h-9 rounded-lg flex items-center justify-center text-[18px] font-extrabold text-white shadow-lg" style={{ background: "linear-gradient(135deg, #3b82f6, #6366f1)" }}>M</div>
                     <div>
@@ -5394,7 +5394,7 @@ export default function DashboardPage() {
             <div className="flex flex-col md:flex-row">
                 {/* Sidebar */}
                 <div className="md:w-[210px] bg-white md:border-r border-b md:border-b-0 border-slate-200 md:min-h-[calc(100vh-56px)] flex-shrink-0">
-                    <div className="flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto md:max-h-[calc(100vh-56px)] p-3 md:p-0 md:pt-3 md:pb-8 gap-0.5">
+                    <div className="flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto md:max-h-[calc(100vh-56px)] p-3 md:p-0 md:pt-3 md:pb-8 gap-px">
                         {tabs.map((tab, i) => {
                             const sectionBreaks: Record<string, string> = { announcements: "운영", todos: "내 노트", papers: "연구", conferenceTrips: "커뮤니케이션" };
                             const showBreak = !tab.id.startsWith("memo_") && !tab.id.startsWith("teamMemo_") && sectionBreaks[tab.id];
@@ -5403,22 +5403,22 @@ export default function DashboardPage() {
                             return (
                                 <div key={tab.id}>
                                     {showBreak && (
-                                        <div className="hidden md:block mt-3 mb-1 mx-3">
-                                            <div className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.15em]">{sectionBreaks[tab.id]}</div>
+                                        <div className="hidden md:block mt-5 mb-1.5 mx-3">
+                                            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100 pb-1">{sectionBreaks[tab.id]}</div>
                                         </div>
                                     )}
                                     {showTeamMemoBreak && (
-                                        <div className="hidden md:block mt-3 mb-1 mx-3">
-                                            <div className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.15em]">팀 워크</div>
+                                        <div className="hidden md:block mt-5 mb-1.5 mx-3">
+                                            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100 pb-1">팀 워크</div>
                                         </div>
                                     )}
                                     {showMemoBreak && (
-                                        <div className="hidden md:block mt-3 mb-1 mx-3">
-                                            <div className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.15em]">내 노트</div>
+                                        <div className="hidden md:block mt-5 mb-1.5 mx-3">
+                                            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100 pb-1">내 노트</div>
                                         </div>
                                     )}
                                     <button onClick={() => setActiveTab(tab.id)}
-                                        className={`w-full flex items-center gap-2 px-3 py-1 rounded-md text-[14px] whitespace-nowrap transition-all ${activeTab === tab.id ? "font-semibold text-blue-700 bg-blue-50" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"}`}>
+                                        className={`w-full flex items-center gap-2 px-3 py-1 rounded-md text-[13px] whitespace-nowrap transition-all ${activeTab === tab.id ? "font-semibold text-blue-700 bg-blue-50/80" : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"}`}>
                                         <span className="text-[14px]">{tab.icon}</span>
 {/* color dot removed */}
                                         <span>{tab.label}</span>
