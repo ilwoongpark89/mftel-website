@@ -882,7 +882,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
             </div>
             <div className="flex gap-3 items-start">
             <div className="shrink-0 relative" onMouseLeave={() => { if (isDragging.current) { isDragging.current = false; setDragName(null); setDragDates([]); setDragStart(null); } }}>
-                <div className="absolute right-0 -top-5 flex gap-2 items-center z-10">
+                <div className="absolute right-0 -top-5 flex gap-1.5 items-center z-10">
                     {Object.entries(types).filter(([k]) => scheduleTypeKeys.includes(k)).map(([k, vt]) => (
                         <div key={k} className="flex items-center gap-0.5">
                             <span className="w-3 h-2.5 rounded" style={{ background: vt.color }} />
@@ -943,7 +943,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                                         const inDrag = inDragRow && dragDates.includes(d.str);
                                         return (
                                             <td key={d.date}
-                                                className={`border-b border-amber-100/60 text-center py-0.5 px-0 select-none ${td ? "bg-blue-50/50" : we ? "bg-slate-50/50" : ""} ${canEdit ? "cursor-pointer" : ""} ${inDrag ? "bg-amber-100" : ""}`}
+                                                className={`border-b border-amber-100/60 text-center py-0.5 px-0 select-none ${td ? "bg-[#EFF6FF]" : we ? "bg-slate-50/50" : ""} ${canEdit ? "cursor-pointer" : ""} ${inDrag ? "bg-amber-100" : ""}`}
                                                 onMouseDown={() => {
                                                     if (!canEdit) return;
                                                     if (entry) { setSelType(entry.type); setEditDesc(entry.description || ""); setEditCell({ name: label, date: d.str, existing: { type: entry.type, description: entry.description } }); return; }
@@ -998,7 +998,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                                         const cellDispatched = isDispatchedOn(name, d.str);
                                         return (
                                             <td key={d.date}
-                                                className={`border-b border-slate-100 text-center py-0.5 px-0 select-none ${cellDispatched ? "bg-violet-100/60" : td ? "bg-blue-50/50" : we ? "bg-slate-50/50" : ""} ${canEdit ? "cursor-pointer" : ""} ${inDrag ? "bg-blue-100" : ""}`}
+                                                className={`border-b border-slate-100 text-center py-0.5 px-0 select-none ${cellDispatched ? "bg-violet-100/60" : td ? "bg-[#EFF6FF]" : we ? "bg-slate-50/50" : ""} ${canEdit ? "cursor-pointer" : ""} ${inDrag ? "bg-blue-100" : ""}`}
                                                 onMouseDown={() => {
                                                     if (!canEdit) return;
                                                     if (entry) { setSelType(entry.type); setEditDesc(entry.description || ""); setEditCell({ name, date: d.str, existing: { type: entry.type, description: entry.description } }); return; }
@@ -1058,13 +1058,13 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                     const fri = new Date(monday); fri.setDate(monday.getDate() + 4);
                     const friLabel = `${fri.getMonth() + 1}/${fri.getDate()}`;
                     const isThisWeek = !selectedDate;
-                    const bgColor = isThisWeek ? "bg-amber-50 border-amber-200" : "bg-blue-50 border-blue-200";
-                    const titleColor = isThisWeek ? "text-amber-700" : "text-blue-700";
-                    const dayTitleColor = isThisWeek ? "text-amber-600" : "text-blue-600";
-                    const cardBorder = isThisWeek ? "border-amber-200 text-amber-800" : "border-blue-200 text-blue-800";
+                    const bgColor = isThisWeek ? "bg-white border-slate-200" : "bg-white border-slate-200";
+                    const titleColor = isThisWeek ? "text-slate-800" : "text-blue-700";
+                    const dayTitleColor = isThisWeek ? "text-slate-600" : "text-blue-600";
+                    const cardBorder = isThisWeek ? "border-slate-200 text-slate-700" : "border-blue-200 text-blue-800";
                     const weekLabel = isThisWeek ? "이번 주" : `${monLabel} ~ ${friLabel} 주`;
                     return (
-                        <div className={`p-3 rounded-lg border sticky top-0 ${bgColor}`}>
+                        <div className={`p-3 rounded-xl border sticky top-0 ${bgColor}`} style={{borderLeft: isThisWeek ? "3px solid #F59E0B" : "3px solid #3B82F6"}}>
                             <div className="flex items-center justify-between mb-2">
                                 <span className={`text-[14px] font-semibold ${titleColor}`}>📋 {weekLabel} ({monLabel} ~ {friLabel})</span>
                                 {selectedDate && <button onClick={() => setSelectedDate(null)} className="text-[11px] text-blue-400 hover:text-blue-600">✕ 이번 주</button>}
@@ -2427,7 +2427,7 @@ function DailyTargetView({ targets, onSave, currentUser }: { targets: DailyTarge
                 <table className="w-full border-collapse table-fixed">
                     <thead>
                         <tr>
-                            <th className="sticky left-0 z-10 bg-slate-50 border-b border-r border-slate-200 px-1.5 py-2 text-left text-[13px] font-semibold text-slate-600 w-[72px]">이름</th>
+                            <th className="sticky left-0 z-10 border-b border-r border-slate-200 px-2 py-2 text-left text-[13px] font-semibold w-[72px]" style={{background:"#FAFBFC", color:"#94A3B8"}}>이름</th>
                             {days.map(d => (
                                 <th key={d.str} className={`border-b border-l border-slate-200 px-2 py-2 text-center ${d.isToday ? "bg-blue-50" : "bg-white"}`}>
                                     <div className={`text-[13px] font-semibold ${d.isToday ? "text-blue-600" : "text-slate-700"}`}>{d.label}</div>
@@ -2441,14 +2441,14 @@ function DailyTargetView({ targets, onSave, currentUser }: { targets: DailyTarge
                             const isMe = name === currentUser;
                             const canEdit = isMe || currentUser === "박일웅";
                             return (
-                                <tr key={name} className={isMe ? "bg-blue-50/30" : ""}>
-                                    <td className={`sticky left-0 z-10 border-r border-b border-slate-100 px-1.5 py-2 text-[13px] whitespace-nowrap overflow-hidden ${isMe ? "bg-blue-50 font-semibold text-slate-800" : "bg-white text-slate-600"}`}>
+                                <tr key={name} className={`${isMe ? "bg-blue-50/30" : "hover:bg-[#F8FAFC]"} transition-colors`}>
+                                    <td className={`sticky left-0 z-10 border-r border-b border-slate-100 px-2 py-2.5 text-[13px] whitespace-nowrap overflow-hidden ${isMe ? "font-semibold text-slate-800" : "text-slate-600"}`} style={{background: isMe ? "#EFF6FF" : "#FAFBFC"}}>
                                         {MEMBERS[name]?.emoji} {name}
                                     </td>
                                     {days.map(d => {
                                         const target = getTarget(name, d.str);
                                         return (
-                                            <td key={d.str} className={`border-b border-l border-slate-200 px-2 py-1.5 align-top ${d.isToday ? "bg-blue-50/50" : ""} ${canEdit ? "cursor-pointer hover:bg-slate-50" : ""}`}
+                                            <td key={d.str} className={`border-b border-l border-slate-200 px-2.5 py-2.5 align-top ${d.isToday ? "bg-[#EFF6FF]/50" : ""} ${canEdit ? "cursor-pointer hover:bg-slate-50" : ""}`}
                                                 onClick={() => { if (canEdit) { setEditCell({ name, date: d.str }); setEditText(target?.text || ""); } }}>
                                                 {target ? (
                                                     <div className="text-[13px] text-slate-700 leading-relaxed whitespace-pre-wrap">{target.text}</div>
@@ -3107,16 +3107,16 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
                     </div>
                 )}
                 {announcements.length === 0 && <div className="text-center py-8 text-slate-400 text-[14px]">공지사항이 없습니다</div>}
-                <div className="grid grid-cols-3 gap-3">{sorted.map((ann, idx) => (
+                <div className="grid grid-cols-3 gap-3 items-stretch">{sorted.map((ann, idx) => (
                     <div key={ann.id} draggable
                         onDragStart={() => { dragAnn.current = idx; }}
                         onDragOver={e => { e.preventDefault(); setDragOverAnn(idx); }}
                         onDragEnd={() => { dragAnn.current = null; setDragOverAnn(null); }}
                         onDrop={() => { if (dragAnn.current !== null && dragAnn.current !== idx) { const reordered = [...sorted]; const [moved] = reordered.splice(dragAnn.current, 1); reordered.splice(idx, 0, moved); onReorder(reordered); } dragAnn.current = null; setDragOverAnn(null); }}
                         onClick={() => { if ((currentUser === ann.author || isPI) && !dragAnn.current) openEditAnn(ann); }}
-                        className={`bg-white border rounded-lg p-4 cursor-grab transition-colors flex flex-col ${ann.pinned ? "border-amber-300 bg-amber-50/50" : "border-slate-200"} ${dragOverAnn === idx ? "bg-blue-50" : ""} ${(currentUser === ann.author || isPI) ? "hover:shadow-md" : ""}`}>
+                        className={`bg-white border rounded-xl p-4 cursor-grab transition-all flex flex-col ${ann.pinned ? "border-amber-300 bg-amber-50/50" : "border-slate-200 hover:border-slate-300"} ${dragOverAnn === idx ? "bg-blue-50" : ""} ${(currentUser === ann.author || isPI) ? "hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)]" : ""}`}>
                         <div className="flex items-start justify-between mb-1">
-                            <div className="flex-1">{ann.pinned && <span className="text-[11px] font-semibold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mr-2">📌</span>}<span className="text-[14px] text-slate-800 whitespace-pre-wrap break-words">{ann.text}</span></div>
+                            <div className="flex-1">{ann.pinned && <span className="text-[11px] font-semibold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mr-2">📌</span>}<span className="text-[14px] text-slate-800 whitespace-pre-wrap break-words" style={{lineHeight:1.6}}>{ann.text}</span></div>
                             {(currentUser === ann.author || isPI) && <button onClick={e => { e.stopPropagation(); onDelete(ann.id); }} className="text-slate-400 hover:text-red-500 text-[13px] ml-2 flex-shrink-0">✕</button>}
                         </div>
                         <div className="mt-auto pt-2 text-[12px] text-slate-400">{ann.author} · {ann.date}</div>
@@ -3163,11 +3163,12 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
                     </div>
                 )}
                 {philosophy.length === 0 && <div className="text-center py-8 text-slate-400 text-[14px]">등록된 내용이 없습니다</div>}
-                <div className="grid grid-cols-3 gap-3">{philosophy.map(p => (
-                    <div key={p.id} className={`bg-violet-50/50 border border-violet-200 rounded-lg p-4 flex flex-col ${isPI ? "cursor-pointer hover:shadow-md" : ""}`}
+                <div className="grid grid-cols-3 gap-3 items-stretch">{philosophy.map(p => (
+                    <div key={p.id} className={`bg-white border border-slate-200 rounded-xl p-4 flex flex-col ${isPI ? "cursor-pointer hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)]" : ""}`}
+                        style={{borderLeft:"3px solid #8B5CF6"}}
                         onClick={() => { if (isPI) openEditPhil(p); }}>
                         <div className="flex items-start justify-between mb-1">
-                            <div className="flex-1"><span className="text-[14px] text-slate-800 whitespace-pre-wrap break-words">{p.text}</span></div>
+                            <div className="flex-1"><span className="text-[14px] text-slate-800 whitespace-pre-wrap break-words" style={{lineHeight:1.6}}>{p.text}</span></div>
                             {isPI && <button onClick={e => { e.stopPropagation(); onDeletePhilosophy(p.id); }} className="text-slate-400 hover:text-red-500 text-[13px] ml-2 flex-shrink-0">✕</button>}
                         </div>
                         <div className="mt-auto pt-2 text-[12px] text-slate-400">{p.author} · {p.date}</div>
@@ -3453,9 +3454,9 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chat.length]);
 
     return (
-        <div className="flex gap-3 h-[calc(100vh-140px)]">
-            {/* Board (2/4) */}
-            <div className="w-2/4 flex flex-col">
+        <div className="grid gap-3 h-[calc(100vh-140px)]" style={{gridTemplateColumns:"1.2fr 0.8fr 1fr"}}>
+            {/* Board */}
+            <div className="flex flex-col min-w-0">
                 <div className="flex items-center justify-between mb-2">
                     <h3 className="text-[14px] font-bold text-slate-700">📝 노트</h3>
                     <button onClick={openAdd} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
@@ -3500,8 +3501,8 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                     </div>
                 </div>
             </div>
-            {/* Files (1/4) */}
-            <div className="w-1/4 flex flex-col bg-white border border-slate-200 rounded-lg">
+            {/* Files */}
+            <div className="flex flex-col min-w-0 bg-white border border-slate-200 rounded-xl">
                 <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
                     <h3 className="text-[14px] font-bold text-slate-700">📎 파일</h3>
                     <span className="text-[12px] text-slate-400">{files.length}개</span>
@@ -3848,9 +3849,9 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
     useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chat.length]);
 
     return (
-        <div className="flex gap-3 h-[calc(100vh-140px)]">
-            {/* Board (1/4) */}
-            <div className="w-1/4 flex flex-col">
+        <div className="grid gap-3 h-[calc(100vh-140px)]" style={{gridTemplateColumns:"1fr 0.8fr 1.2fr"}}>
+            {/* Board */}
+            <div className="flex flex-col min-w-0">
                 <div className="flex items-center justify-between mb-2">
                     <h3 className="text-[14px] font-bold text-slate-700">📌 보드</h3>
                     <button onClick={openBoardAdd} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
@@ -3896,16 +3897,16 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                     )}
                 </div>
             </div>
-            {/* Files (1/4) */}
-            <div className="w-1/4 flex flex-col bg-white border border-slate-200 rounded-lg">
+            {/* Files */}
+            <div className="flex flex-col min-w-0 bg-white border border-slate-200 rounded-xl">
                 <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
                     <h3 className="text-[14px] font-bold text-slate-700">📎 파일</h3>
                     <span className="text-[12px] text-slate-400">{files.length}개</span>
                 </div>
                 <FileBox files={files} currentUser={currentUser} onAddFile={onAddFile} onDeleteFile={onDeleteFile} />
             </div>
-            {/* Chat (2/4) */}
-            <div className="w-2/4 flex flex-col bg-white border border-slate-200 rounded-lg">
+            {/* Chat */}
+            <div className="flex flex-col min-w-0 bg-white border border-slate-200 rounded-xl">
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
                     <h3 className="text-[15px] font-bold text-slate-700">💬 연구실 채팅</h3>
                     {currentUser === "박일웅" && (
@@ -4084,7 +4085,7 @@ function FileBox({ files, currentUser, onAddFile, onDeleteFile, compact }: {
     return (
         <>
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                {sorted.length === 0 && <div className={`text-center text-slate-400 ${compact ? "py-6 text-[12px]" : "py-12 text-[13px]"}`}>파일을 업로드하세요 (10MB 이하)</div>}
+                {sorted.length === 0 && <div className={`text-center ${compact ? "py-6" : "py-12"}`}><div className="text-3xl mb-2">📁</div><div className="text-[13px]" style={{color:"#94A3B8"}}>파일을 업로드하세요 (10MB 이하)</div></div>}
                 {sorted.map(f => (
                     <div key={f.id} className="group bg-slate-50 rounded-lg p-2.5 hover:bg-slate-100 transition-colors">
                         <div className="flex items-start gap-2">
@@ -4204,9 +4205,9 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chat.length]);
 
     return (
-        <div className="flex gap-3 h-[calc(100vh-140px)]">
-            {/* Board (1/4) - single column */}
-            <div className="w-1/4 flex flex-col">
+        <div className="grid gap-3 h-[calc(100vh-140px)]" style={{gridTemplateColumns:"1fr 0.8fr 1.2fr"}}>
+            {/* Board */}
+            <div className="flex flex-col min-w-0">
                 <div className="flex items-center justify-between mb-2">
                     <h3 className="text-[14px] font-bold text-slate-700">📌 보드</h3>
                     <button onClick={() => openNew()} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
@@ -4279,16 +4280,16 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                 </div>
             </div>
 
-            {/* Files (1/4) */}
-            <div className="w-1/4 flex flex-col bg-white border border-slate-200 rounded-lg">
+            {/* Files */}
+            <div className="flex flex-col min-w-0 bg-white border border-slate-200 rounded-xl">
                 <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
                     <h4 className="text-[14px] font-bold text-slate-700">📎 파일</h4>
                     <span className="text-[12px] text-slate-400">{files.length}개</span>
                 </div>
                 <FileBox files={files} currentUser={currentUser} onAddFile={onAddFile} onDeleteFile={onDeleteFile} compact />
             </div>
-            {/* Chat (2/4) */}
-            <div className="w-2/4 flex flex-col bg-white border border-slate-200 rounded-lg min-h-0">
+            {/* Chat */}
+            <div className="flex flex-col min-w-0 bg-white border border-slate-200 rounded-xl min-h-0">
                 <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
                     <h4 className="text-[14px] font-bold text-slate-700">💬 채팅</h4>
                     {currentUser === "박일웅" && (
@@ -4520,28 +4521,28 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
         <div className="space-y-5">
             {/* Personal mode header */}
             {isPersonal && (
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-5 text-white">
-                    <div className="flex items-center gap-3 mb-2">
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 text-white">
+                    <div className="flex items-center gap-3 mb-3">
                         <span className="text-3xl">{members[currentUser]?.emoji || "👤"}</span>
                         <div>
-                            <h2 className="text-[20px] font-bold">{currentUser}</h2>
-                            <div className="text-[13px] text-blue-200">{members[currentUser]?.team} {members[currentUser]?.role && `· ${members[currentUser]?.role}`}</div>
+                            <h2 className="text-[20px] font-bold text-white">{currentUser}</h2>
+                            <div className="text-[13px] text-blue-100">{members[currentUser]?.team} {members[currentUser]?.role && `· ${members[currentUser]?.role}`}</div>
                         </div>
                     </div>
                     {myTarget ? (
-                        <div className="mt-3 p-3 bg-white/10 rounded-lg">
-                            <div className="text-[12px] text-blue-200 mb-1">오늘의 목표</div>
-                            <div className="text-[14px] leading-relaxed">{myTarget.text}</div>
+                        <div className="mt-3 p-3.5 rounded-xl" style={{background:"rgba(255,255,255,0.15)"}}>
+                            <div className="text-[12px] text-blue-100 mb-1">오늘의 목표</div>
+                            <div className="text-[14px] leading-relaxed text-white">{myTarget.text}</div>
                         </div>
                     ) : (
-                        <div className="mt-3 p-3 bg-white/10 rounded-lg text-center">
-                            <div className="text-[13px] text-blue-200">오늘 목표를 아직 작성하지 않았습니다</div>
+                        <div className="mt-3 p-3.5 rounded-xl text-center" style={{background:"rgba(255,255,255,0.15)"}}>
+                            <div className="text-[13px] text-blue-100">오늘 목표를 아직 작성하지 않았습니다</div>
                             <button onClick={() => onNavigate("daily")} className="mt-1 text-[13px] font-medium underline underline-offset-2 text-white">작성하러 가기</button>
                         </div>
                     )}
                     {!statusMessages[currentUser] && (
-                        <div className="mt-2 p-2.5 bg-white/10 rounded-lg text-center">
-                            <div className="text-[13px] text-blue-200">오늘의 한마디를 작성하지 않았습니다</div>
+                        <div className="mt-2 p-3 rounded-xl text-center" style={{background:"rgba(255,255,255,0.1)"}}>
+                            <div className="text-[13px] text-blue-100">오늘의 한마디를 작성하지 않았습니다</div>
                             <button onClick={() => onNavigate("settings")} className="mt-1 text-[13px] font-medium underline underline-offset-2 text-white">작성하러 가기</button>
                         </div>
                     )}
@@ -4551,33 +4552,33 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
             {/* Row 1: 연구 파이프라인 5개 한 줄 */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
                 <h3 className="text-[16px] font-bold text-slate-900 mb-4">{isPersonal ? "내 연구 파이프라인" : "연구 파이프라인"}</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
-                    <button onClick={() => onNavigate("papers")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
-                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
+                    <button onClick={() => onNavigate("papers")} className="text-left hover:bg-slate-50 rounded-lg p-3 -m-3 transition-colors">
+                        <div className="text-[13px] font-semibold text-slate-500 mb-3 flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full" style={{background:"#3B82F6"}} />논문 <span className="font-bold" style={{color:"#334155"}}>({fp.length})</span>
                         </div>
                         <MiniBar items={papersByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...papersByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("reports")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
-                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                        <div className="text-[13px] font-semibold text-slate-500 mb-3 flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full" style={{background:"#F59E0B"}} />계획서/보고서 <span className="font-bold" style={{color:"#334155"}}>({fr.length})</span>
                         </div>
                         <MiniBar items={reportsByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...reportsByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("experiments")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
-                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                        <div className="text-[13px] font-semibold text-slate-500 mb-3 flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full" style={{background:"#EF4444"}} />실험 <span className="font-bold" style={{color:"#334155"}}>({fe.length})</span>
                         </div>
                         <MiniBar items={expByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...expByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("analysis")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
-                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                        <div className="text-[13px] font-semibold text-slate-500 mb-3 flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full" style={{background:"#8B5CF6"}} />해석 <span className="font-bold" style={{color:"#334155"}}>({fa.length})</span>
                         </div>
                         <MiniBar items={analysisByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...analysisByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("ip")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
-                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                        <div className="text-[13px] font-semibold text-slate-500 mb-3 flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full" style={{background:"#10B981"}} />지식재산권 <span className="font-bold" style={{color:"#334155"}}>({fip.length})</span>
                         </div>
                         <MiniBar items={patentsByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...patentsByStatus.map(s => s.count))} />
@@ -4586,7 +4587,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
             </div>
 
             {/* Row 2: 논의 필요 + (오늘목표 현황 or 투두) + 최근 공지 */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
                 {/* 논의 필요 */}
                 <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
                     <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
@@ -4767,17 +4768,17 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                 <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
                     <h3 className="text-[16px] font-bold text-slate-900 mb-4">멤버별 현황</h3>
                     <div className="overflow-x-auto">
-                        <table className="w-full text-[12px]">
+                        <table className="w-full text-[13px]">
                             <thead>
-                                <tr className="border-b border-slate-100">
-                                    <th className="text-left py-1.5 px-1.5 font-semibold text-slate-500">멤버</th>
-                                    <th className="text-center py-1.5 px-1 font-semibold text-slate-500">논문</th>
-                                    <th className="text-center py-1.5 px-1 font-semibold text-slate-500">계획/보고</th>
-                                    <th className="text-center py-1.5 px-1 font-semibold text-slate-500">실험</th>
-                                    <th className="text-center py-1.5 px-1 font-semibold text-slate-500">해석</th>
-                                    <th className="text-center py-1.5 px-1 font-semibold text-slate-500">To-do</th>
-                                    <th className="text-center py-1.5 px-1 font-semibold text-slate-500">목표</th>
-                                    <th className="text-center py-1.5 px-1 font-semibold text-slate-500">접속</th>
+                                <tr style={{borderBottom:"1px solid #F1F5F9"}}>
+                                    <th className="text-left py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>멤버</th>
+                                    <th className="text-center py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>논문</th>
+                                    <th className="text-center py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>계획/보고</th>
+                                    <th className="text-center py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>실험</th>
+                                    <th className="text-center py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>해석</th>
+                                    <th className="text-center py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>To-do</th>
+                                    <th className="text-center py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>목표</th>
+                                    <th className="text-center py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>접속</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -4792,21 +4793,21 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                                     const hasTarget = todayTargets.some(t => t.name === name);
                                     const isTeamLead = Object.values(teams).some(t => t.lead === name);
                                     return (
-                                        <tr key={name} className={`border-b border-slate-50 ${isMe ? "bg-blue-50/30" : "hover:bg-slate-50"} transition-colors`}>
-                                            <td className="py-1.5 px-1.5 font-medium text-slate-700">
+                                        <tr key={name} className={`${isMe ? "bg-blue-50/30" : "hover:bg-[#F8FAFC]"} transition-colors`} style={{borderBottom:"1px solid #F8FAFC"}}>
+                                            <td className="py-2.5 px-3" style={{fontWeight:500, color:"#334155"}}>
                                                 <div className="flex items-center gap-1">
                                                     <span className="whitespace-nowrap">{members[name]?.emoji} {name}</span>
-                                                    {isTeamLead && <span className="text-[10px] px-1 py-0.5 rounded bg-blue-100 text-blue-600 font-semibold">팀장</span>}
+                                                    {isTeamLead && <span className="text-[10px] px-1.5 py-0.5 rounded" style={{fontWeight:700, color:"#3B82F6", background:"#EFF6FF"}}>팀장</span>}
                                                     {statusMessages[name] && <span className="text-[11px] text-blue-500/80 italic truncate max-w-[140px] ml-1.5 border-l border-slate-200 pl-1.5">&ldquo;{statusMessages[name]}&rdquo;</span>}
                                                 </div>
                                             </td>
-                                            <td className="text-center py-1.5 px-1"><span className={memberPapers > 0 ? "font-semibold text-blue-600" : "text-slate-300"}>{memberPapers || "-"}</span></td>
-                                            <td className="text-center py-1.5 px-1"><span className={memberReports > 0 ? "font-semibold text-amber-600" : "text-slate-300"}>{memberReports || "-"}</span></td>
-                                            <td className="text-center py-1.5 px-1"><span className={memberExp > 0 ? "font-semibold text-emerald-600" : "text-slate-300"}>{memberExp || "-"}</span></td>
-                                            <td className="text-center py-1.5 px-1"><span className={memberAnalysis > 0 ? "font-semibold text-violet-600" : "text-slate-300"}>{memberAnalysis || "-"}</span></td>
-                                            <td className="text-center py-1.5 px-1"><span className={memberTodos > 0 ? "font-semibold text-red-500" : "text-slate-300"}>{memberTodos || "-"}</span></td>
-                                            <td className="text-center py-1.5 px-1">{hasTarget ? <span className="text-emerald-500 font-bold">O</span> : <span className="text-red-400">X</span>}</td>
-                                            <td className="text-center py-1.5 px-1">{isOnline ? <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" /> : <span className="inline-block w-2 h-2 rounded-full bg-slate-200" />}</td>
+                                            <td className="text-center py-2.5 px-2"><span style={{fontWeight: memberPapers > 0 ? 650 : 400, color: memberPapers > 0 ? "#334155" : "#CBD5E1"}}>{memberPapers || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-2"><span style={{fontWeight: memberReports > 0 ? 650 : 400, color: memberReports > 0 ? "#334155" : "#CBD5E1"}}>{memberReports || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-2"><span style={{fontWeight: memberExp > 0 ? 650 : 400, color: memberExp > 0 ? "#334155" : "#CBD5E1"}}>{memberExp || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-2"><span style={{fontWeight: memberAnalysis > 0 ? 650 : 400, color: memberAnalysis > 0 ? "#334155" : "#CBD5E1"}}>{memberAnalysis || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-2"><span style={{fontWeight: memberTodos > 0 ? 650 : 400, color: memberTodos > 0 ? "#334155" : "#CBD5E1"}}>{memberTodos || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-2">{hasTarget ? <span className="text-emerald-500 font-bold">O</span> : <span className="text-red-400">X</span>}</td>
+                                            <td className="text-center py-2.5 px-2">{isOnline ? <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" /> : <span className="inline-block w-2 h-2 rounded-full bg-slate-200" />}</td>
                                         </tr>
                                     );
                                 })}
@@ -4947,11 +4948,11 @@ export default function DashboardPage() {
         { id: "todos", label: "To-do", icon: "✅" },
         ...(userName === "박일웅" ? memberNames : memberNames.filter(n => n === userName)).map(name => ({ id: `memo_${name}`, label: name, icon: customEmojis[name] || members[name]?.emoji || "👤" })),
         // 연구
-        { id: "papers", label: "논문 현황", icon: "📄" },
+        { id: "papers", label: "논문", icon: "📄" },
         { id: "reports", label: "계획서/보고서", icon: "📋" },
         { id: "ip", label: "지식재산권", icon: "💡" },
-        { id: "experiments", label: "실험 현황", icon: "🧪" },
-        { id: "analysis", label: "해석 현황", icon: "🖥️" },
+        { id: "experiments", label: "실험", icon: "🧪" },
+        { id: "analysis", label: "해석", icon: "🖥️" },
         // 커뮤니케이션
         { id: "conferenceTrips", label: "학회/출장", icon: "✈️" },
         { id: "meetings", label: "회의록", icon: "📝" },
