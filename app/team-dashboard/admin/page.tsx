@@ -29,13 +29,15 @@ export default function AdminPage() {
     const [auth, setAuth] = useState(false);
     const [pw, setPw] = useState("");
     const [err, setErr] = useState("");
-    const [tab, setTab] = useState<"access" | "mods" | "backups" | "members">("access");
+    const [tab, setTab] = useState<"access" | "mods" | "backups" | "members" | "passwords">("access");
     const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
     const [modLogs, setModLogs] = useState<ModLog[]>([]);
     const [backups, setBackups] = useState<BackupInfo[]>([]);
     const [members, setMembers] = useState<Record<string, Member>>({});
     const [days, setDays] = useState(7);
     const [loading, setLoading] = useState(false);
+    const [pwStatus, setPwStatus] = useState<Record<string, { hasPassword: boolean; isDefault: boolean }>>({});
+    const [pwLoading, setPwLoading] = useState<string | null>(null);
     const [ipLocations, setIpLocations] = useState<Record<string, string>>({});
     const ipLookupDone = useRef<Set<string>>(new Set());
 
@@ -82,15 +84,24 @@ export default function AdminPage() {
         } catch { /* ignore */ }
     }, []);
 
+    const fetchPasswordStatus = useCallback(async () => {
+        try {
+            const r = await fetch("/api/dashboard-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "getPasswordStatus" }) });
+            const d = await r.json();
+            if (d.status) setPwStatus(d.status);
+        } catch { /* ignore */ }
+    }, []);
+
     useEffect(() => {
         if (!auth) return;
         const t = setTimeout(() => {
             fetchLogs();
             fetchBackups();
             fetchMembers();
+            fetchPasswordStatus();
         }, 0);
         return () => clearTimeout(t);
-    }, [auth, fetchLogs, fetchBackups, fetchMembers]);
+    }, [auth, fetchLogs, fetchBackups, fetchMembers, fetchPasswordStatus]);
 
     // IP geolocation lookup
     useEffect(() => {
@@ -143,10 +154,12 @@ export default function AdminPage() {
         await fetch("/api/dashboard-admin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "saveMembers", members: updated }) });
     };
 
-    const handleAddMember = () => {
+    const handleAddMember = async () => {
         if (!editName.trim()) return;
-        const updated = { ...members, [editName.trim()]: { team: members[editName.trim()]?.team || "", role: members[editName.trim()]?.role || "", emoji: members[editName.trim()]?.emoji || "👤" } };
-        handleSaveMembers(updated);
+        const name = editName.trim();
+        const updated = { ...members, [name]: { team: members[name]?.team || "", role: members[name]?.role || "", emoji: members[name]?.emoji || "👤" } };
+        await handleSaveMembers(updated);
+        try { await fetch("/api/dashboard-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "syncMember", added: [name] }) }); } catch {}
         setEditMode(null); resetEdit();
     };
 
@@ -159,11 +172,34 @@ export default function AdminPage() {
         setEditMode(null); resetEdit();
     };
 
-    const handleDeleteMember = (name: string) => {
+    const handleDeleteMember = async (name: string) => {
         if (!confirm(`${name}을(를) 삭제하시겠습니까?`)) return;
         const updated = { ...members };
         delete updated[name];
-        handleSaveMembers(updated);
+        await handleSaveMembers(updated);
+        try { await fetch("/api/dashboard-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "syncMember", removed: [name] }) }); } catch {}
+    };
+
+    const handleResetPassword = async (name: string) => {
+        if (!confirm(`${name}의 비밀번호를 초기화(0000)하시겠습니까?`)) return;
+        setPwLoading(name);
+        try {
+            await fetch("/api/dashboard-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "resetPassword", adminPassword: ADMIN_PW, targetUser: name }) });
+            await fetchPasswordStatus();
+        } catch { alert("비밀번호 리셋 실패"); }
+        setPwLoading(null);
+    };
+
+    const handleInitAllPasswords = async () => {
+        if (!confirm("비밀번호가 없는 모든 멤버에게 초기 비밀번호(0000)를 부여하시겠습니까?")) return;
+        setPwLoading("__all");
+        try {
+            const res = await fetch("/api/dashboard-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "initPasswords" }) });
+            const data = await res.json();
+            alert(`${data.initialized || 0}명에게 초기 비밀번호가 부여되었습니다`);
+            await fetchPasswordStatus();
+        } catch { alert("초기화 실패"); }
+        setPwLoading(null);
     };
 
     const resetEdit = () => { setEditName(""); setEditOrigName(""); };
@@ -219,6 +255,7 @@ export default function AdminPage() {
         { id: "mods" as const, label: "수정 로그", icon: "📝" },
         { id: "backups" as const, label: "백업 관리", icon: "💾" },
         { id: "members" as const, label: "멤버 관리", icon: "👥" },
+        { id: "passwords" as const, label: "비밀번호 관리", icon: "🔑" },
     ];
 
     return (
@@ -459,6 +496,44 @@ export default function AdminPage() {
                                 </tbody>
                             </table>
                             {Object.keys(members).length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">저장된 멤버가 없습니다. 대시보드에서 하드코딩된 MEMBERS를 사용중입니다.</div>}
+                        </div>
+                    </div>
+                )}
+
+                {/* Passwords */}
+                {tab === "passwords" && !loading && (
+                    <div>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-[16px] font-bold">🔑 비밀번호 관리</h2>
+                            <div className="flex items-center gap-2">
+                                <button onClick={fetchPasswordStatus} className="px-3 py-1 bg-slate-100 rounded-lg text-[12px] hover:bg-slate-200">새로고침</button>
+                                <button onClick={handleInitAllPasswords} disabled={pwLoading === "__all"} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-[12px] font-medium hover:bg-blue-700 disabled:opacity-60">{pwLoading === "__all" ? "처리 중..." : "전체 초기화"}</button>
+                            </div>
+                        </div>
+                        <p className="text-[12px] text-slate-400 mb-4">비밀번호가 없는 멤버에게만 초기 비밀번호(0000)를 부여합니다. 리셋 시 해당 멤버의 세션도 함께 만료됩니다.</p>
+                        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                            <table className="w-full text-[12px]">
+                                <thead><tr className="bg-slate-50 border-b border-slate-200"><th className="px-4 py-2 text-left font-semibold text-slate-500">이름</th><th className="px-4 py-2 text-left font-semibold text-slate-500">상태</th><th className="px-4 py-2 text-right font-semibold text-slate-500">작업</th></tr></thead>
+                                <tbody>
+                                    {Object.keys(members).map(name => {
+                                        const st = pwStatus[name];
+                                        return (
+                                            <tr key={name} className="border-b border-slate-100 hover:bg-slate-50">
+                                                <td className="px-4 py-2 font-medium">{name}</td>
+                                                <td className="px-4 py-2">
+                                                    {!st || !st.hasPassword ? <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">미설정</span>
+                                                        : st.isDefault ? <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700">초기값(0000)</span>
+                                                        : <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">변경됨</span>}
+                                                </td>
+                                                <td className="px-4 py-2 text-right">
+                                                    <button onClick={() => handleResetPassword(name)} disabled={pwLoading === name} className="px-2 py-1 text-[11px] text-amber-600 hover:bg-amber-50 rounded disabled:opacity-50">{pwLoading === name ? "처리중..." : "비밀번호 리셋"}</button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                            {Object.keys(members).length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">멤버가 없습니다</div>}
                         </div>
                     </div>
                 )}
