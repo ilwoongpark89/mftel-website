@@ -9276,7 +9276,7 @@ export default function DashboardPage() {
                         const tName = activeTab.replace("teamMemo_", "");
                         const cats = expLogCategories[tName] || [];
                         const teamInfo = teams[tName];
-                        const teamMembers = teamInfo ? [teamInfo.lead, ...teamInfo.members].filter(Boolean) : [];
+                        const teamMembers = teamInfo ? [...new Set(teamInfo.members)].filter(Boolean) : [];
                         const toggleExpMember = (catIdx: number, member: string) => {
                             const updated = cats.map((c, i) => {
                                 if (i !== catIdx) return c;
@@ -9354,7 +9354,7 @@ export default function DashboardPage() {
                         const tName = activeTab.replace("teamMemo_", "");
                         const cats = analysisLogCategories[tName] || [];
                         const teamInfo = teams[tName];
-                        const teamMembers = teamInfo ? [teamInfo.lead, ...teamInfo.members].filter(Boolean) : [];
+                        const teamMembers = teamInfo ? [...new Set(teamInfo.members)].filter(Boolean) : [];
                         const toggleAnaMember = (catIdx: number, member: string) => {
                             const updated = cats.map((c, i) => {
                                 if (i !== catIdx) return c;
