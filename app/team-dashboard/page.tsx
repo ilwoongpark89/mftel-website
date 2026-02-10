@@ -6451,32 +6451,50 @@ export default function DashboardPage() {
         setPiChat(u); saveSection("piChat", u);
     };
 
+    // All teamMemos handlers use functional updaters to avoid stale closure bugs.
+    // teamMemos stores kanban + chat + files in a single Redis key, so any handler
+    // reading from a stale closure could overwrite another field's recent changes.
     const handleSaveTeamMemo = (teamName: string, card: TeamMemoCard) => {
-        const data = teamMemos[teamName] || { kanban: [], chat: [] };
-        const found = data.kanban.find(c => c.id === card.id);
-        const updated = found ? data.kanban.map(c => c.id === card.id ? card : c) : [...data.kanban, card];
-        const u = { ...teamMemos, [teamName]: { ...data, kanban: updated } };
-        setTeamMemos(u);
-        if (found) saveSection("teamMemos", u);
-        else trackSave(card.id, "teamMemos", u, () => setTeamMemos(prev => { const d = prev[teamName] || { kanban: [], chat: [] }; return { ...prev, [teamName]: { ...d, kanban: d.kanban.filter(c => c.id !== card.id) } }; }));
+        let toSave: typeof teamMemos; let isNew = false;
+        setTeamMemos(prev => {
+            const data = prev[teamName] || { kanban: [], chat: [], files: [] };
+            const found = data.kanban.find(c => c.id === card.id);
+            isNew = !found;
+            const updated = found ? data.kanban.map(c => c.id === card.id ? card : c) : [...data.kanban, card];
+            toSave = { ...prev, [teamName]: { ...data, kanban: updated } };
+            return toSave;
+        });
+        if (isNew) trackSave(card.id, "teamMemos", toSave!, () => setTeamMemos(prev => { const d = prev[teamName] || { kanban: [], chat: [] }; return { ...prev, [teamName]: { ...d, kanban: d.kanban.filter(c => c.id !== card.id) } }; }));
+        else saveSection("teamMemos", toSave!);
     };
     const handleDeleteTeamMemo = (teamName: string, id: number) => {
-        const data = teamMemos[teamName] || { kanban: [], chat: [] };
-        const u = { ...teamMemos, [teamName]: { ...data, kanban: data.kanban.filter(c => c.id !== id) } };
-        setTeamMemos(u); saveSection("teamMemos", u);
+        let toSave: typeof teamMemos;
+        setTeamMemos(prev => {
+            const data = prev[teamName] || { kanban: [], chat: [], files: [] };
+            toSave = { ...prev, [teamName]: { ...data, kanban: data.kanban.filter(c => c.id !== id) } };
+            return toSave;
+        });
+        saveSection("teamMemos", toSave!);
     };
     const handleReorderTeamMemo = (teamName: string, cards: TeamMemoCard[]) => {
-        const data = teamMemos[teamName] || { kanban: [], chat: [] };
-        const u = { ...teamMemos, [teamName]: { ...data, kanban: cards } };
-        setTeamMemos(u); saveSection("teamMemos", u);
+        let toSave: typeof teamMemos;
+        setTeamMemos(prev => {
+            const data = prev[teamName] || { kanban: [], chat: [], files: [] };
+            toSave = { ...prev, [teamName]: { ...data, kanban: cards } };
+            return toSave;
+        });
+        saveSection("teamMemos", toSave!);
     };
     const handleAddTeamChat = (teamName: string, msg: TeamChatMsg) => {
-        const data = teamMemos[teamName] || { kanban: [], chat: [] };
-        const newChat = [...data.chat, { ...msg, _sending: true }];
-        const u = { ...teamMemos, [teamName]: { ...data, chat: newChat } };
-        setTeamMemos(u);
-        const cleanU = { ...u, [teamName]: { ...u[teamName], chat: stripMsgFlags(newChat) } };
-        saveSection("teamMemos", cleanU).then(ok => {
+        let cleanToSave: typeof teamMemos;
+        setTeamMemos(prev => {
+            const data = prev[teamName] || { kanban: [], chat: [], files: [] };
+            const newChat = [...data.chat, { ...msg, _sending: true }];
+            const next = { ...prev, [teamName]: { ...data, chat: newChat } };
+            cleanToSave = { ...next, [teamName]: { ...next[teamName], chat: stripMsgFlags(newChat) } };
+            return next;
+        });
+        saveSection("teamMemos", cleanToSave!).then(ok => {
             setTeamMemos(prev => {
                 const td = prev[teamName] || { kanban: [], chat: [] };
                 return { ...prev, [teamName]: { ...td, chat: td.chat.map(m => m.id === msg.id ? (ok ? { ...m, _sending: undefined } : { ...m, _sending: undefined, _failed: true }) : m) } };
@@ -6497,31 +6515,52 @@ export default function DashboardPage() {
         });
     };
     const handleUpdateTeamChat = (teamName: string, msg: TeamChatMsg) => {
-        const data = teamMemos[teamName] || { kanban: [], chat: [] };
-        const u = { ...teamMemos, [teamName]: { ...data, chat: data.chat.map(c => c.id === msg.id ? msg : c) } };
-        setTeamMemos(u); saveSection("teamMemos", u);
+        let toSave: typeof teamMemos;
+        setTeamMemos(prev => {
+            const data = prev[teamName] || { kanban: [], chat: [], files: [] };
+            toSave = { ...prev, [teamName]: { ...data, chat: data.chat.map(c => c.id === msg.id ? msg : c) } };
+            return toSave;
+        });
+        saveSection("teamMemos", toSave!);
     };
     const handleDeleteTeamChat = (teamName: string, id: number) => {
-        const data = teamMemos[teamName] || { kanban: [], chat: [] };
-        const u = { ...teamMemos, [teamName]: { ...data, chat: data.chat.filter(c => c.id !== id) } };
-        setTeamMemos(u); saveSection("teamMemos", u);
+        let toSave: typeof teamMemos;
+        setTeamMemos(prev => {
+            const data = prev[teamName] || { kanban: [], chat: [], files: [] };
+            toSave = { ...prev, [teamName]: { ...data, chat: data.chat.filter(c => c.id !== id) } };
+            return toSave;
+        });
+        saveSection("teamMemos", toSave!);
     };
     const handleClearTeamChat = (teamName: string) => {
-        const data = teamMemos[teamName] || { kanban: [], chat: [] };
-        const u = { ...teamMemos, [teamName]: { ...data, chat: [] } };
-        setTeamMemos(u); saveSection("teamMemos", u);
+        let toSave: typeof teamMemos;
+        setTeamMemos(prev => {
+            const data = prev[teamName] || { kanban: [], chat: [], files: [] };
+            toSave = { ...prev, [teamName]: { ...data, chat: [] } };
+            return toSave;
+        });
+        saveSection("teamMemos", toSave!);
     };
     const handleAddTeamFile = (teamName: string, file: LabFile) => {
-        const data = teamMemos[teamName] || { kanban: [], chat: [] };
-        const u = { ...teamMemos, [teamName]: { ...data, files: [...(data.files || []), file] } };
-        setTeamMemos(u); trackSave(file.id, "teamMemos", u, () => setTeamMemos(prev => { const d = prev[teamName] || { kanban: [], chat: [] }; return { ...prev, [teamName]: { ...d, files: (d.files || []).filter(f => f.id !== file.id) } }; }));
+        let toSave: typeof teamMemos;
+        setTeamMemos(prev => {
+            const data = prev[teamName] || { kanban: [], chat: [], files: [] };
+            toSave = { ...prev, [teamName]: { ...data, files: [...(data.files || []), file] } };
+            return toSave;
+        });
+        trackSave(file.id, "teamMemos", toSave!, () => setTeamMemos(prev => { const d = prev[teamName] || { kanban: [], chat: [] }; return { ...prev, [teamName]: { ...d, files: (d.files || []).filter(f => f.id !== file.id) } }; }));
     };
-    const handleDeleteTeamFile = async (teamName: string, id: number) => {
-        const data = teamMemos[teamName] || { kanban: [], chat: [] };
-        const file = (data.files || []).find(f => f.id === id);
-        if (file?.url?.startsWith("https://")) { try { await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: file.url }), headers: { "Content-Type": "application/json" } }); } catch {} }
-        const u = { ...teamMemos, [teamName]: { ...data, files: (data.files || []).filter(f => f.id !== id) } };
-        setTeamMemos(u); saveSection("teamMemos", u);
+    const handleDeleteTeamFile = (teamName: string, id: number) => {
+        // Delete blob first (fire-and-forget), then update state
+        const fileToDelete = (teamMemos[teamName]?.files || []).find(f => f.id === id);
+        if (fileToDelete?.url?.startsWith("https://")) { fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: fileToDelete.url }), headers: { "Content-Type": "application/json" } }).catch(() => {}); }
+        let toSave: typeof teamMemos;
+        setTeamMemos(prev => {
+            const data = prev[teamName] || { kanban: [], chat: [], files: [] };
+            toSave = { ...prev, [teamName]: { ...data, files: (data.files || []).filter(f => f.id !== id) } };
+            return toSave;
+        });
+        saveSection("teamMemos", toSave!);
     };
 
     const handleAddLabChat = (msg: TeamChatMsg) => {
