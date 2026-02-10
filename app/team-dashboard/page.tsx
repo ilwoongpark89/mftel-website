@@ -134,9 +134,9 @@ type ChecklistItem = { id: number; text: string; done: boolean };
 type Report = { id: number; title: string; assignees: string[]; creator: string; deadline: string; progress: number; comments: Comment[]; status: string; createdAt: string; checklist: ChecklistItem[]; category?: string; needsDiscussion?: boolean; team?: string };
 type DailyTarget = { name: string; date: string; text: string };
 type Resource = { id: number; title: string; link: string; nasPath: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean };
-type IdeaPost = { id: number; title: string; body: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean; color?: string; borderColor?: string };
+type IdeaPost = { id: number; title: string; body: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean; color?: string; borderColor?: string; imageUrl?: string };
 type Memo = { id: number; title: string; content: string; color: string; borderColor?: string; updatedAt: string; needsDiscussion?: boolean; comments?: Comment[] };
-type TeamMemoCard = { id: number; title: string; content: string; status: string; color: string; borderColor?: string; author: string; updatedAt: string; comments?: Comment[]; needsDiscussion?: boolean };
+type TeamMemoCard = { id: number; title: string; content: string; status: string; color: string; borderColor?: string; author: string; updatedAt: string; comments?: Comment[]; needsDiscussion?: boolean; imageUrl?: string };
 type TeamChatMsg = { id: number; author: string; text: string; date: string; imageUrl?: string; replyTo?: { id: number; author: string; text: string }; reactions?: Record<string, string[]>; deleted?: boolean; _sending?: boolean; _failed?: boolean };
 type LabFile = { id: number; name: string; size: number; url: string; type: string; uploader: string; date: string };
 type ConferenceTrip = { id: number; title: string; startDate: string; endDate: string; homepage: string; fee: string; participants: string[]; creator: string; createdAt: string; status?: string; comments?: Comment[]; needsDiscussion?: boolean };
@@ -3943,6 +3943,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
     const [ideaBorder, setIdeaBorder] = useState("");
     const [newComment, setNewComment] = useState("");
     const cImg = useCommentImg();
+    const boardImg = useCommentImg();
     const composingRef = useRef(false);
     const dragIdea = useRef<number | null>(null);
     const [dragOverIdea, setDragOverIdea] = useState<number | null>(null);
@@ -3957,12 +3958,12 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
         else { setTitle(""); setBody(""); setDraftLoaded(false); }
         setAdding(true);
     };
-    const closeAdd = () => { if (title.trim() || body.trim()) saveDraft("ideas_add", JSON.stringify({ title, content: body })); setAdding(false); setDraftLoaded(false); };
+    const closeAdd = () => { if (title.trim() || body.trim()) saveDraft("ideas_add", JSON.stringify({ title, content: body })); setAdding(false); setDraftLoaded(false); boardImg.clear(); };
     const startEdit = () => { if (!selected) return; setTitle(selected.title); setBody(selected.body); setIdeaColor(selected.color || MEMO_COLORS[0]); setIdeaBorder(selected.borderColor || ""); setIsEditing(true); };
     const saveEdit = () => {
         if (!selected || !title.trim()) return;
-        const updated = { ...selected, title: title.trim(), body: body.trim(), color: ideaColor, borderColor: ideaBorder };
-        onSave(updated); setSelected(updated); setIsEditing(false);
+        const updated = { ...selected, title: title.trim(), body: body.trim(), color: ideaColor, borderColor: ideaBorder, imageUrl: boardImg.img || selected.imageUrl };
+        onSave(updated); setSelected(updated); setIsEditing(false); boardImg.clear();
     };
 
     // Draft auto-save for add form
@@ -3971,8 +3972,8 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
     const handleCreate = () => {
         if (!title.trim()) return;
         clearDraft("ideas_add");
-        onSave({ id: Date.now(), title: title.trim(), body: body.trim(), author: currentUser, date: new Date().toLocaleDateString("ko-KR"), comments: [], color: ideaColor, borderColor: ideaBorder });
-        setDraftLoaded(false); setAdding(false);
+        onSave({ id: Date.now(), title: title.trim(), body: body.trim(), author: currentUser, date: new Date().toLocaleDateString("ko-KR"), comments: [], color: ideaColor, borderColor: ideaBorder, imageUrl: boardImg.img || undefined });
+        setDraftLoaded(false); setAdding(false); boardImg.clear();
     };
 
     // Comment draft for ideas detail
@@ -4043,7 +4044,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
             {/* Add modal */}
             {adding && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={closeAdd}>
-                    <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                    <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">새 글 작성</h3>
                             <button onClick={closeAdd} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
@@ -4057,18 +4058,19 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                             )}
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">제목 *</label>
-                                <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" style={{height:48}} onPaste={boardImg.onPaste} />
                             </div>
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">내용</label>
-                                <textarea value={body} onChange={e => setBody(e.target.value)} rows={5}
-                                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                <textarea value={body} onChange={e => setBody(e.target.value)}
+                                    className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
                             </div>
+                            {boardImg.preview}
                             <ColorPicker color={ideaColor} onColor={setIdeaColor} />
                         </div>
                         <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
                             <button onClick={closeAdd} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                            <button onClick={handleCreate} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">게시</button>
+                            <button onClick={handleCreate} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">{boardImg.uploading ? "⏳" : "게시"}</button>
                         </div>
                     </div>
                 </div>
@@ -4085,6 +4087,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                         <div className="p-4">
                             <div className="text-[12px] text-slate-400 mb-3">{MEMBERS[selected.author]?.emoji || "👤"} {selected.author} · {selected.date}</div>
                             {selected.body && <div className="text-[14px] text-slate-700 mb-4 whitespace-pre-wrap break-words">{selected.body}</div>}
+                            {selected.imageUrl && <img src={selected.imageUrl} alt="" className="max-w-full max-h-[300px] rounded-md mb-4" />}
 
                             {/* Comments section */}
                             <div className="border-t border-slate-200 pt-4">
@@ -4129,27 +4132,28 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
 
             {/* Edit modal */}
             {selected && isEditing && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setIsEditing(false)}>
-                    <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setIsEditing(false); boardImg.clear(); }}>
+                    <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">글 수정</h3>
-                            <button onClick={() => setIsEditing(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <button onClick={() => { setIsEditing(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">제목 *</label>
-                                <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" style={{height:48}} onPaste={boardImg.onPaste} />
                             </div>
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">내용</label>
-                                <textarea value={body} onChange={e => setBody(e.target.value)} rows={5}
-                                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                <textarea value={body} onChange={e => setBody(e.target.value)}
+                                    className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
                             </div>
+                            {boardImg.preview}
                             <ColorPicker color={ideaColor} onColor={setIdeaColor} />
                         </div>
                         <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
-                            <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                            <button onClick={saveEdit} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
+                            <button onClick={() => { setIsEditing(false); boardImg.clear(); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                            <button onClick={saveEdit} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">{boardImg.uploading ? "⏳" : "저장"}</button>
                         </div>
                     </div>
                 </div>
@@ -4696,7 +4700,8 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                         const showDateSep = !prev || prevDate !== currDate;
                         const showAvatar = !isMe && (!sameAuthor || showDateSep);
                         const tm = msg.date.match(/(오[전후])\s*(\d+:\d+)/);
-                        const timeStr = tm ? `${tm[1]} ${tm[2]}` : "";
+                        const timeStr = tm ? `${tm[1] === "오전" ? "AM" : "PM"} ${tm[2]}` : "";
+                        const showMyTime = isMe && (!sameAuthor || showDateSep);
                         const reactions = msg.reactions || {};
                         if (msg.deleted) return (
                             <div key={msg.id} className={`${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} text-center`}>
@@ -4727,7 +4732,13 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                         {!isMe && showAvatar && (
                                             <div className="flex items-baseline gap-2 mb-1 px-1">
                                                 <span className="text-[13px] font-semibold text-slate-500">{msg.author}</span>
-                                                <span className="text-[11px] text-slate-400">{timeStr}</span>
+                                                {MEMBERS[msg.author]?.team && <span className="text-[11px] text-slate-400">· {MEMBERS[msg.author]?.role ? `${MEMBERS[msg.author].role}/${MEMBERS[msg.author].team}` : MEMBERS[msg.author].team}</span>}
+                                                <span className="text-[12px] text-slate-400 ml-auto">{timeStr}</span>
+                                            </div>
+                                        )}
+                                        {isMe && showMyTime && !msg._sending && !msg._failed && (
+                                            <div className="flex justify-end mb-0.5 px-1">
+                                                <span className="text-[12px] text-slate-400">{timeStr}</span>
                                             </div>
                                         )}
                                         {msg.replyTo && (
@@ -4788,9 +4799,9 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                                 </div>
                                             )}
                                         </div>
-                                        {isMe && (
+                                        {isMe && (msg._sending || msg._failed) && (
                                             <div className="text-[11px] text-slate-400 mt-0.5 px-1">
-                                                {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-500">⚠️ 전송 실패 <button onClick={() => onRetryChat(msg.id)} className="underline hover:text-red-600 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={() => onDeleteChat(msg.id)} className="underline hover:text-red-600">삭제</button></span> : timeStr}
+                                                {msg._sending ? <span className="animate-pulse">전송 중...</span> : <span className="text-red-500">⚠️ 전송 실패 <button onClick={() => onRetryChat(msg.id)} className="underline hover:text-red-600 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={() => onDeleteChat(msg.id)} className="underline hover:text-red-600">삭제</button></span>}
                                             </div>
                                         )}
                                     </div>
@@ -5114,6 +5125,8 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
     const [selectedCard, setSelectedCard] = useState<TeamMemoCard | null>(null);
     const [boardComment, setBoardComment] = useState("");
     const [boardEditing, setBoardEditing] = useState(false);
+    const boardImg = useCommentImg();
+    const boardCmtImg = useCommentImg();
     // Lab board comment draft
     const openBoardDetail = (card: TeamMemoCard) => { setSelectedCard(card); setBoardComment(loadDraft(`comment_labboard_${card.id}`)); };
     useEffect(() => { if (selectedCard) saveDraft(`comment_labboard_${selectedCard.id}`, boardComment); }, [boardComment, selectedCard?.id]);
@@ -5160,10 +5173,10 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
             }
         }
     };
-    const openBoardAdd = () => { setBoardAdding(true); setBoardTitle(""); setBoardContent(""); setBoardColor(MEMO_COLORS[0]); };
+    const openBoardAdd = () => { setBoardAdding(true); setBoardTitle(""); setBoardContent(""); setBoardColor(MEMO_COLORS[0]); boardImg.clear(); };
     const saveBoard = () => {
-        onSaveBoard({ id: Date.now(), title: boardTitle.trim() || "제목 없음", content: boardContent, status: "left", color: boardColor, author: currentUser, updatedAt: new Date().toISOString().split("T")[0] });
-        setBoardAdding(false);
+        onSaveBoard({ id: Date.now(), title: boardTitle.trim() || "제목 없음", content: boardContent, status: "left", color: boardColor, author: currentUser, updatedAt: new Date().toISOString().split("T")[0], imageUrl: boardImg.img || undefined });
+        setBoardAdding(false); boardImg.clear();
     };
 
     useEffect(() => {
@@ -5254,7 +5267,8 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                         const showDateSep = !prev || prevDate !== currDate;
                         const showAvatar = !isMe && (!sameAuthor || showDateSep);
                         const tm = msg.date.match(/(오[전후])\s*(\d+:\d+)/);
-                        const timeStr = tm ? `${tm[1]} ${tm[2]}` : "";
+                        const timeStr = tm ? `${tm[1] === "오전" ? "AM" : "PM"} ${tm[2]}` : "";
+                        const showMyTime = isMe && (!sameAuthor || showDateSep);
                         const reactions = msg.reactions || {};
                         if (msg.deleted) return (
                             <div key={msg.id} className={`${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} text-center`}>
@@ -5285,7 +5299,13 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                         {!isMe && showAvatar && (
                                             <div className="flex items-baseline gap-2 mb-1 px-1">
                                                 <span className="text-[13px] font-semibold text-slate-500">{msg.author}</span>
-                                                <span className="text-[11px] text-slate-400">{timeStr}</span>
+                                                {MEMBERS[msg.author]?.team && <span className="text-[11px] text-slate-400">· {MEMBERS[msg.author]?.role ? `${MEMBERS[msg.author].role}/${MEMBERS[msg.author].team}` : MEMBERS[msg.author].team}</span>}
+                                                <span className="text-[12px] text-slate-400 ml-auto">{timeStr}</span>
+                                            </div>
+                                        )}
+                                        {isMe && showMyTime && !msg._sending && !msg._failed && (
+                                            <div className="flex justify-end mb-0.5 px-1">
+                                                <span className="text-[12px] text-slate-400">{timeStr}</span>
                                             </div>
                                         )}
                                         {msg.replyTo && (
@@ -5346,9 +5366,9 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                                 </div>
                                             )}
                                         </div>
-                                        {isMe && (
+                                        {isMe && (msg._sending || msg._failed) && (
                                             <div className="text-[11px] text-slate-400 mt-0.5 px-1">
-                                                {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-500">⚠️ 전송 실패 <button onClick={() => onRetry(msg.id)} className="underline hover:text-red-600 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={() => onDelete(msg.id)} className="underline hover:text-red-600">삭제</button></span> : timeStr}
+                                                {msg._sending ? <span className="animate-pulse">전송 중...</span> : <span className="text-red-500">⚠️ 전송 실패 <button onClick={() => onRetry(msg.id)} className="underline hover:text-red-600 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={() => onDelete(msg.id)} className="underline hover:text-red-600">삭제</button></span>}
                                             </div>
                                         )}
                                     </div>
@@ -5384,20 +5404,21 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
             {moreMenuMsgId && <div className="fixed inset-0 z-[5]" onClick={() => setMoreMenuMsgId(null)} />}
             {/* Board add modal */}
             {boardAdding && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setBoardAdding(false)}>
-                    <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setBoardAdding(false); boardImg.clear(); }}>
+                    <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">새 글 작성</h3>
-                            <button onClick={() => setBoardAdding(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <button onClick={() => { setBoardAdding(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
-                            <input value={boardTitle} onChange={e => setBoardTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-                            <textarea value={boardContent} onChange={e => setBoardContent(e.target.value)} placeholder="내용..." rows={4} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                            <input value={boardTitle} onChange={e => setBoardTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" style={{height:48}} onPaste={boardImg.onPaste} />
+                            <textarea value={boardContent} onChange={e => setBoardContent(e.target.value)} placeholder="내용을 입력하세요... (Ctrl+V로 이미지 붙여넣기)" className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
+                            {boardImg.preview}
                             <ColorPicker color={boardColor} onColor={setBoardColor} />
                         </div>
                         <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
-                            <button onClick={() => setBoardAdding(false)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                            <button onClick={saveBoard} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">게시</button>
+                            <button onClick={() => { setBoardAdding(false); boardImg.clear(); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                            <button onClick={saveBoard} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">{boardImg.uploading ? "⏳" : "게시"}</button>
                         </div>
                     </div>
                 </div>
@@ -5413,6 +5434,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                         <div className="p-4">
                             <div className="text-[12px] text-slate-400 mb-3">{MEMBERS[selectedCard.author]?.emoji || "👤"} {selectedCard.author} · {selectedCard.updatedAt}</div>
                             {selectedCard.content && <div className="text-[14px] text-slate-700 mb-4 whitespace-pre-wrap break-words">{selectedCard.content}</div>}
+                            {selectedCard.imageUrl && <img src={selectedCard.imageUrl} alt="" className="max-w-full max-h-[300px] rounded-md mb-4 cursor-pointer" onClick={() => setPreviewImg(selectedCard.imageUrl!)} />}
                             <div className="border-t border-slate-200 pt-4">
                                 <div className="text-[13px] font-semibold text-slate-600 mb-3">💬 댓글 ({(selectedCard.comments || []).length})</div>
                                 <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto">
@@ -5426,12 +5448,14 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                     ))}
                                     {(selectedCard.comments || []).length === 0 && <div className="text-[12px] text-slate-300 py-3 text-center">아직 댓글이 없습니다</div>}
                                 </div>
+                                {boardCmtImg.preview}
                                 <div className="flex gap-2 items-center">
-                                    <input value={boardComment} onChange={e => setBoardComment(e.target.value)} placeholder="댓글 작성..."
+                                    <input value={boardComment} onChange={e => setBoardComment(e.target.value)} placeholder="댓글 작성... (Ctrl+V 이미지)"
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                        onKeyDown={e => chatKeyDown(e, () => { if (!boardComment.trim()) return; clearDraft(`comment_labboard_${selectedCard.id}`); const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: Date.now(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); })} />
-                                    <button onClick={() => { if (!boardComment.trim()) return; clearDraft(`comment_labboard_${selectedCard.id}`); const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: Date.now(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); }}
-                                        className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium">전송</button>
+                                        onPaste={boardCmtImg.onPaste}
+                                        onKeyDown={e => chatKeyDown(e, () => { if (!boardComment.trim() && !boardCmtImg.img) return; clearDraft(`comment_labboard_${selectedCard.id}`); const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: Date.now(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: boardCmtImg.img || undefined }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); boardCmtImg.clear(); })} />
+                                    <button onClick={() => { if (!boardComment.trim() && !boardCmtImg.img) return; clearDraft(`comment_labboard_${selectedCard.id}`); const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: Date.now(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: boardCmtImg.img || undefined }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); boardCmtImg.clear(); }}
+                                        className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium">{boardCmtImg.uploading ? "⏳" : "전송"}</button>
                                 </div>
                                 {boardComment && hasDraft(`comment_labboard_${selectedCard.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
@@ -5452,27 +5476,28 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
             )}
             {/* Board edit modal */}
             {selectedCard && boardEditing && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setBoardEditing(false)}>
-                    <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setBoardEditing(false); boardImg.clear(); }}>
+                    <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">글 수정</h3>
-                            <button onClick={() => setBoardEditing(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <button onClick={() => { setBoardEditing(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">제목 *</label>
-                                <input value={boardTitle} onChange={e => setBoardTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                <input value={boardTitle} onChange={e => setBoardTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" style={{height:48}} onPaste={boardImg.onPaste} />
                             </div>
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">내용</label>
-                                <textarea value={boardContent} onChange={e => setBoardContent(e.target.value)} rows={5}
-                                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                <textarea value={boardContent} onChange={e => setBoardContent(e.target.value)}
+                                    className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
                             </div>
+                            {boardImg.preview}
                             <ColorPicker color={boardColor} onColor={setBoardColor} />
                         </div>
                         <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
-                            <button onClick={() => setBoardEditing(false)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                            <button onClick={() => { const updated = { ...selectedCard, title: boardTitle.trim() || "제목 없음", content: boardContent, color: boardColor, updatedAt: new Date().toISOString().split("T")[0] }; onSaveBoard(updated); setSelectedCard(updated); setBoardEditing(false); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
+                            <button onClick={() => { setBoardEditing(false); boardImg.clear(); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                            <button onClick={() => { const updated = { ...selectedCard, title: boardTitle.trim() || "제목 없음", content: boardContent, color: boardColor, updatedAt: new Date().toISOString().split("T")[0], imageUrl: boardImg.img || undefined }; onSaveBoard(updated); setSelectedCard(updated); setBoardEditing(false); boardImg.clear(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">{boardImg.uploading ? "⏳" : "저장"}</button>
                         </div>
                     </div>
                 </div>
@@ -5628,6 +5653,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     const chatFileRef = useRef<HTMLInputElement>(null);
     const [newComment, setNewComment] = useState("");
     const cImg = useCommentImg();
+    const boardImg = useCommentImg();
     const chatEndRef = useRef<HTMLDivElement>(null);
     const teamChatContainerRef = useRef<HTMLDivElement>(null);
     const teamChatDidInit = useRef(false);
@@ -5665,13 +5691,13 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     const saveEdit = () => {
         if (!editing) return;
         const now = new Date().toISOString().split("T")[0];
-        const updated = { ...editing, title: title.trim() || "제목 없음", content, status: col, color, borderColor: borderClr, updatedAt: now };
-        onSaveCard(updated); setSelected(updated); setIsEditing(false);
+        const updated = { ...editing, title: title.trim() || "제목 없음", content, status: col, color, borderColor: borderClr, updatedAt: now, imageUrl: boardImg.img || editing.imageUrl };
+        onSaveCard(updated); setSelected(updated); setIsEditing(false); boardImg.clear();
     };
     const saveNew = () => {
         const now = new Date().toISOString().split("T")[0];
-        onSaveCard({ id: Date.now(), title: title.trim() || "제목 없음", content, status: col, color, borderColor: borderClr, author: currentUser, updatedAt: now, comments: [] });
-        setShowForm(false); clearDraft(cardDraftKey); setCardDraftLoaded(false);
+        onSaveCard({ id: Date.now(), title: title.trim() || "제목 없음", content, status: col, color, borderColor: borderClr, author: currentUser, updatedAt: now, comments: [], imageUrl: boardImg.img || undefined });
+        setShowForm(false); clearDraft(cardDraftKey); setCardDraftLoaded(false); boardImg.clear();
     };
     // Team memo comment draft
     useEffect(() => { if (selected && !isEditing) saveDraft(teamMemoDraftKey(selected.id), newComment); }, [newComment, selected?.id, isEditing]);
@@ -5747,20 +5773,29 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                     <h3 className="text-[14px] font-bold text-slate-700">📌 보드</h3>
                     <button onClick={() => openNew()} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
                 </div>
-                {showForm && (
-                    <div className="bg-white border border-blue-200 rounded-lg p-2.5 mb-2 space-y-1.5 flex-shrink-0">
-                        {cardDraftLoaded && (title.trim() || content.trim()) && (
-                            <div className="flex items-center justify-between px-1 text-[11px]">
-                                <span className="text-amber-600">임시저장된 글이 있습니다</span>
-                                <button onClick={() => { setTitle(""); setContent(""); clearDraft(cardDraftKey); setCardDraftLoaded(false); }} className="text-amber-500 hover:text-amber-700 font-medium">삭제</button>
+                {showForm && !editing && (
+                    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setShowForm(false); boardImg.clear(); }}>
+                        <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+                                <h3 className="text-[15px] font-bold text-slate-800">새 글 작성</h3>
+                                <button onClick={() => { setShowForm(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
                             </div>
-                        )}
-                        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-[13px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-                        <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용..." rows={2} className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
-                        <ColorPicker color={color} onColor={setColor} />
-                        <div className="flex justify-end gap-2">
-                            <button onClick={() => setShowForm(false)} className="px-2 py-1 text-[12px] text-slate-500">취소</button>
-                            <button onClick={saveNew} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">저장</button>
+                            <div className="p-4 space-y-3">
+                                {cardDraftLoaded && (title.trim() || content.trim()) && (
+                                    <div className="flex items-center justify-between px-3 py-2 rounded-lg text-[13px]" style={{background:"#FEF3C7", color:"#92400E", border:"1px solid #FDE68A"}}>
+                                        <span>임시저장된 글이 있습니다</span>
+                                        <button onClick={() => { setTitle(""); setContent(""); clearDraft(cardDraftKey); setCardDraftLoaded(false); }} className="text-amber-600 hover:text-amber-800 font-medium ml-2">삭제</button>
+                                    </div>
+                                )}
+                                <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" style={{height:48}} onPaste={boardImg.onPaste} />
+                                <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용을 입력하세요... (Ctrl+V로 이미지 붙여넣기)" className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
+                                {boardImg.preview}
+                                <ColorPicker color={color} onColor={setColor} />
+                            </div>
+                            <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
+                                <button onClick={() => { setShowForm(false); boardImg.clear(); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                                <button onClick={saveNew} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">{boardImg.uploading ? "⏳" : "저장"}</button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -5846,7 +5881,8 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                         const showDateSep = !prev || prevDate !== currDate;
                         const showAvatar = !isMe && (!sameAuthor || showDateSep);
                         const tm = msg.date.match(/(오[전후])\s*(\d+:\d+)/);
-                        const timeStr = tm ? `${tm[1]} ${tm[2]}` : "";
+                        const timeStr = tm ? `${tm[1] === "오전" ? "AM" : "PM"} ${tm[2]}` : "";
+                        const showMyTime = isMe && (!sameAuthor || showDateSep);
                         const reactions = msg.reactions || {};
                         if (msg.deleted) return (
                             <div key={msg.id} className={`${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} text-center`}>
@@ -5877,7 +5913,13 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                         {!isMe && showAvatar && (
                                             <div className="flex items-baseline gap-2 mb-1 px-1">
                                                 <span className="text-[13px] font-semibold text-slate-500">{msg.author}</span>
-                                                <span className="text-[11px] text-slate-400">{timeStr}</span>
+                                                {MEMBERS[msg.author]?.team && <span className="text-[11px] text-slate-400">· {MEMBERS[msg.author]?.role ? `${MEMBERS[msg.author].role}/${MEMBERS[msg.author].team}` : MEMBERS[msg.author].team}</span>}
+                                                <span className="text-[12px] text-slate-400 ml-auto">{timeStr}</span>
+                                            </div>
+                                        )}
+                                        {isMe && showMyTime && !msg._sending && !msg._failed && (
+                                            <div className="flex justify-end mb-0.5 px-1">
+                                                <span className="text-[12px] text-slate-400">{timeStr}</span>
                                             </div>
                                         )}
                                         {msg.replyTo && (
@@ -5938,9 +5980,9 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                                 </div>
                                             )}
                                         </div>
-                                        {isMe && (
+                                        {isMe && (msg._sending || msg._failed) && (
                                             <div className="text-[11px] text-slate-400 mt-0.5 px-1">
-                                                {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-500">⚠️ 전송 실패 <button onClick={() => onRetryChat(msg.id)} className="underline hover:text-red-600 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={() => onDeleteChat(msg.id)} className="underline hover:text-red-600">삭제</button></span> : timeStr}
+                                                {msg._sending ? <span className="animate-pulse">전송 중...</span> : <span className="text-red-500">⚠️ 전송 실패 <button onClick={() => onRetryChat(msg.id)} className="underline hover:text-red-600 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={() => onDeleteChat(msg.id)} className="underline hover:text-red-600">삭제</button></span>}
                                             </div>
                                         )}
                                     </div>
@@ -5986,6 +6028,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                         <div className="p-4">
                             <div className="text-[12px] text-slate-400 mb-3">{MEMBERS[selected.author]?.emoji || "👤"} {selected.author} · {selected.updatedAt}</div>
                             {selected.content && <div className="text-[14px] text-slate-700 mb-4 whitespace-pre-wrap break-words">{selected.content}</div>}
+                            {selected.imageUrl && <img src={selected.imageUrl} alt="" className="max-w-full max-h-[300px] rounded-md mb-4 cursor-pointer" onClick={() => setPreviewImg(selected.imageUrl!)} />}
                             <div className="border-t border-slate-200 pt-4">
                                 <div className="text-[13px] font-semibold text-slate-600 mb-3">💬 댓글 ({(selected.comments || []).length})</div>
                                 <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto">
@@ -6020,20 +6063,21 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                 </div>
             )}
             {selected && isEditing && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setIsEditing(false)}>
-                    <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setIsEditing(false); boardImg.clear(); }}>
+                    <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">카드 수정</h3>
-                            <button onClick={() => setIsEditing(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <button onClick={() => { setIsEditing(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
-                            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-                            <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용..." rows={5} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" style={{height:48}} onPaste={boardImg.onPaste} />
+                            <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용을 입력하세요... (Ctrl+V로 이미지 붙여넣기)" className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
+                            {boardImg.preview}
                             <ColorPicker color={color} onColor={setColor} />
                         </div>
                         <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
-                            <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                            <button onClick={saveEdit} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
+                            <button onClick={() => { setIsEditing(false); boardImg.clear(); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                            <button onClick={saveEdit} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">{boardImg.uploading ? "⏳" : "저장"}</button>
                         </div>
                     </div>
                 </div>
@@ -6476,17 +6520,17 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                 <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
                     <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">멤버별 현황</h3>
                     <div className="overflow-x-auto">
-                        <table className="w-full text-[13px]" style={{tableLayout:"fixed"}}>
+                        <table className="w-full text-[13px]">
                             <thead>
                                 <tr style={{borderBottom:"1px solid #F1F5F9"}}>
                                     <th className="text-left py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>멤버</th>
-                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", width:60}}>논문</th>
-                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", width:65}}>계획/보고</th>
-                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", width:55}}>실험</th>
-                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", width:55}}>해석</th>
-                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", width:55}}>To-do</th>
-                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", width:50}}>목표</th>
-                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", width:50}}>접속</th>
+                                    <th className="text-center py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>논문</th>
+                                    <th className="text-center py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>계획/보고</th>
+                                    <th className="text-center py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>실험</th>
+                                    <th className="text-center py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>해석</th>
+                                    <th className="text-center py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>To-do</th>
+                                    <th className="text-center py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>목표</th>
+                                    <th className="text-center py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>접속</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -6502,18 +6546,18 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                                     return (
                                         <tr key={name} className={`${isMe ? "bg-blue-50/30" : "hover:bg-[#F8FAFC]"} transition-colors`} style={{borderBottom:"1px solid #F8FAFC"}}>
                                             <td className="py-2.5 px-3" style={{fontWeight:500, color:"#334155"}}>
-                                                <div className="flex items-center gap-1">
+                                                <div className="flex items-start gap-1">
                                                     <span className="whitespace-nowrap">{members[name]?.emoji} {name}</span>
-                                                    {statusMessages[name] && <span className="text-[11px] text-blue-500/80 italic truncate max-w-[200px] ml-1.5 border-l border-slate-200 pl-1.5">&ldquo;{statusMessages[name]}&rdquo;</span>}
+                                                    {statusMessages[name] && <span className="text-[11px] text-blue-500/80 italic ml-1.5 border-l border-slate-200 pl-1.5" style={{whiteSpace:"normal", wordBreak:"break-word"}}>&ldquo;{statusMessages[name]}&rdquo;</span>}
                                                 </div>
                                             </td>
-                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: memberPapers > 0 ? 650 : 400, color: memberPapers > 0 ? "#334155" : "#CBD5E1"}}>{memberPapers || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: memberReports > 0 ? 650 : 400, color: memberReports > 0 ? "#334155" : "#CBD5E1"}}>{memberReports || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: memberExp > 0 ? 650 : 400, color: memberExp > 0 ? "#334155" : "#CBD5E1"}}>{memberExp || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: memberAnalysis > 0 ? 650 : 400, color: memberAnalysis > 0 ? "#334155" : "#CBD5E1"}}>{memberAnalysis || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: memberTodos > 0 ? 650 : 400, color: memberTodos > 0 ? "#334155" : "#CBD5E1"}}>{memberTodos || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-1">{hasTarget ? <span className="text-emerald-500 font-bold">O</span> : <span className="text-red-400">X</span>}</td>
-                                            <td className="text-center py-2.5 px-1">{isOnline ? <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" /> : <span className="inline-block w-2 h-2 rounded-full bg-slate-200" />}</td>
+                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: memberPapers > 0 ? 650 : 400, color: memberPapers > 0 ? "#334155" : "#CBD5E1"}}>{memberPapers || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: memberReports > 0 ? 650 : 400, color: memberReports > 0 ? "#334155" : "#CBD5E1"}}>{memberReports || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: memberExp > 0 ? 650 : 400, color: memberExp > 0 ? "#334155" : "#CBD5E1"}}>{memberExp || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: memberAnalysis > 0 ? 650 : 400, color: memberAnalysis > 0 ? "#334155" : "#CBD5E1"}}>{memberAnalysis || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: memberTodos > 0 ? 650 : 400, color: memberTodos > 0 ? "#334155" : "#CBD5E1"}}>{memberTodos || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-3">{hasTarget ? <span className="text-emerald-500 font-bold">O</span> : <span className="text-red-400">X</span>}</td>
+                                            <td className="text-center py-2.5 px-3">{isOnline ? <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" /> : <span className="inline-block w-2 h-2 rounded-full bg-slate-200" />}</td>
                                         </tr>
                                     );
                                 })}
@@ -7225,7 +7269,9 @@ export default function DashboardPage() {
             return sum + (teamMemos[t]?.chat || []).filter(m => m.author !== userName && m.id > ts).length;
         }, 0);
         const piNew = memberNames.reduce((sum, n) => sum + (piChat[n] || []).filter(m => m.author !== userName && m.id > (chatReadTs[`memo_${n}`] || 0)).length, 0);
-        return labNew + annNew + teamNew + piNew;
+        const total = labNew + annNew + teamNew + piNew;
+        console.log("[Tab알림] unread:", { labNew, annNew, teamNew, piNew, total });
+        return total;
     }, [labChat, announcements, teamMemos, piChat, chatReadTs, userName, teamNames, memberNames]);
 
     useEffect(() => {
@@ -7265,10 +7311,12 @@ export default function DashboardPage() {
             isOriginal = true;
         };
         const onVisChange = () => {
+            console.log("[Tab알림] visibilitychange:", { hidden: document.hidden, totalUnread });
             if (document.hidden && totalUnread > 0) startFlash();
             else stopFlash();
         };
         setFaviconBadge(totalUnread);
+        console.log("[Tab알림] effect:", { totalUnread, hidden: document.hidden });
         if (document.hidden && totalUnread > 0) startFlash();
         document.addEventListener("visibilitychange", onVisChange);
         return () => { stopFlash(); document.removeEventListener("visibilitychange", onVisChange); };
