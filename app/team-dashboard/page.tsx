@@ -6372,21 +6372,30 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
 
     return (
         <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{gridTemplateColumns: showClassicCols ? "1fr 1fr 2fr" : "1fr"}}>
-            {/* Tab bar (both mobile + desktop) */}
-            <div className="flex items-center border-b border-slate-200 bg-white flex-shrink-0 -mt-1 md:col-span-full">
+            {/* Mobile tab bar — all 5 tabs (mobile only) */}
+            <div className="md:hidden flex border-b border-slate-200 bg-white flex-shrink-0 -mt-1">
+                {([["chat","💬","채팅"],["board","📌","보드"],["files","📎","파일"],["expLogs","🧪","실험일지"],["analysisLogs","🖥️","해석일지"]] as const).map(([id,icon,label]) => (
+                    <button key={id} onClick={() => setMobileTab(id as typeof mobileTab)}
+                        className={`flex-1 py-2.5 text-[12px] font-semibold transition-colors whitespace-nowrap ${mobileTab === id ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400 hover:text-slate-600"}`}>
+                        {icon} {label}
+                    </button>
+                ))}
+            </div>
+            {/* Desktop tab bar — only expLogs/analysisLogs toggle (desktop only) */}
+            <div className="hidden md:flex items-center border-b border-slate-200 bg-white flex-shrink-0 -mt-1 md:col-span-full">
                 <div className="flex overflow-x-auto flex-1 min-w-0">
-                    {([["chat","💬","채팅"],["board","📌","보드"],["files","📎","파일"],["expLogs","🧪","실험일지"],["analysisLogs","🖥️","해석일지"]] as const).map(([id,icon,label]) => (
+                    {([["chat","💬","채팅/보드/파일"],["expLogs","🧪","실험일지"],["analysisLogs","🖥️","해석일지"]] as const).map(([id,icon,label]) => (
                         <button key={id} onClick={() => setMobileTab(id as typeof mobileTab)}
-                            className={`flex-1 md:flex-none md:px-4 py-2.5 text-[12px] md:text-[13px] font-semibold transition-colors whitespace-nowrap ${mobileTab === id ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400 hover:text-slate-600"}`}>
+                            className={`px-4 py-2.5 text-[13px] font-semibold transition-colors whitespace-nowrap ${(id === "chat" ? showClassicCols : mobileTab === id) ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400 hover:text-slate-600"}`}>
                             {icon} {label}
                         </button>
                     ))}
                 </div>
                 {mobileTab === "expLogs" && (
-                    <button onClick={() => setShowExpMgr(!showExpMgr)} className="hidden md:inline-flex px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200 whitespace-nowrap mr-2 flex-shrink-0">✏️ 실험일지 관리</button>
+                    <button onClick={() => setShowExpMgr(!showExpMgr)} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200 whitespace-nowrap mr-2 flex-shrink-0">✏️ 실험일지 관리</button>
                 )}
                 {mobileTab === "analysisLogs" && (
-                    <button onClick={() => setShowAnalysisMgr(!showAnalysisMgr)} className="hidden md:inline-flex px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200 whitespace-nowrap mr-2 flex-shrink-0">💻 해석일지 관리</button>
+                    <button onClick={() => setShowAnalysisMgr(!showAnalysisMgr)} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200 whitespace-nowrap mr-2 flex-shrink-0">💻 해석일지 관리</button>
                 )}
             </div>
             {/* Sub-tabs for experiment/analysis logs */}
@@ -6422,7 +6431,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                         {expLogBooks.map(b => (
                             <span key={b.id} className="flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-full text-[12px] text-slate-700">
                                 {b.name}
-                                <button onClick={() => { if (expSubTab === b.name) setExpSubTab("전체"); onDeleteExpLogBook(b.id); }} className="text-slate-400 hover:text-red-500 text-[11px]">✕</button>
+                                <button onClick={() => confirmDel(() => { if (expSubTab === b.name) setExpSubTab("전체"); onDeleteExpLogBook(b.id); })} className="text-slate-400 hover:text-red-500 text-[11px]">✕</button>
                             </span>
                         ))}
                         {expLogBooks.length === 0 && <span className="text-[12px] text-slate-400">등록된 실험일지가 없습니다</span>}
@@ -6443,7 +6452,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                         {analysisLogBooks.map(b => (
                             <span key={b.id} className="flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-full text-[12px] text-slate-700">
                                 {b.name}
-                                <button onClick={() => { if (analysisSubTab === b.name) setAnalysisSubTab("전체"); onDeleteAnalysisLogBook(b.id); }} className="text-slate-400 hover:text-red-500 text-[11px]">✕</button>
+                                <button onClick={() => confirmDel(() => { if (analysisSubTab === b.name) setAnalysisSubTab("전체"); onDeleteAnalysisLogBook(b.id); })} className="text-slate-400 hover:text-red-500 text-[11px]">✕</button>
                             </span>
                         ))}
                         {analysisLogBooks.length === 0 && <span className="text-[12px] text-slate-400">등록된 해석일지가 없습니다</span>}
@@ -8256,7 +8265,18 @@ export default function DashboardPage() {
                 }
                 setExperimentLogs(migrated);
             }
-            if (d.analysisLogs) setAnalysisLogs(d.analysisLogs);
+            if (d.analysisLogs) {
+                const rawA = d.analysisLogs as Record<string, unknown>;
+                const migratedA: Record<string, AnalysisLogBook[]> = {};
+                for (const [team, val] of Object.entries(rawA)) {
+                    if (Array.isArray(val) && val.length > 0 && 'entries' in val[0]) {
+                        migratedA[team] = val as AnalysisLogBook[];
+                    } else if (Array.isArray(val)) {
+                        migratedA[team] = val.length > 0 ? [{ id: 1, name: "해석일지", createdAt: new Date().toISOString().split("T")[0], entries: val as AnalysisLogEntry[] }] : [];
+                    }
+                }
+                setAnalysisLogs(migratedA);
+            }
             if (d.analysisToolList) setAnalysisToolList(d.analysisToolList);
             if (d.paperTagList) setPaperTagList(d.paperTagList);
             if (d.members && Object.keys(d.members).length > 0) {
