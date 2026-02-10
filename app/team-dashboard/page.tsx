@@ -6476,17 +6476,17 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                 <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
                     <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">멤버별 현황</h3>
                     <div className="overflow-x-auto">
-                        <table className="w-full text-[13px]">
+                        <table className="w-full text-[13px]" style={{tableLayout:"fixed"}}>
                             <thead>
                                 <tr style={{borderBottom:"1px solid #F1F5F9"}}>
-                                    <th className="text-left py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", width:300, minWidth:300}}>멤버</th>
-                                    <th className="text-center py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>논문</th>
-                                    <th className="text-center py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>계획/보고</th>
-                                    <th className="text-center py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>실험</th>
-                                    <th className="text-center py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>해석</th>
-                                    <th className="text-center py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>To-do</th>
-                                    <th className="text-center py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>목표</th>
-                                    <th className="text-center py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>접속</th>
+                                    <th className="text-left py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>멤버</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", width:60}}>논문</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", width:65}}>계획/보고</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", width:55}}>실험</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", width:55}}>해석</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", width:55}}>To-do</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", width:50}}>목표</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", width:50}}>접속</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -6507,13 +6507,13 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                                                     {statusMessages[name] && <span className="text-[11px] text-blue-500/80 italic truncate max-w-[200px] ml-1.5 border-l border-slate-200 pl-1.5">&ldquo;{statusMessages[name]}&rdquo;</span>}
                                                 </div>
                                             </td>
-                                            <td className="text-center py-2.5 px-2"><span style={{fontWeight: memberPapers > 0 ? 650 : 400, color: memberPapers > 0 ? "#334155" : "#CBD5E1"}}>{memberPapers || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-2"><span style={{fontWeight: memberReports > 0 ? 650 : 400, color: memberReports > 0 ? "#334155" : "#CBD5E1"}}>{memberReports || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-2"><span style={{fontWeight: memberExp > 0 ? 650 : 400, color: memberExp > 0 ? "#334155" : "#CBD5E1"}}>{memberExp || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-2"><span style={{fontWeight: memberAnalysis > 0 ? 650 : 400, color: memberAnalysis > 0 ? "#334155" : "#CBD5E1"}}>{memberAnalysis || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-2"><span style={{fontWeight: memberTodos > 0 ? 650 : 400, color: memberTodos > 0 ? "#334155" : "#CBD5E1"}}>{memberTodos || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-2">{hasTarget ? <span className="text-emerald-500 font-bold">O</span> : <span className="text-red-400">X</span>}</td>
-                                            <td className="text-center py-2.5 px-2">{isOnline ? <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" /> : <span className="inline-block w-2 h-2 rounded-full bg-slate-200" />}</td>
+                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: memberPapers > 0 ? 650 : 400, color: memberPapers > 0 ? "#334155" : "#CBD5E1"}}>{memberPapers || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: memberReports > 0 ? 650 : 400, color: memberReports > 0 ? "#334155" : "#CBD5E1"}}>{memberReports || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: memberExp > 0 ? 650 : 400, color: memberExp > 0 ? "#334155" : "#CBD5E1"}}>{memberExp || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: memberAnalysis > 0 ? 650 : 400, color: memberAnalysis > 0 ? "#334155" : "#CBD5E1"}}>{memberAnalysis || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: memberTodos > 0 ? 650 : 400, color: memberTodos > 0 ? "#334155" : "#CBD5E1"}}>{memberTodos || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-1">{hasTarget ? <span className="text-emerald-500 font-bold">O</span> : <span className="text-red-400">X</span>}</td>
+                                            <td className="text-center py-2.5 px-1">{isOnline ? <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" /> : <span className="inline-block w-2 h-2 rounded-full bg-slate-200" />}</td>
                                         </tr>
                                     );
                                 })}
@@ -7375,14 +7375,14 @@ export default function DashboardPage() {
             )}
             <div className="flex flex-col h-[100dvh] overflow-hidden md:flex-row md:h-screen pt-[56px] md:pt-0">
                 {/* Desktop Sidebar */}
-                <div className="hidden md:flex md:w-[220px] md:h-screen flex-shrink-0 flex-col" style={{background:"#0F172A", borderRight:"1px solid #1E293B", boxShadow:"2px 0 8px rgba(0,0,0,0.05)"}}>
+                <div className="hidden md:flex md:w-[200px] md:h-screen flex-shrink-0 flex-col" style={{background:"#0F172A", borderRight:"1px solid #1E293B", boxShadow:"2px 0 8px rgba(0,0,0,0.05)"}}>
                     {/* Sidebar top: MFTEL logo */}
-                    <button onClick={() => setActiveTab("overview")} className="flex items-center gap-3 px-4 pt-5 pb-4 relative z-10 flex-shrink-0 cursor-pointer w-full text-left" style={{borderBottom:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
-                        <div className="w-[34px] h-[34px] rounded-xl flex items-center justify-center text-[15px] font-extrabold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", boxShadow: "0 2px 8px rgba(59,130,246,0.3)" }}>M</div>
-                        <div className="text-[14px] tracking-tight text-white" style={{fontWeight:750}}>MFTEL</div>
+                    <button onClick={() => setActiveTab("overview")} className="flex items-center gap-2.5 px-3 pt-4 pb-3 relative z-10 flex-shrink-0 cursor-pointer w-full text-left" style={{borderBottom:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
+                        <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center text-[13px] font-extrabold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", boxShadow: "0 2px 8px rgba(59,130,246,0.3)" }}>M</div>
+                        <div className="text-[13.5px] tracking-tight text-white" style={{fontWeight:750}}>MFTEL</div>
                     </button>
                     {/* Sidebar nav */}
-                    <div className="flex-1 min-h-0 flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto p-3 md:p-0 md:pt-2 md:pb-2 md:px-1.5 gap-px dark-scrollbar">
+                    <div className="flex-1 min-h-0 flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto p-3 md:p-0 md:pt-2 md:pb-2 md:px-1 gap-px dark-scrollbar">
                         {tabs.map((tab, i) => {
                             const sectionBreaks: Record<string, string> = { announcements: "운영", todos: "내 노트", papers: "연구", conferenceTrips: "커뮤니케이션" };
                             const showBreak = !tab.id.startsWith("memo_") && !tab.id.startsWith("teamMemo_") && sectionBreaks[tab.id];
@@ -7392,27 +7392,27 @@ export default function DashboardPage() {
                             return (
                                 <div key={tab.id}>
                                     {showBreak && (
-                                        <div className="hidden md:block mt-5 mb-1.5 px-3">
-                                            <div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>{sectionBreaks[tab.id]}</div>
+                                        <div className="hidden md:block mt-4 mb-1 px-3">
+                                            <div className="text-[10px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>{sectionBreaks[tab.id]}</div>
                                         </div>
                                     )}
                                     {showTeamMemoBreak && (
-                                        <div className="hidden md:block mt-5 mb-1.5 px-3">
-                                            <div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>팀 워크</div>
+                                        <div className="hidden md:block mt-4 mb-1 px-3">
+                                            <div className="text-[10px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>팀 워크</div>
                                         </div>
                                     )}
                                     {showMemoBreak && (
-                                        <div className="hidden md:block mt-5 mb-1.5 px-3">
-                                            <div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>내 노트</div>
+                                        <div className="hidden md:block mt-4 mb-1 px-3">
+                                            <div className="text-[10px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>내 노트</div>
                                         </div>
                                     )}
                                     <button onClick={() => setActiveTab(tab.id)}
-                                        className="relative w-full flex items-center gap-2 px-3 py-2 rounded-[10px] text-[13px] whitespace-nowrap transition-all"
+                                        className="relative w-full flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[12.5px] whitespace-nowrap transition-all"
                                         style={{ fontWeight: isActive ? 600 : 450, letterSpacing: "-0.01em", color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}
                                         onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#E2E8F0"; } }}
                                         onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94A3B8"; } }}>
                                         {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-blue-400" />}
-                                        <span className="text-[15px]">{tab.icon}</span>
+                                        <span className="text-[14px]">{tab.icon}</span>
                                         <span>{tab.label}</span>
                                         {((unreadCounts[tab.id] || 0) > 0 || (discussionCounts[tab.id] || 0) > 0) && (
                                             <div className="flex items-center gap-1.5">
@@ -7426,20 +7426,20 @@ export default function DashboardPage() {
                         })}
                         {/* Admin: 팀 관리 + 설정 */}
                         {userName === "박일웅" && (
-                            <div className="hidden md:block mt-5 mb-1.5 px-3">
-                                <div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>관리</div>
+                            <div className="hidden md:block mt-4 mb-1 px-3">
+                                <div className="text-[10px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>관리</div>
                             </div>
                         )}
                         {userName === "박일웅" && (() => {
                             const isActive = activeTab === "teams";
                             return (
                                 <button onClick={() => setActiveTab("teams")}
-                                    className="relative w-full flex items-center gap-2 px-3 py-2 rounded-[10px] text-[13px] whitespace-nowrap transition-all"
+                                    className="relative w-full flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[12.5px] whitespace-nowrap transition-all"
                                     style={{ fontWeight: isActive ? 600 : 450, letterSpacing: "-0.01em", color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}
                                     onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#E2E8F0"; } }}
                                     onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94A3B8"; } }}>
                                     {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-blue-400" />}
-                                    <span className="text-[15px]">👥</span>
+                                    <span className="text-[14px]">👥</span>
                                     <span>팀 관리</span>
                                 </button>
                             );
@@ -7448,23 +7448,23 @@ export default function DashboardPage() {
                             const isActive = activeTab === "settings";
                             return (
                                 <button onClick={() => setActiveTab("settings")}
-                                    className="relative w-full flex items-center gap-2 px-3 py-2 rounded-[10px] text-[13px] whitespace-nowrap transition-all"
+                                    className="relative w-full flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[12.5px] whitespace-nowrap transition-all"
                                     style={{ fontWeight: isActive ? 600 : 450, letterSpacing: "-0.01em", color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}
                                     onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#E2E8F0"; } }}
                                     onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94A3B8"; } }}>
                                     {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-blue-400" />}
-                                    <span className="text-[15px]">⚙️</span>
+                                    <span className="text-[14px]">⚙️</span>
                                     <span>설정</span>
                                 </button>
                             );
                         })()}
                     </div>
                     {/* Sidebar bottom: user profile */}
-                    <div className="hidden md:flex items-center gap-2 px-3 py-3 relative z-10 flex-shrink-0" style={{borderTop:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-[16px] flex-shrink-0" style={{background:"rgba(59,130,246,0.1)", border:"1.5px solid rgba(59,130,246,0.25)"}}>{displayMembers[userName]?.emoji || "👤"}</div>
+                    <div className="hidden md:flex items-center gap-2 px-2.5 py-2.5 relative z-10 flex-shrink-0" style={{borderTop:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center text-[14px] flex-shrink-0" style={{background:"rgba(59,130,246,0.1)", border:"1.5px solid rgba(59,130,246,0.25)"}}>{displayMembers[userName]?.emoji || "👤"}</div>
                         <div className="flex-1 min-w-0">
-                            <div className="text-[13px] truncate text-white" style={{fontWeight:650}}>{userName}</div>
-                            <div className="text-[10.5px]" style={{color:"#64748B"}}>{displayMembers[userName]?.role || "학생"}</div>
+                            <div className="text-[12.5px] truncate text-white" style={{fontWeight:650}}>{userName}</div>
+                            <div className="text-[10px]" style={{color:"#64748B"}}>{displayMembers[userName]?.role || "학생"}</div>
                         </div>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
                             <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" /></span>
