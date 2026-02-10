@@ -7478,9 +7478,32 @@ export default function DashboardPage() {
         personalMemos: { label: "메모", icon: "📝", tabId: "overview" },
         timetable: { label: "시간표", icon: "📚", tabId: "lectures" },
     };
-    const notiUnreadCount = useMemo(() => notiLogs.filter(l => l.timestamp > notiLastSeen && l.userName !== userName).length, [notiLogs, notiLastSeen, userName]);
+    const notiLogUnread = useMemo(() => notiLogs.filter(l => l.timestamp > notiLastSeen && l.userName !== userName).length, [notiLogs, notiLastSeen, userName]);
+
+    // Mention alerts: @mentions directed at current user across all chats
+    const mentionAlerts = useMemo(() => {
+        const alerts: Array<{ author: string; text: string; section: string; tabId: string; timestamp: number }> = [];
+        const mentionTag = `@${userName}`;
+        labChat.filter(m => m.author !== userName && !m.deleted && m.text?.includes(mentionTag))
+            .forEach(m => alerts.push({ author: m.author, text: m.text, section: "연구실 채팅", tabId: "labChat", timestamp: m.id }));
+        Object.entries(teamMemos).forEach(([tName, data]) => {
+            (data.chat || []).filter(m => m.author !== userName && !m.deleted && m.text?.includes(mentionTag))
+                .forEach(m => alerts.push({ author: m.author, text: m.text, section: tName, tabId: `teamMemo_${tName}`, timestamp: m.id }));
+        });
+        Object.entries(piChat).forEach(([name, msgs]) => {
+            msgs.filter(m => m.author !== userName && !m.deleted && m.text?.includes(mentionTag))
+                .forEach(m => alerts.push({ author: m.author, text: m.text, section: `${name} 채팅`, tabId: `memo_${name}`, timestamp: m.id }));
+        });
+        return alerts.sort((a, b) => b.timestamp - a.timestamp);
+    }, [labChat, teamMemos, piChat, userName]);
+
+    const mentionUnread = useMemo(() => mentionAlerts.filter(a => a.timestamp > notiLastSeen).length, [mentionAlerts, notiLastSeen]);
+    const notiUnreadCount = mentionUnread + notiLogUnread;
+    const [notiTab, setNotiTab] = useState<"alerts" | "logs">("alerts");
     const openNoti = () => {
         setNotiOpen(true);
+    };
+    const markNotiRead = () => {
         const now = Date.now();
         setNotiLastSeen(now);
         try { localStorage.setItem(`mftel_notiLastSeen_${userName}`, String(now)); } catch {}
@@ -7686,7 +7709,7 @@ export default function DashboardPage() {
                         onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#94A3B8"; }}
                         onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#64748B"; }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                        <span className="flex-1 text-left">변경 기록</span>
+                        <span className="flex-1 text-left">알림</span>
                         {notiUnreadCount > 0 && <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold" style={{ background: "#EF4444", color: "#fff" }}>{notiUnreadCount > 99 ? "99+" : notiUnreadCount}</span>}
                     </button>
                     {/* Sidebar nav */}
@@ -7840,62 +7863,111 @@ export default function DashboardPage() {
         {notiOpen && (
             <div className="fixed inset-0 z-[80] flex items-start justify-center pt-[8vh]" style={{ background: "rgba(0,0,0,0.5)" }} onClick={() => setNotiOpen(false)}>
                 <div className="bg-white rounded-2xl w-full overflow-hidden" style={{ maxWidth: 520, boxShadow: "0 25px 60px rgba(0,0,0,0.25)" }} onClick={e => e.stopPropagation()}>
+                    {/* Header */}
                     <div className="flex items-center justify-between px-5 border-b border-slate-200" style={{ height: 52 }}>
-                        <div className="flex items-center gap-2">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                            <span className="text-[15px] font-bold text-slate-800">변경 기록</span>
-                            {notiUnreadCount > 0 && <span className="px-1.5 py-0.5 rounded-full text-[11px] font-bold" style={{ background: "#EF4444", color: "#fff" }}>{notiUnreadCount}</span>}
+                        <div className="flex items-center gap-1">
+                            {(["alerts", "logs"] as const).map(tab => {
+                                const isActive = notiTab === tab;
+                                const count = tab === "alerts" ? mentionUnread : notiLogUnread;
+                                return (
+                                    <button key={tab} onClick={() => setNotiTab(tab)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] transition-colors"
+                                        style={{ fontWeight: isActive ? 650 : 450, color: isActive ? "#1E293B" : "#94A3B8", background: isActive ? "#F1F5F9" : "transparent" }}>
+                                        {tab === "alerts" ? "알림" : "변경 기록"}
+                                        {count > 0 && <span className="px-1 py-0.5 rounded text-[10px] font-bold" style={{ background: tab === "alerts" ? "#EF4444" : "rgba(59,130,246,0.15)", color: tab === "alerts" ? "#fff" : "#3B82F6" }}>{count > 99 ? "99+" : count}</span>}
+                                    </button>
+                                );
+                            })}
                         </div>
                         <div className="flex items-center gap-2">
-                            {notiLogs.length > 0 && (
-                                <button onClick={() => {
-                                    const now = Date.now();
-                                    setNotiLastSeen(now);
-                                    try { localStorage.setItem(`mftel_notiLastSeen_${userName}`, String(now)); } catch {}
-                                    setNotiLogs([]);
-                                }} className="text-[12px] text-slate-400 hover:text-slate-600 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors">모두 지우기</button>
-                            )}
+                            <button onClick={() => { markNotiRead(); if (notiTab === "logs") setNotiLogs([]); }}
+                                className="text-[12px] text-slate-400 hover:text-slate-600 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors">
+                                {notiTab === "alerts" ? "모두 읽음" : "모두 지우기"}
+                            </button>
                             <button onClick={() => setNotiOpen(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
                         </div>
                     </div>
-                    <div className="max-h-[60vh] overflow-y-auto modal-scroll">
-                        {notiLogs.length === 0 && (
-                            <div className="py-12 text-center text-[14px] text-slate-400">변경 기록이 없습니다</div>
-                        )}
-                        {notiLogs.filter(l => l.userName !== userName).slice(0, 100).map((log, i) => {
-                            const sec = NOTI_SECTION_MAP[log.section] || { label: log.section, icon: "📋", tabId: "overview" };
-                            const isNew = log.timestamp > notiLastSeen;
-                            const prevLog = notiLogs.filter(l => l.userName !== userName)[i - 1];
-                            const prevDate = prevLog ? new Date(prevLog.timestamp).toLocaleDateString("ko-KR") : "";
-                            const currDate = new Date(log.timestamp).toLocaleDateString("ko-KR");
-                            const showDate = currDate !== prevDate;
-                            return (
-                                <div key={`${log.timestamp}-${i}`}>
-                                    {showDate && <div className="px-5 pt-3 pb-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{currDate}</div>}
-                                    <button
-                                        className="w-full flex items-start gap-3 px-5 py-2.5 text-left transition-colors hover:bg-slate-50"
-                                        onClick={() => { setActiveTab(sec.tabId); setNotiOpen(false); }}>
-                                        <span className="text-[18px] mt-0.5 flex-shrink-0">{sec.icon}</span>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="text-[13px] text-slate-700">
-                                                <span className="font-semibold">{log.userName}</span>
-                                                <span className="text-slate-500">님이 </span>
-                                                <span className="font-medium" style={{ color: isNew ? "#3B82F6" : "#64748B" }}>{sec.label}</span>
-                                                <span className="text-slate-500">을(를) 수정했습니다</span>
-                                            </div>
-                                            <div className="text-[11px] text-slate-400 mt-0.5">{notiTimeAgo(log.timestamp)}</div>
-                                        </div>
-                                        {isNew && <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-2" />}
-                                    </button>
+
+                    {/* Alerts Tab */}
+                    {notiTab === "alerts" && (
+                        <div className="max-h-[60vh] overflow-y-auto modal-scroll">
+                            {mentionAlerts.length === 0 && (
+                                <div className="py-12 text-center">
+                                    <div className="text-[28px] mb-2">🔔</div>
+                                    <div className="text-[14px] text-slate-400">알림이 없습니다</div>
+                                    <div className="text-[12px] text-slate-300 mt-1">채팅에서 @멘션되면 여기에 표시됩니다</div>
                                 </div>
-                            );
-                        })}
-                    </div>
-                    {notiLogs.length > 0 && (
-                        <div className="flex items-center justify-center px-4 py-2.5 border-t border-slate-100" style={{ background: "#FAFBFC" }}>
-                            <span className="text-[12px] text-slate-400">다른 멤버의 최근 수정 기록</span>
+                            )}
+                            {mentionAlerts.slice(0, 50).map((alert, i) => {
+                                const isNew = alert.timestamp > notiLastSeen;
+                                const prevAlert = mentionAlerts[i - 1];
+                                const prevDate = prevAlert ? new Date(prevAlert.timestamp).toLocaleDateString("ko-KR") : "";
+                                const currDate = new Date(alert.timestamp).toLocaleDateString("ko-KR");
+                                const showDate = currDate !== prevDate;
+                                return (
+                                    <div key={`${alert.timestamp}-${i}`}>
+                                        {showDate && <div className="px-5 pt-3 pb-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{currDate}</div>}
+                                        <button className="w-full flex items-start gap-3 px-5 py-2.5 text-left transition-colors hover:bg-slate-50"
+                                            onClick={() => { setActiveTab(alert.tabId); setNotiOpen(false); markNotiRead(); }}>
+                                            <span className="text-[18px] mt-0.5 flex-shrink-0">{MEMBERS[alert.author]?.emoji || "👤"}</span>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-[13px] text-slate-700">
+                                                    <span className="font-semibold">{alert.author}</span>
+                                                    <span className="text-slate-500">님이 </span>
+                                                    <span className="font-medium" style={{ color: isNew ? "#3B82F6" : "#64748B" }}>{alert.section}</span>
+                                                    <span className="text-slate-500">에서 멘션했습니다</span>
+                                                </div>
+                                                <div className="text-[12px] text-slate-500 mt-0.5 truncate">{alert.text.slice(0, 80)}</div>
+                                                <div className="text-[11px] text-slate-400 mt-0.5">{notiTimeAgo(alert.timestamp)}</div>
+                                            </div>
+                                            {isNew && <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-2" />}
+                                        </button>
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
+
+                    {/* Logs Tab */}
+                    {notiTab === "logs" && (
+                        <div className="max-h-[60vh] overflow-y-auto modal-scroll">
+                            {notiLogs.length === 0 && (
+                                <div className="py-12 text-center text-[14px] text-slate-400">변경 기록이 없습니다</div>
+                            )}
+                            {notiLogs.filter(l => l.userName !== userName).slice(0, 100).map((log, i) => {
+                                const sec = NOTI_SECTION_MAP[log.section] || { label: log.section, icon: "📋", tabId: "overview" };
+                                const isNew = log.timestamp > notiLastSeen;
+                                const prevLog = notiLogs.filter(l => l.userName !== userName)[i - 1];
+                                const prevDate = prevLog ? new Date(prevLog.timestamp).toLocaleDateString("ko-KR") : "";
+                                const currDate = new Date(log.timestamp).toLocaleDateString("ko-KR");
+                                const showDate = currDate !== prevDate;
+                                return (
+                                    <div key={`${log.timestamp}-${i}`}>
+                                        {showDate && <div className="px-5 pt-3 pb-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{currDate}</div>}
+                                        <button className="w-full flex items-start gap-3 px-5 py-2.5 text-left transition-colors hover:bg-slate-50"
+                                            onClick={() => { setActiveTab(sec.tabId); setNotiOpen(false); }}>
+                                            <span className="text-[18px] mt-0.5 flex-shrink-0">{sec.icon}</span>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-[13px] text-slate-700">
+                                                    <span className="font-semibold">{log.userName}</span>
+                                                    <span className="text-slate-500">님이 </span>
+                                                    <span className="font-medium" style={{ color: isNew ? "#3B82F6" : "#64748B" }}>{sec.label}</span>
+                                                    <span className="text-slate-500">을(를) 수정했습니다</span>
+                                                </div>
+                                                <div className="text-[11px] text-slate-400 mt-0.5">{notiTimeAgo(log.timestamp)}</div>
+                                            </div>
+                                            {isNew && <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-2" />}
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Footer */}
+                    <div className="flex items-center justify-center px-4 py-2 border-t border-slate-100" style={{ background: "#FAFBFC" }}>
+                        <span className="text-[11px] text-slate-400">{notiTab === "alerts" ? "@멘션 알림 — 향후 모바일 푸시 대상" : "다른 멤버의 최근 수정 기록"}</span>
+                    </div>
                 </div>
             </div>
         )}
