@@ -120,10 +120,10 @@ function slotToTime(slot: number) {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Comment = { id: number; author: string; text: string; date: string };
+type Comment = { id: number; author: string; text: string; date: string; imageUrl?: string };
 type Paper = { id: number; title: string; journal: string; status: string; assignees: string[]; tags: string[]; deadline: string; progress: number; comments: Comment[]; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string };
 type Todo = { id: number; text: string; assignees: string[]; done: boolean; priority: string; deadline: string; progress?: number; needsDiscussion?: boolean; comments?: Comment[] };
-type ExperimentLog = { id: number; date: string; author: string; text: string };
+type ExperimentLog = { id: number; date: string; author: string; text: string; imageUrl?: string };
 type Experiment = { id: number; title: string; equipment: string; status: string; assignees: string[]; goal: string; startDate: string; endDate: string; logs: ExperimentLog[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string };
 type Announcement = { id: number; text: string; author: string; date: string; pinned: boolean };
 type VacationEntry = { name: string; date: string; type: string };
@@ -167,7 +167,7 @@ const ANALYSIS_STATUS_MIGRATE = (s: string) => s === "paused" ? "paused_done" : 
 const ANALYSIS_TOOLS = ["OpenFOAM", "ANSYS Fluent", "STAR-CCM+", "MARS-K", "CUPID", "GAMMA+", "Python/MATLAB", "기타"];
 
 type Patent = { id: number; title: string; deadline: string; status: string; assignees: string[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string };
-type AnalysisLog = { id: number; date: string; author: string; text: string };
+type AnalysisLog = { id: number; date: string; author: string; text: string; imageUrl?: string };
 type Analysis = { id: number; title: string; tool: string; status: string; assignees: string[]; goal: string; startDate: string; endDate: string; logs: AnalysisLog[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string };
 
 const DEFAULT_PATENTS: Patent[] = [];
@@ -186,6 +186,35 @@ function PillSelect({ options, selected, onToggle, emojis }: { options: string[]
             ))}
         </div>
     );
+}
+
+// ─── Shared: Comment image paste helper ──────────────────────────────────────
+
+function useCommentImg() {
+    const [img, setImg] = useState("");
+    const [uploading, setUploading] = useState(false);
+    const onPaste = async (e: React.ClipboardEvent) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (const item of Array.from(items)) {
+            if (item.type.startsWith("image/")) {
+                e.preventDefault();
+                const file = item.getAsFile(); if (!file) return;
+                if (file.size > 10 * 1024 * 1024) { alert("10MB 이하 이미지만 첨부 가능합니다."); return; }
+                setUploading(true);
+                try { setImg(await uploadFile(file)); } catch { alert("이미지 업로드 실패"); }
+                setUploading(false); return;
+            }
+        }
+    };
+    const clear = () => setImg("");
+    const preview = img ? (
+        <div className="mb-1.5 relative inline-block">
+            <img src={img} alt="" className="max-h-[80px] rounded-md" />
+            <button onClick={clear} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">✕</button>
+        </div>
+    ) : null;
+    return { img, clear, onPaste, uploading, preview };
 }
 
 // ─── Shared: Drop indicator & kanban reorder helper ─────────────────────────
@@ -282,6 +311,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
     const [comments, setComments] = useState<Comment[]>(paper?.comments || []);
     const [newComment, setNewComment] = useState("");
     const [team, setTeam] = useState(paper?.team || "");
+    const cImg = useCommentImg();
 
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
@@ -291,9 +321,9 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
         return true;
     };
     const addComment = () => {
-        if (!newComment.trim()) return;
-        setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR") }]);
-        setNewComment("");
+        if (!newComment.trim() && !cImg.img) return;
+        setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]);
+        setNewComment(""); cImg.clear();
     };
 
     return (
@@ -353,17 +383,18 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
                                 <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
                                     <button onClick={() => setComments(comments.filter(x => x.id !== c.id))}
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                    <div className="text-[13px] text-slate-700 pr-4">{c.text}</div>
+                                    <div className="text-[13px] text-slate-700 pr-4">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                     <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                 </div>
                             ))}
                             {comments.length === 0 && <div className="text-[12px] text-slate-300 py-2">코멘트 없음</div>}
                         </div>
+                        {cImg.preview}
                         <div className="flex gap-2">
-                            <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="코멘트 작성..."
+                            <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="코멘트 작성... (Ctrl+V 이미지)"
                                 className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                onKeyDown={e => chatKeyDown(e, addComment)} />
-                            <button onClick={addComment} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">전송</button>
+                                onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment)} />
+                            <button onClick={addComment} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">{cImg.uploading ? "⏳" : "전송"}</button>
                         </div>
                     </div>
                 </div>
@@ -394,19 +425,19 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
     const [showCompleted, setShowCompleted] = useState(false);
     const [selected, setSelected] = useState<Paper | null>(null);
     const [detailComment, setDetailComment] = useState("");
+    const cImg = useCommentImg();
     const composingRef = useRef(false);
     // Comment draft
     useEffect(() => { if (selected) { const d = loadDraft(`comment_paper_${selected.id}`); if (d) setDetailComment(d); else setDetailComment(""); } }, [selected?.id]);
     useEffect(() => { if (selected) saveDraft(`comment_paper_${selected.id}`, detailComment); }, [detailComment, selected?.id]);
-    const addDetailComment = () => { if (!detailComment.trim() || !selected) return; clearDraft(`comment_paper_${selected.id}`); const u = { ...selected, comments: [...selected.comments, { id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] }; onSavePaper(u); setSelected(u); setDetailComment(""); };
+    const addDetailComment = () => { if (!detailComment.trim() && !cImg.img || !selected) return; clearDraft(`comment_paper_${selected.id}`); const u = { ...selected, comments: [...selected.comments, { id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] }; onSavePaper(u); setSelected(u); setDetailComment(""); cImg.clear(); };
     const delDetailComment = (cid: number) => { if (!selected) return; const u = { ...selected, comments: selected.comments.filter(c => c.id !== cid) }; onSavePaper(u); setSelected(u); };
     const completedPapers = filtered.filter(p => PAPER_STATUS_MIGRATE(p.status) === "completed");
     const kanbanFiltered = filtered.filter(p => PAPER_STATUS_MIGRATE(p.status) !== "completed");
     return (
         <div>
-            {/* Title row with action buttons */}
-            <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-[17px] font-bold text-slate-800">논문</h2>
+            {/* Action buttons */}
+            <div className="mb-3 flex items-center justify-end">
                 <div className="flex items-center gap-2">
                     <button onClick={onAddPaper} className="px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 논문 등록</button>
                     <button onClick={() => setShowTagMgr(!showTagMgr)} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200">🏷️ 태그 관리</button>
@@ -606,7 +637,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                                                     <span className="text-[12px] font-semibold text-slate-700">{MEMBERS[c.author]?.emoji} {c.author}</span>
                                                     <span className="text-[10px] text-slate-400">{c.date}</span>
                                                 </div>
-                                                <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{c.text}</div>
+                                                <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             </div>
                                             {(c.author === currentUser || currentUser === "박일웅") && (
                                                 <button onClick={() => delDetailComment(c.id)} className="text-[11px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 self-start mt-2">삭제</button>
@@ -614,12 +645,13 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                                         </div>
                                     ))}
                                 </div>
+                                {cImg.preview}
                                 <div className="flex gap-2 items-center">
                                     <input value={detailComment} onChange={e => setDetailComment(e.target.value)}
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
-                                        onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
-                                        placeholder="댓글 입력..." className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-                                    <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">등록</button>
+                                        onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
+                                        placeholder="댓글 입력... (Ctrl+V 이미지)" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                    <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
                                 </div>
                                 {detailComment && hasDraft(`comment_paper_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
@@ -654,6 +686,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
     const [newItem, setNewItem] = useState("");
     const [comments, setComments] = useState<Comment[]>(report?.comments || []);
     const [newComment, setNewComment] = useState("");
+    const cImg = useCommentImg();
     const [category] = useState(report?.category || initialCategory || "계획서");
     const [team, setTeam] = useState(report?.team || "");
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
@@ -678,9 +711,9 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
         setChecklist(checklist.filter(c => c.id !== id));
     };
     const addComment = () => {
-        if (!newComment.trim()) return;
-        setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR") }]);
-        setNewComment("");
+        if (!newComment.trim() && !cImg.img) return;
+        setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]);
+        setNewComment(""); cImg.clear();
     };
     return (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
@@ -758,17 +791,18 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                                 <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
                                     <button onClick={() => setComments(comments.filter(x => x.id !== c.id))}
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                    <div className="text-[13px] text-slate-700 pr-4">{c.text}</div>
+                                    <div className="text-[13px] text-slate-700 pr-4">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                     <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                 </div>
                             ))}
                             {comments.length === 0 && <div className="text-[12px] text-slate-300 py-2">코멘트 없음</div>}
                         </div>
+                        {cImg.preview}
                         <div className="flex gap-2">
-                            <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="코멘트 작성..."
+                            <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="코멘트 작성... (Ctrl+V 이미지)"
                                 className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                onKeyDown={e => chatKeyDown(e, addComment)} />
-                            <button onClick={addComment} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">전송</button>
+                                onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment)} />
+                            <button onClick={addComment} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">{cImg.uploading ? "⏳" : "전송"}</button>
                         </div>
                     </div>
                 </div>
@@ -796,11 +830,12 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
     const [showCompleted, setShowCompleted] = useState(false);
     const [selected, setSelected] = useState<Report | null>(null);
     const [detailComment, setDetailComment] = useState("");
+    const cImg = useCommentImg();
     const composingRef = useRef(false);
     // Comment draft
     useEffect(() => { if (selected) { const d = loadDraft(`comment_report_${selected.id}`); if (d) setDetailComment(d); else setDetailComment(""); } }, [selected?.id]);
     useEffect(() => { if (selected) saveDraft(`comment_report_${selected.id}`, detailComment); }, [detailComment, selected?.id]);
-    const addDetailComment = () => { if (!detailComment.trim() || !selected) return; clearDraft(`comment_report_${selected.id}`); const u = { ...selected, comments: [...selected.comments, { id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] }; onSave(u); setSelected(u); setDetailComment(""); };
+    const addDetailComment = () => { if (!detailComment.trim() && !cImg.img || !selected) return; clearDraft(`comment_report_${selected.id}`); const u = { ...selected, comments: [...selected.comments, { id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] }; onSave(u); setSelected(u); setDetailComment(""); cImg.clear(); };
     const delDetailComment = (cid: number) => { if (!selected) return; const u = { ...selected, comments: selected.comments.filter(c => c.id !== cid) }; onSave(u); setSelected(u); };
     const completedReports = filteredReports.filter(r => r.status === "done");
     const kanbanFilteredReports = filteredReports.filter(r => r.status !== "done");
@@ -963,7 +998,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                                                     <span className="text-[12px] font-semibold text-slate-700">{MEMBERS[c.author]?.emoji} {c.author}</span>
                                                     <span className="text-[10px] text-slate-400">{c.date}</span>
                                                 </div>
-                                                <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{c.text}</div>
+                                                <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             </div>
                                             {(c.author === currentUser || currentUser === "박일웅") && (
                                                 <button onClick={() => delDetailComment(c.id)} className="text-[11px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 self-start mt-2">삭제</button>
@@ -971,12 +1006,13 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                                         </div>
                                     ))}
                                 </div>
+                                {cImg.preview}
                                 <div className="flex gap-2 items-center">
                                     <input value={detailComment} onChange={e => setDetailComment(e.target.value)}
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
-                                        onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
-                                        placeholder="댓글 입력..." className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-                                    <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">등록</button>
+                                        onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
+                                        placeholder="댓글 입력... (Ctrl+V 이미지)" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                    <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
                                 </div>
                                 {detailComment && hasDraft(`comment_report_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
@@ -1716,11 +1752,12 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
     const [showCompleted, setShowCompleted] = useState(false);
     const [selected, setSelected] = useState<Experiment | null>(null);
     const [detailComment, setDetailComment] = useState("");
+    const cImg = useCommentImg();
     const composingRef = useRef(false);
     // Comment draft
     useEffect(() => { if (selected) { const d = loadDraft(`comment_exp_${selected.id}`); if (d) setDetailComment(d); else setDetailComment(""); } }, [selected?.id]);
     useEffect(() => { if (selected) saveDraft(`comment_exp_${selected.id}`, detailComment); }, [detailComment, selected?.id]);
-    const addDetailComment = () => { if (!detailComment.trim() || !selected) return; clearDraft(`comment_exp_${selected.id}`); const u = { ...selected, logs: [{ id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR") }, ...selected.logs] }; onSave(u); setSelected(u); setDetailComment(""); };
+    const addDetailComment = () => { if (!detailComment.trim() && !cImg.img || !selected) return; clearDraft(`comment_exp_${selected.id}`); const u = { ...selected, logs: [{ id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }, ...selected.logs] }; onSave(u); setSelected(u); setDetailComment(""); cImg.clear(); };
     const delDetailComment = (cid: number) => { if (!selected) return; const u = { ...selected, logs: selected.logs.filter(c => c.id !== cid) }; onSave(u); setSelected(u); };
     const completedExperiments = filteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) === "completed");
     const kanbanFilteredExperiments = filteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) !== "completed");
@@ -1891,7 +1928,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                                                     <span className="text-[12px] font-semibold text-slate-700">{MEMBERS[c.author]?.emoji} {c.author}</span>
                                                     <span className="text-[10px] text-slate-400">{c.date}</span>
                                                 </div>
-                                                <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{c.text}</div>
+                                                <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             </div>
                                             {(c.author === currentUser || currentUser === "박일웅") && (
                                                 <button onClick={() => delDetailComment(c.id)} className="text-[11px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 self-start mt-2">삭제</button>
@@ -1899,12 +1936,13 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                                         </div>
                                     ))}
                                 </div>
+                                {cImg.preview}
                                 <div className="flex gap-2 items-center">
                                     <input value={detailComment} onChange={e => setDetailComment(e.target.value)}
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
-                                        onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
-                                        placeholder="실험 일지 작성..." className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-                                    <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">등록</button>
+                                        onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
+                                        placeholder="실험 일지 작성... (Ctrl+V 이미지)" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                    <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
                                 </div>
                                 {detailComment && hasDraft(`comment_exp_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
@@ -2063,11 +2101,12 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
     const [showCompleted, setShowCompleted] = useState(false);
     const [selected, setSelected] = useState<Analysis | null>(null);
     const [detailComment, setDetailComment] = useState("");
+    const cImg = useCommentImg();
     const composingRef = useRef(false);
     // Comment draft
     useEffect(() => { if (selected) { const d = loadDraft(`comment_analysis_${selected.id}`); if (d) setDetailComment(d); else setDetailComment(""); } }, [selected?.id]);
     useEffect(() => { if (selected) saveDraft(`comment_analysis_${selected.id}`, detailComment); }, [detailComment, selected?.id]);
-    const addDetailComment = () => { if (!detailComment.trim() || !selected) return; clearDraft(`comment_analysis_${selected.id}`); const u = { ...selected, logs: [{ id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR") }, ...selected.logs] }; onSave(u); setSelected(u); setDetailComment(""); };
+    const addDetailComment = () => { if (!detailComment.trim() && !cImg.img || !selected) return; clearDraft(`comment_analysis_${selected.id}`); const u = { ...selected, logs: [{ id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }, ...selected.logs] }; onSave(u); setSelected(u); setDetailComment(""); cImg.clear(); };
     const delDetailComment = (cid: number) => { if (!selected) return; const u = { ...selected, logs: selected.logs.filter(c => c.id !== cid) }; onSave(u); setSelected(u); };
     const completedAnalyses = filteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) === "completed");
     const kanbanFilteredAnalyses = filteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) !== "completed");
@@ -2238,7 +2277,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                                                     <span className="text-[12px] font-semibold text-slate-700">{MEMBERS[c.author]?.emoji} {c.author}</span>
                                                     <span className="text-[10px] text-slate-400">{c.date}</span>
                                                 </div>
-                                                <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{c.text}</div>
+                                                <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             </div>
                                             {(c.author === currentUser || currentUser === "박일웅") && (
                                                 <button onClick={() => delDetailComment(c.id)} className="text-[11px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 self-start mt-2">삭제</button>
@@ -2246,12 +2285,13 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                                         </div>
                                     ))}
                                 </div>
+                                {cImg.preview}
                                 <div className="flex gap-2 items-center">
                                     <input value={detailComment} onChange={e => setDetailComment(e.target.value)}
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
-                                        onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
-                                        placeholder="해석 일지 작성..." className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-                                    <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">등록</button>
+                                        onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
+                                        placeholder="해석 일지 작성... (Ctrl+V 이미지)" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                    <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
                                 </div>
                                 {detailComment && hasDraft(`comment_analysis_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
@@ -2593,7 +2633,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                                         <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
                                             <button onClick={() => setEditComments(editComments.filter(x => x.id !== c.id))}
                                                 className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4">{c.text}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
@@ -3293,6 +3333,7 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
 
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState("");
+    const cImg = useCommentImg();
     const [confDraftLoaded, setConfDraftLoaded] = useState(false);
 
     const openAdd = (status?: string) => {
@@ -3454,18 +3495,19 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
                                         <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
                                             <button onClick={() => setComments(comments.filter(x => x.id !== c.id))}
                                                 className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4">{c.text}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
                                     {comments.length === 0 && <div className="text-[12px] text-slate-300 py-2">댓글 없음</div>}
                                 </div>
+                                {cImg.preview}
                                 <div className="flex gap-2">
-                                    <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글 작성..."
+                                    <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글 작성... (Ctrl+V 이미지)"
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                        onKeyDown={e => { if (e.key === "Enter" && newComment.trim()) { setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR") }]); setNewComment(""); } }} />
-                                    <button onClick={() => { if (newComment.trim()) { setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR") }]); setNewComment(""); } }}
-                                        className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">전송</button>
+                                        onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && (newComment.trim() || cImg.img)) { setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]); setNewComment(""); cImg.clear(); } }} />
+                                    <button onClick={() => { if (newComment.trim() || cImg.img) { setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]); setNewComment(""); cImg.clear(); } }}
+                                        className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">{cImg.uploading ? "⏳" : "전송"}</button>
                                 </div>
                             </div>
                         </div>
@@ -3494,6 +3536,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
     const [nasPath, setNasPath] = useState("");
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState("");
+    const cImg = useCommentImg();
     const [resDraftLoaded, setResDraftLoaded] = useState(false);
 
     const dragRes = useRef<number | null>(null);
@@ -3522,9 +3565,9 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
         setAdding(false); setEditing(null); // close without re-saving draft
     };
     const addComment = () => {
-        if (!newComment.trim()) return;
-        setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR") }]);
-        setNewComment("");
+        if (!newComment.trim() && !cImg.img) return;
+        setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]);
+        setNewComment(""); cImg.clear();
     };
 
     return (
@@ -3561,7 +3604,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
                                 {cmt.length > 0 ? (
                                     cmt.slice(-1).map(c => (
                                         <div key={c.id} className="text-[12px] text-slate-500 truncate">
-                                            <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}
+                                            <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}{c.imageUrl && " 📷"}
                                         </div>
                                     ))
                                 ) : (
@@ -3608,17 +3651,18 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
                                         <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
                                             <button onClick={() => setComments(comments.filter(x => x.id !== c.id))}
                                                 className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4">{c.text}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
                                     {comments.length === 0 && <div className="text-[12px] text-slate-300 py-2">코멘트 없음</div>}
                                 </div>
+                                {cImg.preview}
                                 <div className="flex gap-2">
-                                    <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="코멘트 작성..."
+                                    <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="코멘트 작성... (Ctrl+V 이미지)"
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                        onKeyDown={e => chatKeyDown(e, addComment)} />
-                                    <button onClick={addComment} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">전송</button>
+                                        onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment)} />
+                                    <button onClick={addComment} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">{cImg.uploading ? "⏳" : "전송"}</button>
                                 </div>
                             </div>
                         </div>
@@ -3648,6 +3692,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
     const [ideaColor, setIdeaColor] = useState(MEMO_COLORS[0]);
     const [ideaBorder, setIdeaBorder] = useState("");
     const [newComment, setNewComment] = useState("");
+    const cImg = useCommentImg();
     const composingRef = useRef(false);
     const dragIdea = useRef<number | null>(null);
     const [dragOverIdea, setDragOverIdea] = useState<number | null>(null);
@@ -3684,12 +3729,12 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
     useEffect(() => { if (selected) saveDraft(`comment_ideas_${selected.id}`, newComment); }, [newComment, selected?.id]);
 
     const addComment = () => {
-        if (!newComment.trim() || !selected) return;
+        if (!newComment.trim() && !cImg.img || !selected) return;
         clearDraft(`comment_ideas_${selected.id}`);
-        const updated = { ...selected, comments: [...selected.comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] };
+        const updated = { ...selected, comments: [...selected.comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] };
         onSave(updated);
         setSelected(updated);
-        setNewComment("");
+        setNewComment(""); cImg.clear();
     };
 
     const deleteComment = (cid: number) => {
@@ -3730,7 +3775,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                                 <div className="text-[11px] font-semibold text-slate-400 mb-1">💬 댓글 {idea.comments.length}개</div>
                                 {idea.comments.slice(-2).map(c => (
                                     <div key={c.id} className="text-[12px] text-slate-500 truncate">
-                                        <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}
+                                        <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}{c.imageUrl && " 📷"}
                                     </div>
                                 ))}
                             </div>
@@ -3799,19 +3844,20 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group relative">
                                             <button onClick={() => deleteComment(c.id)}
                                                 className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{c.text}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
                                     {selected.comments.length === 0 && <div className="text-[12px] text-slate-300 py-3 text-center">아직 댓글이 없습니다</div>}
                                 </div>
+                                {cImg.preview}
                                 <div className="flex gap-2 items-center">
-                                    <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글 작성..."
+                                    <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글 작성... (Ctrl+V 이미지)"
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                         onCompositionStart={() => { composingRef.current = true; }}
                                         onCompositionEnd={() => { composingRef.current = false; }}
-                                        onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
-                                    <button onClick={addComment} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium">전송</button>
+                                        onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
+                                    <button onClick={addComment} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium">{cImg.uploading ? "⏳" : "전송"}</button>
                                 </div>
                                 {newComment && hasDraft(`comment_ideas_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
@@ -3968,7 +4014,6 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
 
     return (
         <div>
-            <h2 className="text-[17px] font-bold text-slate-800 mb-4">📢 공지사항</h2>
             <div className="flex gap-4">
                 {COLS.map(col => {
                     const items = colData[col.key];
@@ -4008,7 +4053,7 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
                                         onDragEnd={() => { setDraggedItem(null); setDropCol(null); setDropIdx(-1); }}
                                         onClick={() => { if (isPI || currentUser === item.author) openEdit(item); }}
                                         className={`group/card bg-white rounded-xl p-3.5 cursor-grab transition-all flex flex-col ${draggedItem?.id === item.id ? "opacity-40" : ""}`}
-                                        style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.08)", borderLeft: `4px solid ${colCfg.color}` }}>
+                                        style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.08)", borderLeft: `2px solid ${colCfg.color}` }}>
                                         <div className="flex items-start justify-between">
                                             <span className="text-[14px] text-slate-800 whitespace-pre-wrap break-words line-clamp-4 flex-1" style={{ lineHeight: 1.6 }}>{item.text}<SavingBadge id={item.id} /></span>
                                         </div>
@@ -4241,6 +4286,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
     const [color, setColor] = useState(MEMO_COLORS[0]);
     const [borderColor, setBorderColor] = useState("");
     const [newComment, setNewComment] = useState("");
+    const cImg = useCommentImg();
     const [chatText, setChatText] = useState("");
     const [chatImg, setChatImg] = useState("");
     const [imgUploading, setImgUploading] = useState(false);
@@ -4253,7 +4299,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
     const scrollPiChat = useCallback(() => { const el = piChatContainerRef.current; if (el) el.scrollTop = el.scrollHeight; }, []);
     const [chatReplyTo, setChatReplyTo] = useState<TeamChatMsg | null>(null);
     const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
-    const [piContextMenu, setPiContextMenu] = useState<{ msgId: number; x: number; y: number } | null>(null);
+    const [piMoreMenuMsgId, setPiMoreMenuMsgId] = useState<number | null>(null);
 
     const toggleReaction = (msgId: number, emoji: string) => {
         const msg = chat.find(m => m.id === msgId);
@@ -4284,9 +4330,9 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
         setAdding(false);
     };
     const addComment = () => {
-        if (!newComment.trim() || !selected) return;
-        const updated = { ...selected, comments: [...(selected.comments || []), { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] };
-        onSave(updated); setSelected(updated); setNewComment("");
+        if (!newComment.trim() && !cImg.img || !selected) return;
+        const updated = { ...selected, comments: [...(selected.comments || []), { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] };
+        onSave(updated); setSelected(updated); setNewComment(""); cImg.clear();
     };
     const deleteComment = (cid: number) => {
         if (!selected) return;
@@ -4356,7 +4402,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                             <div className="text-[10px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
                                             {cmts.slice(-2).map(c => (
                                                 <div key={c.id} className="text-[10px] text-slate-500 truncate">
-                                                    <span className="font-medium text-slate-600">{c.author}</span> {c.text}
+                                                    <span className="font-medium text-slate-600">{c.author}</span> {c.text}{c.imageUrl && " 📷"}
                                                 </div>
                                             ))}
                                         </div>
@@ -4415,8 +4461,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                     </div>
                                 )}
                                 <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} group/msg`}
-                                    style={{ opacity: msg._sending ? 0.7 : 1 }}
-                                    onContextMenu={e => { if (!msg._sending && !msg._failed) { e.preventDefault(); setPiContextMenu({ msgId: msg.id, x: e.clientX, y: e.clientY }); } }}>
+                                    style={{ opacity: msg._sending ? 0.7 : 1 }}>
                                     {!isMe && (
                                         <div className="w-9 flex-shrink-0 mr-2 self-start">
                                             {showAvatar ? (
@@ -4438,10 +4483,10 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                                 <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                             </div>
                                         )}
-                                        <div className="relative" style={{ marginBottom: Object.keys(reactions).length > 0 ? 14 : 0 }}>
-                                            {/* Hover action bar */}
+                                        <div className="relative pt-5" style={{ marginBottom: Object.keys(reactions).length > 0 ? 14 : 0 }}>
+                                            {/* Hover action bar — fixed to top-right of bubble */}
                                             {!msg._sending && !msg._failed && (
-                                                <div className={`absolute -top-8 ${isMe ? "right-1" : "left-1"} opacity-0 group-hover/msg:opacity-100 transition-opacity z-10`}>
+                                                <div className="absolute top-0 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
                                                     <div className="flex items-center bg-white rounded-full px-1 py-0.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
                                                         {["👍","✅","😂"].map(em => (
                                                             <button key={em} onClick={() => toggleReaction(msg.id, em)}
@@ -4452,7 +4497,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                                             <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
                                                                 className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] transition-colors">😊</button>
                                                             {emojiPickerMsgId === msg.id && (
-                                                                <div className={`absolute top-full ${isMe ? "right-0" : "left-0"} mt-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5 flex gap-1 z-20`}>
+                                                                <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5 flex gap-1 z-20">
                                                                     {["👍","❤️","😂","😮","😢","🔥","✅","🎉"].map(em => (
                                                                         <button key={em} onClick={() => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }}
                                                                             className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-[16px] transition-colors">{em}</button>
@@ -4462,6 +4507,22 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                                         </div>
                                                         <button onClick={() => setChatReplyTo(msg)}
                                                             className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-500 transition-colors" title="답장">↩</button>
+                                                        <div className="w-px h-4 bg-slate-200 mx-0.5" />
+                                                        <div className="relative">
+                                                            <button onClick={() => setPiMoreMenuMsgId(piMoreMenuMsgId === msg.id ? null : msg.id)}
+                                                                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-400 transition-colors" title="더보기">⋮</button>
+                                                            {piMoreMenuMsgId === msg.id && (
+                                                                <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 min-w-[160px] z-30">
+                                                                    <button onClick={() => { onSave({ id: Date.now(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", color: "#DBEAFE", updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setPiMoreMenuMsgId(null); }}
+                                                                        className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 노트에 저장</button>
+                                                                    {msg.author === currentUser && (<>
+                                                                        <div className="h-px bg-slate-100 my-1" />
+                                                                        <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onUpdateChat({ ...msg, deleted: true, text: "", imageUrl: undefined }); setPiMoreMenuMsgId(null); } }}
+                                                                            className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2"><span>🗑</span> 삭제</button>
+                                                                    </>)}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
@@ -4515,42 +4576,8 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                     </div>
                 </div>
             </div>
-            {/* PI Context menu */}
-            {piContextMenu && (() => {
-                const ctxMsg = chat.find(m => m.id === piContextMenu.msgId);
-                if (!ctxMsg) return null;
-                const isCtxMe = ctxMsg.author === currentUser;
-                return (
-                    <div className="fixed inset-0 z-50" onClick={() => setPiContextMenu(null)}>
-                        <div className="fixed bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 min-w-[180px] z-50"
-                            style={{ left: Math.min(piContextMenu.x, typeof window !== "undefined" ? window.innerWidth - 200 : piContextMenu.x), top: Math.min(piContextMenu.y, typeof window !== "undefined" ? window.innerHeight - 250 : piContextMenu.y) }}
-                            onClick={e => e.stopPropagation()}>
-                            <button onClick={() => { setChatReplyTo(ctxMsg); setPiContextMenu(null); }}
-                                className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                                <span className="text-[14px]">↩</span> 답장에서 인용
-                            </button>
-                            <button onClick={() => {
-                                onSave({ id: Date.now(), title: (ctxMsg.text || "📷 이미지").slice(0, 50), content: ctxMsg.text || "", color: "#FEF3C7", updatedAt: new Date().toISOString().split("T")[0], comments: [] });
-                                setPiContextMenu(null);
-                            }} className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                                <span className="text-[14px]">📌</span> 노트에 저장
-                            </button>
-                            <div className="h-px bg-slate-100 my-1" />
-                            <button onClick={() => { navigator.clipboard.writeText(`${window.location.href}#msg-${ctxMsg.id}`); setPiContextMenu(null); }}
-                                className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                                <span className="text-[14px]">🔗</span> 메시지 링크 복사
-                            </button>
-                            {isCtxMe && (<>
-                                <div className="h-px bg-slate-100 my-1" />
-                                <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onUpdateChat({ ...ctxMsg, deleted: true, text: "", imageUrl: undefined }); setPiContextMenu(null); } }}
-                                    className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2">
-                                    <span className="text-[14px]">🗑</span> 삭제
-                                </button>
-                            </>)}
-                        </div>
-                    </div>
-                );
-            })()}
+            {/* Dismiss more menu */}
+            {piMoreMenuMsgId && <div className="fixed inset-0 z-[5]" onClick={() => setPiMoreMenuMsgId(null)} />}
 
             {/* Add modal */}
             {adding && (
@@ -4593,18 +4620,19 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                     {(selected.comments || []).map(c => (
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group/c relative">
                                             <button onClick={() => deleteComment(c.id)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{c.text}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{c.date}</div>
                                         </div>
                                     ))}
                                     {(selected.comments || []).length === 0 && <div className="text-[12px] text-slate-300 py-3 text-center">댓글이 없습니다</div>}
                                 </div>
+                                {cImg.preview}
                                 <div className="flex gap-2">
-                                    <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글..."
+                                    <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글... (Ctrl+V 이미지)"
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
-                                        onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
-                                    <button onClick={addComment} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium flex-shrink-0">전송</button>
+                                        onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
+                                    <button onClick={addComment} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium flex-shrink-0">{cImg.uploading ? "⏳" : "전송"}</button>
                                 </div>
                             </div>
                         </div>
@@ -4656,6 +4684,7 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
     const [team, setTeam] = useState(meeting?.team || "");
     const [comments, setComments] = useState<Comment[]>(meeting?.comments || []);
     const [newComment, setNewComment] = useState("");
+    const cImg = useCommentImg();
     const composingRef = useRef(false);
     const [meetingDraftLoaded] = useState(() => { if (meeting) return false; const d = loadDraft("meeting_add"); if (d) { try { const p = JSON.parse(d); return !!(p.title || p.content); } catch {} } return false; });
     const [meetingDraftVisible, setMeetingDraftVisible] = useState(meetingDraftLoaded);
@@ -4671,9 +4700,9 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
         onSave({ id: meeting?.id ?? Date.now(), title: title.trim(), goal: goal.trim(), summary: summary.trim(), date, assignees, status: "done", creator: meeting?.creator || currentUser, createdAt: meeting?.createdAt || new Date().toLocaleString("ko-KR"), comments, team, needsDiscussion: meeting?.needsDiscussion });
     };
     const addComment = () => {
-        if (!newComment.trim()) return;
-        setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR") }]);
-        setNewComment("");
+        if (!newComment.trim() && !cImg.img) return;
+        setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]);
+        setNewComment(""); cImg.clear();
     };
 
     const handleClose = () => { if (!isEdit && (title.trim() || summary.trim())) saveDraft("meeting_add", JSON.stringify({ title, content: summary })); onClose(); };
@@ -4722,18 +4751,19 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
                                 <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2 group relative text-[13px]">
                                     <button onClick={() => setComments(comments.filter(x => x.id !== c.id))}
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100">✕</button>
-                                    <div className="text-slate-700 pr-4">{c.text}</div>
+                                    <div className="text-slate-700 pr-4">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                     <div className="text-[11px] text-slate-400 mt-0.5">{c.author} · {c.date}</div>
                                 </div>
                             ))}
                         </div>
+                        {cImg.preview}
                         <div className="flex gap-2">
-                            <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글..."
+                            <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글... (Ctrl+V 이미지)"
                                 className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                 onCompositionStart={() => { composingRef.current = true; }}
                                 onCompositionEnd={() => { composingRef.current = false; }}
-                                onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
-                            <button onClick={addComment} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] hover:bg-blue-600">추가</button>
+                                onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
+                            <button onClick={addComment} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] hover:bg-blue-600">{cImg.uploading ? "⏳" : "추가"}</button>
                         </div>
                     </div>
                 </div>
@@ -4792,7 +4822,7 @@ function MeetingView({ meetings, onSave, onDelete, currentUser, teamNames }: {
                                 <div className="text-[11px] font-semibold text-slate-400 mb-1">💬 댓글 {m.comments.length}개</div>
                                 {m.comments.slice(-2).map(c => (
                                     <div key={c.id} className="text-[12px] text-slate-500 truncate">
-                                        <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}
+                                        <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}{c.imageUrl && " 📷"}
                                     </div>
                                 ))}
                             </div>
@@ -4842,7 +4872,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
     const [mobileTab, setMobileTab] = useState<"chat"|"board"|"files">("chat");
     const [replyTo, setReplyTo] = useState<TeamChatMsg | null>(null);
     const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
-    const [contextMenu, setContextMenu] = useState<{ msgId: number; x: number; y: number } | null>(null);
+    const [moreMenuMsgId, setMoreMenuMsgId] = useState<number | null>(null);
 
     const toggleReaction = (msgId: number, emoji: string) => {
         const msg = chat.find(m => m.id === msgId);
@@ -4932,7 +4962,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                         <div className="text-[10px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
                                         {cmts.slice(-2).map(c => (
                                             <div key={c.id} className="text-[10px] text-slate-500 truncate">
-                                                <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}
+                                                <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}{c.imageUrl && " 📷"}
                                             </div>
                                         ))}
                                     </div>
@@ -4993,8 +5023,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                     </div>
                                 )}
                                 <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} group/msg`}
-                                    style={{ opacity: msg._sending ? 0.7 : 1 }}
-                                    onContextMenu={e => { if (!msg._sending && !msg._failed) { e.preventDefault(); setContextMenu({ msgId: msg.id, x: e.clientX, y: e.clientY }); } }}>
+                                    style={{ opacity: msg._sending ? 0.7 : 1 }}>
                                     {!isMe && (
                                         <div className="w-9 flex-shrink-0 mr-2 self-start">
                                             {showAvatar ? (
@@ -5016,10 +5045,10 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                                 <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                             </div>
                                         )}
-                                        <div className="relative" style={{ marginBottom: Object.keys(reactions).length > 0 ? 14 : 0 }}>
-                                            {/* Hover action bar */}
+                                        <div className="relative pt-5" style={{ marginBottom: Object.keys(reactions).length > 0 ? 14 : 0 }}>
+                                            {/* Hover action bar — fixed to top-right of bubble */}
                                             {!msg._sending && !msg._failed && (
-                                                <div className={`absolute -top-8 ${isMe ? "right-1" : "left-1"} opacity-0 group-hover/msg:opacity-100 transition-opacity z-10`}>
+                                                <div className="absolute top-0 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
                                                     <div className="flex items-center bg-white rounded-full px-1 py-0.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
                                                         {["👍","✅","😂"].map(em => (
                                                             <button key={em} onClick={() => toggleReaction(msg.id, em)}
@@ -5030,7 +5059,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                                             <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
                                                                 className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] transition-colors">😊</button>
                                                             {emojiPickerMsgId === msg.id && (
-                                                                <div className={`absolute top-full ${isMe ? "right-0" : "left-0"} mt-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5 flex gap-1 z-20`}>
+                                                                <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5 flex gap-1 z-20">
                                                                     {["👍","❤️","😂","😮","😢","🔥","✅","🎉"].map(em => (
                                                                         <button key={em} onClick={() => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }}
                                                                             className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-[16px] transition-colors">{em}</button>
@@ -5040,6 +5069,22 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                                         </div>
                                                         <button onClick={() => setReplyTo(msg)}
                                                             className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-500 transition-colors" title="답장">↩</button>
+                                                        <div className="w-px h-4 bg-slate-200 mx-0.5" />
+                                                        <div className="relative">
+                                                            <button onClick={() => setMoreMenuMsgId(moreMenuMsgId === msg.id ? null : msg.id)}
+                                                                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-400 transition-colors" title="더보기">⋮</button>
+                                                            {moreMenuMsgId === msg.id && (
+                                                                <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 min-w-[160px] z-30">
+                                                                    <button onClick={() => { onSaveBoard({ id: Date.now(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", status: "left", color: "#DBEAFE", author: msg.author, updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setMoreMenuMsgId(null); }}
+                                                                        className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 보드에 고정</button>
+                                                                    {msg.author === currentUser && (<>
+                                                                        <div className="h-px bg-slate-100 my-1" />
+                                                                        <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onUpdate({ ...msg, deleted: true, text: "", imageUrl: undefined }); setMoreMenuMsgId(null); } }}
+                                                                            className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2"><span>🗑</span> 삭제</button>
+                                                                    </>)}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
@@ -5093,42 +5138,8 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                     </div>
                 </div>
             </div>
-            {/* Context menu */}
-            {contextMenu && (() => {
-                const ctxMsg = chat.find(m => m.id === contextMenu.msgId);
-                if (!ctxMsg) return null;
-                const isCtxMe = ctxMsg.author === currentUser;
-                return (
-                    <div className="fixed inset-0 z-50" onClick={() => setContextMenu(null)}>
-                        <div className="fixed bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 min-w-[180px] z-50"
-                            style={{ left: Math.min(contextMenu.x, typeof window !== "undefined" ? window.innerWidth - 200 : contextMenu.x), top: Math.min(contextMenu.y, typeof window !== "undefined" ? window.innerHeight - 250 : contextMenu.y) }}
-                            onClick={e => e.stopPropagation()}>
-                            <button onClick={() => { setReplyTo(ctxMsg); setContextMenu(null); }}
-                                className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                                <span className="text-[14px]">↩</span> 답장에서 인용
-                            </button>
-                            <button onClick={() => {
-                                onSaveBoard({ id: Date.now(), title: (ctxMsg.text || "📷 이미지").slice(0, 50), content: ctxMsg.text || "", status: "left", color: "#FEF3C7", author: ctxMsg.author, updatedAt: new Date().toISOString().split("T")[0] });
-                                setContextMenu(null);
-                            }} className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                                <span className="text-[14px]">📌</span> 보드에 고정
-                            </button>
-                            <div className="h-px bg-slate-100 my-1" />
-                            <button onClick={() => { navigator.clipboard.writeText(`${window.location.href}#msg-${ctxMsg.id}`); setContextMenu(null); }}
-                                className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                                <span className="text-[14px]">🔗</span> 메시지 링크 복사
-                            </button>
-                            {isCtxMe && (<>
-                                <div className="h-px bg-slate-100 my-1" />
-                                <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onUpdate({ ...ctxMsg, deleted: true, text: "", imageUrl: undefined }); setContextMenu(null); } }}
-                                    className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2">
-                                    <span className="text-[14px]">🗑</span> 삭제
-                                </button>
-                            </>)}
-                        </div>
-                    </div>
-                );
-            })()}
+            {/* Dismiss more menu on click outside */}
+            {moreMenuMsgId && <div className="fixed inset-0 z-[5]" onClick={() => setMoreMenuMsgId(null)} />}
             {/* Board add modal */}
             {boardAdding && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setBoardAdding(false)}>
@@ -5167,7 +5178,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group/c relative">
                                             <button onClick={() => { const updated = { ...selectedCard, comments: (selectedCard.comments || []).filter(x => x.id !== c.id) }; onSaveBoard(updated); setSelectedCard(updated); }}
                                                 className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{c.text}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
@@ -5373,6 +5384,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     const [previewImg, setPreviewImg] = useState("");
     const chatFileRef = useRef<HTMLInputElement>(null);
     const [newComment, setNewComment] = useState("");
+    const cImg = useCommentImg();
     const chatEndRef = useRef<HTMLDivElement>(null);
     const teamChatContainerRef = useRef<HTMLDivElement>(null);
     const teamChatDidInit = useRef(false);
@@ -5383,7 +5395,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     const [mobileTab, setMobileTab] = useState<"chat"|"board"|"files">("chat");
     const [replyTo, setReplyTo] = useState<TeamChatMsg | null>(null);
     const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
-    const [contextMenu, setContextMenu] = useState<{ msgId: number; x: number; y: number } | null>(null);
+    const [moreMenuMsgId, setMoreMenuMsgId] = useState<number | null>(null);
 
     // Draft: auto-save card form
     useEffect(() => {
@@ -5422,10 +5434,10 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     useEffect(() => { if (selected && !isEditing) saveDraft(teamMemoDraftKey(selected.id), newComment); }, [newComment, selected?.id, isEditing]);
 
     const addComment = () => {
-        if (!newComment.trim() || !selected) return;
+        if (!newComment.trim() && !cImg.img || !selected) return;
         clearDraft(teamMemoDraftKey(selected.id));
-        const updated = { ...selected, comments: [...(selected.comments || []), { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] };
-        onSaveCard(updated); setSelected(updated); setNewComment("");
+        const updated = { ...selected, comments: [...(selected.comments || []), { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] };
+        onSaveCard(updated); setSelected(updated); setNewComment(""); cImg.clear();
     };
     const deleteComment = (cid: number) => {
         if (!selected) return;
@@ -5544,7 +5556,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                             <div className="text-[10px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
                                             {cmts.slice(-2).map(c => (
                                                 <div key={c.id} className="text-[10px] text-slate-500 truncate">
-                                                    <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}
+                                                    <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}{c.imageUrl && " 📷"}
                                                 </div>
                                             ))}
                                         </div>
@@ -5608,8 +5620,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                     </div>
                                 )}
                                 <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} group/msg`}
-                                    style={{ opacity: msg._sending ? 0.7 : 1 }}
-                                    onContextMenu={e => { if (!msg._sending && !msg._failed) { e.preventDefault(); setContextMenu({ msgId: msg.id, x: e.clientX, y: e.clientY }); } }}>
+                                    style={{ opacity: msg._sending ? 0.7 : 1 }}>
                                     {!isMe && (
                                         <div className="w-9 flex-shrink-0 mr-2 self-start">
                                             {showAvatar ? (
@@ -5631,10 +5642,10 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                                 <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                             </div>
                                         )}
-                                        <div className="relative" style={{ marginBottom: (!msg._sending && !msg._failed && Object.keys(reactions).length > 0) ? 14 : 0 }}>
-                                            {/* Hover action bar */}
+                                        <div className="relative pt-5" style={{ marginBottom: (!msg._sending && !msg._failed && Object.keys(reactions).length > 0) ? 14 : 0 }}>
+                                            {/* Hover action bar — fixed to top-right of bubble */}
                                             {!msg._sending && !msg._failed && (
-                                                <div className={`absolute -top-8 ${isMe ? "right-1" : "left-1"} opacity-0 group-hover/msg:opacity-100 transition-opacity z-10`}>
+                                                <div className="absolute top-0 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
                                                     <div className="flex items-center bg-white rounded-full px-1 py-0.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
                                                         {["👍","✅","😂"].map(em => (
                                                             <button key={em} onClick={() => toggleReaction(msg.id, em)}
@@ -5645,7 +5656,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                                             <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
                                                                 className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] transition-colors">😊</button>
                                                             {emojiPickerMsgId === msg.id && (
-                                                                <div className={`absolute top-full ${isMe ? "right-0" : "left-0"} mt-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5 flex gap-1 z-20`}>
+                                                                <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5 flex gap-1 z-20">
                                                                     {["👍","❤️","😂","😮","😢","🔥","✅","🎉"].map(em => (
                                                                         <button key={em} onClick={() => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }}
                                                                             className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-[16px] transition-colors">{em}</button>
@@ -5655,6 +5666,22 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                                         </div>
                                                         <button onClick={() => setReplyTo(msg)}
                                                             className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-500 transition-colors" title="답장">↩</button>
+                                                        <div className="w-px h-4 bg-slate-200 mx-0.5" />
+                                                        <div className="relative">
+                                                            <button onClick={() => setMoreMenuMsgId(moreMenuMsgId === msg.id ? null : msg.id)}
+                                                                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-400 transition-colors" title="더보기">⋮</button>
+                                                            {moreMenuMsgId === msg.id && (
+                                                                <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 min-w-[160px] z-30">
+                                                                    <button onClick={() => { onSaveCard({ id: Date.now(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", status: "left", color: "#DBEAFE", author: msg.author, updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setMoreMenuMsgId(null); }}
+                                                                        className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 보드에 고정</button>
+                                                                    {msg.author === currentUser && (<>
+                                                                        <div className="h-px bg-slate-100 my-1" />
+                                                                        <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onUpdateChat({ ...msg, deleted: true, text: "", imageUrl: undefined }); setMoreMenuMsgId(null); } }}
+                                                                            className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2"><span>🗑</span> 삭제</button>
+                                                                    </>)}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
@@ -5708,42 +5735,8 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                     </div>
                 </div>
             </div>
-            {/* Context menu */}
-            {contextMenu && (() => {
-                const ctxMsg = chat.find(m => m.id === contextMenu.msgId);
-                if (!ctxMsg) return null;
-                const isCtxMe = ctxMsg.author === currentUser;
-                return (
-                    <div className="fixed inset-0 z-50" onClick={() => setContextMenu(null)}>
-                        <div className="fixed bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 min-w-[180px] z-50"
-                            style={{ left: Math.min(contextMenu.x, typeof window !== "undefined" ? window.innerWidth - 200 : contextMenu.x), top: Math.min(contextMenu.y, typeof window !== "undefined" ? window.innerHeight - 250 : contextMenu.y) }}
-                            onClick={e => e.stopPropagation()}>
-                            <button onClick={() => { setReplyTo(ctxMsg); setContextMenu(null); }}
-                                className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                                <span className="text-[14px]">↩</span> 답장에서 인용
-                            </button>
-                            <button onClick={() => {
-                                onSaveCard({ id: Date.now(), title: (ctxMsg.text || "📷 이미지").slice(0, 50), content: ctxMsg.text || "", status: "left", color: "#FEF3C7", author: ctxMsg.author, updatedAt: new Date().toISOString().split("T")[0] });
-                                setContextMenu(null);
-                            }} className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                                <span className="text-[14px]">📌</span> 보드에 고정
-                            </button>
-                            <div className="h-px bg-slate-100 my-1" />
-                            <button onClick={() => { navigator.clipboard.writeText(`${window.location.href}#msg-${ctxMsg.id}`); setContextMenu(null); }}
-                                className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                                <span className="text-[14px]">🔗</span> 메시지 링크 복사
-                            </button>
-                            {isCtxMe && (<>
-                                <div className="h-px bg-slate-100 my-1" />
-                                <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onUpdateChat({ ...ctxMsg, deleted: true, text: "", imageUrl: undefined }); setContextMenu(null); } }}
-                                    className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2">
-                                    <span className="text-[14px]">🗑</span> 삭제
-                                </button>
-                            </>)}
-                        </div>
-                    </div>
-                );
-            })()}
+            {/* Dismiss overlay for more menu */}
+            {moreMenuMsgId && <div className="fixed inset-0 z-[5]" onClick={() => setMoreMenuMsgId(null)} />}
 
             {/* Detail modal */}
             {selected && !isEditing && (
@@ -5762,18 +5755,19 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                     {(selected.comments || []).map(c => (
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group/c relative">
                                             <button onClick={() => deleteComment(c.id)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{c.text}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
                                     {(selected.comments || []).length === 0 && <div className="text-[12px] text-slate-300 py-3 text-center">아직 댓글이 없습니다</div>}
                                 </div>
+                                {cImg.preview}
                                 <div className="flex gap-2 items-center">
-                                    <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글 작성..."
+                                    <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글 작성... (Ctrl+V 이미지)"
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
-                                        onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
-                                    <button onClick={addComment} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium flex-shrink-0">전송</button>
+                                        onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
+                                    <button onClick={addComment} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium flex-shrink-0">{cImg.uploading ? "⏳" : "전송"}</button>
                                 </div>
                                 {newComment && hasDraft(teamMemoDraftKey(selected.id)) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
@@ -5948,9 +5942,9 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
         <div className="space-y-5">
             {/* Team mode: page title + date + online users */}
             {!isPersonal && (
-                <div>
-                    <h2 className="text-[24px] font-bold tracking-tight" style={{color:"#0F172A", letterSpacing:"-0.02em", lineHeight:"1.3"}}>🏠 연구실 현황</h2>
-                    <div className="flex items-center gap-3 mt-1.5">
+                <div className="mb-1">
+                    <h2 className="text-[24px] font-bold tracking-tight mb-2" style={{color:"#0F172A", letterSpacing:"-0.02em", lineHeight:"1.3"}}>🏠 연구실 현황</h2>
+                    <div className="flex items-center gap-3">
                         <span className="text-[13.5px]" style={{color:"#94A3B8"}}>{dateLabel}</span>
                         <span className="text-[13px] flex items-center gap-1.5" style={{color:"#94A3B8"}}>
                             · 접속 중 <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" /></span>
@@ -6113,7 +6107,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                     ) : (
                         <div className="space-y-2 max-h-[260px] overflow-y-auto">
                             {urgentAnn.map(ann => (
-                                <div key={ann.id} className="p-3 rounded-xl cursor-pointer transition-colors" style={{background:"#FEF2F2", borderLeft:"3px solid #EF4444"}} onMouseEnter={e => (e.currentTarget.style.background = "#FEE2E2")} onMouseLeave={e => (e.currentTarget.style.background = "#FEF2F2")}>
+                                <div key={ann.id} className="p-3 rounded-xl cursor-pointer transition-colors" style={{background:"#FEF2F2", borderLeft:"2px solid #EF4444"}} onMouseEnter={e => (e.currentTarget.style.background = "#FEE2E2")} onMouseLeave={e => (e.currentTarget.style.background = "#FEF2F2")}>
                                     <div className="text-[13px] leading-relaxed" style={{color:"#334155", fontWeight:500}}>{ann.text.length > 50 ? ann.text.slice(0, 50) + "..." : ann.text}</div>
                                     <div className="text-[11px] mt-1" style={{color:"#94A3B8"}}>{members[ann.author]?.emoji} {ann.author} · {ann.date}</div>
                                 </div>
@@ -6135,7 +6129,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                     ) : (
                         <div className="space-y-2 max-h-[260px] overflow-y-auto">
                             {generalAnn.map(ann => (
-                                <div key={ann.id} className="p-3 rounded-xl cursor-pointer transition-colors" style={{background:"#EFF6FF", borderLeft:"3px solid #3B82F6"}} onMouseEnter={e => (e.currentTarget.style.background = "#DBEAFE")} onMouseLeave={e => (e.currentTarget.style.background = "#EFF6FF")}>
+                                <div key={ann.id} className="p-3 rounded-xl cursor-pointer transition-colors" style={{background:"#EFF6FF", borderLeft:"2px solid #3B82F6"}} onMouseEnter={e => (e.currentTarget.style.background = "#DBEAFE")} onMouseLeave={e => (e.currentTarget.style.background = "#EFF6FF")}>
                                     <div className="text-[13px] leading-relaxed" style={{color:"#334155", fontWeight:500}}>{ann.text.length > 50 ? ann.text.slice(0, 50) + "..." : ann.text}</div>
                                     <div className="text-[11px] mt-1" style={{color:"#94A3B8"}}>{members[ann.author]?.emoji} {ann.author} · {ann.date}</div>
                                 </div>
@@ -6155,7 +6149,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                     ) : (
                         <div className="space-y-1.5 max-h-[260px] overflow-y-auto">
                             {discussionItems.slice(0, 10).map((item, i) => (
-                                <button key={i} onClick={() => onNavigate(item.tab)} className="w-full flex items-start gap-2.5 p-3 rounded-xl text-left transition-all group" style={{background:"#FEF2F2", borderLeft:"3px solid #EF4444"}}>
+                                <button key={i} onClick={() => onNavigate(item.tab)} className="w-full flex items-start gap-2.5 p-3 rounded-xl text-left transition-all group" style={{background:"#FEF2F2", borderLeft:"2px solid #EF4444"}}>
                                     <span className="text-[13px] mt-0.5">{item.icon}</span>
                                     <div className="flex-1 min-w-0">
                                         <div className="text-[13.5px] text-slate-800 leading-snug truncate group-hover:text-red-600 transition-colors" style={{fontWeight:600}}>{item.title}</div>
@@ -6268,13 +6262,11 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                                     const memberAnalysis = analyses.filter(a => a.assignees.includes(name)).length;
                                     const memberTodos = todos.filter(t => !t.done && t.assignees.includes(name)).length;
                                     const hasTarget = todayTargets.some(t => t.name === name);
-                                    const isTeamLead = Object.values(teams).some(t => t.lead === name);
                                     return (
                                         <tr key={name} className={`${isMe ? "bg-blue-50/30" : "hover:bg-[#F8FAFC]"} transition-colors`} style={{borderBottom:"1px solid #F8FAFC"}}>
                                             <td className="py-2.5 px-3" style={{fontWeight:500, color:"#334155"}}>
                                                 <div className="flex items-center gap-1">
                                                     <span className="whitespace-nowrap">{members[name]?.emoji} {name}</span>
-                                                    {isTeamLead && <span className="text-[10px] px-1.5 py-0.5 rounded" style={{fontWeight:700, color:"#3B82F6", background:"#EFF6FF"}}>팀장</span>}
                                                     {statusMessages[name] && <span className="text-[11px] text-blue-500/80 italic truncate max-w-[200px] ml-1.5 border-l border-slate-200 pl-1.5">&ldquo;{statusMessages[name]}&rdquo;</span>}
                                                 </div>
                                             </td>
