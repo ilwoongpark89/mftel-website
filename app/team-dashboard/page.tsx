@@ -25,6 +25,7 @@ const MEMBER_NAMES = Object.keys(MEMBERS).filter(k => k !== "박일웅");
 
 // Context for dynamic member data (customEmojis merged)
 const MembersContext = createContext<Record<string, { team: string; role: string; emoji: string }>>(DEFAULT_MEMBERS);
+const ConfirmDeleteContext = createContext<(action: () => void) => void>(() => {});
 const SavingContext = createContext<Set<number>>(new Set());
 function SavingBadge({ id }: { id: number }) {
     const s = useContext(SavingContext);
@@ -188,6 +189,65 @@ function PillSelect({ options, selected, onToggle, emojis }: { options: string[]
     );
 }
 
+// ─── Shared: Delete Confirm Dialog ───────────────────────────────────────────
+
+function useConfirmDelete() {
+    const [pending, setPending] = useState<(() => void) | null>(null);
+    const confirm = (action: () => void) => setPending(() => action);
+    const dialog = pending ? (
+        <div className="fixed inset-0 z-[70] bg-black/40 flex items-center justify-center p-4" onClick={() => setPending(null)}>
+            <div className="bg-white rounded-2xl w-full shadow-xl" style={{ maxWidth: 400, padding: 24, boxShadow: "0 8px 32px rgba(0,0,0,0.12)" }} onClick={e => e.stopPropagation()}>
+                <div className="flex flex-col items-center text-center">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4" style={{ background: "#FEE2E2" }}>
+                        <span className="text-[22px]">🗑</span>
+                    </div>
+                    <h3 className="text-[16px] font-bold text-slate-800 mb-1">정말 삭제하시겠습니까?</h3>
+                    <p className="text-[13px] text-slate-400 mb-6">삭제된 항목은 복구할 수 없습니다.</p>
+                    <div className="flex gap-3 w-full">
+                        <button onClick={() => setPending(null)}
+                            className="flex-1 py-2.5 rounded-xl text-[14px] font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">취소</button>
+                        <button onClick={() => { pending(); setPending(null); }}
+                            className="flex-1 py-2.5 rounded-xl text-[14px] font-medium transition-colors" style={{ background: "#FEE2E2", color: "#DC2626" }}>삭제</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    ) : null;
+    return { confirm, dialog };
+}
+
+// ─── Shared: Emoji Picker ────────────────────────────────────────────────────
+
+const EMOJI_CATEGORIES = [
+    { label: "😀", name: "표정", emojis: ["😀","😁","😂","🤣","😊","😇","🙂","😉","😌","😍","🥰","😘","😋","😛","😜","🤪","😝","🤗","🤔","🤫","🤭","😏","🙄","😯","😲","😳","🥺","🥹","😢","😭","😤"] },
+    { label: "👍", name: "손", emojis: ["👍","👎","👌","✌️","🤞","🤟","🤘","🤙","👈","👉","👆","👇","☝️","✋","🤚","🖖","👋","🤝","🙏","💪","🫶"] },
+    { label: "❤️", name: "하트", emojis: ["❤️","🧡","💛","💚","💙","💜","🖤","🤍","💔","❣️","💕","💞","💓","💗","💖","💝","💘"] },
+    { label: "🎉", name: "축하", emojis: ["🎉","🎊","🎈","🎁","🏆","🏅","🥇","⭐","🌟","💫","✨","🔔","📣"] },
+    { label: "🔥", name: "기타", emojis: ["🔥","💯","✅","❌","⭕","❓","❗","💡","📌","📎","📝","💬","👀","🚀","⚡","🌈","☀️","🌙","⏰","🎯"] },
+];
+
+function EmojiPickerPopup({ onSelect }: { onSelect: (emoji: string) => void }) {
+    const [tab, setTab] = useState(0);
+    const cat = EMOJI_CATEGORIES[tab];
+    return (
+        <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 z-20" style={{ width: 280 }} onClick={e => e.stopPropagation()}>
+            <div className="flex border-b border-slate-100 px-1 pt-1">
+                {EMOJI_CATEGORIES.map((c, i) => (
+                    <button key={i} onClick={() => setTab(i)}
+                        className={`flex-1 py-1.5 text-[15px] rounded-t-lg transition-colors ${tab === i ? "bg-slate-100" : "hover:bg-slate-50"}`}
+                        title={c.name}>{c.label}</button>
+                ))}
+            </div>
+            <div className="p-2 grid grid-cols-7 gap-0.5 max-h-[240px] overflow-y-auto modal-scroll">
+                {cat.emojis.map(em => (
+                    <button key={em} onClick={() => onSelect(em)}
+                        className="w-[34px] h-[34px] flex items-center justify-center rounded-lg hover:bg-slate-100 text-[18px] transition-colors">{em}</button>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 // ─── Shared: Comment image paste helper ──────────────────────────────────────
 
 function useCommentImg() {
@@ -300,6 +360,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
     paper: Paper | null; onSave: (p: Paper) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; tagList: string[]; teamNames?: string[];
 }) {
     const MEMBERS = useContext(MembersContext);
+    const confirmDel = useContext(ConfirmDeleteContext);
     const isEdit = !!paper;
     const [title, setTitle] = useState(paper?.title || "");
     const [journal, setJournal] = useState(paper?.journal || "TBD");
@@ -404,7 +465,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
                         <button onClick={() => { if (handleSave()) onClose(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
                     {isEdit && onDelete && (
-                        <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(paper!.id); onClose(); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                        <button onClick={() => confirmDel(() => { onDelete(paper!.id); onClose(); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                     )}
                 </div>
             </div>
@@ -414,6 +475,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
 
 function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, onAddPaper, onSavePaper, onDeletePaper, onReorder, tagList, onSaveTags, teamNames, currentUser }: { papers: Paper[]; filter: string; onFilterPerson?: (name: string) => void; allPeople?: string[]; onClickPaper: (p: Paper) => void; onAddPaper: () => void; onSavePaper: (p: Paper) => void; onDeletePaper?: (id: number) => void; onReorder: (list: Paper[]) => void; tagList: string[]; onSaveTags: (list: string[]) => void; teamNames?: string[]; currentUser: string }) {
     const MEMBERS = useContext(MembersContext);
+    const confirmDel = useContext(ConfirmDeleteContext);
     const [filterTeam, setFilterTeam] = useState("전체");
     const personFiltered = filter === "전체" ? papers : papers.filter(p => p.assignees.includes(filter) || p.tags.some(t => t === filter));
     const filtered = filterTeam === "전체" ? personFiltered : personFiltered.filter(p => p.team === filterTeam);
@@ -660,7 +722,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                             <button onClick={() => { onClickPaper(selected); setSelected(null); setDetailComment(""); }} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
                             <div className="flex items-center gap-3">
                                 {onDeletePaper && (currentUser === selected.creator || currentUser === "박일웅") && (
-                                    <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDeletePaper(selected.id); setSelected(null); setDetailComment(""); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                                    <button onClick={() => confirmDel(() => { onDeletePaper(selected.id); setSelected(null); setDetailComment(""); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                                 )}
                                 <button onClick={() => { setSelected(null); setDetailComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                             </div>
@@ -677,6 +739,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
 function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, currentUser, teamNames }: {
     report: Report | null; initialCategory?: string; onSave: (r: Report) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; teamNames?: string[];
 }) {
+    const confirmDel = useContext(ConfirmDeleteContext);
     const isEdit = !!report;
     const [title, setTitle] = useState(report?.title || "");
     const [assignees, setAssignees] = useState<string[]>(report?.assignees || []);
@@ -811,7 +874,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                         <button onClick={onClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                         <button onClick={() => { if (handleSave()) onClose(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
-                    {isEdit && onDelete && <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(report!.id); onClose(); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
+                    {isEdit && onDelete && <button onClick={() => confirmDel(() => { onDelete(report!.id); onClose(); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
                 </div>
             </div>
         </div>
@@ -820,6 +883,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
 
 function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion, onReorder, teamNames }: { reports: Report[]; currentUser: string; onSave: (r: Report) => void; onDelete: (id: number) => void; onToggleDiscussion: (r: Report) => void; onReorder: (list: Report[]) => void; teamNames?: string[] }) {
     const MEMBERS = useContext(MembersContext);
+    const confirmDel = useContext(ConfirmDeleteContext);
     const [editing, setEditing] = useState<Report | null>(null);
     const [addCategory, setAddCategory] = useState<string | null>(null);
     const [filterTeam, setFilterTeam] = useState("전체");
@@ -1021,7 +1085,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                             <button onClick={() => { setEditing(selected); setSelected(null); setDetailComment(""); }} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
                             <div className="flex items-center gap-3">
                                 {(currentUser === selected.creator || currentUser === "박일웅") && (
-                                    <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(selected.id); setSelected(null); setDetailComment(""); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                                    <button onClick={() => confirmDel(() => { onDelete(selected.id); setSelected(null); setDetailComment(""); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                                 )}
                                 <button onClick={() => { setSelected(null); setDetailComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                             </div>
@@ -1618,6 +1682,7 @@ function TimetableView({ blocks, onSave, onDelete }: {
 function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUser, equipmentList, teamNames }: {
     experiment: Experiment | null; onSave: (e: Experiment) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; equipmentList: string[]; teamNames?: string[];
 }) {
+    const confirmDel = useContext(ConfirmDeleteContext);
     const isEdit = !!experiment;
     const [title, setTitle] = useState(experiment?.title || "");
     const [equipment, setEquipment] = useState(experiment?.equipment || equipmentList[0] || "");
@@ -1731,7 +1796,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
                         <button onClick={onClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                         <button onClick={() => { if (handleSave()) onClose(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
-                    {isEdit && onDelete && <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(experiment!.id); onClose(); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
+                    {isEdit && onDelete && <button onClick={() => confirmDel(() => { onDelete(experiment!.id); onClose(); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
                 </div>
             </div>
         </div>
@@ -1740,6 +1805,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
 
 function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentList, onSaveEquipment, onToggleDiscussion, onReorder, teamNames }: { experiments: Experiment[]; onSave: (e: Experiment) => void; onDelete: (id: number) => void; currentUser: string; equipmentList: string[]; onSaveEquipment: (list: string[]) => void; onToggleDiscussion: (e: Experiment) => void; onReorder: (list: Experiment[]) => void; teamNames?: string[] }) {
     const MEMBERS = useContext(MembersContext);
+    const confirmDel = useContext(ConfirmDeleteContext);
     const [editing, setEditing] = useState<Experiment | null>(null);
     const [adding, setAdding] = useState(false);
     const [showEqMgr, setShowEqMgr] = useState(false);
@@ -1951,7 +2017,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                             <button onClick={() => { setEditing(selected); setSelected(null); setDetailComment(""); }} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
                             <div className="flex items-center gap-3">
                                 {(currentUser === selected.creator || currentUser === "박일웅") && (
-                                    <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(selected.id); setSelected(null); setDetailComment(""); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                                    <button onClick={() => confirmDel(() => { onDelete(selected.id); setSelected(null); setDetailComment(""); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                                 )}
                                 <button onClick={() => { setSelected(null); setDetailComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                             </div>
@@ -1968,6 +2034,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
 function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, toolList, teamNames }: {
     analysis: Analysis | null; onSave: (a: Analysis) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; toolList: string[]; teamNames?: string[];
 }) {
+    const confirmDel = useContext(ConfirmDeleteContext);
     const isEdit = !!analysis;
     const [title, setTitle] = useState(analysis?.title || "");
     const [tool, setTool] = useState(analysis?.tool || toolList[0] || "");
@@ -2080,7 +2147,7 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
                         <button onClick={onClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                         <button onClick={() => { if (handleSave()) onClose(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
-                    {isEdit && onDelete && <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(analysis!.id); onClose(); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
+                    {isEdit && onDelete && <button onClick={() => confirmDel(() => { onDelete(analysis!.id); onClose(); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
                 </div>
             </div>
         </div>
@@ -2089,6 +2156,7 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
 
 function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSaveTools, onToggleDiscussion, onReorder, teamNames }: { analyses: Analysis[]; onSave: (a: Analysis) => void; onDelete: (id: number) => void; currentUser: string; toolList: string[]; onSaveTools: (list: string[]) => void; onToggleDiscussion: (a: Analysis) => void; onReorder: (list: Analysis[]) => void; teamNames?: string[] }) {
     const MEMBERS = useContext(MembersContext);
+    const confirmDel = useContext(ConfirmDeleteContext);
     const [editing, setEditing] = useState<Analysis | null>(null);
     const [adding, setAdding] = useState(false);
     const [showToolMgr, setShowToolMgr] = useState(false);
@@ -2300,7 +2368,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                             <button onClick={() => { setEditing(selected); setSelected(null); setDetailComment(""); }} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
                             <div className="flex items-center gap-3">
                                 {(currentUser === selected.creator || currentUser === "박일웅") && (
-                                    <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(selected.id); setSelected(null); setDetailComment(""); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                                    <button onClick={() => confirmDel(() => { onDelete(selected.id); setSelected(null); setDetailComment(""); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                                 )}
                                 <button onClick={() => { setSelected(null); setDetailComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                             </div>
@@ -2314,6 +2382,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
 
 function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, currentUser }: { todos: Todo[]; onToggle: (id: number) => void; onAdd: (t: Todo) => void; onUpdate: (t: Todo) => void; onDelete: (id: number) => void; onReorder: (list: Todo[]) => void; currentUser: string }) {
     const MEMBERS = useContext(MembersContext);
+    const confirmDel = useContext(ConfirmDeleteContext);
     const [showForm, setShowForm] = useState(false);
     const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
     const [newText, setNewText] = useState("");
@@ -2654,7 +2723,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                                 <button onClick={() => { onUpdate({ ...editingTodo, text: newText, assignees: newAssignees.length > 0 ? newAssignees : editingTodo.assignees, priority: newPriority, deadline: newDeadline, progress: newProgress, comments: editComments }); setEditingTodo(null); }}
                                     className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                             </div>
-                            <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(editingTodo.id); setEditingTodo(null); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                            <button onClick={() => confirmDel(() => { onDelete(editingTodo.id); setEditingTodo(null); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                         </div>
                     </div>
                 </div>
@@ -2668,6 +2737,7 @@ const TEAM_EMOJIS = ["💧", "⚙️", "🔋", "🌊", "🔬", "🧪", "📐", "
 
 function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams, currentUser }: { papers: Paper[]; todos: Todo[]; experiments: Experiment[]; analyses: Analysis[]; teams: Record<string, TeamData>; onSaveTeams: (t: Record<string, TeamData>) => void; currentUser: string }) {
     const MEMBERS = useContext(MembersContext);
+    const confirmDel = useContext(ConfirmDeleteContext);
     const isPI = currentUser === "박일웅";
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
     const [editingTeam, setEditingTeam] = useState<string | null>(null);
@@ -2846,7 +2916,7 @@ function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams
                                 <button onClick={() => { setEditingTeam(null); setAddingTeam(false); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                                 <button onClick={handleSave} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                             </div>
-                            {editingTeam && isPI && <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { handleDelete(editingTeam); setEditingTeam(null); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
+                            {editingTeam && isPI && <button onClick={() => confirmDel(() => { handleDelete(editingTeam); setEditingTeam(null); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
                         </div>
                     </div>
                 </div>
@@ -2856,6 +2926,7 @@ function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams
 }
 
 function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames }: { patent: Patent | null; onSave: (p: Patent) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; teamNames?: string[] }) {
+    const confirmDel = useContext(ConfirmDeleteContext);
     const isEdit = !!patent;
     const [title, setTitle] = useState(patent?.title || "");
     const [deadline, setDeadline] = useState(patent?.deadline || "");
@@ -2905,7 +2976,7 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
                         <button onClick={() => { if (title.trim()) { onSave({ id: patent?.id ?? Date.now(), title, deadline, status, assignees, creator: patent?.creator || currentUser, createdAt: patent?.createdAt || new Date().toLocaleString("ko-KR"), team }); onClose(); } }}
                             className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
-                    {isEdit && onDelete && <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(patent!.id); onClose(); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
+                    {isEdit && onDelete && <button onClick={() => confirmDel(() => { onDelete(patent!.id); onClose(); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
                 </div>
             </div>
         </div>
@@ -3317,6 +3388,7 @@ const CONF_COL_COLORS: Record<string, { bg: string; border: string; header: stri
 
 function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }: { items: ConferenceTrip[]; onSave: (c: ConferenceTrip) => void; onDelete: (id: number) => void; onReorder: (list: ConferenceTrip[]) => void; currentUser: string }) {
     const MEMBERS = useContext(MembersContext);
+    const confirmDel = useContext(ConfirmDeleteContext);
     const [editing, setEditing] = useState<ConferenceTrip | null>(null);
     const [adding, setAdding] = useState(false);
     const [title, setTitle] = useState("");
@@ -3516,7 +3588,7 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
                                 <button onClick={closeModal} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                                 <button onClick={() => { if (handleSave()) { setAdding(false); setEditing(null); setConfDraftLoaded(false); } }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                             </div>
-                            {isEdit && <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(editing!.id); closeModal(); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
+                            {isEdit && <button onClick={() => confirmDel(() => { onDelete(editing!.id); closeModal(); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
                         </div>
                     </div>
                 </div>
@@ -3529,6 +3601,7 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
 
 function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: { resources: Resource[]; onSave: (r: Resource) => void; onDelete: (id: number) => void; onReorder: (list: Resource[]) => void; currentUser: string }) {
     const MEMBERS = useContext(MembersContext);
+    const confirmDel = useContext(ConfirmDeleteContext);
     const [editing, setEditing] = useState<Resource | null>(null);
     const [adding, setAdding] = useState(false);
     const [title, setTitle] = useState("");
@@ -3671,7 +3744,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
                                 <button onClick={closeModal} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                                 <button onClick={handleSave} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                             </div>
-                            {isEdit && <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(editing!.id); closeModal(); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
+                            {isEdit && <button onClick={() => confirmDel(() => { onDelete(editing!.id); closeModal(); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
                         </div>
                     </div>
                 </div>
@@ -3684,6 +3757,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
 
 function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas: IdeaPost[]; onSave: (i: IdeaPost) => void; onDelete: (id: number) => void; onReorder: (list: IdeaPost[]) => void; currentUser: string }) {
     const MEMBERS = useContext(MembersContext);
+    const confirmDel = useContext(ConfirmDeleteContext);
     const [selected, setSelected] = useState<IdeaPost | null>(null);
     const [adding, setAdding] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -3868,7 +3942,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                             )}
                             <div className="flex items-center gap-3">
                                 {(currentUser === selected.author || currentUser === "박일웅") && (
-                                    <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(selected.id); closeDetail(); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                                    <button onClick={() => confirmDel(() => { onDelete(selected.id); closeDetail(); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                                 )}
                                 <button onClick={closeDetail} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                             </div>
@@ -3913,6 +3987,7 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
     philosophy: Announcement[]; onAddPhilosophy: (text: string) => void; onDeletePhilosophy: (id: number) => void; onUpdatePhilosophy: (p: Announcement) => void; onReorderPhilosophy: (list: Announcement[]) => void;
     currentUser: string;
 }) {
+    const confirmDel = useContext(ConfirmDeleteContext);
     const COLS = [
         { key: "urgent", label: "🚨 긴급", color: "#EF4444", accent: "#FEE2E2" },
         { key: "general", label: "📌 일반", color: "#3B82F6", accent: "#DBEAFE" },
@@ -4085,7 +4160,7 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
                                 <button onClick={() => setEditing(null)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                                 <button onClick={saveEdit} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                             </div>
-                            <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { deleteItem(editing); setEditing(null); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                            <button onClick={() => confirmDel(() => { deleteItem(editing); setEditing(null); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                         </div>
                     </div>
                 </div>
@@ -4278,6 +4353,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
     currentUser: string;
 }) {
     const MEMBERS = useContext(MembersContext);
+    const confirmDel = useContext(ConfirmDeleteContext);
     const [selected, setSelected] = useState<Memo | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [adding, setAdding] = useState(false);
@@ -4430,7 +4506,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                 <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
                     <h3 className="text-[14px] font-bold text-slate-700">💬 PI 채팅</h3>
                     {currentUser === "박일웅" && (
-                        <button onClick={() => { if (confirm("채팅을 모두 삭제하시겠습니까?")) onClearChat(); }} className="text-[11px] text-slate-400 hover:text-red-500">초기화</button>
+                        <button onClick={() => confirmDel(() => onClearChat())} className="text-[11px] text-slate-400 hover:text-red-500">초기화</button>
                     )}
                 </div>
                 <div ref={piChatContainerRef} className="flex-1 overflow-y-auto px-3 py-2">
@@ -4460,7 +4536,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                         <div className="flex-1 h-px bg-slate-200" />
                                     </div>
                                 )}
-                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} group/msg`}
+                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-1" : "mt-4"} group/msg`}
                                     style={{ opacity: msg._sending ? 0.7 : 1 }}>
                                     {!isMe && (
                                         <div className="w-9 flex-shrink-0 mr-2 self-start">
@@ -4473,7 +4549,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                     )}
                                     <div className={`max-w-[85%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
                                         {!isMe && showAvatar && (
-                                            <div className="flex items-baseline gap-2 mb-0.5 px-1">
+                                            <div className="flex items-baseline gap-2 mb-1 px-1">
                                                 <span className="text-[13px] font-semibold text-slate-500">{msg.author}</span>
                                                 <span className="text-[11px] text-slate-400">{timeStr}</span>
                                             </div>
@@ -4483,26 +4559,20 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                                 <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                             </div>
                                         )}
-                                        <div className="relative pt-5" style={{ marginBottom: Object.keys(reactions).length > 0 ? 14 : 0 }}>
+                                        <div className="relative" style={{ marginBottom: Object.keys(reactions).length > 0 ? 14 : 0 }}>
                                             {/* Hover action bar — fixed to top-right of bubble */}
                                             {!msg._sending && !msg._failed && (
-                                                <div className="absolute top-0 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
-                                                    <div className="flex items-center bg-white rounded-full px-1 py-0.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
+                                                <div className="absolute -top-3 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
+                                                    <div className="flex items-center bg-white rounded-full px-2 py-1.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
                                                         {["👍","✅","😂"].map(em => (
                                                             <button key={em} onClick={() => toggleReaction(msg.id, em)}
                                                                 className={`w-7 h-7 flex items-center justify-center rounded-full text-[14px] transition-colors ${reactions[em]?.includes(currentUser) ? "bg-blue-50" : "hover:bg-slate-100"}`}>{em}</button>
                                                         ))}
-                                                        <div className="w-px h-4 bg-slate-200 mx-0.5" />
                                                         <div className="relative">
                                                             <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
                                                                 className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] transition-colors">😊</button>
                                                             {emojiPickerMsgId === msg.id && (
-                                                                <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5 flex gap-1 z-20">
-                                                                    {["👍","❤️","😂","😮","😢","🔥","✅","🎉"].map(em => (
-                                                                        <button key={em} onClick={() => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }}
-                                                                            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-[16px] transition-colors">{em}</button>
-                                                                    ))}
-                                                                </div>
+                                                                <EmojiPickerPopup onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
                                                             )}
                                                         </div>
                                                         <button onClick={() => setChatReplyTo(msg)}
@@ -4517,8 +4587,8 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                                                         className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 노트에 저장</button>
                                                                     {msg.author === currentUser && (<>
                                                                         <div className="h-px bg-slate-100 my-1" />
-                                                                        <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onUpdateChat({ ...msg, deleted: true, text: "", imageUrl: undefined }); setPiMoreMenuMsgId(null); } }}
-                                                                            className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2"><span>🗑</span> 삭제</button>
+                                                                        <button onClick={() => confirmDel(() => { onUpdateChat({ ...msg, deleted: true, text: "", imageUrl: undefined }); setPiMoreMenuMsgId(null); })}
+                                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-600 hover:bg-slate-50 flex items-center gap-2"><span className="text-red-400">🗑</span> 삭제</button>
                                                                     </>)}
                                                                 </div>
                                                             )}
@@ -4528,7 +4598,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                             )}
                                             <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "10px 16px" }}
                                                 className="text-[13.5px] leading-relaxed text-slate-800">
-                                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mb-1 cursor-pointer" onLoad={scrollPiChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
+                                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollPiChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                                 {msg.text && <div className="whitespace-pre-wrap break-words">{msg.text}</div>}
                                             </div>
                                             {Object.keys(reactions).length > 0 && (
@@ -4675,6 +4745,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
 function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, teamNames }: {
     meeting: Meeting | null; onSave: (m: Meeting) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; teamNames: string[];
 }) {
+    const confirmDel = useContext(ConfirmDeleteContext);
     const isEdit = !!meeting;
     const [title, setTitle] = useState(() => { if (meeting) return meeting.title; const d = loadDraft("meeting_add"); if (d) { try { return JSON.parse(d).title || ""; } catch {} } return ""; });
     const [goal, setGoal] = useState(meeting?.goal || "");
@@ -4772,7 +4843,7 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
                         <button onClick={handleClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                         <button onClick={() => { handleSave(); onClose(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
-                    {isEdit && onDelete && <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(meeting!.id); onClose(); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
+                    {isEdit && onDelete && <button onClick={() => confirmDel(() => { onDelete(meeting!.id); onClose(); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
                 </div>
             </div>
         </div>
@@ -4849,6 +4920,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
     board: TeamMemoCard[]; onSaveBoard: (c: TeamMemoCard) => void; onDeleteBoard: (id: number) => void;
 }) {
     const MEMBERS = useContext(MembersContext);
+    const confirmDel = useContext(ConfirmDeleteContext);
     const [text, setText] = useState("");
     const [chatImg, setChatImg] = useState("");
     const [imgUploading, setImgUploading] = useState(false);
@@ -4992,7 +5064,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                 <div className="hidden md:flex px-3 py-2.5 border-b border-slate-100 items-center justify-between">
                     <h3 className="text-[14px] font-bold text-slate-700">💬 연구실 채팅</h3>
                     {currentUser === "박일웅" && (
-                        <button onClick={() => { if (confirm("채팅을 모두 삭제하시겠습니까?")) onClear(); }} className="text-[11px] text-slate-400 hover:text-red-500 transition-colors">초기화</button>
+                        <button onClick={() => confirmDel(() => onClear())} className="text-[11px] text-slate-400 hover:text-red-500 transition-colors">초기화</button>
                     )}
                 </div>
                 <div ref={labChatContainerRef} className="flex-1 overflow-y-auto px-3 py-2">
@@ -5022,7 +5094,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                         <div className="flex-1 h-px bg-slate-200" />
                                     </div>
                                 )}
-                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} group/msg`}
+                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-1" : "mt-4"} group/msg`}
                                     style={{ opacity: msg._sending ? 0.7 : 1 }}>
                                     {!isMe && (
                                         <div className="w-9 flex-shrink-0 mr-2 self-start">
@@ -5035,7 +5107,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                     )}
                                     <div className={`max-w-[75%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
                                         {!isMe && showAvatar && (
-                                            <div className="flex items-baseline gap-2 mb-0.5 px-1">
+                                            <div className="flex items-baseline gap-2 mb-1 px-1">
                                                 <span className="text-[13px] font-semibold text-slate-500">{msg.author}</span>
                                                 <span className="text-[11px] text-slate-400">{timeStr}</span>
                                             </div>
@@ -5045,26 +5117,20 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                                 <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                             </div>
                                         )}
-                                        <div className="relative pt-5" style={{ marginBottom: Object.keys(reactions).length > 0 ? 14 : 0 }}>
+                                        <div className="relative" style={{ marginBottom: Object.keys(reactions).length > 0 ? 14 : 0 }}>
                                             {/* Hover action bar — fixed to top-right of bubble */}
                                             {!msg._sending && !msg._failed && (
-                                                <div className="absolute top-0 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
-                                                    <div className="flex items-center bg-white rounded-full px-1 py-0.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
+                                                <div className="absolute -top-3 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
+                                                    <div className="flex items-center bg-white rounded-full px-2 py-1.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
                                                         {["👍","✅","😂"].map(em => (
                                                             <button key={em} onClick={() => toggleReaction(msg.id, em)}
                                                                 className={`w-7 h-7 flex items-center justify-center rounded-full text-[14px] transition-colors ${reactions[em]?.includes(currentUser) ? "bg-blue-50" : "hover:bg-slate-100"}`}>{em}</button>
                                                         ))}
-                                                        <div className="w-px h-4 bg-slate-200 mx-0.5" />
                                                         <div className="relative">
                                                             <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
                                                                 className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] transition-colors">😊</button>
                                                             {emojiPickerMsgId === msg.id && (
-                                                                <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5 flex gap-1 z-20">
-                                                                    {["👍","❤️","😂","😮","😢","🔥","✅","🎉"].map(em => (
-                                                                        <button key={em} onClick={() => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }}
-                                                                            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-[16px] transition-colors">{em}</button>
-                                                                    ))}
-                                                                </div>
+                                                                <EmojiPickerPopup onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
                                                             )}
                                                         </div>
                                                         <button onClick={() => setReplyTo(msg)}
@@ -5079,8 +5145,8 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                                                         className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 보드에 고정</button>
                                                                     {msg.author === currentUser && (<>
                                                                         <div className="h-px bg-slate-100 my-1" />
-                                                                        <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onUpdate({ ...msg, deleted: true, text: "", imageUrl: undefined }); setMoreMenuMsgId(null); } }}
-                                                                            className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2"><span>🗑</span> 삭제</button>
+                                                                        <button onClick={() => confirmDel(() => { onUpdate({ ...msg, deleted: true, text: "", imageUrl: undefined }); setMoreMenuMsgId(null); })}
+                                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-600 hover:bg-slate-50 flex items-center gap-2"><span className="text-red-400">🗑</span> 삭제</button>
                                                                     </>)}
                                                                 </div>
                                                             )}
@@ -5090,7 +5156,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                             )}
                                             <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "10px 16px" }}
                                                 className="text-[13.5px] leading-relaxed text-slate-800">
-                                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[300px] rounded-md mb-1.5 cursor-pointer" onLoad={scrollLabChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
+                                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1.5 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollLabChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                                 {msg.text && <div className="whitespace-pre-wrap break-words">{msg.text}</div>}
                                             </div>
                                             {Object.keys(reactions).length > 0 && (
@@ -5200,7 +5266,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                             )}
                             <div className="flex items-center gap-3">
                                 {(currentUser === selectedCard.author || currentUser === "박일웅") && (
-                                    <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDeleteBoard(selectedCard.id); setSelectedCard(null); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                                    <button onClick={() => confirmDel(() => { onDeleteBoard(selectedCard.id); setSelectedCard(null); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                                 )}
                                 <button onClick={() => { setSelectedCard(null); setBoardComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                             </div>
@@ -5367,6 +5433,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     onAddFile: (f: LabFile) => void; onDeleteFile: (id: number) => void;
 }) {
     const MEMBERS = useContext(MembersContext);
+    const confirmDel = useContext(ConfirmDeleteContext);
     const [showForm, setShowForm] = useState(false);
     const [editing, setEditing] = useState<TeamMemoCard | null>(null);
     const [selected, setSelected] = useState<TeamMemoCard | null>(null);
@@ -5589,7 +5656,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                 <div className="hidden md:flex px-3 py-2.5 border-b border-slate-100 items-center justify-between">
                     <h4 className="text-[14px] font-bold text-slate-700">💬 채팅</h4>
                     {currentUser === "박일웅" && (
-                        <button onClick={() => { if (confirm("채팅을 모두 삭제하시겠습니까?")) onClearChat(); }} className="text-[11px] text-slate-400 hover:text-red-500 transition-colors">초기화</button>
+                        <button onClick={() => confirmDel(() => onClearChat())} className="text-[11px] text-slate-400 hover:text-red-500 transition-colors">초기화</button>
                     )}
                 </div>
                 <div ref={teamChatContainerRef} className="flex-1 overflow-y-auto px-3 py-2">
@@ -5619,7 +5686,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                         <div className="flex-1 h-px bg-slate-200" />
                                     </div>
                                 )}
-                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} group/msg`}
+                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-1" : "mt-4"} group/msg`}
                                     style={{ opacity: msg._sending ? 0.7 : 1 }}>
                                     {!isMe && (
                                         <div className="w-9 flex-shrink-0 mr-2 self-start">
@@ -5632,7 +5699,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                     )}
                                     <div className={`max-w-[75%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
                                         {!isMe && showAvatar && (
-                                            <div className="flex items-baseline gap-2 mb-0.5 px-1">
+                                            <div className="flex items-baseline gap-2 mb-1 px-1">
                                                 <span className="text-[13px] font-semibold text-slate-500">{msg.author}</span>
                                                 <span className="text-[11px] text-slate-400">{timeStr}</span>
                                             </div>
@@ -5642,26 +5709,20 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                                 <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                             </div>
                                         )}
-                                        <div className="relative pt-5" style={{ marginBottom: (!msg._sending && !msg._failed && Object.keys(reactions).length > 0) ? 14 : 0 }}>
+                                        <div className="relative" style={{ marginBottom: (!msg._sending && !msg._failed && Object.keys(reactions).length > 0) ? 14 : 0 }}>
                                             {/* Hover action bar — fixed to top-right of bubble */}
                                             {!msg._sending && !msg._failed && (
-                                                <div className="absolute top-0 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
-                                                    <div className="flex items-center bg-white rounded-full px-1 py-0.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
+                                                <div className="absolute -top-3 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
+                                                    <div className="flex items-center bg-white rounded-full px-2 py-1.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
                                                         {["👍","✅","😂"].map(em => (
                                                             <button key={em} onClick={() => toggleReaction(msg.id, em)}
                                                                 className={`w-7 h-7 flex items-center justify-center rounded-full text-[14px] transition-colors ${reactions[em]?.includes(currentUser) ? "bg-blue-50" : "hover:bg-slate-100"}`}>{em}</button>
                                                         ))}
-                                                        <div className="w-px h-4 bg-slate-200 mx-0.5" />
                                                         <div className="relative">
                                                             <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
                                                                 className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] transition-colors">😊</button>
                                                             {emojiPickerMsgId === msg.id && (
-                                                                <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5 flex gap-1 z-20">
-                                                                    {["👍","❤️","😂","😮","😢","🔥","✅","🎉"].map(em => (
-                                                                        <button key={em} onClick={() => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }}
-                                                                            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-[16px] transition-colors">{em}</button>
-                                                                    ))}
-                                                                </div>
+                                                                <EmojiPickerPopup onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
                                                             )}
                                                         </div>
                                                         <button onClick={() => setReplyTo(msg)}
@@ -5676,8 +5737,8 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                                                         className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 보드에 고정</button>
                                                                     {msg.author === currentUser && (<>
                                                                         <div className="h-px bg-slate-100 my-1" />
-                                                                        <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onUpdateChat({ ...msg, deleted: true, text: "", imageUrl: undefined }); setMoreMenuMsgId(null); } }}
-                                                                            className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2"><span>🗑</span> 삭제</button>
+                                                                        <button onClick={() => confirmDel(() => { onUpdateChat({ ...msg, deleted: true, text: "", imageUrl: undefined }); setMoreMenuMsgId(null); })}
+                                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-600 hover:bg-slate-50 flex items-center gap-2"><span className="text-red-400">🗑</span> 삭제</button>
                                                                     </>)}
                                                                 </div>
                                                             )}
@@ -5687,7 +5748,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                             )}
                                             <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "10px 16px" }}
                                                 className="text-[13.5px] leading-relaxed text-slate-800">
-                                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[250px] rounded-md mb-1.5 cursor-pointer" onLoad={scrollTeamChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
+                                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1.5 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollTeamChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                                 {msg.text && <div className="whitespace-pre-wrap break-words">{msg.text}</div>}
                                             </div>
                                             {!msg._sending && !msg._failed && Object.keys(reactions).length > 0 && (
@@ -5775,7 +5836,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                         <div className="flex items-center justify-between p-4 border-t border-slate-200">
                             <button onClick={startEdit} className="px-3 py-1.5 text-[13px] text-blue-600 hover:bg-blue-50 rounded-lg font-medium">수정</button>
                             <div className="flex items-center gap-3">
-                                <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDeleteCard(selected.id); setSelected(null); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                                <button onClick={() => confirmDel(() => { onDeleteCard(selected.id); setSelected(null); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                                 <button onClick={() => setSelected(null)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                             </div>
                         </div>
@@ -6373,6 +6434,7 @@ export default function DashboardPage() {
     const [onlineUsers, setOnlineUsers] = useState<Array<{ name: string; timestamp: number }>>([]);
     const [members, setMembers] = useState<Record<string, { team: string; role: string; emoji: string }>>(DEFAULT_MEMBERS);
     const memberNames = useMemo(() => Object.keys(members).filter(k => k !== "박일웅"), [members]);
+    const { confirm: confirmDel, dialog: confirmDialog } = useConfirmDelete();
 
     // Paper modal state
     const [paperModal, setPaperModal] = useState<{ paper: Paper | null; mode: "add" | "edit" } | null>(null);
@@ -7076,6 +7138,7 @@ export default function DashboardPage() {
     return (
         <MembersContext.Provider value={displayMembers}>
         <SavingContext.Provider value={savingIds}>
+        <ConfirmDeleteContext.Provider value={confirmDel}>
         <div className="min-h-screen bg-[#F8FAFC] text-slate-800 leading-normal" style={{ fontFamily: "'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif" }}>
 
             {/* Mobile top header */}
@@ -7289,7 +7352,9 @@ export default function DashboardPage() {
                     {toast}
                 </div>
             )}
+        {confirmDialog}
         </div>
+        </ConfirmDeleteContext.Provider>
         </SavingContext.Provider>
         </MembersContext.Provider>
     );
