@@ -7937,8 +7937,8 @@ export default function DashboardPage() {
     const [notiSettingsOpen, setNotiSettingsOpen] = useState(false);
     const [experimentLogs, setExperimentLogs] = useState<Record<string, ExpLogEntry[]>>({});
     const [analysisLogs, setAnalysisLogs] = useState<Record<string, AnalysisLogEntry[]>>({});
-    const [expLogCategories, setExpLogCategories] = useState<Record<string, string[]>>({});
-    const [analysisLogCategories, setAnalysisLogCategories] = useState<Record<string, string[]>>({});
+    const [expLogCategories, setExpLogCategories] = useState<Record<string, Array<{name: string; members: string[]}>>>({});
+    const [analysisLogCategories, setAnalysisLogCategories] = useState<Record<string, Array<{name: string; members: string[]}>>>({});
     const [showExpMgr, setShowExpMgr] = useState(false);
     const [showAnalysisMgr, setShowAnalysisMgr] = useState(false);
     const [newExpCat, setNewExpCat] = useState("");
@@ -8103,13 +8103,13 @@ export default function DashboardPage() {
                 // Migrate: if old book format (has 'entries'), flatten to flat entries with category
                 const raw = d.experimentLogs as Record<string, unknown>;
                 const migrated: Record<string, ExpLogEntry[]> = {};
-                const migratedCats: Record<string, string[]> = {};
+                const migratedCats: Record<string, Array<{name: string; members: string[]}>> = {};
                 for (const [team, val] of Object.entries(raw)) {
                     if (Array.isArray(val) && val.length > 0 && 'entries' in val[0]) {
                         // Book format → flatten
                         const books = val as Array<{ name: string; entries: ExpLogEntry[] }>;
                         migrated[team] = books.flatMap(b => b.entries.map(e => ({ ...e, category: e.category || b.name })));
-                        migratedCats[team] = books.map(b => b.name);
+                        migratedCats[team] = books.map(b => ({ name: b.name, members: [] }));
                     } else if (Array.isArray(val)) {
                         migrated[team] = val as ExpLogEntry[];
                     }
@@ -8129,12 +8129,12 @@ export default function DashboardPage() {
             if (d.analysisLogs) {
                 const rawA = d.analysisLogs as Record<string, unknown>;
                 const migratedA: Record<string, AnalysisLogEntry[]> = {};
-                const migratedACats: Record<string, string[]> = {};
+                const migratedACats: Record<string, Array<{name: string; members: string[]}>> = {};
                 for (const [team, val] of Object.entries(rawA)) {
                     if (Array.isArray(val) && val.length > 0 && 'entries' in val[0]) {
                         const books = val as Array<{ name: string; entries: AnalysisLogEntry[] }>;
                         migratedA[team] = books.flatMap(b => b.entries.map(e => ({ ...e, category: e.category || b.name })));
-                        migratedACats[team] = books.map(b => b.name);
+                        migratedACats[team] = books.map(b => ({ name: b.name, members: [] }));
                     } else if (Array.isArray(val)) {
                         migratedA[team] = val as AnalysisLogEntry[];
                     }
@@ -8150,8 +8150,22 @@ export default function DashboardPage() {
                     });
                 }
             }
-            if (d.experimentLogCategories) setExpLogCategories(d.experimentLogCategories);
-            if (d.analysisLogCategories) setAnalysisLogCategories(d.analysisLogCategories);
+            if (d.experimentLogCategories) {
+                const raw = d.experimentLogCategories as Record<string, unknown[]>;
+                const norm: Record<string, Array<{name: string; members: string[]}>> = {};
+                for (const [t, cats] of Object.entries(raw)) {
+                    norm[t] = (cats || []).map((c: unknown) => typeof c === "string" ? { name: c, members: [] } : c as {name: string; members: string[]});
+                }
+                setExpLogCategories(norm);
+            }
+            if (d.analysisLogCategories) {
+                const raw = d.analysisLogCategories as Record<string, unknown[]>;
+                const norm: Record<string, Array<{name: string; members: string[]}>> = {};
+                for (const [t, cats] of Object.entries(raw)) {
+                    norm[t] = (cats || []).map((c: unknown) => typeof c === "string" ? { name: c, members: [] } : c as {name: string; members: string[]});
+                }
+                setAnalysisLogCategories(norm);
+            }
             if (d.analysisToolList) setAnalysisToolList(d.analysisToolList);
             if (d.paperTagList) setPaperTagList(d.paperTagList);
             if (d.members && Object.keys(d.members).length > 0) {
@@ -8575,7 +8589,7 @@ export default function DashboardPage() {
             return toSave;
         });
     };
-    const handleSaveExpLogCategories = (teamName: string, cats: string[]) => {
+    const handleSaveExpLogCategories = (teamName: string, cats: Array<{name: string; members: string[]}>) => {
         pendingSavesRef.current++;
         setExpLogCategories(prev => {
             const toSave = { ...prev, [teamName]: cats };
@@ -8603,7 +8617,7 @@ export default function DashboardPage() {
             return toSave;
         });
     };
-    const handleSaveAnalysisLogCategories = (teamName: string, cats: string[]) => {
+    const handleSaveAnalysisLogCategories = (teamName: string, cats: Array<{name: string; members: string[]}>) => {
         pendingSavesRef.current++;
         setAnalysisLogCategories(prev => {
             const toSave = { ...prev, [teamName]: cats };
@@ -8613,7 +8627,7 @@ export default function DashboardPage() {
     };
     const handleRenameExpLogCategory = (teamName: string, oldName: string, newName: string) => {
         if (!newName.trim() || newName === oldName) return;
-        handleSaveExpLogCategories(teamName, (expLogCategories[teamName] || []).map(c => c === oldName ? newName : c));
+        handleSaveExpLogCategories(teamName, (expLogCategories[teamName] || []).map(c => c.name === oldName ? { ...c, name: newName } : c));
         // Update entries referencing old category
         pendingSavesRef.current++;
         setExperimentLogs(prev => {
@@ -8626,7 +8640,7 @@ export default function DashboardPage() {
     };
     const handleRenameAnalysisLogCategory = (teamName: string, oldName: string, newName: string) => {
         if (!newName.trim() || newName === oldName) return;
-        handleSaveAnalysisLogCategories(teamName, (analysisLogCategories[teamName] || []).map(c => c === oldName ? newName : c));
+        handleSaveAnalysisLogCategories(teamName, (analysisLogCategories[teamName] || []).map(c => c.name === oldName ? { ...c, name: newName } : c));
         pendingSavesRef.current++;
         setAnalysisLogs(prev => {
             const entries = (prev[teamName] || []).map(e => e.category === oldName ? { ...e, category: newName } : e);
@@ -9146,13 +9160,13 @@ export default function DashboardPage() {
                                     {/* Sub-menus for team log categories */}
                                     {tab.id.startsWith("teamMemo_") && (() => {
                                         const tName = tab.id.replace("teamMemo_", "");
-                                        const expCats = expLogCategories[tName] || [];
-                                        const anaCats = analysisLogCategories[tName] || [];
+                                        const expCats = (expLogCategories[tName] || []).filter(c => c.members.length === 0 || c.members.includes(userName));
+                                        const anaCats = (analysisLogCategories[tName] || []).filter(c => c.members.length === 0 || c.members.includes(userName));
                                         if (expCats.length === 0 && anaCats.length === 0) return null;
                                         return (
                                             <div className="hidden md:block">
                                                 {expCats.map(cat => {
-                                                    const subId = `expLog_${tName}_${cat}`;
+                                                    const subId = `expLog_${tName}_${cat.name}`;
                                                     const isSubActive = activeTab === subId;
                                                     return (
                                                         <button key={subId} onClick={() => setActiveTab(subId)}
@@ -9162,12 +9176,12 @@ export default function DashboardPage() {
                                                             onMouseLeave={e => { if (!isSubActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = isSubActive ? "#FFFFFF" : "#64748B"; } }}>
                                                             {isSubActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-3.5 rounded-sm bg-blue-400" />}
                                                             <span className="text-[12px]">✏️</span>
-                                                            <span>{cat}</span>
+                                                            <span>{cat.name}</span>
                                                         </button>
                                                     );
                                                 })}
                                                 {anaCats.map(cat => {
-                                                    const subId = `analysisLog_${tName}_${cat}`;
+                                                    const subId = `analysisLog_${tName}_${cat.name}`;
                                                     const isSubActive = activeTab === subId;
                                                     return (
                                                         <button key={subId} onClick={() => setActiveTab(subId)}
@@ -9177,7 +9191,7 @@ export default function DashboardPage() {
                                                             onMouseLeave={e => { if (!isSubActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = isSubActive ? "#FFFFFF" : "#64748B"; } }}>
                                                             {isSubActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-3.5 rounded-sm bg-blue-400" />}
                                                             <span className="text-[12px]">💻</span>
-                                                            <span>{cat}</span>
+                                                            <span>{cat.name}</span>
                                                         </button>
                                                     );
                                                 })}
@@ -9261,29 +9275,63 @@ export default function DashboardPage() {
                     {showExpMgr && (() => {
                         const tName = activeTab.replace("teamMemo_", "");
                         const cats = expLogCategories[tName] || [];
+                        const teamInfo = teams[tName];
+                        const teamMembers = teamInfo ? [teamInfo.lead, ...teamInfo.members].filter(Boolean) : [];
+                        const toggleExpMember = (catIdx: number, member: string) => {
+                            const updated = cats.map((c, i) => {
+                                if (i !== catIdx) return c;
+                                const ms = c.members.includes(member) ? c.members.filter(m => m !== member) : [...c.members, member];
+                                return { ...c, members: ms };
+                            });
+                            handleSaveExpLogCategories(tName, updated);
+                        };
+                        const toggleExpAll = (catIdx: number) => {
+                            const updated = cats.map((c, i) => i !== catIdx ? c : { ...c, members: [] });
+                            handleSaveExpLogCategories(tName, updated);
+                        };
                         return (
                             <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setShowExpMgr(false); setEditingCat(null); }}>
-                                <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:480}} onClick={e => e.stopPropagation()}>
+                                <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:520}} onClick={e => e.stopPropagation()}>
                                     <div className="flex items-center justify-between mb-4">
                                         <h3 className="text-[15px] font-bold text-slate-800">실험일지 관리</h3>
                                         <button onClick={() => { setShowExpMgr(false); setEditingCat(null); }} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
                                     </div>
                                     <div className="mb-4">
-                                        {cats.map((t, i) => (
-                                            <div key={t} className="flex items-center gap-2 px-2 py-2" style={i < cats.length - 1 ? { borderBottom: "1px solid #F1F5F9" } : {}}>
-                                                <span className="text-[12px] text-slate-400 w-5 text-right shrink-0">{i + 1}.</span>
-                                                {editingCat === `exp_${t}` ? (
-                                                    <input autoFocus value={editingCatVal} onChange={e => setEditingCatVal(e.target.value)}
-                                                        className="flex-1 border border-blue-300 rounded px-2 py-0.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                                        onKeyDown={e => { if (e.key === "Enter") { const nv = editingCatVal.trim(); if (nv && nv !== t) handleRenameExpLogCategory(tName, t, nv); setEditingCat(null); } if (e.key === "Escape") setEditingCat(null); }}
-                                                        onBlur={() => { const nv = editingCatVal.trim(); if (nv && nv !== t) handleRenameExpLogCategory(tName, t, nv); setEditingCat(null); }} />
-                                                ) : (
-                                                    <span className="flex-1 text-[13px] text-slate-700">{t}</span>
+                                        {cats.map((cat, i) => (
+                                            <div key={cat.name} style={i < cats.length - 1 ? { borderBottom: "1px solid #F1F5F9" } : {}}>
+                                                <div className="flex items-center gap-2 px-2 py-2">
+                                                    <span className="text-[12px] text-slate-400 w-5 text-right shrink-0">{i + 1}.</span>
+                                                    {editingCat === `exp_${cat.name}` ? (
+                                                        <input autoFocus value={editingCatVal} onChange={e => setEditingCatVal(e.target.value)}
+                                                            className="flex-1 border border-blue-300 rounded px-2 py-0.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                            onKeyDown={e => { if (e.key === "Enter") { const nv = editingCatVal.trim(); if (nv && nv !== cat.name) handleRenameExpLogCategory(tName, cat.name, nv); setEditingCat(null); } if (e.key === "Escape") setEditingCat(null); }}
+                                                            onBlur={() => { const nv = editingCatVal.trim(); if (nv && nv !== cat.name) handleRenameExpLogCategory(tName, cat.name, nv); setEditingCat(null); }} />
+                                                    ) : (
+                                                        <span className="flex-1 text-[13px] text-slate-700">{cat.name}</span>
+                                                    )}
+                                                    <button onClick={() => { setEditingCat(`exp_${cat.name}`); setEditingCatVal(cat.name); }}
+                                                        className="text-[13px] text-slate-300 hover:text-blue-500 transition-colors p-0.5" title="이름 수정">✏️</button>
+                                                    <button onClick={() => { if (confirm(`'${cat.name}' 일지를 삭제하시겠습니까?`)) { handleSaveExpLogCategories(tName, cats.filter(x => x.name !== cat.name)); } }}
+                                                        className="text-[13px] text-slate-300 hover:text-red-500 transition-colors p-0.5" title="삭제">🗑️</button>
+                                                </div>
+                                                {teamMembers.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1 px-2 pb-2 ml-7">
+                                                        <button onClick={() => toggleExpAll(i)}
+                                                            className="px-2 py-0.5 rounded-full text-[11px] font-medium transition-colors"
+                                                            style={{ background: cat.members.length === 0 ? "#3B82F6" : "transparent", color: cat.members.length === 0 ? "#FFF" : "#64748B", border: cat.members.length === 0 ? "1px solid #3B82F6" : "1px solid #CBD5E1" }}>전체</button>
+                                                        {teamMembers.map(m => {
+                                                            const sel = cat.members.includes(m);
+                                                            const emoji = displayMembers[m]?.emoji || "";
+                                                            return (
+                                                                <button key={m} onClick={() => toggleExpMember(i, m)}
+                                                                    className="px-2 py-0.5 rounded-full text-[11px] font-medium transition-colors"
+                                                                    style={{ background: sel ? "#3B82F6" : "transparent", color: sel ? "#FFF" : "#64748B", border: sel ? "1px solid #3B82F6" : "1px solid #CBD5E1" }}>
+                                                                    {emoji} {m}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 )}
-                                                <button onClick={() => { setEditingCat(`exp_${t}`); setEditingCatVal(t); }}
-                                                    className="text-[13px] text-slate-300 hover:text-blue-500 transition-colors p-0.5" title="이름 수정">✏️</button>
-                                                <button onClick={() => { if (confirm(`'${t}' 일지를 삭제하시겠습니까?`)) { handleSaveExpLogCategories(tName, cats.filter(x => x !== t)); } }}
-                                                    className="text-[13px] text-slate-300 hover:text-red-500 transition-colors p-0.5" title="삭제">🗑️</button>
                                             </div>
                                         ))}
                                         {cats.length === 0 && <p className="text-[13px] text-slate-400 text-center py-4">등록된 실험일지가 없습니다</p>}
@@ -9291,8 +9339,8 @@ export default function DashboardPage() {
                                     <div className="flex gap-2 mb-4">
                                         <input value={newExpCat} onChange={e => setNewExpCat(e.target.value)} placeholder="새 실험일지 이름 입력"
                                             className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                            onKeyDown={e => { if (e.key === "Enter" && newExpCat.trim() && !cats.includes(newExpCat.trim())) { handleSaveExpLogCategories(tName, [...cats, newExpCat.trim()]); setNewExpCat(""); } }} />
-                                        <button onClick={() => { if (newExpCat.trim() && !cats.includes(newExpCat.trim())) { handleSaveExpLogCategories(tName, [...cats, newExpCat.trim()]); setNewExpCat(""); } }}
+                                            onKeyDown={e => { if (e.key === "Enter" && newExpCat.trim() && !cats.some(c => c.name === newExpCat.trim())) { handleSaveExpLogCategories(tName, [...cats, { name: newExpCat.trim(), members: [] }]); setNewExpCat(""); } }} />
+                                        <button onClick={() => { if (newExpCat.trim() && !cats.some(c => c.name === newExpCat.trim())) { handleSaveExpLogCategories(tName, [...cats, { name: newExpCat.trim(), members: [] }]); setNewExpCat(""); } }}
                                             className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">추가</button>
                                     </div>
                                     <div className="flex justify-end">
@@ -9305,29 +9353,63 @@ export default function DashboardPage() {
                     {showAnalysisMgr && (() => {
                         const tName = activeTab.replace("teamMemo_", "");
                         const cats = analysisLogCategories[tName] || [];
+                        const teamInfo = teams[tName];
+                        const teamMembers = teamInfo ? [teamInfo.lead, ...teamInfo.members].filter(Boolean) : [];
+                        const toggleAnaMember = (catIdx: number, member: string) => {
+                            const updated = cats.map((c, i) => {
+                                if (i !== catIdx) return c;
+                                const ms = c.members.includes(member) ? c.members.filter(m => m !== member) : [...c.members, member];
+                                return { ...c, members: ms };
+                            });
+                            handleSaveAnalysisLogCategories(tName, updated);
+                        };
+                        const toggleAnaAll = (catIdx: number) => {
+                            const updated = cats.map((c, i) => i !== catIdx ? c : { ...c, members: [] });
+                            handleSaveAnalysisLogCategories(tName, updated);
+                        };
                         return (
                             <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setShowAnalysisMgr(false); setEditingCat(null); }}>
-                                <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:480}} onClick={e => e.stopPropagation()}>
+                                <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:520}} onClick={e => e.stopPropagation()}>
                                     <div className="flex items-center justify-between mb-4">
                                         <h3 className="text-[15px] font-bold text-slate-800">해석일지 관리</h3>
                                         <button onClick={() => { setShowAnalysisMgr(false); setEditingCat(null); }} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
                                     </div>
                                     <div className="mb-4">
-                                        {cats.map((t, i) => (
-                                            <div key={t} className="flex items-center gap-2 px-2 py-2" style={i < cats.length - 1 ? { borderBottom: "1px solid #F1F5F9" } : {}}>
-                                                <span className="text-[12px] text-slate-400 w-5 text-right shrink-0">{i + 1}.</span>
-                                                {editingCat === `ana_${t}` ? (
-                                                    <input autoFocus value={editingCatVal} onChange={e => setEditingCatVal(e.target.value)}
-                                                        className="flex-1 border border-blue-300 rounded px-2 py-0.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                                        onKeyDown={e => { if (e.key === "Enter") { const nv = editingCatVal.trim(); if (nv && nv !== t) handleRenameAnalysisLogCategory(tName, t, nv); setEditingCat(null); } if (e.key === "Escape") setEditingCat(null); }}
-                                                        onBlur={() => { const nv = editingCatVal.trim(); if (nv && nv !== t) handleRenameAnalysisLogCategory(tName, t, nv); setEditingCat(null); }} />
-                                                ) : (
-                                                    <span className="flex-1 text-[13px] text-slate-700">{t}</span>
+                                        {cats.map((cat, i) => (
+                                            <div key={cat.name} style={i < cats.length - 1 ? { borderBottom: "1px solid #F1F5F9" } : {}}>
+                                                <div className="flex items-center gap-2 px-2 py-2">
+                                                    <span className="text-[12px] text-slate-400 w-5 text-right shrink-0">{i + 1}.</span>
+                                                    {editingCat === `ana_${cat.name}` ? (
+                                                        <input autoFocus value={editingCatVal} onChange={e => setEditingCatVal(e.target.value)}
+                                                            className="flex-1 border border-blue-300 rounded px-2 py-0.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                            onKeyDown={e => { if (e.key === "Enter") { const nv = editingCatVal.trim(); if (nv && nv !== cat.name) handleRenameAnalysisLogCategory(tName, cat.name, nv); setEditingCat(null); } if (e.key === "Escape") setEditingCat(null); }}
+                                                            onBlur={() => { const nv = editingCatVal.trim(); if (nv && nv !== cat.name) handleRenameAnalysisLogCategory(tName, cat.name, nv); setEditingCat(null); }} />
+                                                    ) : (
+                                                        <span className="flex-1 text-[13px] text-slate-700">{cat.name}</span>
+                                                    )}
+                                                    <button onClick={() => { setEditingCat(`ana_${cat.name}`); setEditingCatVal(cat.name); }}
+                                                        className="text-[13px] text-slate-300 hover:text-blue-500 transition-colors p-0.5" title="이름 수정">✏️</button>
+                                                    <button onClick={() => { if (confirm(`'${cat.name}' 일지를 삭제하시겠습니까?`)) { handleSaveAnalysisLogCategories(tName, cats.filter(x => x.name !== cat.name)); } }}
+                                                        className="text-[13px] text-slate-300 hover:text-red-500 transition-colors p-0.5" title="삭제">🗑️</button>
+                                                </div>
+                                                {teamMembers.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1 px-2 pb-2 ml-7">
+                                                        <button onClick={() => toggleAnaAll(i)}
+                                                            className="px-2 py-0.5 rounded-full text-[11px] font-medium transition-colors"
+                                                            style={{ background: cat.members.length === 0 ? "#3B82F6" : "transparent", color: cat.members.length === 0 ? "#FFF" : "#64748B", border: cat.members.length === 0 ? "1px solid #3B82F6" : "1px solid #CBD5E1" }}>전체</button>
+                                                        {teamMembers.map(m => {
+                                                            const sel = cat.members.includes(m);
+                                                            const emoji = displayMembers[m]?.emoji || "";
+                                                            return (
+                                                                <button key={m} onClick={() => toggleAnaMember(i, m)}
+                                                                    className="px-2 py-0.5 rounded-full text-[11px] font-medium transition-colors"
+                                                                    style={{ background: sel ? "#3B82F6" : "transparent", color: sel ? "#FFF" : "#64748B", border: sel ? "1px solid #3B82F6" : "1px solid #CBD5E1" }}>
+                                                                    {emoji} {m}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 )}
-                                                <button onClick={() => { setEditingCat(`ana_${t}`); setEditingCatVal(t); }}
-                                                    className="text-[13px] text-slate-300 hover:text-blue-500 transition-colors p-0.5" title="이름 수정">✏️</button>
-                                                <button onClick={() => { if (confirm(`'${t}' 일지를 삭제하시겠습니까?`)) { handleSaveAnalysisLogCategories(tName, cats.filter(x => x !== t)); } }}
-                                                    className="text-[13px] text-slate-300 hover:text-red-500 transition-colors p-0.5" title="삭제">🗑️</button>
                                             </div>
                                         ))}
                                         {cats.length === 0 && <p className="text-[13px] text-slate-400 text-center py-4">등록된 해석일지가 없습니다</p>}
@@ -9335,8 +9417,8 @@ export default function DashboardPage() {
                                     <div className="flex gap-2 mb-4">
                                         <input value={newAnalysisCat} onChange={e => setNewAnalysisCat(e.target.value)} placeholder="새 해석일지 이름 입력"
                                             className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                            onKeyDown={e => { if (e.key === "Enter" && newAnalysisCat.trim() && !cats.includes(newAnalysisCat.trim())) { handleSaveAnalysisLogCategories(tName, [...cats, newAnalysisCat.trim()]); setNewAnalysisCat(""); } }} />
-                                        <button onClick={() => { if (newAnalysisCat.trim() && !cats.includes(newAnalysisCat.trim())) { handleSaveAnalysisLogCategories(tName, [...cats, newAnalysisCat.trim()]); setNewAnalysisCat(""); } }}
+                                            onKeyDown={e => { if (e.key === "Enter" && newAnalysisCat.trim() && !cats.some(c => c.name === newAnalysisCat.trim())) { handleSaveAnalysisLogCategories(tName, [...cats, { name: newAnalysisCat.trim(), members: [] }]); setNewAnalysisCat(""); } }} />
+                                        <button onClick={() => { if (newAnalysisCat.trim() && !cats.some(c => c.name === newAnalysisCat.trim())) { handleSaveAnalysisLogCategories(tName, [...cats, { name: newAnalysisCat.trim(), members: [] }]); setNewAnalysisCat(""); } }}
                                             className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">추가</button>
                                     </div>
                                     <div className="flex justify-end">
@@ -9395,7 +9477,7 @@ export default function DashboardPage() {
                         return <ExpLogView teamName={catName} entries={entries} onSave={entry => {
                             const tagged = { ...entry, category: catName };
                             handleSaveExpLogEntry(tName, tagged);
-                        }} onDelete={id => handleDeleteExpLogEntry(tName, id)} currentUser={userName} categories={expLogCategories[tName] || []} />;
+                        }} onDelete={id => handleDeleteExpLogEntry(tName, id)} currentUser={userName} categories={(expLogCategories[tName] || []).map(c => c.name)} />;
                     })()}
                     {activeTab.startsWith("analysisLog_") && (() => {
                         const rest = activeTab.replace("analysisLog_", "");
@@ -9406,7 +9488,7 @@ export default function DashboardPage() {
                         return <AnalysisLogView bookName={catName} entries={entries} onSave={entry => {
                             const tagged = { ...entry, category: catName };
                             handleSaveAnalysisLogEntry(tName, tagged);
-                        }} onDelete={id => handleDeleteAnalysisLogEntry(tName, id)} currentUser={userName} categories={analysisLogCategories[tName] || []} />;
+                        }} onDelete={id => handleDeleteAnalysisLogEntry(tName, id)} currentUser={userName} categories={(analysisLogCategories[tName] || []).map(c => c.name)} />;
                     })()}
                 </div>
             </div>
