@@ -38,7 +38,7 @@ const ALLOWED_SECTIONS = new Set([
     "reports", "teams", "dailyTargets", "philosophy", "resources",
     "ideas", "analyses", "chatPosts", "customEmojis", "statusMessages",
     "equipmentList", "personalMemos", "personalFiles", "piChat", "teamMemos", "labChat", "labBoard", "labFiles", "meetings", "analysisToolList", "paperTagList",
-    "members", "online", "dispatches",
+    "members", "online", "dispatches", "readReceipts", "pushPrefs", "experimentLogs", "analysisLogs",
 ]);
 
 async function appendLog(logKey: string, entry: Record<string, unknown>) {
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 
         if (section === 'all') {
             // Return all dashboard data at once
-            const keys = ["announcements","papers","experiments","todos","conferences","lectures","patents","vacations","schedule","timetable","reports","teams","dailyTargets","philosophy","resources","ideas","analyses","chatPosts","customEmojis","statusMessages","equipmentList","personalMemos","personalFiles","piChat","teamMemos","labChat","labBoard","labFiles","meetings","analysisToolList","paperTagList","members","dispatches"];
+            const keys = ["announcements","papers","experiments","todos","conferences","lectures","patents","vacations","schedule","timetable","reports","teams","dailyTargets","philosophy","resources","ideas","analyses","chatPosts","customEmojis","statusMessages","equipmentList","personalMemos","personalFiles","piChat","teamMemos","labChat","labBoard","labFiles","meetings","analysisToolList","paperTagList","members","dispatches","readReceipts","pushPrefs","experimentLogs","analysisLogs"];
             const results = await Promise.all(keys.map(k => getKey(`${DASHBOARD_PREFIX}${k}`)));
             const out: Record<string, unknown> = {};
             keys.forEach((k, i) => { out[k] = results[i] ? JSON.parse(results[i] as string) : null; });
@@ -142,9 +142,106 @@ export async function POST(request: NextRequest) {
         // Save section data
         await setKey(`${DASHBOARD_PREFIX}${section}`, JSON.stringify(data));
         // Log modification (skip frequent/noisy sections)
-        if (userName && !['online'].includes(section)) {
+        if (userName && !['online', 'readReceipts'].includes(section)) {
             await appendLog(`${LOG_PREFIX}modifications`, { userName, section, action: 'update' });
         }
+
+        // Fire-and-forget push notifications for all meaningful sections
+        const PUSH_SILENT = new Set(['online', 'readReceipts', 'statusMessages', 'customEmojis', 'members', 'pushPrefs']);
+        if (userName && !PUSH_SILENT.has(section)) {
+            const pushUrl = new URL('/api/push/send', request.url);
+            try {
+                const membersRaw = await getKey(`${DASHBOARD_PREFIX}members`);
+                const membersData = membersRaw ? JSON.parse(membersRaw) : {};
+                const allMembers = Object.keys(membersData);
+
+                // Load per-user push preferences
+                const prefsRaw = await getKey(`${DASHBOARD_PREFIX}pushPrefs`);
+                const pushPrefs: Record<string, Record<string, boolean>> = prefsRaw ? JSON.parse(prefsRaw) : {};
+
+                // Map section → push category
+                const PUSH_CATEGORY: Record<string, string> = {
+                    labChat: 'chat', teamMemos: 'chat', piChat: 'chat',
+                    announcements: 'announcement',
+                    labBoard: 'board', labFiles: 'board',
+                    papers: 'research', reports: 'research', experiments: 'research', analyses: 'research', patents: 'research',
+                };
+                const category = PUSH_CATEGORY[section] || 'other';
+
+                // Filter users who have this category enabled (default: all on)
+                const filterByPrefs = (users: string[]) =>
+                    users.filter(u => {
+                        const prefs = pushPrefs[u];
+                        if (!prefs) return true; // no prefs = all enabled
+                        return prefs[category] !== false; // explicit false = disabled
+                    });
+
+                const SECTION_LABELS: Record<string, string> = {
+                    labChat: '연구실 채팅에 새 메시지',
+                    announcements: '공지사항을 등록했습니다',
+                    teamMemos: '팀 메모에 새 메시지',
+                    piChat: '1:1 메시지가 도착했습니다',
+                    papers: '논문을 업데이트했습니다',
+                    reports: '보고서를 업데이트했습니다',
+                    experiments: '실험을 업데이트했습니다',
+                    analyses: '해석을 업데이트했습니다',
+                    patents: '특허를 업데이트했습니다',
+                    todos: '할일을 업데이트했습니다',
+                    schedule: '일정을 업데이트했습니다',
+                    timetable: '시간표를 업데이트했습니다',
+                    conferences: '학회 정보를 업데이트했습니다',
+                    lectures: '강의를 업데이트했습니다',
+                    vacations: '휴가를 업데이트했습니다',
+                    dailyTargets: '일일 목표를 업데이트했습니다',
+                    ideas: '아이디어를 업데이트했습니다',
+                    resources: '자료를 업데이트했습니다',
+                    equipmentList: '장비 목록을 업데이트했습니다',
+                    meetings: '회의를 업데이트했습니다',
+                    labBoard: '게시판에 새 글을 작성했습니다',
+                    labFiles: '파일을 업데이트했습니다',
+                    dispatches: '파견을 업데이트했습니다',
+                    philosophy: '연구 철학을 업데이트했습니다',
+                    teams: '팀 구성을 업데이트했습니다',
+                    personalMemos: '개인 메모를 업데이트했습니다',
+                    personalFiles: '개인 파일을 업데이트했습니다',
+                    chatPosts: '게시물을 업데이트했습니다',
+                    analysisToolList: '해석 도구를 업데이트했습니다',
+                    paperTagList: '논문 태그를 업데이트했습니다',
+                };
+
+                if (section === 'piChat') {
+                    const piChatData = data as Record<string, unknown[]>;
+                    const targetPeople = Object.keys(piChatData);
+                    const targets = filterByPrefs([...new Set([...targetPeople, '박일웅'])]);
+                    fetch(pushUrl.toString(), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            targetUsers: targets,
+                            excludeUser: userName,
+                            title: `${userName}`,
+                            body: SECTION_LABELS.piChat,
+                            tag: 'piChat',
+                        }),
+                    }).catch(() => {});
+                } else {
+                    const filteredMembers = filterByPrefs(allMembers);
+                    const body = SECTION_LABELS[section] || `${section}을(를) 업데이트했습니다`;
+                    fetch(pushUrl.toString(), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            targetUsers: filteredMembers,
+                            excludeUser: userName,
+                            title: `${userName}`,
+                            body,
+                            tag: section,
+                        }),
+                    }).catch(() => {});
+                }
+            } catch {} // push is best-effort
+        }
+
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Dashboard POST error:', error);

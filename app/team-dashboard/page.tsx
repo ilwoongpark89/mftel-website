@@ -122,16 +122,16 @@ function slotToTime(slot: number) {
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type Comment = { id: number; author: string; text: string; date: string; imageUrl?: string };
-type Paper = { id: number; title: string; journal: string; status: string; assignees: string[]; tags: string[]; deadline: string; progress: number; comments: Comment[]; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string };
+type Paper = { id: number; title: string; journal: string; status: string; assignees: string[]; tags: string[]; deadline: string; progress: number; comments: Comment[]; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string; files?: LabFile[] };
 type Todo = { id: number; text: string; assignees: string[]; done: boolean; priority: string; deadline: string; progress?: number; needsDiscussion?: boolean; comments?: Comment[] };
 type ExperimentLog = { id: number; date: string; author: string; text: string; imageUrl?: string };
-type Experiment = { id: number; title: string; equipment: string; status: string; assignees: string[]; goal: string; startDate: string; endDate: string; logs: ExperimentLog[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string };
+type Experiment = { id: number; title: string; equipment: string; status: string; assignees: string[]; goal: string; startDate: string; endDate: string; logs: ExperimentLog[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string; files?: LabFile[] };
 type Announcement = { id: number; text: string; author: string; date: string; pinned: boolean };
 type VacationEntry = { name: string; date: string; type: string };
 type ScheduleEvent = { name: string; date: string; type: string; description: string };
 type TimetableBlock = { id: number; day: number; startSlot: number; endSlot: number; name: string; students: string[]; color: string };
 type ChecklistItem = { id: number; text: string; done: boolean };
-type Report = { id: number; title: string; assignees: string[]; creator: string; deadline: string; progress: number; comments: Comment[]; status: string; createdAt: string; checklist: ChecklistItem[]; category?: string; needsDiscussion?: boolean; team?: string };
+type Report = { id: number; title: string; assignees: string[]; creator: string; deadline: string; progress: number; comments: Comment[]; status: string; createdAt: string; checklist: ChecklistItem[]; category?: string; needsDiscussion?: boolean; team?: string; files?: LabFile[] };
 type DailyTarget = { name: string; date: string; text: string };
 type Resource = { id: number; title: string; link: string; nasPath: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean };
 type IdeaPost = { id: number; title: string; body: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean; color?: string; borderColor?: string; imageUrl?: string };
@@ -167,14 +167,48 @@ const ANALYSIS_STATUS_KEYS = ["planning", "preparing", "running", "paused_done"]
 const ANALYSIS_STATUS_MIGRATE = (s: string) => s === "paused" ? "paused_done" : s;
 const ANALYSIS_TOOLS = ["OpenFOAM", "ANSYS Fluent", "STAR-CCM+", "MARS-K", "CUPID", "GAMMA+", "Python/MATLAB", "기타"];
 
-type Patent = { id: number; title: string; deadline: string; status: string; assignees: string[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string };
+type Patent = { id: number; title: string; deadline: string; status: string; assignees: string[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string; files?: LabFile[] };
 type AnalysisLog = { id: number; date: string; author: string; text: string; imageUrl?: string };
-type Analysis = { id: number; title: string; tool: string; status: string; assignees: string[]; goal: string; startDate: string; endDate: string; logs: AnalysisLog[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string };
+type Analysis = { id: number; title: string; tool: string; status: string; assignees: string[]; goal: string; startDate: string; endDate: string; logs: AnalysisLog[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string; files?: LabFile[] };
 
 const DEFAULT_PATENTS: Patent[] = [];
 const DEFAULT_TIMETABLE: TimetableBlock[] = [];
 
+type ExpLogEntry = { id: number; title: string; date: string; author: string; conditions: string; specimen: string; data: string; notes: string; imageUrl?: string; createdAt: string };
+type ExpLogBook = { id: number; name: string; createdAt: string; entries: ExpLogEntry[] };
+type AnalysisLogEntry = { id: number; title: string; date: string; author: string; tool: string; meshInfo: string; boundaryConditions: string; results: string; notes: string; imageUrl?: string; createdAt: string };
+type AnalysisLogBook = { id: number; name: string; createdAt: string; entries: AnalysisLogEntry[] };
+
 // ─── Shared: Multi-select pill helper ────────────────────────────────────────
+
+// ─── Read Receipt Popup ──────────────────────────────────────────────────────
+
+function ReadReceiptBadge({ msgId, currentUser, readReceipts }: { msgId: number; currentUser: string; readReceipts?: Record<string, number> }) {
+    const MEMBERS = useContext(MembersContext);
+    const [show, setShow] = useState(false);
+    if (!readReceipts) return null;
+    const readers = Object.entries(readReceipts).filter(([user, ts]) => user !== currentUser && ts >= msgId);
+    if (readers.length === 0) return null;
+    return (
+        <div className="relative inline-block">
+            <button onClick={(e) => { e.stopPropagation(); setShow(!show); }} className="text-[10px] text-blue-400 mt-0.5 px-1 hover:text-blue-600 cursor-pointer">
+                읽음 {readers.length}
+            </button>
+            {show && (
+                <div className="absolute bottom-full right-0 mb-1 bg-white rounded-lg shadow-lg border border-slate-200 py-1.5 px-1 min-w-[120px] z-50" onClick={e => e.stopPropagation()}>
+                    <div className="text-[11px] font-semibold text-slate-500 px-2 pb-1 border-b border-slate-100 mb-1">읽은 사람</div>
+                    {readers.map(([user]) => (
+                        <div key={user} className="flex items-center gap-1.5 px-2 py-1 text-[12px] text-slate-700">
+                            <span className="text-[14px]">{MEMBERS[user]?.emoji || "👤"}</span>
+                            <span>{user}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+            {show && <div className="fixed inset-0 z-40" onClick={() => setShow(false)} />}
+        </div>
+    );
+}
 
 function PillSelect({ options, selected, onToggle, emojis }: { options: string[]; selected: string[]; onToggle: (v: string) => void; emojis?: Record<string, string> }) {
     return (
@@ -423,6 +457,63 @@ function TeamSelect({ teamNames, selected, onSelect }: { teamNames: string[]; se
     );
 }
 
+// ─── Shared Item File Attach ─────────────────────────────────────────────────
+
+function ItemFiles({ files, onChange, currentUser }: { files: LabFile[]; onChange: (files: LabFile[]) => void; currentUser: string }) {
+    const MEMBERS = useContext(MembersContext);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploading, setUploading] = useState(false);
+    const [preview, setPreview] = useState<LabFile | null>(null);
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > FILE_MAX) { alert("10MB 이하 파일만 업로드 가능합니다."); return; }
+        setUploading(true);
+        try {
+            const url = await uploadFile(file);
+            onChange([...files, { id: Date.now(), name: file.name, size: file.size, url, type: file.type, uploader: currentUser, date: new Date().toLocaleString("ko-KR") }]);
+        } catch { alert("파일 업로드에 실패했습니다."); }
+        setUploading(false);
+        e.target.value = "";
+    };
+
+    const handleDelete = async (id: number) => {
+        const f = files.find(x => x.id === id);
+        if (f?.url?.startsWith("https://")) { try { await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: f.url }), headers: { "Content-Type": "application/json" } }); } catch {} }
+        onChange(files.filter(x => x.id !== id));
+    };
+
+    return (
+        <div>
+            <label className="text-[12px] font-semibold text-slate-500 block mb-1">첨부파일 ({files.length})</label>
+            {files.length > 0 && (
+                <div className="space-y-1 mb-2">
+                    {files.map(f => (
+                        <div key={f.id} className="group flex items-center gap-2 bg-slate-50 rounded-md px-2.5 py-1.5">
+                            <span className="text-[14px] shrink-0 cursor-pointer" onClick={() => { if (isImageFile(f) || isPdfFile(f)) setPreview(f); else { const a = document.createElement("a"); a.href = f.url; a.download = f.name; a.click(); } }}>
+                                {isImageFile(f) ? "🖼️" : isPdfFile(f) ? "📄" : "📎"}
+                            </span>
+                            <button onClick={() => { if (isImageFile(f) || isPdfFile(f)) setPreview(f); else { const a = document.createElement("a"); a.href = f.url; a.download = f.name; a.click(); } }}
+                                className="text-[12px] font-medium text-blue-600 hover:text-blue-800 truncate flex-1 text-left">{f.name}</button>
+                            <span className="text-[10px] text-slate-400 shrink-0">{(f.size / 1024).toFixed(0)}KB · {MEMBERS[f.uploader]?.emoji || ""}{f.uploader}</span>
+                            {(f.uploader === currentUser || currentUser === "박일웅") && (
+                                <button onClick={() => handleDelete(f.id)} className="text-[11px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">✕</button>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+            <input ref={fileInputRef} type="file" onChange={handleUpload} className="hidden" />
+            <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[12px] font-medium transition-colors disabled:opacity-50">
+                {uploading ? "업로드 중..." : "📎 파일 첨부"}
+            </button>
+            {preview && <FilePreviewModal file={preview} onClose={() => setPreview(null)} />}
+        </div>
+    );
+}
+
 // ─── Paper Components ────────────────────────────────────────────────────────
 
 function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList, teamNames }: {
@@ -441,13 +532,14 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
     const [comments, setComments] = useState<Comment[]>(paper?.comments || []);
     const [newComment, setNewComment] = useState("");
     const [team, setTeam] = useState(paper?.team || "");
+    const [files, setFiles] = useState<LabFile[]>(paper?.files || []);
     const cImg = useCommentImg();
 
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const handleSave = () => {
         if (!title.trim()) return false;
-        onSave({ id: paper?.id ?? Date.now(), title, journal, status, assignees, tags, deadline, progress, comments, creator: paper?.creator || currentUser, createdAt: paper?.createdAt || new Date().toLocaleString("ko-KR"), team });
+        onSave({ id: paper?.id ?? Date.now(), title, journal, status, assignees, tags, deadline, progress, comments, creator: paper?.creator || currentUser, createdAt: paper?.createdAt || new Date().toLocaleString("ko-KR"), team, files });
         return true;
     };
     const addComment = () => {
@@ -505,6 +597,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
                         <input type="range" min={0} max={100} value={progress} onChange={e => setProgress(Number(e.target.value))}
                             className="w-full accent-blue-500" />
                     </div>
+                    <ItemFiles files={files} onChange={setFiles} currentUser={currentUser} />
                     {/* Comments */}
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">코멘트 ({comments.length})</label>
@@ -550,6 +643,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
     const filtered = filterTeam === "전체" ? personFiltered : personFiltered.filter(p => p.team === filterTeam);
     const [showTagMgr, setShowTagMgr] = useState(false);
     const [newTag, setNewTag] = useState("");
+    const [mobileCol, setMobileCol] = useState(STATUS_KEYS[0]);
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Paper | null>(null);
@@ -570,8 +664,8 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
             {/* Action buttons */}
             <div className="mb-3 flex items-center justify-end">
                 <div className="flex items-center gap-2">
-                    <button onClick={onAddPaper} className="px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 논문 등록</button>
-                    <button onClick={() => setShowTagMgr(!showTagMgr)} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200">🏷️ 태그 관리</button>
+                    <button onClick={onAddPaper} className="hidden md:inline-flex px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 논문 등록</button>
+                    <button onClick={() => setShowTagMgr(!showTagMgr)} className="hidden md:inline-flex px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200">🏷️ 태그 관리</button>
                     <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedPapers.length})</button>
                 </div>
             </div>
@@ -638,8 +732,53 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                     </div>
                 </div>
             )}
+            {/* Mobile tab bar */}
             {!showCompleted && (
-            <div className="flex gap-3 pb-2">
+            <div className="md:hidden flex border-b border-slate-200 mb-3 -mx-1">
+                {STATUS_KEYS.map(status => {
+                    const cnt = kanbanFiltered.filter(p => PAPER_STATUS_MIGRATE(p.status) === status).length;
+                    const st = STATUS_CONFIG[status];
+                    return (
+                        <button key={status} onClick={() => setMobileCol(status)}
+                            className={`flex-1 text-center py-2 text-[13px] font-semibold transition-colors ${mobileCol === status ? "border-b-2 text-slate-800" : "text-slate-400"}`}
+                            style={mobileCol === status ? { borderColor: st.color } : {}}>
+                            {st.label} <span className="text-[11px] font-normal">{cnt}</span>
+                        </button>
+                    );
+                })}
+            </div>
+            )}
+            {/* Mobile single column */}
+            {!showCompleted && (
+            <div className="md:hidden space-y-2">
+                {kanbanFiltered.filter(p => PAPER_STATUS_MIGRATE(p.status) === mobileCol).map(p => (
+                    <div key={p.id} onClick={() => setSelected(p)}
+                        className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300`}
+                        style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
+                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{p.title}<SavingBadge id={p.id} /></div>
+                        <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
+                            {p.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md flex-shrink-0" style={{background:"#EFF6FF", color:"#3B82F6", fontWeight:500}}>{p.team}</span>}
+                            {p.tags.slice(0, 2).map(t => <span key={t} className="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">{t}</span>)}
+                            {p.tags.length > 2 && <span className="text-[10px] text-slate-400 flex-shrink-0">+{p.tags.length - 2}</span>}
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                            <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
+                                <div className="h-1 rounded-full transition-all" style={{ width: `${p.progress}%`, background: "#3B82F6" }} />
+                            </div>
+                            <span className="text-[10px] font-semibold" style={{color: p.progress >= 80 ? "#10B981" : "#3B82F6"}}>{p.progress}%</span>
+                        </div>
+                        <div className="flex -space-x-1 mt-1.5">
+                            {p.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
+                            {p.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{p.assignees.length - 4}</span>}
+                        </div>
+                    </div>
+                ))}
+                {kanbanFiltered.filter(p => PAPER_STATUS_MIGRATE(p.status) === mobileCol).length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">{STATUS_CONFIG[mobileCol]?.label} 없음</div>}
+            </div>
+            )}
+            {/* Desktop kanban */}
+            {!showCompleted && (
+            <div className="hidden md:flex gap-3 pb-2">
                 {STATUS_KEYS.map(status => {
                     const col = kanbanFiltered.filter(p => PAPER_STATUS_MIGRATE(p.status) === status);
                     const st = STATUS_CONFIG[status];
@@ -668,6 +807,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                                             {p.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md flex-shrink-0" style={{background:"#EFF6FF", color:"#3B82F6", fontWeight:500}}>{p.team}</span>}
                                             {p.tags.slice(0, 2).map(t => <span key={t} className="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">{t}</span>)}
                                             {p.tags.length > 2 && <span className="text-[10px] text-slate-400 flex-shrink-0">+{p.tags.length - 2}</span>}
+                                            {(p.files?.length ?? 0) > 0 && <span className="text-[10px] text-slate-400 flex-shrink-0 ml-auto">📎{p.files!.length}</span>}
                                         </div>
                                         <div className="flex items-center gap-2 mt-2">
                                             <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
@@ -691,7 +831,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
             </div>
             )}
             {showCompleted && (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {completedPapers.map(p => (
                         <div key={p.id} onClick={() => setSelected(p)}
                             className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
@@ -714,6 +854,10 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                     ))}
                     {completedPapers.length === 0 && <div className="col-span-3 text-center text-[13px] text-slate-400 py-8">완료된 논문이 없습니다</div>}
                 </div>
+            )}
+            {/* Mobile FAB */}
+            {!selected && (
+                <button onClick={onAddPaper} className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-blue-600 active:scale-95 transition-transform">+</button>
             )}
             {selected && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setSelected(null); setDetailComment(""); }}>
@@ -821,6 +965,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
     const cImg = useCommentImg();
     const [category] = useState(report?.category || initialCategory || "계획서");
     const [team, setTeam] = useState(report?.team || "");
+    const [files, setFiles] = useState<LabFile[]>(report?.files || []);
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const doneCount = checklist.filter(c => c.done).length;
@@ -828,7 +973,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
 
     const handleSave = () => {
         if (!title.trim()) return false;
-        onSave({ id: report?.id ?? Date.now(), title, assignees, creator: report?.creator || currentUser, deadline, progress: autoProgress, comments, status, createdAt: report?.createdAt || new Date().toLocaleDateString("ko-KR"), checklist, category, team });
+        onSave({ id: report?.id ?? Date.now(), title, assignees, creator: report?.creator || currentUser, deadline, progress: autoProgress, comments, status, createdAt: report?.createdAt || new Date().toLocaleDateString("ko-KR"), checklist, category, team, files });
         return true;
     };
     const addChecklistItem = () => {
@@ -884,6 +1029,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                             emojis={Object.fromEntries(Object.entries(MEMBERS).map(([k, v]) => [k, v.emoji]))} />
                     </div>
                     {teamNames && <TeamSelect teamNames={teamNames} selected={team} onSelect={setTeam} />}
+                    <ItemFiles files={files} onChange={setFiles} currentUser={currentUser} />
                     {/* Checklist */}
                     <div>
                         <div className="flex items-center justify-between mb-1">
@@ -957,6 +1103,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
     const [addCategory, setAddCategory] = useState<string | null>(null);
     const [filterTeam, setFilterTeam] = useState("전체");
     const [filterPerson, setFilterPerson] = useState("전체");
+    const [mobileCol, setMobileCol] = useState(REPORT_STATUS_KEYS[0]);
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Report | null>(null);
@@ -978,8 +1125,8 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
         <div>
             <div className="mb-3 flex items-center justify-end">
                 <div className="flex items-center gap-2">
-                    <button onClick={() => setAddCategory("계획서")} className="px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 계획서 등록</button>
-                    <button onClick={() => setAddCategory("보고서")} className="px-3.5 py-1.5 bg-violet-500 text-white rounded-lg text-[13px] font-medium hover:bg-violet-600 transition-colors">+ 보고서 등록</button>
+                    <button onClick={() => setAddCategory("계획서")} className="hidden md:inline-flex px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 계획서 등록</button>
+                    <button onClick={() => setAddCategory("보고서")} className="hidden md:inline-flex px-3.5 py-1.5 bg-violet-500 text-white rounded-lg text-[13px] font-medium hover:bg-violet-600 transition-colors">+ 보고서 등록</button>
                     <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedReports.length})</button>
                 </div>
             </div>
@@ -1019,8 +1166,56 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                     </div>
                 </div>
             </div>
+            {/* Mobile tab bar */}
             {!showCompleted && (
-            <div className="flex gap-3 pb-2">
+            <div className="md:hidden flex border-b border-slate-200 mb-3 -mx-1">
+                {REPORT_STATUS_KEYS.map(status => {
+                    const cnt = kanbanFilteredReports.filter(r => r.status === status).length;
+                    const cfg = REPORT_STATUS_CONFIG[status];
+                    return (
+                        <button key={status} onClick={() => setMobileCol(status)}
+                            className={`flex-1 text-center py-2 text-[13px] font-semibold transition-colors ${mobileCol === status ? "border-b-2 text-slate-800" : "text-slate-400"}`}
+                            style={mobileCol === status ? { borderColor: cfg.color } : {}}>
+                            {cfg.label} <span className="text-[11px] font-normal">{cnt}</span>
+                        </button>
+                    );
+                })}
+            </div>
+            )}
+            {/* Mobile single column */}
+            {!showCompleted && (
+            <div className="md:hidden space-y-2">
+                {kanbanFilteredReports.filter(r => r.status === mobileCol).map(r => {
+                    const cl = r.checklist || [];
+                    const done = cl.filter(c => c.done).length;
+                    return (
+                        <div key={r.id} onClick={() => setSelected(r)}
+                            className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300`}
+                            style={{ borderLeft: r.needsDiscussion ? "3px solid #EF4444" : `3px solid ${REPORT_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
+                            <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{r.title}<SavingBadge id={r.id} /></div>
+                            <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
+                                {r.category && <span className={`text-[10.5px] px-1.5 py-0.5 rounded flex-shrink-0 ${r.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`} style={{fontWeight:500}}>{r.category}</span>}
+                                {r.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{r.team}</span>}
+                            </div>
+                            <div className="flex items-center gap-2 mt-2">
+                                <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
+                                    <div className="h-1 rounded-full transition-all" style={{ width: `${r.progress}%`, background: "#3B82F6" }} />
+                                </div>
+                                <span className="text-[10px] font-semibold" style={{color: r.progress >= 80 ? "#10B981" : "#3B82F6"}}>{r.progress}%</span>
+                            </div>
+                            <div className="flex -space-x-1 mt-1.5">
+                                {r.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
+                                {r.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{r.assignees.length - 4}</span>}
+                            </div>
+                        </div>
+                    );
+                })}
+                {kanbanFilteredReports.filter(r => r.status === mobileCol).length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">{REPORT_STATUS_CONFIG[mobileCol]?.label} 없음</div>}
+            </div>
+            )}
+            {/* Desktop kanban */}
+            {!showCompleted && (
+            <div className="hidden md:flex gap-3 pb-2">
                 {REPORT_STATUS_KEYS.map(status => {
                     const col = kanbanFilteredReports.filter(r => r.status === status);
                     const cfg = REPORT_STATUS_CONFIG[status];
@@ -1075,7 +1270,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
             </div>
             )}
             {showCompleted && (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {completedReports.map(r => (
                         <div key={r.id} onClick={() => setSelected(r)}
                             className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
@@ -1100,6 +1295,10 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
             )}
             {addCategory && <ReportFormModal report={null} initialCategory={addCategory} onSave={r => { onSave(r); setAddCategory(null); }} onClose={() => setAddCategory(null)} currentUser={currentUser} teamNames={teamNames} />}
             {editing && <ReportFormModal report={editing} onSave={r => { onSave(r); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} teamNames={teamNames} />}
+            {/* Mobile FAB */}
+            {!addCategory && !editing && !selected && (
+                <button onClick={() => setAddCategory("보고서")} className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-orange-500 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-orange-600 active:scale-95 transition-transform">+</button>
+            )}
             {selected && !editing && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setSelected(null); setDetailComment(""); }}>
                     <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -1283,7 +1482,7 @@ function DispatchPanel({ dispatches, currentUser, onSave, onDelete }: {
 
 // ─── Vacation View ───────────────────────────────────────────────────────────
 
-function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispatchSave, onDispatchDelete }: {
+function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispatchSave, onDispatchDelete, deadlines, onNavigate }: {
     data: Array<{ name: string; date: string; type: string; description?: string }>;
     currentUser: string;
     types: Record<string, { label: string; color: string; short: string }>;
@@ -1291,6 +1490,8 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
     dispatches?: Array<{ id: number; name: string; start: string; end: string; description: string }>;
     onDispatchSave?: (d: { id: number; name: string; start: string; end: string; description: string }) => void;
     onDispatchDelete?: (id: number) => void;
+    deadlines?: Array<{ title: string; date: string; type: string; color: string; icon: string; tab: string }>;
+    onNavigate?: (tab: string) => void;
 }) {
     const MEMBERS = useContext(MembersContext);
     const isPI = currentUser === "박일웅";
@@ -1375,6 +1576,12 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                                                 <span className="w-2 h-2 rounded-full flex-shrink-0 bg-violet-400" />
                                                 <span className="text-[13px]"><span className="font-semibold text-slate-700">{MEMBERS[dp.name]?.emoji || "👤"}{dp.name}</span> <span className="text-violet-500">파견 · {dp.description}</span></span>
                                             </div>
+                                        ))}
+                                        {(deadlines || []).filter(dl => dl.date === ds).map((dl, dlIdx) => (
+                                            <button key={`dl-${dlIdx}`} onClick={() => onNavigate?.(dl.tab)} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg bg-red-50 text-left">
+                                                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{background:dl.color}} />
+                                                <span className="text-[13px]"><span className="font-semibold" style={{color:dl.color}}>마감</span> <span className="text-slate-700">{dl.title}</span></span>
+                                            </button>
                                         ))}
                                     </div>
                                 )}
@@ -1498,6 +1705,31 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                                 </tr>
                             );
                         })}
+                        {/* 마감 row — deadline dots */}
+                        {deadlines && deadlines.length > 0 && (() => {
+                            const dlByDate: Record<string, typeof deadlines> = {};
+                            deadlines.forEach(dl => { if (!dlByDate[dl.date]) dlByDate[dl.date] = []; dlByDate[dl.date].push(dl); });
+                            return (
+                                <tr className="bg-red-50/30">
+                                    <td className="sticky left-0 z-10 border-r border-b border-red-200/60 px-1 py-1.5 text-[12px] text-center whitespace-nowrap bg-red-50 font-semibold text-red-500">📌 마감</td>
+                                    {days.map(d => {
+                                        const dls = dlByDate[d.str];
+                                        return (
+                                            <td key={d.date} className="border-b border-[#E2E8F0] text-center py-0.5 px-0">
+                                                {dls ? (
+                                                    <div className="flex gap-[2px] justify-center flex-wrap">
+                                                        {dls.slice(0, 3).map((dl, i) => (
+                                                            <button key={i} onClick={() => onNavigate?.(dl.tab)} className="w-[8px] h-[8px] rounded-full hover:scale-150 transition-transform" style={{background:dl.color}} title={`${dl.icon} ${dl.title}`} />
+                                                        ))}
+                                                        {dls.length > 3 && <span className="text-[8px] text-slate-400">+{dls.length - 3}</span>}
+                                                    </div>
+                                                ) : null}
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            );
+                        })()}
                         {MEMBER_NAMES.map(name => {
                             const isMe = name === currentUser;
                             const canEdit = isMe || isPI;
@@ -1613,6 +1845,37 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                             ) : (
                                 <div className="text-[13px] text-slate-400">이번 주 일정이 없습니다</div>
                             )}
+                        </div>
+                    );
+                })()}
+                {/* 주간 마감 */}
+                {deadlines && deadlines.length > 0 && (() => {
+                    const baseDate = selectedDate ? new Date(selectedDate) : new Date();
+                    const dow2 = baseDate.getDay();
+                    const monday2 = new Date(baseDate);
+                    monday2.setDate(baseDate.getDate() - ((dow2 === 0 ? 7 : dow2) - 1));
+                    const friday2 = new Date(monday2);
+                    friday2.setDate(monday2.getDate() + 4);
+                    const monStr = `${monday2.getFullYear()}-${String(monday2.getMonth() + 1).padStart(2, "0")}-${String(monday2.getDate()).padStart(2, "0")}`;
+                    const friStr = `${friday2.getFullYear()}-${String(friday2.getMonth() + 1).padStart(2, "0")}-${String(friday2.getDate()).padStart(2, "0")}`;
+                    const weekDl = deadlines.filter(dl => dl.date >= monStr && dl.date <= friStr);
+                    if (weekDl.length === 0) return null;
+                    return (
+                        <div className="p-3 rounded-xl border border-red-200 bg-white sticky mt-3" style={{borderLeft:"3px solid #EF4444"}}>
+                            <div className="text-[14px] font-semibold text-red-600 mb-2">📌 이번 주 마감 ({weekDl.length})</div>
+                            <div className="space-y-1">
+                                {weekDl.map((dl, i) => {
+                                    const dd = new Date(dl.date);
+                                    const dayL2 = ["일", "월", "화", "수", "목", "금", "토"];
+                                    return (
+                                        <button key={i} onClick={() => onNavigate?.(dl.tab)} className="w-full text-left text-[13px] px-2 py-1.5 rounded-md hover:bg-red-50 transition-colors flex items-center gap-2">
+                                            <span className="w-2 h-2 rounded-full shrink-0" style={{background:dl.color}} />
+                                            <span className="font-medium text-slate-700 truncate flex-1">{dl.title}</span>
+                                            <span className="text-[11px] text-slate-400 shrink-0">{dd.getMonth() + 1}/{dd.getDate()}({dayL2[dd.getDay()]})</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     );
                 })()}
@@ -1803,11 +2066,12 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
     const [newLog, setNewLog] = useState("");
     const [progress, setProgress] = useState(experiment?.progress ?? 0);
     const [team, setTeam] = useState(experiment?.team || "");
+    const [files, setFiles] = useState<LabFile[]>(experiment?.files || []);
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const handleSave = () => {
         if (!title.trim()) return false;
-        onSave({ id: experiment?.id ?? Date.now(), title, equipment, status, assignees, goal, startDate, endDate, logs, progress, creator: experiment?.creator || currentUser, createdAt: experiment?.createdAt || new Date().toLocaleString("ko-KR"), team });
+        onSave({ id: experiment?.id ?? Date.now(), title, equipment, status, assignees, goal, startDate, endDate, logs, progress, creator: experiment?.creator || currentUser, createdAt: experiment?.createdAt || new Date().toLocaleString("ko-KR"), team, files });
         return true;
     };
     const addLog = () => {
@@ -1877,6 +2141,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
                                 className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                         </div>
                     </div>
+                    <ItemFiles files={files} onChange={setFiles} currentUser={currentUser} />
                     {/* Daily logs */}
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">실험 일지 ({logs.length})</label>
@@ -1920,6 +2185,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
     const [newEq, setNewEq] = useState("");
     const [filterTeam, setFilterTeam] = useState("전체");
     const [filterPerson, setFilterPerson] = useState("전체");
+    const [mobileCol, setMobileCol] = useState(EXP_STATUS_KEYS[0]);
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Experiment | null>(null);
@@ -1941,8 +2207,8 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
         <div>
             <div className="mb-3 flex items-center justify-end">
                 <div className="flex items-center gap-2">
-                    <button onClick={() => setAdding(true)} className="px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 실험 등록</button>
-                    <button onClick={() => setShowEqMgr(!showEqMgr)} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200">🔧 실험 장치 관리</button>
+                    <button onClick={() => setAdding(true)} className="hidden md:inline-flex px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 실험 등록</button>
+                    <button onClick={() => setShowEqMgr(!showEqMgr)} className="hidden md:inline-flex px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200">🔧 실험 장치 관리</button>
                     <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedExperiments.length})</button>
                 </div>
             </div>
@@ -2002,8 +2268,52 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                     </div>
                 </div>
             </div>
+            {/* Mobile tab bar */}
             {!showCompleted && (
-            <div className="flex gap-3 pb-2">
+            <div className="md:hidden flex border-b border-slate-200 mb-3 -mx-1">
+                {EXP_STATUS_KEYS.map(status => {
+                    const cnt = kanbanFilteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) === status).length;
+                    const cfg = EXP_STATUS_CONFIG[status];
+                    return (
+                        <button key={status} onClick={() => setMobileCol(status)}
+                            className={`flex-1 text-center py-2 text-[13px] font-semibold transition-colors ${mobileCol === status ? "border-b-2 text-slate-800" : "text-slate-400"}`}
+                            style={mobileCol === status ? { borderColor: cfg.color } : {}}>
+                            {cfg.label} <span className="text-[11px] font-normal">{cnt}</span>
+                        </button>
+                    );
+                })}
+            </div>
+            )}
+            {/* Mobile single column */}
+            {!showCompleted && (
+            <div className="md:hidden space-y-2">
+                {kanbanFilteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) === mobileCol).map(exp => (
+                    <div key={exp.id} onClick={() => setSelected(exp)}
+                        className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300`}
+                        style={{ borderLeft: exp.needsDiscussion ? "3px solid #EF4444" : `3px solid ${EXP_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
+                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{exp.title}<SavingBadge id={exp.id} /></div>
+                        <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
+                            <span className="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">🔧 {exp.equipment}</span>
+                            {exp.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{exp.team}</span>}
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                            <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
+                                <div className="h-1 rounded-full transition-all" style={{ width: `${exp.progress ?? 0}%`, background: "#3B82F6" }} />
+                            </div>
+                            <span className="text-[10px] font-semibold" style={{color: (exp.progress ?? 0) >= 80 ? "#10B981" : "#3B82F6"}}>{exp.progress ?? 0}%</span>
+                        </div>
+                        <div className="flex -space-x-1 mt-1.5">
+                            {exp.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
+                            {exp.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{exp.assignees.length - 4}</span>}
+                        </div>
+                    </div>
+                ))}
+                {kanbanFilteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) === mobileCol).length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">{EXP_STATUS_CONFIG[mobileCol]?.label} 없음</div>}
+            </div>
+            )}
+            {/* Desktop kanban */}
+            {!showCompleted && (
+            <div className="hidden md:flex gap-3 pb-2">
                 {EXP_STATUS_KEYS.map(status => {
                     const col = kanbanFilteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) === status);
                     const cfg = EXP_STATUS_CONFIG[status];
@@ -2054,7 +2364,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
             </div>
             )}
             {showCompleted && (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {completedExperiments.map(exp => (
                         <div key={exp.id} onClick={() => setSelected(exp)}
                             className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
@@ -2080,6 +2390,10 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
             )}
             {adding && <ExperimentFormModal experiment={null} onSave={e => { onSave(e); setAdding(false); }} onClose={() => setAdding(false)} currentUser={currentUser} equipmentList={equipmentList} teamNames={teamNames} />}
             {editing && <ExperimentFormModal experiment={editing} onSave={e => { onSave(e); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} equipmentList={equipmentList} teamNames={teamNames} />}
+            {/* Mobile FAB */}
+            {!adding && !editing && !selected && (
+                <button onClick={() => setAdding(true)} className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-red-500 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-red-600 active:scale-95 transition-transform">+</button>
+            )}
             {selected && !editing && !adding && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setSelected(null); setDetailComment(""); }}>
                     <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -2194,11 +2508,12 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
     const [newLog, setNewLog] = useState("");
     const [progress, setProgress] = useState(analysis?.progress ?? 0);
     const [team, setTeam] = useState(analysis?.team || "");
+    const [files, setFiles] = useState<LabFile[]>(analysis?.files || []);
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const handleSave = () => {
         if (!title.trim()) return false;
-        onSave({ id: analysis?.id ?? Date.now(), title, tool, status, assignees, goal, startDate, endDate, logs, progress, creator: analysis?.creator || currentUser, createdAt: analysis?.createdAt || new Date().toLocaleString("ko-KR"), team });
+        onSave({ id: analysis?.id ?? Date.now(), title, tool, status, assignees, goal, startDate, endDate, logs, progress, creator: analysis?.creator || currentUser, createdAt: analysis?.createdAt || new Date().toLocaleString("ko-KR"), team, files });
         return true;
     };
     const addLog = () => {
@@ -2268,6 +2583,7 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
                                 className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                         </div>
                     </div>
+                    <ItemFiles files={files} onChange={setFiles} currentUser={currentUser} />
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">해석 일지 ({logs.length})</label>
                         <div className="flex gap-2 mb-2">
@@ -2310,6 +2626,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
     const [newTool, setNewTool] = useState("");
     const [filterTeam, setFilterTeam] = useState("전체");
     const [filterPerson, setFilterPerson] = useState("전체");
+    const [mobileCol, setMobileCol] = useState(ANALYSIS_STATUS_KEYS[0]);
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Analysis | null>(null);
@@ -2331,8 +2648,8 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
         <div>
             <div className="mb-3 flex items-center justify-end">
                 <div className="flex items-center gap-2">
-                    <button onClick={() => setAdding(true)} className="px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 해석 등록</button>
-                    <button onClick={() => setShowToolMgr(!showToolMgr)} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200">🔧 해석 도구 관리</button>
+                    <button onClick={() => setAdding(true)} className="hidden md:inline-flex px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 해석 등록</button>
+                    <button onClick={() => setShowToolMgr(!showToolMgr)} className="hidden md:inline-flex px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200">🔧 해석 도구 관리</button>
                     <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedAnalyses.length})</button>
                 </div>
             </div>
@@ -2392,8 +2709,52 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                     </div>
                 </div>
             </div>
+            {/* Mobile tab bar */}
             {!showCompleted && (
-            <div className="flex gap-3 pb-2">
+            <div className="md:hidden flex border-b border-slate-200 mb-3 -mx-1">
+                {ANALYSIS_STATUS_KEYS.map(status => {
+                    const cnt = kanbanFilteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) === status).length;
+                    const cfg = ANALYSIS_STATUS_CONFIG[status];
+                    return (
+                        <button key={status} onClick={() => setMobileCol(status)}
+                            className={`flex-1 text-center py-2 text-[13px] font-semibold transition-colors ${mobileCol === status ? "border-b-2 text-slate-800" : "text-slate-400"}`}
+                            style={mobileCol === status ? { borderColor: cfg.color } : {}}>
+                            {cfg.label} <span className="text-[11px] font-normal">{cnt}</span>
+                        </button>
+                    );
+                })}
+            </div>
+            )}
+            {/* Mobile single column */}
+            {!showCompleted && (
+            <div className="md:hidden space-y-2">
+                {kanbanFilteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) === mobileCol).map(a => (
+                    <div key={a.id} onClick={() => setSelected(a)}
+                        className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300`}
+                        style={{ borderLeft: a.needsDiscussion ? "3px solid #EF4444" : `3px solid ${ANALYSIS_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
+                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{a.title}<SavingBadge id={a.id} /></div>
+                        <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
+                            <span className="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">🖥️ {a.tool}</span>
+                            {a.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{a.team}</span>}
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                            <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
+                                <div className="h-1 rounded-full transition-all" style={{ width: `${a.progress ?? 0}%`, background: "#3B82F6" }} />
+                            </div>
+                            <span className="text-[10px] font-semibold" style={{color: (a.progress ?? 0) >= 80 ? "#10B981" : "#3B82F6"}}>{a.progress ?? 0}%</span>
+                        </div>
+                        <div className="flex -space-x-1 mt-1.5">
+                            {a.assignees.slice(0, 4).map(n => <span key={n} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={n}>{MEMBERS[n]?.emoji || "👤"}</span>)}
+                            {a.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{a.assignees.length - 4}</span>}
+                        </div>
+                    </div>
+                ))}
+                {kanbanFilteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) === mobileCol).length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">{ANALYSIS_STATUS_CONFIG[mobileCol]?.label} 없음</div>}
+            </div>
+            )}
+            {/* Desktop kanban */}
+            {!showCompleted && (
+            <div className="hidden md:flex gap-3 pb-2">
                 {ANALYSIS_STATUS_KEYS.map(status => {
                     const col = kanbanFilteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) === status);
                     const cfg = ANALYSIS_STATUS_CONFIG[status];
@@ -2444,7 +2805,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
             </div>
             )}
             {showCompleted && (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {completedAnalyses.map(a => (
                         <div key={a.id} onClick={() => setSelected(a)}
                             className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
@@ -2470,6 +2831,10 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
             )}
             {adding && <AnalysisFormModal analysis={null} onSave={a => { onSave(a); setAdding(false); }} onClose={() => setAdding(false)} currentUser={currentUser} toolList={toolList} teamNames={teamNames} />}
             {editing && <AnalysisFormModal analysis={editing} onSave={a => { onSave(a); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} toolList={toolList} teamNames={teamNames} />}
+            {/* Mobile FAB */}
+            {!adding && !editing && !selected && (
+                <button onClick={() => setAdding(true)} className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-violet-500 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-violet-600 active:scale-95 transition-transform">+</button>
+            )}
             {selected && !editing && !adding && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setSelected(null); setDetailComment(""); }}>
                     <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -3139,6 +3504,7 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
     const [status, setStatus] = useState(patent?.status || "planning");
     const [assignees, setAssignees] = useState<string[]>(patent?.assignees || []);
     const [team, setTeam] = useState(patent?.team || "");
+    const [files, setFiles] = useState<LabFile[]>(patent?.files || []);
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
     return (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
@@ -3175,11 +3541,12 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
                             emojis={Object.fromEntries(Object.entries(MEMBERS).map(([k, v]) => [k, v.emoji]))} />
                     </div>
                     {teamNames && <TeamSelect teamNames={teamNames} selected={team} onSelect={setTeam} />}
+                    <ItemFiles files={files} onChange={setFiles} currentUser={currentUser} />
                 </div>
                 <div className="flex items-center justify-between p-4 border-t border-slate-200">
                     <div className="flex gap-2">
                         <button onClick={onClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                        <button onClick={() => { if (title.trim()) { onSave({ id: patent?.id ?? Date.now(), title, deadline, status, assignees, creator: patent?.creator || currentUser, createdAt: patent?.createdAt || new Date().toLocaleString("ko-KR"), team }); onClose(); } }}
+                        <button onClick={() => { if (title.trim()) { onSave({ id: patent?.id ?? Date.now(), title, deadline, status, assignees, creator: patent?.creator || currentUser, createdAt: patent?.createdAt || new Date().toLocaleString("ko-KR"), team, files }); onClose(); } }}
                             className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
                     {isEdit && onDelete && <button onClick={() => confirmDel(() => { onDelete(patent!.id); onClose(); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
@@ -3195,6 +3562,7 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
     const [adding, setAdding] = useState(false);
     const [filterTeam, setFilterTeam] = useState("전체");
     const [filterPerson, setFilterPerson] = useState("전체");
+    const [mobileCol, setMobileCol] = useState(IP_STATUS_KEYS[0]);
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Patent | null>(null);
@@ -3207,7 +3575,7 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
         <div>
             <div className="mb-3 flex items-center justify-end">
                 <div className="flex items-center gap-2">
-                    <button onClick={() => setAdding(true)} className="px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 지식재산권 등록</button>
+                    <button onClick={() => setAdding(true)} className="hidden md:inline-flex px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 지식재산권 등록</button>
                     <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedPatents.length})</button>
                 </div>
             </div>
@@ -3247,8 +3615,52 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
                     </div>
                 </div>
             </div>
+            {/* Mobile tab bar */}
             {!showCompleted && (
-            <div className="flex gap-3 pb-2">
+            <div className="md:hidden flex border-b border-slate-200 mb-3 -mx-1">
+                {IP_STATUS_KEYS.map(status => {
+                    const cnt = kanbanFilteredPatents.filter(p => p.status === status).length;
+                    const cfg = IP_STATUS_CONFIG[status];
+                    return (
+                        <button key={status} onClick={() => setMobileCol(status)}
+                            className={`flex-1 text-center py-2 text-[13px] font-semibold transition-colors ${mobileCol === status ? "border-b-2 text-slate-800" : "text-slate-400"}`}
+                            style={mobileCol === status ? { borderColor: cfg.color } : {}}>
+                            {cfg.label} <span className="text-[11px] font-normal">{cnt}</span>
+                        </button>
+                    );
+                })}
+            </div>
+            )}
+            {/* Mobile single column */}
+            {!showCompleted && (
+            <div className="md:hidden space-y-2">
+                {kanbanFilteredPatents.filter(p => p.status === mobileCol).map(p => (
+                    <div key={p.id} onClick={() => setEditing(p)}
+                        className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300`}
+                        style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${IP_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
+                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{p.title}<SavingBadge id={p.id} /></div>
+                        <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
+                            {p.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{p.team}</span>}
+                            {p.deadline && <span className="text-[10.5px] px-1.5 py-0.5 rounded bg-red-50 text-red-500 flex-shrink-0" style={{fontWeight:500}}>~{p.deadline}</span>}
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                            <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
+                                <div className="h-1 rounded-full transition-all" style={{ width: `${p.progress || 0}%`, background: "#3B82F6" }} />
+                            </div>
+                            <span className="text-[10px] font-semibold" style={{color: (p.progress || 0) >= 80 ? "#10B981" : "#3B82F6"}}>{p.progress || 0}%</span>
+                        </div>
+                        <div className="flex -space-x-1 mt-1.5">
+                            {p.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
+                            {p.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{p.assignees.length - 4}</span>}
+                        </div>
+                    </div>
+                ))}
+                {kanbanFilteredPatents.filter(p => p.status === mobileCol).length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">{IP_STATUS_CONFIG[mobileCol]?.label} 없음</div>}
+            </div>
+            )}
+            {/* Desktop kanban */}
+            {!showCompleted && (
+            <div className="hidden md:flex gap-3 pb-2">
                 {IP_STATUS_KEYS.map(status => {
                     const col = kanbanFilteredPatents.filter(p => p.status === status);
                     const cfg = IP_STATUS_CONFIG[status];
@@ -3299,7 +3711,7 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
             </div>
             )}
             {showCompleted && (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {completedPatents.map(p => (
                         <div key={p.id} onClick={() => setEditing(p)}
                             className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
@@ -3320,6 +3732,10 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
             )}
             {adding && <IPFormModal patent={null} onSave={p => { onSave(p); setAdding(false); }} onClose={() => setAdding(false)} currentUser={currentUser} teamNames={teamNames} />}
             {editing && <IPFormModal patent={editing} onSave={p => { onSave(p); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} teamNames={teamNames} />}
+            {/* Mobile FAB */}
+            {!adding && !editing && (
+                <button onClick={() => setAdding(true)} className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-teal-500 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-teal-600 active:scale-95 transition-transform">+</button>
+            )}
         </div>
     );
 }
@@ -4571,8 +4987,91 @@ function SettingsView({ currentUser, customEmojis, onSaveEmoji, statusMessages, 
                     ))}
                 </div>
             </div>
+            {/* 푸시 알림 설정 */}
+            <PushNotificationSettings currentUser={currentUser} />
             {/* Admin Log */}
             {currentUser === "박일웅" && <AdminLogSection />}
+        </div>
+    );
+}
+
+function PushNotificationSettings({ currentUser }: { currentUser: string }) {
+    const [pushSupported] = useState(() => typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window);
+    const [permission, setPermission] = useState<string>(() => typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default');
+    const [subscribed, setSubscribed] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!pushSupported) return;
+        navigator.serviceWorker.ready.then(reg => {
+            reg.pushManager.getSubscription().then(sub => { setSubscribed(!!sub); });
+        });
+    }, [pushSupported]);
+
+    const handleSubscribe = async () => {
+        setLoading(true);
+        try {
+            const perm = await Notification.requestPermission();
+            setPermission(perm);
+            if (perm !== 'granted') { setLoading(false); return; }
+            const reg = await navigator.serviceWorker.ready;
+            const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+            if (!vapidKey) { setLoading(false); return; }
+            const urlBase64ToUint8Array = (base64String: string) => {
+                const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+                const raw = atob(base64);
+                return Uint8Array.from(raw, c => c.charCodeAt(0));
+            };
+            const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidKey) });
+            await fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userName: currentUser, subscription: sub.toJSON() }) });
+            setSubscribed(true);
+        } catch {}
+        setLoading(false);
+    };
+
+    const handleUnsubscribe = async () => {
+        setLoading(true);
+        try {
+            const reg = await navigator.serviceWorker.ready;
+            const sub = await reg.pushManager.getSubscription();
+            if (sub) await sub.unsubscribe();
+            setSubscribed(false);
+        } catch {}
+        setLoading(false);
+    };
+
+    return (
+        <div className="bg-white border border-slate-200 rounded-lg p-5">
+            <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">푸시 알림</h3>
+            {!pushSupported ? (
+                <p className="text-[13px] text-slate-400">이 브라우저는 푸시 알림을 지원하지 않습니다.</p>
+            ) : permission === 'denied' ? (
+                <div>
+                    <p className="text-[13px] text-red-500 mb-2">알림 권한이 차단되었습니다.</p>
+                    <p className="text-[12px] text-slate-400">브라우저 설정에서 알림 권한을 허용해주세요.</p>
+                </div>
+            ) : subscribed ? (
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[13px] text-slate-700 font-medium">푸시 알림 활성화됨</span>
+                    </div>
+                    <button onClick={handleUnsubscribe} disabled={loading} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200 disabled:opacity-50">
+                        {loading ? "처리 중..." : "알림 끄기"}
+                    </button>
+                </div>
+            ) : (
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-[13px] text-slate-700">새 메시지, 공지사항 알림을 받을 수 있습니다.</p>
+                        <p className="text-[12px] text-slate-400 mt-0.5">채팅, 팀 메모, 공지 알림</p>
+                    </div>
+                    <button onClick={handleSubscribe} disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-medium hover:bg-blue-700 disabled:opacity-50">
+                        {loading ? "처리 중..." : "알림 켜기"}
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
@@ -4595,11 +5094,12 @@ function ColorPicker({ color, onColor, compact }: { color: string; onColor: (c: 
     );
 }
 
-function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteFile, chat, onAddChat, onUpdateChat, onDeleteChat, onClearChat, onRetryChat, currentUser }: {
+function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteFile, chat, onAddChat, onUpdateChat, onDeleteChat, onClearChat, onRetryChat, currentUser, readReceipts }: {
     memos: Memo[]; onSave: (m: Memo) => void; onDelete: (id: number) => void;
     files: LabFile[]; onAddFile: (f: LabFile) => void; onDeleteFile: (id: number) => void;
     chat: TeamChatMsg[]; onAddChat: (msg: TeamChatMsg) => void; onUpdateChat: (msg: TeamChatMsg) => void; onDeleteChat: (id: number) => void; onClearChat: () => void; onRetryChat: (id: number) => void;
     currentUser: string;
+    readReceipts?: Record<string, number>;
 }) {
     const MEMBERS = useContext(MembersContext);
     const confirmDel = useContext(ConfirmDeleteContext);
@@ -4781,7 +5281,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                         const showMyTime = isMe && (!sameAuthor || showDateSep);
                         const reactions = msg.reactions || {};
                         if (msg.deleted) return (
-                            <div key={msg.id} className={`${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} text-center`}>
+                            <div key={msg.id} className={`${sameAuthor && !showDateSep ? "mt-[5px]" : "mt-3"} text-center`}>
                                 <span className="text-[12px] text-slate-400 italic">{msg.author}님이 메시지를 삭제했습니다.</span>
                             </div>
                         );
@@ -4794,7 +5294,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                         <div className="flex-1 h-px bg-slate-200" />
                                     </div>
                                 )}
-                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-1" : "mt-4"} group/msg`}
+                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-[5px]" : "mt-[18px]"} group/msg`}
                                     style={{ opacity: msg._sending ? 0.7 : 1 }}>
                                     {!isMe && (
                                         <div className="w-9 flex-shrink-0 mr-2 self-start">
@@ -4808,18 +5308,18 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                     <div className={`max-w-[85%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
                                         {!isMe && showAvatar && (
                                             <div className="flex items-baseline gap-2 mb-1 px-1">
-                                                <span className="text-[13px] font-semibold text-slate-500">{msg.author}</span>
-                                                {MEMBERS[msg.author]?.team && <span className="text-[11px] text-slate-400">· {MEMBERS[msg.author]?.role ? `${MEMBERS[msg.author].role}/${MEMBERS[msg.author].team}` : MEMBERS[msg.author].team}</span>}
-                                                <span className="text-[12px] text-slate-400 ml-auto">{timeStr}</span>
+                                                <span className="text-[13px] font-semibold" style={{color:"#64748B"}}>{msg.author}</span>
+                                                {MEMBERS[msg.author]?.team && <span className="text-[10.5px]" style={{color:"#94A3B8"}}>· {MEMBERS[msg.author]?.role ? `${MEMBERS[msg.author].role}/${MEMBERS[msg.author].team}` : MEMBERS[msg.author].team}</span>}
+                                                <span className="text-[11px] ml-auto" style={{color:"#94A3B8"}}>{timeStr}</span>
                                             </div>
                                         )}
                                         {isMe && showMyTime && !msg._sending && !msg._failed && (
                                             <div className="flex justify-end mb-0.5 px-1">
-                                                <span className="text-[12px] text-slate-400">{timeStr}</span>
+                                                <span className="text-[11px]" style={{color:"#94A3B8"}}>{timeStr}</span>
                                             </div>
                                         )}
                                         {msg.replyTo && (
-                                            <div className="text-[11px] text-slate-400 mb-0.5 px-3 py-1.5 bg-slate-100 rounded-lg border-l-2 border-slate-300 max-w-full truncate">
+                                            <div className="text-[11px] text-slate-400 mb-1 px-3 py-1.5 rounded-lg border-l-[3px] max-w-full truncate" style={{background:"#F8F9FA", borderLeftColor:"#CBD5E1"}}>
                                                 <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                             </div>
                                         )}
@@ -4860,8 +5360,8 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                                     </div>
                                                 </div>
                                             )}
-                                            <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "10px 16px" }}
-                                                className="text-[13.5px] leading-relaxed text-slate-800">
+                                            <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "12px 16px", lineHeight: "1.65" }}
+                                                className="text-[13.5px] text-slate-800">
                                                 {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollPiChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                                 {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
                                             </div>
@@ -4881,6 +5381,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                                 {msg._sending ? <span className="animate-pulse">전송 중...</span> : <span className="text-red-500">⚠️ 전송 실패 <button onClick={() => onRetryChat(msg.id)} className="underline hover:text-red-600 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={() => onDeleteChat(msg.id)} className="underline hover:text-red-600">삭제</button></span>}
                                             </div>
                                         )}
+                                        {isMe && !msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} />}
                                     </div>
                                 </div>
                             </div>
@@ -5181,10 +5682,11 @@ function MeetingView({ meetings, onSave, onDelete, currentUser, teamNames }: {
 
 // ─── Lab Chat View ───────────────────────────────────────────────────────────
 
-function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, onRetry, files, onAddFile, onDeleteFile, board, onSaveBoard, onDeleteBoard }: {
+function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, onRetry, files, onAddFile, onDeleteFile, board, onSaveBoard, onDeleteBoard, readReceipts }: {
     chat: TeamChatMsg[]; currentUser: string; onAdd: (msg: TeamChatMsg) => void; onUpdate: (msg: TeamChatMsg) => void; onDelete: (id: number) => void; onClear: () => void; onRetry: (id: number) => void;
     files: LabFile[]; onAddFile: (f: LabFile) => void; onDeleteFile: (id: number) => void;
     board: TeamMemoCard[]; onSaveBoard: (c: TeamMemoCard) => void; onDeleteBoard: (id: number) => void;
+    readReceipts?: Record<string, number>;
 }) {
     const MEMBERS = useContext(MembersContext);
     const confirmDel = useContext(ConfirmDeleteContext);
@@ -5359,7 +5861,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                         const showMyTime = isMe && (!sameAuthor || showDateSep);
                         const reactions = msg.reactions || {};
                         if (msg.deleted) return (
-                            <div key={msg.id} className={`${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} text-center`}>
+                            <div key={msg.id} className={`${sameAuthor && !showDateSep ? "mt-[5px]" : "mt-3"} text-center`}>
                                 <span className="text-[12px] text-slate-400 italic">{msg.author}님이 메시지를 삭제했습니다.</span>
                             </div>
                         );
@@ -5372,7 +5874,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                         <div className="flex-1 h-px bg-slate-200" />
                                     </div>
                                 )}
-                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-1" : "mt-4"} group/msg`}
+                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-[5px]" : "mt-[18px]"} group/msg`}
                                     style={{ opacity: msg._sending ? 0.7 : 1 }}>
                                     {!isMe && (
                                         <div className="w-9 flex-shrink-0 mr-2 self-start">
@@ -5386,18 +5888,18 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                     <div className={`max-w-[75%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
                                         {!isMe && showAvatar && (
                                             <div className="flex items-baseline gap-2 mb-1 px-1">
-                                                <span className="text-[13px] font-semibold text-slate-500">{msg.author}</span>
-                                                {MEMBERS[msg.author]?.team && <span className="text-[11px] text-slate-400">· {MEMBERS[msg.author]?.role ? `${MEMBERS[msg.author].role}/${MEMBERS[msg.author].team}` : MEMBERS[msg.author].team}</span>}
-                                                <span className="text-[12px] text-slate-400 ml-auto">{timeStr}</span>
+                                                <span className="text-[13px] font-semibold" style={{color:"#64748B"}}>{msg.author}</span>
+                                                {MEMBERS[msg.author]?.team && <span className="text-[10.5px]" style={{color:"#94A3B8"}}>· {MEMBERS[msg.author]?.role ? `${MEMBERS[msg.author].role}/${MEMBERS[msg.author].team}` : MEMBERS[msg.author].team}</span>}
+                                                <span className="text-[11px] ml-auto" style={{color:"#94A3B8"}}>{timeStr}</span>
                                             </div>
                                         )}
                                         {isMe && showMyTime && !msg._sending && !msg._failed && (
                                             <div className="flex justify-end mb-0.5 px-1">
-                                                <span className="text-[12px] text-slate-400">{timeStr}</span>
+                                                <span className="text-[11px]" style={{color:"#94A3B8"}}>{timeStr}</span>
                                             </div>
                                         )}
                                         {msg.replyTo && (
-                                            <div className="text-[11px] text-slate-400 mb-0.5 px-3 py-1.5 bg-slate-100 rounded-lg border-l-2 border-slate-300 max-w-full truncate">
+                                            <div className="text-[11px] text-slate-400 mb-1 px-3 py-1.5 rounded-lg border-l-[3px] max-w-full truncate" style={{background:"#F8F9FA", borderLeftColor:"#CBD5E1"}}>
                                                 <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                             </div>
                                         )}
@@ -5438,8 +5940,8 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                                     </div>
                                                 </div>
                                             )}
-                                            <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "10px 16px" }}
-                                                className="text-[13.5px] leading-relaxed text-slate-800">
+                                            <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "12px 16px", lineHeight: "1.65" }}
+                                                className="text-[13.5px] text-slate-800">
                                                 {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1.5 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollLabChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                                 {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
                                             </div>
@@ -5459,6 +5961,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                                 {msg._sending ? <span className="animate-pulse">전송 중...</span> : <span className="text-red-500">⚠️ 전송 실패 <button onClick={() => onRetry(msg.id)} className="underline hover:text-red-600 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={() => onDelete(msg.id)} className="underline hover:text-red-600">삭제</button></span>}
                                             </div>
                                         )}
+                                        {isMe && !msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} />}
                                     </div>
                                 </div>
                             </div>
@@ -5718,11 +6221,15 @@ const TEAM_MEMO_COLORS = MEMO_COLORS;
 const MEMO_COL_MIGRATE = (s: string) => (s === "done" || s === "right") ? "right" : "left";
 const MEMO_COLUMNS = [{ key: "left", label: "진행", color: "#3b82f6" }, { key: "right", label: "완료", color: "#8b5cf6" }];
 
-function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, onDeleteCard, onReorderCards, onAddChat, onUpdateChat, onDeleteChat, onClearChat, onRetryChat, onAddFile, onDeleteFile }: {
+function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, onDeleteCard, onReorderCards, onAddChat, onUpdateChat, onDeleteChat, onClearChat, onRetryChat, onAddFile, onDeleteFile, readReceipts, expLogBooks, analysisLogBooks, onSaveExpLogBook, onDeleteExpLogBook, onSaveAnalysisLogBook, onDeleteAnalysisLogBook }: {
     teamName: string; kanban: TeamMemoCard[]; chat: TeamChatMsg[]; files: LabFile[]; currentUser: string;
     onSaveCard: (card: TeamMemoCard) => void; onDeleteCard: (id: number) => void; onReorderCards: (cards: TeamMemoCard[]) => void;
     onAddChat: (msg: TeamChatMsg) => void; onUpdateChat: (msg: TeamChatMsg) => void; onDeleteChat: (id: number) => void; onClearChat: () => void; onRetryChat: (id: number) => void;
     onAddFile: (f: LabFile) => void; onDeleteFile: (id: number) => void;
+    readReceipts?: Record<string, number>;
+    expLogBooks: ExpLogBook[]; analysisLogBooks: AnalysisLogBook[];
+    onSaveExpLogBook: (book: ExpLogBook) => void; onDeleteExpLogBook: (bookId: number) => void;
+    onSaveAnalysisLogBook: (book: AnalysisLogBook) => void; onDeleteAnalysisLogBook: (bookId: number) => void;
 }) {
     const MEMBERS = useContext(MembersContext);
     const confirmDel = useContext(ConfirmDeleteContext);
@@ -5752,8 +6259,10 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     const composingRef = useRef(false);
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
-    const [mobileTab, setMobileTab] = useState<"chat"|"board"|"files">("chat");
+    const [mobileTab, setMobileTab] = useState<"chat"|"board"|"files"|"expLogs"|"analysisLogs">("chat");
     const [replyTo, setReplyTo] = useState<TeamChatMsg | null>(null);
+    const [openExpBookId, setOpenExpBookId] = useState<number | null>(null);
+    const [openAnalysisBookId, setOpenAnalysisBookId] = useState<number | null>(null);
     const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
     const [moreMenuMsgId, setMoreMenuMsgId] = useState<number | null>(null);
     const mention = useMention();
@@ -5855,19 +6364,21 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
         else { requestAnimationFrame(scrollTeamChat); }
     }, [chat.length, scrollTeamChat]);
 
+    const showClassicCols = mobileTab === "chat" || mobileTab === "board" || mobileTab === "files";
+
     return (
-        <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{gridTemplateColumns:"1fr 1fr 2fr"}}>
-            {/* Mobile tab bar */}
-            <div className="md:hidden flex border-b border-slate-200 bg-white flex-shrink-0 -mt-1">
-                {([["chat","💬","채팅"],["board","📌","보드"],["files","📎","파일"]] as const).map(([id,icon,label]) => (
-                    <button key={id} onClick={() => setMobileTab(id as typeof mobileTab)}
-                        className={`flex-1 py-2.5 text-[13px] font-semibold transition-colors ${mobileTab === id ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400"}`}>
+        <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{gridTemplateColumns: showClassicCols ? "1fr 1fr 2fr" : "1fr"}}>
+            {/* Tab bar (both mobile + desktop) */}
+            <div className="flex border-b border-slate-200 bg-white flex-shrink-0 -mt-1 overflow-x-auto md:col-span-full">
+                {([["chat","💬","채팅"],["board","📌","보드"],["files","📎","파일"],["expLogs","🧪","실험일지"],["analysisLogs","🖥️","해석일지"]] as const).map(([id,icon,label]) => (
+                    <button key={id} onClick={() => { setMobileTab(id as typeof mobileTab); if (id === "expLogs") setOpenExpBookId(null); if (id === "analysisLogs") setOpenAnalysisBookId(null); }}
+                        className={`flex-1 md:flex-none md:px-4 py-2.5 text-[12px] md:text-[13px] font-semibold transition-colors whitespace-nowrap ${mobileTab === id ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400 hover:text-slate-600"}`}>
                         {icon} {label}
                     </button>
                 ))}
             </div>
             {/* Board */}
-            <div className={`flex-col min-w-0 ${mobileTab === "board" ? "flex flex-1 min-h-0" : "hidden"} md:flex`}>
+            <div className={`flex-col min-w-0 ${mobileTab === "board" ? "flex flex-1 min-h-0" : "hidden"} ${showClassicCols ? "md:flex" : "md:hidden"}`}>
                 <div className="flex items-center justify-between mb-2">
                     <h3 className="text-[14px] font-bold text-slate-700">📌 보드</h3>
                     <button onClick={() => openNew()} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
@@ -5954,7 +6465,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
             </div>
 
             {/* Files */}
-            <div className={`flex-col min-w-0 bg-white border border-slate-200 rounded-xl ${mobileTab === "files" ? "flex flex-1 min-h-0" : "hidden"} md:flex`}>
+            <div className={`flex-col min-w-0 bg-white border border-slate-200 rounded-xl ${mobileTab === "files" ? "flex flex-1 min-h-0" : "hidden"} ${showClassicCols ? "md:flex" : "md:hidden"}`}>
                 <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
                     <h4 className="text-[14px] font-bold text-slate-700">📎 파일</h4>
                     <span className="text-[12px] text-slate-400">{files.length}개</span>
@@ -5962,7 +6473,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                 <FileBox files={files} currentUser={currentUser} onAddFile={onAddFile} onDeleteFile={onDeleteFile} compact />
             </div>
             {/* Chat */}
-            <div className={`flex-col min-w-0 md:border md:border-slate-200 md:rounded-xl min-h-0 ${mobileTab === "chat" ? "flex flex-1" : "hidden"} md:flex`} style={{ background: "#FFFFFF" }}>
+            <div className={`flex-col min-w-0 md:border md:border-slate-200 md:rounded-xl min-h-0 ${mobileTab === "chat" ? "flex flex-1" : "hidden"} ${showClassicCols ? "md:flex" : "md:hidden"}`} style={{ background: "#FFFFFF" }}>
                 <div className="hidden md:flex px-3 py-2.5 border-b border-slate-100 items-center justify-between">
                     <h4 className="text-[14px] font-bold text-slate-700">💬 채팅</h4>
                     {currentUser === "박일웅" && (
@@ -5984,7 +6495,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                         const showMyTime = isMe && (!sameAuthor || showDateSep);
                         const reactions = msg.reactions || {};
                         if (msg.deleted) return (
-                            <div key={msg.id} className={`${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} text-center`}>
+                            <div key={msg.id} className={`${sameAuthor && !showDateSep ? "mt-[5px]" : "mt-3"} text-center`}>
                                 <span className="text-[12px] text-slate-400 italic">{msg.author}님이 메시지를 삭제했습니다.</span>
                             </div>
                         );
@@ -5997,7 +6508,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                         <div className="flex-1 h-px bg-slate-200" />
                                     </div>
                                 )}
-                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-1" : "mt-4"} group/msg`}
+                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-[5px]" : "mt-[18px]"} group/msg`}
                                     style={{ opacity: msg._sending ? 0.7 : 1 }}>
                                     {!isMe && (
                                         <div className="w-9 flex-shrink-0 mr-2 self-start">
@@ -6011,18 +6522,18 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                     <div className={`max-w-[75%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
                                         {!isMe && showAvatar && (
                                             <div className="flex items-baseline gap-2 mb-1 px-1">
-                                                <span className="text-[13px] font-semibold text-slate-500">{msg.author}</span>
-                                                {MEMBERS[msg.author]?.team && <span className="text-[11px] text-slate-400">· {MEMBERS[msg.author]?.role ? `${MEMBERS[msg.author].role}/${MEMBERS[msg.author].team}` : MEMBERS[msg.author].team}</span>}
-                                                <span className="text-[12px] text-slate-400 ml-auto">{timeStr}</span>
+                                                <span className="text-[13px] font-semibold" style={{color:"#64748B"}}>{msg.author}</span>
+                                                {MEMBERS[msg.author]?.team && <span className="text-[10.5px]" style={{color:"#94A3B8"}}>· {MEMBERS[msg.author]?.role ? `${MEMBERS[msg.author].role}/${MEMBERS[msg.author].team}` : MEMBERS[msg.author].team}</span>}
+                                                <span className="text-[11px] ml-auto" style={{color:"#94A3B8"}}>{timeStr}</span>
                                             </div>
                                         )}
                                         {isMe && showMyTime && !msg._sending && !msg._failed && (
                                             <div className="flex justify-end mb-0.5 px-1">
-                                                <span className="text-[12px] text-slate-400">{timeStr}</span>
+                                                <span className="text-[11px]" style={{color:"#94A3B8"}}>{timeStr}</span>
                                             </div>
                                         )}
                                         {msg.replyTo && (
-                                            <div className="text-[11px] text-slate-400 mb-0.5 px-3 py-1.5 bg-slate-100 rounded-lg border-l-2 border-slate-300 max-w-full truncate">
+                                            <div className="text-[11px] text-slate-400 mb-1 px-3 py-1.5 rounded-lg border-l-[3px] max-w-full truncate" style={{background:"#F8F9FA", borderLeftColor:"#CBD5E1"}}>
                                                 <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                             </div>
                                         )}
@@ -6063,8 +6574,8 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                                     </div>
                                                 </div>
                                             )}
-                                            <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "10px 16px" }}
-                                                className="text-[13.5px] leading-relaxed text-slate-800">
+                                            <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "12px 16px", lineHeight: "1.65" }}
+                                                className="text-[13.5px] text-slate-800">
                                                 {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1.5 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollTeamChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                                 {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
                                             </div>
@@ -6084,6 +6595,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                                 {msg._sending ? <span className="animate-pulse">전송 중...</span> : <span className="text-red-500">⚠️ 전송 실패 <button onClick={() => onRetryChat(msg.id)} className="underline hover:text-red-600 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={() => onDeleteChat(msg.id)} className="underline hover:text-red-600">삭제</button></span>}
                                             </div>
                                         )}
+                                        {isMe && !msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} />}
                                     </div>
                                 </div>
                             </div>
@@ -6190,6 +6702,62 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                     <img src={previewImg} alt="" className="max-w-[90vw] max-h-[85vh] rounded-lg shadow-2xl object-contain" />
                 </div>
             )}
+
+            {/* Experiment Logs Tab */}
+            {mobileTab === "expLogs" && (
+                <div className="flex-1 min-h-0 overflow-y-auto md:col-span-full">
+                    {openExpBookId != null ? (() => {
+                        const book = expLogBooks.find(b => b.id === openExpBookId);
+                        if (!book) return null;
+                        return (
+                            <div>
+                                <button onClick={() => setOpenExpBookId(null)} className="flex items-center gap-1 text-[13px] text-blue-500 hover:text-blue-700 font-medium mb-3">← 목록으로</button>
+                                <ExpLogView teamName={book.name} entries={book.entries} onSave={entry => {
+                                    const updated = { ...book, entries: book.entries.find(e => e.id === entry.id) ? book.entries.map(e => e.id === entry.id ? entry : e) : [...book.entries, entry] };
+                                    onSaveExpLogBook(updated);
+                                }} onDelete={id => {
+                                    onSaveExpLogBook({ ...book, entries: book.entries.filter(e => e.id !== id) });
+                                }} currentUser={currentUser} />
+                            </div>
+                        );
+                    })() : (
+                        <LogBookManager books={expLogBooks} type="exp" onCreateBook={name => {
+                            onSaveExpLogBook({ id: Date.now(), name, createdAt: new Date().toISOString().split("T")[0], entries: [] });
+                        }} onDeleteBook={id => onDeleteExpLogBook(id)} onOpenBook={id => setOpenExpBookId(id)} onRenameBook={(id, name) => {
+                            const book = expLogBooks.find(b => b.id === id);
+                            if (book) onSaveExpLogBook({ ...book, name });
+                        }} />
+                    )}
+                </div>
+            )}
+
+            {/* Analysis Logs Tab */}
+            {mobileTab === "analysisLogs" && (
+                <div className="flex-1 min-h-0 overflow-y-auto md:col-span-full">
+                    {openAnalysisBookId != null ? (() => {
+                        const book = analysisLogBooks.find(b => b.id === openAnalysisBookId);
+                        if (!book) return null;
+                        return (
+                            <div>
+                                <button onClick={() => setOpenAnalysisBookId(null)} className="flex items-center gap-1 text-[13px] text-blue-500 hover:text-blue-700 font-medium mb-3">← 목록으로</button>
+                                <AnalysisLogView bookName={book.name} entries={book.entries} onSave={entry => {
+                                    const updated = { ...book, entries: book.entries.find(e => e.id === entry.id) ? book.entries.map(e => e.id === entry.id ? entry : e) : [...book.entries, entry] };
+                                    onSaveAnalysisLogBook(updated);
+                                }} onDelete={id => {
+                                    onSaveAnalysisLogBook({ ...book, entries: book.entries.filter(e => e.id !== id) });
+                                }} currentUser={currentUser} />
+                            </div>
+                        );
+                    })() : (
+                        <LogBookManager books={analysisLogBooks} type="analysis" onCreateBook={name => {
+                            onSaveAnalysisLogBook({ id: Date.now(), name, createdAt: new Date().toISOString().split("T")[0], entries: [] });
+                        }} onDeleteBook={id => onDeleteAnalysisLogBook(id)} onOpenBook={id => setOpenAnalysisBookId(id)} onRenameBook={(id, name) => {
+                            const book = analysisLogBooks.find(b => b.id === id);
+                            if (book) onSaveAnalysisLogBook({ ...book, name });
+                        }} />
+                    )}
+                </div>
+            )}
         </div>
     );
 }
@@ -6248,8 +6816,515 @@ function MiniBar({ items, maxVal }: { items: Array<{ label: string; count: numbe
     );
 }
 
-function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPatents, announcements, dailyTargets, ideas, resources, chatPosts, personalMemos, teamMemos, meetings, onlineUsers, currentUser, onNavigate, mode, statusMessages, members, teams }: {
-    papers: Paper[]; reports: Report[]; experiments: Experiment[]; analyses: Analysis[]; todos: Todo[]; ipPatents: Patent[]; announcements: Announcement[]; dailyTargets: DailyTarget[]; ideas: IdeaPost[]; resources: Resource[]; chatPosts: IdeaPost[]; personalMemos: Record<string, Memo[]>; teamMemos: Record<string, { kanban: TeamMemoCard[]; chat: TeamChatMsg[] }>; meetings: Meeting[]; onlineUsers: Array<{ name: string; timestamp: number }>; currentUser: string; onNavigate: (tab: string) => void; mode: "team" | "personal"; statusMessages: Record<string, string>; members: Record<string, { team: string; role: string; emoji: string }>; teams: Record<string, TeamData>;
+// ─── Log Book Manager (shared for 실험일지 / 해석일지) ──────────────────────────
+
+function LogBookManager({ books, type, onCreateBook, onDeleteBook, onOpenBook, onRenameBook }: {
+    books: Array<{ id: number; name: string; createdAt: string; entries: unknown[] }>;
+    type: "exp" | "analysis";
+    onCreateBook: (name: string) => void; onDeleteBook: (id: number) => void;
+    onOpenBook: (id: number) => void; onRenameBook: (id: number, name: string) => void;
+}) {
+    const confirmDel = useContext(ConfirmDeleteContext);
+    const [newName, setNewName] = useState("");
+    const [renameId, setRenameId] = useState<number | null>(null);
+    const [renameVal, setRenameVal] = useState("");
+    const icon = type === "exp" ? "🧪" : "🖥️";
+    const label = type === "exp" ? "실험일지" : "해석일지";
+    return (
+        <div>
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <h2 className="text-[18px] font-bold text-slate-900">{icon} {label} 관리</h2>
+            </div>
+            <div className="flex items-center gap-2 mb-4">
+                <input value={newName} onChange={e => setNewName(e.target.value)} placeholder={`새 ${label} 이름`} className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" onKeyDown={e => { if (e.key === "Enter" && newName.trim()) { onCreateBook(newName.trim()); setNewName(""); } }} />
+                <button onClick={() => { if (newName.trim()) { onCreateBook(newName.trim()); setNewName(""); } }} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600 whitespace-nowrap">+ 만들기</button>
+            </div>
+            {books.length === 0 ? (
+                <div className="text-center py-16">
+                    <div className="text-[40px] mb-3">{icon}</div>
+                    <div className="text-[15px] text-slate-400 mb-1">아직 {label}가 없습니다</div>
+                    <div className="text-[13px] text-slate-300">위에서 이름을 입력하고 만들기를 눌러주세요</div>
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    {books.map(book => (
+                        <div key={book.id} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-3 hover:shadow-sm transition-shadow">
+                            <div className="text-[24px]">{icon}</div>
+                            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onOpenBook(book.id)}>
+                                {renameId === book.id ? (
+                                    <input value={renameVal} onChange={e => setRenameVal(e.target.value)} className="border border-blue-300 rounded px-2 py-1 text-[14px] focus:outline-none w-full" autoFocus
+                                        onKeyDown={e => { if (e.key === "Enter" && renameVal.trim()) { onRenameBook(book.id, renameVal.trim()); setRenameId(null); } if (e.key === "Escape") setRenameId(null); }}
+                                        onBlur={() => { if (renameVal.trim()) onRenameBook(book.id, renameVal.trim()); setRenameId(null); }}
+                                        onClick={e => e.stopPropagation()} />
+                                ) : (
+                                    <div className="text-[15px] font-semibold text-slate-800 truncate">{book.name}</div>
+                                )}
+                                <div className="flex items-center gap-3 mt-0.5">
+                                    <span className="text-[12px] text-slate-400">{book.entries.length}건</span>
+                                    <span className="text-[12px] text-slate-300">생성: {book.createdAt}</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                                <button onClick={e => { e.stopPropagation(); setRenameId(book.id); setRenameVal(book.name); }} className="text-[12px] text-slate-400 hover:text-blue-500 px-2 py-1 rounded hover:bg-blue-50 transition-colors" title="이름 변경">✏️</button>
+                                <button onClick={e => { e.stopPropagation(); confirmDel(() => onDeleteBook(book.id)); }} className="text-[12px] text-slate-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50 transition-colors" title="삭제">🗑️</button>
+                                <button onClick={() => onOpenBook(book.id)} className="text-[13px] text-blue-500 hover:text-blue-700 font-medium px-2 py-1">열기 →</button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Analysis Log View (per-book analysis daily log) ─────────────────────────
+
+function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser }: {
+    bookName: string; entries: AnalysisLogEntry[]; onSave: (e: AnalysisLogEntry) => void; onDelete: (id: number) => void; currentUser: string;
+}) {
+    const MEMBERS = useContext(MembersContext);
+    const confirmDelete = useContext(ConfirmDeleteContext);
+    const [formOpen, setFormOpen] = useState(false);
+    const [editEntry, setEditEntry] = useState<AnalysisLogEntry | null>(null);
+    const [title, setTitle] = useState("");
+    const [date, setDate] = useState(() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; });
+    const [tool, setTool] = useState("");
+    const [meshInfo, setMeshInfo] = useState("");
+    const [boundaryConditions, setBoundaryConditions] = useState("");
+    const [results, setResults] = useState("");
+    const [notes, setNotes] = useState("");
+    const [imgUrl, setImgUrl] = useState("");
+    const [imgUploading, setImgUploading] = useState(false);
+    const [expandedId, setExpandedId] = useState<number | null>(null);
+    const [search, setSearch] = useState("");
+    const todayStr = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; })();
+
+    const openAdd = () => { setEditEntry(null); setTitle(""); setDate(todayStr); setTool(""); setMeshInfo(""); setBoundaryConditions(""); setResults(""); setNotes(""); setImgUrl(""); setFormOpen(true); };
+    const openEdit = (e: AnalysisLogEntry) => { setEditEntry(e); setTitle(e.title); setDate(e.date); setTool(e.tool); setMeshInfo(e.meshInfo); setBoundaryConditions(e.boundaryConditions); setResults(e.results); setNotes(e.notes); setImgUrl(e.imageUrl || ""); setFormOpen(true); };
+    const handleImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]; if (!file) return;
+        setImgUploading(true);
+        try { const url = await uploadFile(file); setImgUrl(url); } catch {}
+        setImgUploading(false); e.target.value = "";
+    };
+    const handleSubmit = () => {
+        if (!title.trim()) return;
+        const entry: AnalysisLogEntry = editEntry
+            ? { ...editEntry, title: title.trim(), date, tool, meshInfo, boundaryConditions, results, notes, imageUrl: imgUrl || undefined, createdAt: editEntry.createdAt }
+            : { id: Date.now(), title: title.trim(), date, author: currentUser, tool, meshInfo, boundaryConditions, results, notes, imageUrl: imgUrl || undefined, createdAt: todayStr };
+        onSave(entry);
+        setFormOpen(false);
+    };
+
+    const sorted = useMemo(() => [...entries].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id), [entries]);
+    const filtered = useMemo(() => {
+        if (!search.trim()) return sorted;
+        const q = search.toLowerCase();
+        return sorted.filter(e => e.title.toLowerCase().includes(q) || e.tool.toLowerCase().includes(q) || e.meshInfo?.toLowerCase().includes(q) || e.boundaryConditions?.toLowerCase().includes(q) || e.results?.toLowerCase().includes(q) || e.notes?.toLowerCase().includes(q));
+    }, [sorted, search]);
+
+    const dateGroups = useMemo(() => {
+        const groups: Array<{ date: string; label: string; entries: AnalysisLogEntry[] }> = [];
+        const dayL = ["일", "월", "화", "수", "목", "금", "토"];
+        let cur = "";
+        for (const e of filtered) {
+            if (e.date !== cur) {
+                cur = e.date;
+                const d = new Date(e.date + "T00:00:00");
+                groups.push({ date: e.date, label: `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}. (${dayL[d.getDay()]})`, entries: [] });
+            }
+            groups[groups.length - 1].entries.push(e);
+        }
+        return groups;
+    }, [filtered]);
+
+    return (
+        <div>
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <h2 className="text-[20px] font-bold text-slate-900">🖥️ {bookName}</h2>
+                <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-xl text-[14px] font-medium hover:bg-blue-600 transition-colors shadow-sm">+ 기록 추가</button>
+            </div>
+            {entries.length > 3 && (
+                <div className="mb-4">
+                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="도구, 격자, 경계조건, 결과 검색..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                </div>
+            )}
+            <div className="flex items-center gap-4 mb-4 text-[13px] text-slate-500">
+                <span>전체 <span className="font-bold text-slate-700">{entries.length}</span>건</span>
+                <span>오늘 <span className="font-bold text-blue-600">{entries.filter(e => e.date === todayStr).length}</span>건</span>
+            </div>
+            {dateGroups.length === 0 ? (
+                <div className="text-center py-16">
+                    <div className="text-[40px] mb-3">🖥️</div>
+                    <div className="text-[15px] text-slate-400 mb-1">아직 해석 기록이 없습니다</div>
+                    <div className="text-[13px] text-slate-300 mb-4">해석을 진행하고 기록을 남겨보세요</div>
+                    <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-xl text-[14px] font-medium hover:bg-blue-600">+ 첫 기록 추가</button>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {dateGroups.map(g => (
+                        <div key={g.date}>
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className={`text-[14px] font-bold ${g.date === todayStr ? "text-blue-600" : "text-slate-700"}`}>{g.label}</span>
+                                {g.date === todayStr && <span className="text-[11px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 font-semibold">오늘</span>}
+                                <span className="text-[12px] text-slate-400">{g.entries.length}건</span>
+                            </div>
+                            <div className="space-y-2">
+                                {g.entries.map(entry => {
+                                    const isExpanded = expandedId === entry.id;
+                                    return (
+                                        <div key={entry.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden transition-all hover:shadow-sm">
+                                            <button onClick={() => setExpandedId(isExpanded ? null : entry.id)} className="w-full text-left p-4 flex items-start gap-3">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-[15px] font-semibold text-slate-800 leading-snug">{entry.title}</div>
+                                                    <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                                        {entry.tool && <span className="text-[12px] text-slate-500">🔧 {entry.tool}</span>}
+                                                        {entry.meshInfo && <span className="text-[12px] text-slate-400 truncate max-w-[200px]">📐 {entry.meshInfo}</span>}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <span className="text-[11px] text-slate-400">{MEMBERS[entry.author]?.emoji} {entry.author}</span>
+                                                    <span className="text-[16px] text-slate-300 transition-transform" style={{transform: isExpanded ? "rotate(180deg)" : "rotate(0)"}}>{isExpanded ? "▲" : "▼"}</span>
+                                                </div>
+                                            </button>
+                                            {isExpanded && (
+                                                <div className="px-4 pb-4 pt-0 border-t border-slate-100">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                                                        {entry.tool && (
+                                                            <div className="rounded-lg p-3" style={{background:"#F8FAFC"}}>
+                                                                <div className="text-[11px] font-bold text-slate-400 mb-1">🔧 해석 도구</div>
+                                                                <div className="text-[13px] text-slate-700 whitespace-pre-wrap leading-relaxed">{entry.tool}</div>
+                                                            </div>
+                                                        )}
+                                                        {entry.meshInfo && (
+                                                            <div className="rounded-lg p-3" style={{background:"#F0F9FF"}}>
+                                                                <div className="text-[11px] font-bold text-slate-400 mb-1">📐 격자 정보</div>
+                                                                <div className="text-[13px] text-slate-700 whitespace-pre-wrap leading-relaxed">{entry.meshInfo}</div>
+                                                            </div>
+                                                        )}
+                                                        {entry.boundaryConditions && (
+                                                            <div className="rounded-lg p-3" style={{background:"#FFF7ED"}}>
+                                                                <div className="text-[11px] font-bold text-slate-400 mb-1">⚙️ 경계 조건</div>
+                                                                <div className="text-[13px] text-slate-700 whitespace-pre-wrap leading-relaxed">{entry.boundaryConditions}</div>
+                                                            </div>
+                                                        )}
+                                                        {entry.results && (
+                                                            <div className="rounded-lg p-3" style={{background:"#F0FDF4"}}>
+                                                                <div className="text-[11px] font-bold text-slate-400 mb-1">📊 결과</div>
+                                                                <div className="text-[13px] text-slate-700 whitespace-pre-wrap leading-relaxed">{entry.results}</div>
+                                                            </div>
+                                                        )}
+                                                        {entry.notes && (
+                                                            <div className="rounded-lg p-3" style={{background:"#FFFBEB"}}>
+                                                                <div className="text-[11px] font-bold text-slate-400 mb-1">💬 의견</div>
+                                                                <div className="text-[13px] text-slate-700 whitespace-pre-wrap leading-relaxed">{entry.notes}</div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {entry.imageUrl && (
+                                                        <div className="mt-3">
+                                                            <img src={entry.imageUrl} alt="" className="max-h-[300px] rounded-lg border border-slate-200 object-contain cursor-pointer" onClick={() => window.open(entry.imageUrl, '_blank')} />
+                                                        </div>
+                                                    )}
+                                                    <div className="flex items-center justify-between mt-3 pt-2" style={{borderTop:"1px solid #F1F5F9"}}>
+                                                        <span className="text-[11px] text-slate-300">작성: {entry.createdAt}</span>
+                                                        <button onClick={() => openEdit(entry)} className="text-[12px] text-blue-500 hover:text-blue-700 font-medium">수정</button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+            <button onClick={openAdd} className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-blue-500 text-white shadow-lg flex items-center justify-center text-[24px] hover:bg-blue-600 active:scale-95 transition-all">+</button>
+            {formOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:"rgba(0,0,0,0.4)"}} onClick={() => setFormOpen(false)}>
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <div className="p-5">
+                            <h3 className="text-[18px] font-bold text-slate-900 mb-4">{editEntry ? "해석 기록 수정" : "해석 기록 추가"}</h3>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-[12px] font-semibold text-slate-500 mb-1 block">해석명 *</label>
+                                    <input value={title} onChange={e => setTitle(e.target.value)} placeholder="예: ANSYS Fluent CHF 시뮬레이션 #2" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                </div>
+                                <div>
+                                    <label className="text-[12px] font-semibold text-slate-500 mb-1 block">날짜</label>
+                                    <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                </div>
+                                <div>
+                                    <label className="text-[12px] font-semibold text-slate-500 mb-1 block">🔧 해석 도구</label>
+                                    <input value={tool} onChange={e => setTool(e.target.value)} placeholder="예: ANSYS Fluent 2024R2, OpenFOAM v2312..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                </div>
+                                <div>
+                                    <label className="text-[12px] font-semibold text-slate-500 mb-1 block">📐 격자 정보</label>
+                                    <textarea value={meshInfo} onChange={e => setMeshInfo(e.target.value)} placeholder="격자 유형, 셀 수, 격자 품질, y+ 등" rows={2} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                </div>
+                                <div>
+                                    <label className="text-[12px] font-semibold text-slate-500 mb-1 block">⚙️ 경계 조건</label>
+                                    <textarea value={boundaryConditions} onChange={e => setBoundaryConditions(e.target.value)} placeholder="inlet/outlet 조건, 벽면 조건, 열유속 등" rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                </div>
+                                <div>
+                                    <label className="text-[12px] font-semibold text-slate-500 mb-1 block">📊 결과</label>
+                                    <textarea value={results} onChange={e => setResults(e.target.value)} placeholder="수렴 결과, 핵심 수치, 비교 분석 등" rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                </div>
+                                <div>
+                                    <label className="text-[12px] font-semibold text-slate-500 mb-1 block">💬 의견</label>
+                                    <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="관찰사항, 문제점, 다음 해석 계획 등" rows={2} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                </div>
+                                <div>
+                                    <label className="text-[12px] font-semibold text-slate-500 mb-1 block">📷 이미지</label>
+                                    <input type="file" accept="image/*" onChange={handleImg} className="w-full text-[13px] text-slate-500" />
+                                    {imgUploading && <span className="text-[12px] text-blue-500">업로드 중...</span>}
+                                    {imgUrl && <img src={imgUrl} alt="" className="mt-2 max-h-[150px] rounded-lg border border-slate-200 object-contain" />}
+                                </div>
+                            </div>
+                            <div className="flex justify-between mt-5">
+                                {editEntry ? (
+                                    <button onClick={() => { confirmDelete(() => { onDelete(editEntry.id); setFormOpen(false); }); }} className="px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 rounded-lg font-medium">삭제</button>
+                                ) : <div />}
+                                <div className="flex gap-2">
+                                    <button onClick={() => setFormOpen(false)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                                    <button onClick={handleSubmit} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">{imgUploading ? "⏳" : editEntry ? "수정" : "추가"}</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Experiment Log View (per-team daily log) ────────────────────────────────
+
+function ExpLogView({ teamName, entries, onSave, onDelete, currentUser }: {
+    teamName: string; entries: ExpLogEntry[]; onSave: (e: ExpLogEntry) => void; onDelete: (id: number) => void; currentUser: string;
+}) {
+    const MEMBERS = useContext(MembersContext);
+    const confirmDelete = useContext(ConfirmDeleteContext);
+    const [formOpen, setFormOpen] = useState(false);
+    const [editEntry, setEditEntry] = useState<ExpLogEntry | null>(null);
+    const [title, setTitle] = useState("");
+    const [date, setDate] = useState(() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; });
+    const [conditions, setConditions] = useState("");
+    const [specimen, setSpecimen] = useState("");
+    const [dataField, setDataField] = useState("");
+    const [notes, setNotes] = useState("");
+    const [imgUrl, setImgUrl] = useState("");
+    const [imgUploading, setImgUploading] = useState(false);
+    const [expandedId, setExpandedId] = useState<number | null>(null);
+    const [search, setSearch] = useState("");
+
+    const todayStr = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; })();
+
+    const openAdd = () => { setEditEntry(null); setTitle(""); setDate(todayStr); setConditions(""); setSpecimen(""); setDataField(""); setNotes(""); setImgUrl(""); setFormOpen(true); };
+    const openEdit = (e: ExpLogEntry) => { setEditEntry(e); setTitle(e.title); setDate(e.date); setConditions(e.conditions); setSpecimen(e.specimen || ""); setDataField(e.data || ""); setNotes(e.notes || ""); setImgUrl(e.imageUrl || ""); setFormOpen(true); };
+    const handleImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]; if (!file) return;
+        setImgUploading(true);
+        try { const url = await uploadFile(file); setImgUrl(url); } catch {}
+        setImgUploading(false); e.target.value = "";
+    };
+    const handleSubmit = () => {
+        if (!title.trim()) return;
+        const now = todayStr;
+        const entry: ExpLogEntry = editEntry
+            ? { ...editEntry, title: title.trim(), date, conditions, specimen, data: dataField, notes, imageUrl: imgUrl || undefined, createdAt: editEntry.createdAt }
+            : { id: Date.now(), title: title.trim(), date, author: currentUser, conditions, specimen, data: dataField, notes, imageUrl: imgUrl || undefined, createdAt: now };
+        onSave(entry);
+        setFormOpen(false);
+    };
+
+    // Sort by date descending, group by date
+    const sorted = useMemo(() => [...entries].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id), [entries]);
+    const filtered = useMemo(() => {
+        if (!search.trim()) return sorted;
+        const q = search.toLowerCase();
+        return sorted.filter(e => e.title.toLowerCase().includes(q) || e.conditions.toLowerCase().includes(q) || e.specimen?.toLowerCase().includes(q) || e.data?.toLowerCase().includes(q) || e.notes?.toLowerCase().includes(q) || e.author.includes(q));
+    }, [sorted, search]);
+
+    const dateGroups = useMemo(() => {
+        const groups: Array<{ date: string; label: string; entries: ExpLogEntry[] }> = [];
+        const dayL = ["일", "월", "화", "수", "목", "금", "토"];
+        let cur = "";
+        for (const e of filtered) {
+            if (e.date !== cur) {
+                cur = e.date;
+                const d = new Date(e.date + "T00:00:00");
+                groups.push({ date: e.date, label: `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}. (${dayL[d.getDay()]})`, entries: [] });
+            }
+            groups[groups.length - 1].entries.push(e);
+        }
+        return groups;
+    }, [filtered]);
+
+    return (
+        <div>
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <h2 className="text-[20px] font-bold text-slate-900">🧪 {teamName} 실험일지</h2>
+                <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-xl text-[14px] font-medium hover:bg-blue-600 transition-colors shadow-sm">+ 기록 추가</button>
+            </div>
+
+            {/* Search */}
+            {entries.length > 3 && (
+                <div className="mb-4">
+                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="실험명, 조건, 시편, 데이터 검색..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                </div>
+            )}
+
+            {/* Stats */}
+            <div className="flex items-center gap-4 mb-4 text-[13px] text-slate-500">
+                <span>전체 <span className="font-bold text-slate-700">{entries.length}</span>건</span>
+                <span>오늘 <span className="font-bold text-blue-600">{entries.filter(e => e.date === todayStr).length}</span>건</span>
+            </div>
+
+            {/* Date-grouped list */}
+            {dateGroups.length === 0 ? (
+                <div className="text-center py-16">
+                    <div className="text-[40px] mb-3">🧪</div>
+                    <div className="text-[15px] text-slate-400 mb-1">아직 실험 기록이 없습니다</div>
+                    <div className="text-[13px] text-slate-300 mb-4">실험을 진행하고 기록을 남겨보세요</div>
+                    <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-xl text-[14px] font-medium hover:bg-blue-600">+ 첫 기록 추가</button>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {dateGroups.map(g => (
+                        <div key={g.date}>
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className={`text-[14px] font-bold ${g.date === todayStr ? "text-blue-600" : "text-slate-700"}`}>{g.label}</span>
+                                {g.date === todayStr && <span className="text-[11px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 font-semibold">오늘</span>}
+                                <span className="text-[12px] text-slate-400">{g.entries.length}건</span>
+                            </div>
+                            <div className="space-y-2">
+                                {g.entries.map(entry => {
+                                    const isExpanded = expandedId === entry.id;
+                                    return (
+                                        <div key={entry.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden transition-all hover:shadow-sm">
+                                            <button onClick={() => setExpandedId(isExpanded ? null : entry.id)} className="w-full text-left p-4 flex items-start gap-3">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-[15px] font-semibold text-slate-800 leading-snug">{entry.title}</div>
+                                                    <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                                        {entry.specimen && <span className="text-[12px] text-slate-500">🔬 {entry.specimen}</span>}
+                                                        {entry.conditions && <span className="text-[12px] text-slate-400 truncate max-w-[200px]">⚙️ {entry.conditions}</span>}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <span className="text-[11px] text-slate-400">{MEMBERS[entry.author]?.emoji} {entry.author}</span>
+                                                    <span className="text-[16px] text-slate-300 transition-transform" style={{transform: isExpanded ? "rotate(180deg)" : "rotate(0)"}}>{isExpanded ? "▲" : "▼"}</span>
+                                                </div>
+                                            </button>
+                                            {isExpanded && (
+                                                <div className="px-4 pb-4 pt-0 border-t border-slate-100">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                                                        {entry.conditions && (
+                                                            <div className="rounded-lg p-3" style={{background:"#F8FAFC"}}>
+                                                                <div className="text-[11px] font-bold text-slate-400 mb-1">⚙️ 실험 조건</div>
+                                                                <div className="text-[13px] text-slate-700 whitespace-pre-wrap leading-relaxed">{entry.conditions}</div>
+                                                            </div>
+                                                        )}
+                                                        {entry.specimen && (
+                                                            <div className="rounded-lg p-3" style={{background:"#F0F9FF"}}>
+                                                                <div className="text-[11px] font-bold text-slate-400 mb-1">🔬 시편 종류</div>
+                                                                <div className="text-[13px] text-slate-700 whitespace-pre-wrap leading-relaxed">{entry.specimen}</div>
+                                                            </div>
+                                                        )}
+                                                        {entry.data && (
+                                                            <div className="rounded-lg p-3" style={{background:"#F0FDF4"}}>
+                                                                <div className="text-[11px] font-bold text-slate-400 mb-1">📊 데이터</div>
+                                                                <div className="text-[13px] text-slate-700 whitespace-pre-wrap leading-relaxed">{entry.data}</div>
+                                                            </div>
+                                                        )}
+                                                        {entry.notes && (
+                                                            <div className="rounded-lg p-3" style={{background:"#FFFBEB"}}>
+                                                                <div className="text-[11px] font-bold text-slate-400 mb-1">💬 의견</div>
+                                                                <div className="text-[13px] text-slate-700 whitespace-pre-wrap leading-relaxed">{entry.notes}</div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {entry.imageUrl && (
+                                                        <div className="mt-3">
+                                                            <img src={entry.imageUrl} alt="" className="max-h-[300px] rounded-lg border border-slate-200 object-contain cursor-pointer" onClick={() => window.open(entry.imageUrl, '_blank')} />
+                                                        </div>
+                                                    )}
+                                                    <div className="flex items-center justify-between mt-3 pt-2" style={{borderTop:"1px solid #F1F5F9"}}>
+                                                        <span className="text-[11px] text-slate-300">작성: {entry.createdAt}</span>
+                                                        <button onClick={() => openEdit(entry)} className="text-[12px] text-blue-500 hover:text-blue-700 font-medium">수정</button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Mobile FAB */}
+            <button onClick={openAdd} className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-blue-500 text-white shadow-lg flex items-center justify-center text-[24px] hover:bg-blue-600 active:scale-95 transition-all">+</button>
+
+            {/* Form modal */}
+            {formOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:"rgba(0,0,0,0.4)"}} onClick={() => setFormOpen(false)}>
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <div className="p-5">
+                            <h3 className="text-[18px] font-bold text-slate-900 mb-4">{editEntry ? "실험 기록 수정" : "실험 기록 추가"}</h3>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-[12px] font-semibold text-slate-500 mb-1 block">실험명 *</label>
+                                    <input value={title} onChange={e => setTitle(e.target.value)} placeholder="예: Pool boiling CHF 측정 #3" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                </div>
+                                <div>
+                                    <label className="text-[12px] font-semibold text-slate-500 mb-1 block">실험 날짜</label>
+                                    <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                </div>
+                                <div>
+                                    <label className="text-[12px] font-semibold text-slate-500 mb-1 block">⚙️ 실험 조건</label>
+                                    <textarea value={conditions} onChange={e => setConditions(e.target.value)} placeholder="유속, 온도, 압력, 히터 전력, 냉각수 유량 등" rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                </div>
+                                <div>
+                                    <label className="text-[12px] font-semibold text-slate-500 mb-1 block">🔬 시편 종류</label>
+                                    <input value={specimen} onChange={e => setSpecimen(e.target.value)} placeholder="예: Cu 20×20mm, SiC 코팅, FC-72 ..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                </div>
+                                <div>
+                                    <label className="text-[12px] font-semibold text-slate-500 mb-1 block">📊 데이터</label>
+                                    <textarea value={dataField} onChange={e => setDataField(e.target.value)} placeholder="측정 결과, 열유속, HTC 값, 주요 수치 등" rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                </div>
+                                <div>
+                                    <label className="text-[12px] font-semibold text-slate-500 mb-1 block">💬 의견</label>
+                                    <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="관찰사항, 문제점, 다음 실험 계획 등" rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                </div>
+                                <div>
+                                    <label className="text-[12px] font-semibold text-slate-500 mb-1 block">📷 이미지</label>
+                                    <input type="file" accept="image/*" onChange={handleImg} className="w-full text-[13px] text-slate-500" />
+                                    {imgUploading && <span className="text-[12px] text-blue-500">업로드 중...</span>}
+                                    {imgUrl && <img src={imgUrl} alt="" className="mt-2 max-h-[150px] rounded-lg border border-slate-200 object-contain" />}
+                                </div>
+                            </div>
+                            <div className="flex justify-between mt-5">
+                                {editEntry ? (
+                                    <button onClick={() => { confirmDelete(() => { onDelete(editEntry.id); setFormOpen(false); }); }} className="px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 rounded-lg font-medium">삭제</button>
+                                ) : <div />}
+                                <div className="flex gap-2">
+                                    <button onClick={() => setFormOpen(false)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                                    <button onClick={handleSubmit} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">{imgUploading ? "⏳" : editEntry ? "수정" : "추가"}</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPatents, announcements, dailyTargets, ideas, resources, chatPosts, personalMemos, teamMemos, meetings, conferenceTrips, onlineUsers, currentUser, onNavigate, mode, statusMessages, members, teams }: {
+    papers: Paper[]; reports: Report[]; experiments: Experiment[]; analyses: Analysis[]; todos: Todo[]; ipPatents: Patent[]; announcements: Announcement[]; dailyTargets: DailyTarget[]; ideas: IdeaPost[]; resources: Resource[]; chatPosts: IdeaPost[]; personalMemos: Record<string, Memo[]>; teamMemos: Record<string, { kanban: TeamMemoCard[]; chat: TeamChatMsg[] }>; meetings: Meeting[]; conferenceTrips: ConferenceTrip[]; onlineUsers: Array<{ name: string; timestamp: number }>; currentUser: string; onNavigate: (tab: string) => void; mode: "team" | "personal"; statusMessages: Record<string, string>; members: Record<string, { team: string; role: string; emoji: string }>; teams: Record<string, TeamData>;
 }) {
     const MEMBERS = useContext(MembersContext);
     const today = new Date();
@@ -6321,6 +7396,71 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
     const dayNames = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
     const dateLabel = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${dayNames[today.getDay()]}`;
 
+    // ── Upcoming Deadlines (D-day) ──
+    type DeadlineItem = { title: string; deadline: string; dday: number; type: string; color: string; icon: string; tab: string; assignees: string[] };
+    const upcomingDeadlines = useMemo(() => {
+        const nowMs = today.getTime();
+        const items: DeadlineItem[] = [];
+        const addItem = (title: string, deadline: string, type: string, color: string, icon: string, tab: string, assignees: string[]) => {
+            if (!deadline) return;
+            const dMs = new Date(deadline + "T00:00:00").getTime();
+            const dday = Math.ceil((dMs - nowMs) / 86400000);
+            if (dday >= -7 && dday <= 90) items.push({ title, deadline, dday, type, color, icon, tab, assignees });
+        };
+        fp.filter(p => p.status !== "completed").forEach(p => addItem(p.title, p.deadline, "논문", CATEGORY_COLORS.paper, "📄", "papers", p.assignees));
+        fr.filter(r => r.status !== "done").forEach(r => addItem(r.title, r.deadline, "보고서", CATEGORY_COLORS.report, "📋", "reports", r.assignees));
+        ft.filter(t => !t.done).forEach(t => addItem(t.text, t.deadline, "할일", "#F59E0B", "✅", "todos", t.assignees));
+        fe.filter(e => e.status !== "completed").forEach(e => addItem(e.title, e.endDate, "실험", CATEGORY_COLORS.experiment, "🧪", "experiments", e.assignees));
+        fa.filter(a => a.status !== "completed").forEach(a => addItem(a.title, a.endDate, "해석", CATEGORY_COLORS.analysis, "🖥️", "analysis", a.assignees));
+        fip.filter(p => p.status !== "completed").forEach(p => addItem(p.title, p.deadline, "특허", CATEGORY_COLORS.ip, "💡", "ip", p.assignees || []));
+        const fconf = isPersonal ? conferenceTrips.filter(c => c.participants.includes(currentUser)) : conferenceTrips;
+        fconf.forEach(c => addItem(c.title, c.startDate, "학회", "#60A5FA", "✈️", "conferenceTrips", c.participants));
+        items.sort((a, b) => a.dday - b.dday);
+        return items;
+    }, [fp, fr, ft, fe, fa, fip, conferenceTrips, isPersonal, currentUser, today]);
+    const ddayLabel = (d: number) => d === 0 ? "D-Day" : d > 0 ? `D-${d}` : `D+${Math.abs(d)}`;
+    const ddayColor = (d: number) => d < 0 ? "#EF4444" : d === 0 ? "#EF4444" : d <= 3 ? "#F97316" : d <= 7 ? "#F59E0B" : "#94A3B8";
+
+    // ── Feedback (comments by others on my items) ──
+    const recentFeedback = useMemo(() => {
+        if (!isPersonal) return [];
+        type FeedbackItem = { author: string; text: string; date: string; itemTitle: string; icon: string; tab: string };
+        const fb: FeedbackItem[] = [];
+        const collectComments = (items: Array<{ title?: string; text?: string; comments?: Comment[] }>, icon: string, tab: string) => {
+            items.forEach(item => {
+                (item.comments || []).filter(c => c.author !== currentUser).forEach(c => {
+                    fb.push({ author: c.author, text: c.text, date: c.date, itemTitle: (item.title || item.text || "").slice(0, 30), icon, tab });
+                });
+            });
+        };
+        collectComments(myPapers, "📄", "papers");
+        collectComments(myReports, "📋", "reports");
+        collectComments(myExperiments, "🧪", "experiments");
+        collectComments(myAnalyses, "🖥️", "analysis");
+        collectComments(myTodos as Array<{ title?: string; text?: string; comments?: Comment[] }>, "✅", "todos");
+        fb.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return fb.slice(0, 10);
+    }, [isPersonal, myPapers, myReports, myExperiments, myAnalyses, myTodos, currentUser]);
+
+    // ── Goal Streak (consecutive weekdays with daily target written) ──
+    const goalStreak = useMemo(() => {
+        if (!isPersonal) return 0;
+        const myTargetDates = new Set(dailyTargets.filter(t => t.name === currentUser).map(t => t.date));
+        let streak = 0;
+        const d = new Date(today);
+        // Start from today (or yesterday if no target today yet)
+        if (!myTargetDates.has(todayStr)) d.setDate(d.getDate() - 1);
+        // Skip weekends
+        while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
+        // Count consecutive weekdays
+        for (let i = 0; i < 365; i++) {
+            if (d.getDay() === 0 || d.getDay() === 6) { d.setDate(d.getDate() - 1); continue; }
+            const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            if (myTargetDates.has(ds)) { streak++; d.setDate(d.getDate() - 1); } else break;
+        }
+        return streak;
+    }, [isPersonal, dailyTargets, currentUser, todayStr, today]);
+
     return (
         <div className="space-y-5">
             {/* Team mode: page title + date + online users */}
@@ -6370,6 +7510,28 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                                 <button onClick={() => onNavigate("settings")} className="relative px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors" style={{background:"#F0FDF4", color:"#16A34A", border:"1px solid #DCFCE7", animation:"subtle-pulse 3s ease-in-out infinite"}} onMouseEnter={e => (e.currentTarget.style.background = "#DCFCE7")} onMouseLeave={e => (e.currentTarget.style.background = "#F0FDF4")}><span className="absolute -top-1 -left-1 w-[6px] h-[6px] rounded-full bg-red-500" />💬 한마디 작성하기</button>
                             )}
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* D-day: 다가오는 마감 */}
+            {upcomingDeadlines.length > 0 && (
+                <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200" style={{borderTop:"2px solid #F59E0B"}}>
+                    <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-amber-500 flex items-center gap-2">
+                        {isPersonal ? "내 마감 일정" : "다가오는 마감"}
+                        <span className="px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600 text-[11px] font-semibold">{upcomingDeadlines.length}</span>
+                    </h3>
+                    <div className="flex gap-2.5 overflow-x-auto pb-1" style={{scrollbarWidth:"thin", scrollbarColor:"rgba(0,0,0,0.08) transparent"}}>
+                        {upcomingDeadlines.slice(0, 20).map((dl, i) => (
+                            <button key={`${dl.tab}-${dl.title}-${i}`} onClick={() => onNavigate(dl.tab)} className="flex-shrink-0 rounded-xl p-3 text-left transition-all hover:shadow-md hover:-translate-y-0.5 group" style={{background:`${dl.color}08`, border:`1px solid ${dl.color}30`, minWidth:"160px", maxWidth:"200px"}}>
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <span className="text-[12px] font-semibold px-1.5 py-0.5 rounded" style={{background:`${dl.color}18`, color:dl.color}}>{dl.icon} {dl.type}</span>
+                                    <span className="text-[13px] font-black" style={{color:ddayColor(dl.dday)}}>{ddayLabel(dl.dday)}</span>
+                                </div>
+                                <div className="text-[13px] font-semibold text-slate-800 leading-snug truncate group-hover:text-slate-900">{dl.title}</div>
+                                <div className="text-[11px] text-slate-400 mt-1">{dl.deadline} · {dl.assignees.slice(0, 2).join(", ")}{dl.assignees.length > 2 ? ` +${dl.assignees.length - 2}` : ""}</div>
+                            </button>
+                        ))}
                     </div>
                 </div>
             )}
@@ -6547,7 +7709,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
             </div>
 
             {/* Row 3: 멤버별 현황 (team) / 내 현황 (personal) */}
-            {isPersonal ? (
+            {isPersonal ? (<>
                 <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
                     <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">내 전체 현황</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -6618,7 +7780,80 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                         </div>
                     </div>
                 </div>
-            ) : (
+
+                {/* 피드백 + 스트릭 (personal only) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    {/* 나에게 온 피드백 */}
+                    <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
+                        <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500 flex items-center gap-2">
+                            나에게 온 피드백
+                            {recentFeedback.length > 0 && <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-500 text-[11px] font-semibold">{recentFeedback.length}</span>}
+                        </h3>
+                        {recentFeedback.length === 0 ? (
+                            <div className="text-[13px] text-slate-300 text-center py-6">피드백 없음</div>
+                        ) : (
+                            <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
+                                {recentFeedback.map((fb, i) => (
+                                    <button key={i} onClick={() => onNavigate(fb.tab)} className="w-full flex items-start gap-2.5 p-2.5 rounded-xl text-left transition-colors hover:bg-slate-50" style={{background:"#F8FAFC"}}>
+                                        <span className="text-[14px] mt-0.5">{fb.icon}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-[13px] text-slate-700 leading-snug"><span className="font-semibold">{MEMBERS[fb.author]?.emoji} {fb.author}</span> <span className="text-slate-400">→</span> <span className="text-slate-500">{fb.itemTitle}</span></div>
+                                            <div className="text-[12px] text-slate-500 mt-0.5 truncate">{fb.text}</div>
+                                            <div className="text-[10px] text-slate-300 mt-0.5">{fb.date}</div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 목표 스트릭 */}
+                    <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
+                        <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">목표 스트릭</h3>
+                        <div className="flex items-center gap-4 mb-3">
+                            <div className="text-center">
+                                <div className="text-[36px] font-black" style={{color: goalStreak >= 5 ? "#22C55E" : goalStreak >= 1 ? "#3B82F6" : "#CBD5E1", lineHeight:1}}>{goalStreak}</div>
+                                <div className="text-[12px] text-slate-400 mt-1">연속 일수</div>
+                            </div>
+                            <div className="flex-1">
+                                <div className="text-[13px] text-slate-600 leading-relaxed">
+                                    {goalStreak === 0 ? "오늘 목표를 작성하고 스트릭을 시작하세요!" :
+                                     goalStreak < 5 ? `${goalStreak}일 연속 작성 중! 계속 이어가세요.` :
+                                     goalStreak < 20 ? `${goalStreak}일 연속! 대단해요!` :
+                                     `${goalStreak}일 연속 달성! 놀라운 꾸준함입니다!`}
+                                </div>
+                                {goalStreak === 0 && !myTarget && (
+                                    <button onClick={() => onNavigate("daily")} className="mt-2 text-[12px] px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 font-medium hover:bg-blue-100 transition-colors">🎯 목표 작성하기</button>
+                                )}
+                            </div>
+                        </div>
+                        {/* Mini heatmap — last 14 weekdays */}
+                        {(() => {
+                            const myTargetDates = new Set(dailyTargets.filter(t => t.name === currentUser).map(t => t.date));
+                            const cells: Array<{ date: string; has: boolean; label: string }> = [];
+                            const d = new Date(today);
+                            for (let i = 0; cells.length < 14; i++) {
+                                if (i > 30) break;
+                                if (d.getDay() !== 0 && d.getDay() !== 6) {
+                                    const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                                    cells.unshift({ date: ds, has: myTargetDates.has(ds), label: `${d.getMonth() + 1}/${d.getDate()}` });
+                                }
+                                d.setDate(d.getDate() - 1);
+                            }
+                            return (
+                                <div className="flex gap-1 mt-2">
+                                    {cells.map(c => (
+                                        <div key={c.date} className="flex-1 h-[28px] rounded-md flex items-center justify-center text-[10px] font-medium transition-colors" title={c.date}
+                                            style={{background: c.has ? "#22C55E" : "#F1F5F9", color: c.has ? "white" : "#94A3B8"}}>
+                                            {c.label.split("/")[1]}
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                        })()}
+                    </div>
+                </div>
+            </>) : (
                 <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
                     <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">멤버별 현황</h3>
                     <div className="overflow-x-auto">
@@ -6811,6 +8046,11 @@ export default function DashboardPage() {
     const [labFiles, setLabFiles] = useState<LabFile[]>([]);
     const [labBoard, setLabBoard] = useState<TeamMemoCard[]>([]);
     const [chatReadTs, setChatReadTs] = useState<Record<string, number>>({});
+    const [readReceipts, setReadReceipts] = useState<Record<string, Record<string, number>>>({});
+    const [pushPrefs, setPushPrefs] = useState<Record<string, Record<string, boolean>>>({});
+    const [notiSettingsOpen, setNotiSettingsOpen] = useState(false);
+    const [experimentLogs, setExperimentLogs] = useState<Record<string, ExpLogBook[]>>({});
+    const [analysisLogs, setAnalysisLogs] = useState<Record<string, AnalysisLogBook[]>>({});
 
     const tabs = [
         { id: "overview", label: "연구실 현황", icon: "🏠" },
@@ -6821,7 +8061,9 @@ export default function DashboardPage() {
         { id: "calendar", label: "일정/휴가", icon: "📅" },
         { id: "daily", label: "오늘 목표", icon: "🎯" },
         // 팀 워크
-        ...(userName === "박일웅" ? teamNames : teamNames.filter(t => teams[t]?.lead === userName || teams[t]?.members?.includes(userName))).map(t => ({ id: `teamMemo_${t}`, label: t, icon: teams[t]?.emoji || "📌", color: teams[t]?.color })),
+        ...(userName === "박일웅" ? teamNames : teamNames.filter(t => teams[t]?.lead === userName || teams[t]?.members?.includes(userName))).map(t =>
+            ({ id: `teamMemo_${t}`, label: t, icon: teams[t]?.emoji || "📌", color: teams[t]?.color })
+        ),
         // 내 노트
         { id: "todos", label: "To-do", icon: "✅" },
         ...(userName === "박일웅" ? memberNames : memberNames.filter(n => n === userName)).map(name => ({ id: `memo_${name}`, label: name, icon: customEmojis[name] || members[name]?.emoji || "👤" })),
@@ -6961,6 +8203,22 @@ export default function DashboardPage() {
             if (d.labChat) setLabChat(d.labChat);
             if (d.labFiles) setLabFiles(d.labFiles);
             if (d.labBoard) setLabBoard(d.labBoard);
+            if (d.readReceipts) setReadReceipts(d.readReceipts);
+            if (d.pushPrefs) setPushPrefs(d.pushPrefs);
+            if (d.experimentLogs) {
+                // Migrate old flat format (Record<string, ExpLogEntry[]>) → new book format (Record<string, ExpLogBook[]>)
+                const raw = d.experimentLogs as Record<string, unknown>;
+                const migrated: Record<string, ExpLogBook[]> = {};
+                for (const [team, val] of Object.entries(raw)) {
+                    if (Array.isArray(val) && val.length > 0 && 'entries' in val[0]) {
+                        migrated[team] = val as ExpLogBook[];
+                    } else if (Array.isArray(val)) {
+                        migrated[team] = val.length > 0 ? [{ id: 1, name: "실험일지", createdAt: new Date().toISOString().split("T")[0], entries: val as ExpLogEntry[] }] : [];
+                    }
+                }
+                setExperimentLogs(migrated);
+            }
+            if (d.analysisLogs) setAnalysisLogs(d.analysisLogs);
             if (d.analysisToolList) setAnalysisToolList(d.analysisToolList);
             if (d.paperTagList) setPaperTagList(d.paperTagList);
             if (d.members && Object.keys(d.members).length > 0) {
@@ -7074,19 +8332,62 @@ export default function DashboardPage() {
         } catch {}
     }, [userName]);
 
+    // Register Service Worker for PWA + Push
+    useEffect(() => {
+        if (!('serviceWorker' in navigator) || !userName) return;
+        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        navigator.serviceWorker.register('/sw.js').then(async (reg) => {
+            if (!vapidKey || !('PushManager' in window)) return;
+            try {
+                const existing = await reg.pushManager.getSubscription();
+                if (existing) {
+                    // Already subscribed, just re-register with server
+                    fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userName, subscription: existing.toJSON() }) }).catch(() => {});
+                    return;
+                }
+                const urlBase64ToUint8Array = (base64String: string) => {
+                    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+                    const raw = atob(base64);
+                    return Uint8Array.from(raw, c => c.charCodeAt(0));
+                };
+                const sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(vapidKey),
+                });
+                fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userName, subscription: sub.toJSON() }) }).catch(() => {});
+            } catch {} // push permission denied or not supported
+        }).catch(() => {});
+    }, [userName]);
+
     // chatReadTs: mark current tab as read (on tab switch + when new msgs arrive while viewing)
     const activeChatLen = activeTab === "labChat" ? (labChat.length + labBoard.length)
         : activeTab.startsWith("teamMemo_") ? ((teamMemos[activeTab.replace("teamMemo_", "")]?.chat || []).length + (teamMemos[activeTab.replace("teamMemo_", "")]?.kanban || []).length)
         : activeTab.startsWith("memo_") ? (piChat[activeTab.replace("memo_", "")] || []).length
         : activeTab === "announcements" ? announcements.length : -1;
+    // Debounced save of readReceipts to server
+    const readReceiptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const saveReadReceipt = useCallback((tabId: string, ts: number) => {
+        if (!userName) return;
+        setReadReceipts(prev => {
+            const next = { ...prev, [tabId]: { ...(prev[tabId] || {}), [userName]: ts } };
+            if (readReceiptTimerRef.current) clearTimeout(readReceiptTimerRef.current);
+            readReceiptTimerRef.current = setTimeout(() => {
+                fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "readReceipts", data: next, userName }) }).catch(() => {});
+            }, 1000);
+            return next;
+        });
+    }, [userName]);
     useEffect(() => {
         if (!userName || activeChatLen < 0) return;
+        const now = Date.now();
         setChatReadTs(prev => {
-            const next = { ...prev, [activeTab]: Date.now() };
+            const next = { ...prev, [activeTab]: now };
             try { localStorage.setItem(`mftel_chatReadTs_${userName}`, JSON.stringify(next)); } catch {}
             return next;
         });
-    }, [activeTab, userName, activeChatLen]);
+        saveReadReceipt(activeTab, now);
+    }, [activeTab, userName, activeChatLen, saveReadReceipt]);
 
     // Handlers
     const handleToggleTodo = (id: number) => { const u = todos.map(t => t.id === id ? { ...t, done: !t.done } : t); setTodos(u); saveSection("todos", u); };
@@ -7097,35 +8398,35 @@ export default function DashboardPage() {
     const handleDelAnn = (id: number) => { const u = announcements.filter(a => a.id !== id); setAnnouncements(u); saveSection("announcements", u); };
     const handleUpdateAnn = (ann: Announcement) => { const u = announcements.map(a => a.id === ann.id ? ann : a); setAnnouncements(u); saveSection("announcements", u); };
     const handleAddPhil = (text: string) => { const nid = Date.now(); const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned: false }, ...philosophy]; setPhilosophy(u); trackSave(nid, "philosophy", u, () => setPhilosophy(prev => prev.filter(p => p.id !== nid))); };
-    const handleDelPhil = (id: number) => { const u = philosophy.filter(p => p.id !== id); setPhilosophy(u); saveSection("philosophy", u); };
-    const handleUpdatePhil = (p: Announcement) => { const u = philosophy.map(x => x.id === p.id ? p : x); setPhilosophy(u); saveSection("philosophy", u); };
+    const handleDelPhil = (id: number) => { pendingSavesRef.current++; setPhilosophy(prev => { const u = prev.filter(p => p.id !== id); saveSection("philosophy", u).then(() => { pendingSavesRef.current--; }); return u; }); };
+    const handleUpdatePhil = (p: Announcement) => { pendingSavesRef.current++; setPhilosophy(prev => { const u = prev.map(x => x.id === p.id ? p : x); saveSection("philosophy", u).then(() => { pendingSavesRef.current--; }); return u; }); };
 
     const handleSavePaper = (p: Paper) => {
         const exists = papers.find(x => x.id === p.id);
         const u = exists ? papers.map(x => x.id === p.id ? p : x) : [...papers, p];
         setPapers(u); setPaperModal(null);
-        if (exists) saveSection("papers", u);
+        if (exists) { pendingSavesRef.current++; saveSection("papers", u).then(() => { pendingSavesRef.current--; }); }
         else trackSave(p.id, "papers", u, () => setPapers(prev => prev.filter(x => x.id !== p.id)));
     };
-    const handleDeletePaper = (id: number) => { const u = papers.filter(p => p.id !== id); setPapers(u); saveSection("papers", u); };
+    const handleDeletePaper = (id: number) => { pendingSavesRef.current++; setPapers(prev => { const u = prev.filter(p => p.id !== id); saveSection("papers", u).then(() => { pendingSavesRef.current--; }); return u; }); };
 
     const handleSaveExperiment = (e: Experiment) => {
         const exists = experiments.find(x => x.id === e.id);
         const u = exists ? experiments.map(x => x.id === e.id ? e : x) : [...experiments, e];
         setExperiments(u);
-        if (exists) saveSection("experiments", u);
+        if (exists) { pendingSavesRef.current++; saveSection("experiments", u).then(() => { pendingSavesRef.current--; }); }
         else trackSave(e.id, "experiments", u, () => setExperiments(prev => prev.filter(x => x.id !== e.id)));
     };
-    const handleDeleteExperiment = (id: number) => { const u = experiments.filter(e => e.id !== id); setExperiments(u); saveSection("experiments", u); };
+    const handleDeleteExperiment = (id: number) => { pendingSavesRef.current++; setExperiments(prev => { const u = prev.filter(e => e.id !== id); saveSection("experiments", u).then(() => { pendingSavesRef.current--; }); return u; }); };
 
     const handleSaveReport = (r: Report) => {
         const exists = reports.find(x => x.id === r.id);
         const u = exists ? reports.map(x => x.id === r.id ? r : x) : [...reports, r];
         setReports(u);
-        if (exists) saveSection("reports", u);
+        if (exists) { pendingSavesRef.current++; saveSection("reports", u).then(() => { pendingSavesRef.current--; }); }
         else trackSave(r.id, "reports", u, () => setReports(prev => prev.filter(x => x.id !== r.id)));
     };
-    const handleDeleteReport = (id: number) => { const u = reports.filter(r => r.id !== id); setReports(u); saveSection("reports", u); };
+    const handleDeleteReport = (id: number) => { pendingSavesRef.current++; setReports(prev => { const u = prev.filter(r => r.id !== id); saveSection("reports", u).then(() => { pendingSavesRef.current--; }); return u; }); };
 
     const handleCalendarToggle = (name: string, date: string, type: string | null, desc?: string) => {
         const dates = date.includes(",") ? date.split(",") : [date];
@@ -7144,73 +8445,73 @@ export default function DashboardPage() {
                 us = [...us.filter(v => !(v.name === name && v.date === dt)), { name, date: dt, type, description: desc || "" }];
             }
         }
-        setVacations(uv); saveSection("vacations", uv);
-        setSchedule(us); saveSection("schedule", us);
+        setVacations(uv); pendingSavesRef.current++; saveSection("vacations", uv).then(() => { pendingSavesRef.current--; });
+        setSchedule(us); pendingSavesRef.current++; saveSection("schedule", us).then(() => { pendingSavesRef.current--; });
     };
     const handleTimetableSave = (b: TimetableBlock) => {
         const exists = timetable.find(x => x.id === b.id);
         const u = exists ? timetable.map(x => x.id === b.id ? b : x) : [...timetable, b];
-        setTimetable(u); saveSection("timetable", u);
+        setTimetable(u); pendingSavesRef.current++; saveSection("timetable", u).then(() => { pendingSavesRef.current--; });
     };
-    const handleTimetableDelete = (id: number) => { const u = timetable.filter(b => b.id !== id); setTimetable(u); saveSection("timetable", u); };
-    const handleSaveTeams = (t: Record<string, TeamData>) => { setTeams(t); saveSection("teams", t); };
+    const handleTimetableDelete = (id: number) => { pendingSavesRef.current++; setTimetable(prev => { const u = prev.filter(b => b.id !== id); saveSection("timetable", u).then(() => { pendingSavesRef.current--; }); return u; }); };
+    const handleSaveTeams = (t: Record<string, TeamData>) => { setTeams(t); pendingSavesRef.current++; saveSection("teams", t).then(() => { pendingSavesRef.current--; }); };
     const handleSavePatent = (p: Patent) => {
         const exists = ipPatents.find(x => x.id === p.id);
         const u = exists ? ipPatents.map(x => x.id === p.id ? p : x) : [...ipPatents, p];
         setIpPatents(u);
-        if (exists) saveSection("patents", u);
+        if (exists) { pendingSavesRef.current++; saveSection("patents", u).then(() => { pendingSavesRef.current--; }); }
         else trackSave(p.id, "patents", u, () => setIpPatents(prev => prev.filter(x => x.id !== p.id)));
     };
-    const handleDeletePatent = (id: number) => { const u = ipPatents.filter(p => p.id !== id); setIpPatents(u); saveSection("patents", u); };
+    const handleDeletePatent = (id: number) => { pendingSavesRef.current++; setIpPatents(prev => { const u = prev.filter(p => p.id !== id); saveSection("patents", u).then(() => { pendingSavesRef.current--; }); return u; }); };
     const handleSaveResource = (r: Resource) => {
         const exists = resources.find(x => x.id === r.id);
         const u = exists ? resources.map(x => x.id === r.id ? r : x) : [...resources, r];
         setResources(u);
-        if (exists) saveSection("resources", u);
+        if (exists) { pendingSavesRef.current++; saveSection("resources", u).then(() => { pendingSavesRef.current--; }); }
         else trackSave(r.id, "resources", u, () => setResources(prev => prev.filter(x => x.id !== r.id)));
     };
-    const handleDeleteResource = (id: number) => { const u = resources.filter(r => r.id !== id); setResources(u); saveSection("resources", u); };
+    const handleDeleteResource = (id: number) => { pendingSavesRef.current++; setResources(prev => { const u = prev.filter(r => r.id !== id); saveSection("resources", u).then(() => { pendingSavesRef.current--; }); return u; }); };
     const handleSaveConference = (c: ConferenceTrip) => {
         const exists = conferenceTrips.find(x => x.id === c.id);
         const u = exists ? conferenceTrips.map(x => x.id === c.id ? c : x) : [...conferenceTrips, c];
         setConferenceTrips(u);
-        if (exists) saveSection("conferences", u);
+        if (exists) { pendingSavesRef.current++; saveSection("conferences", u).then(() => { pendingSavesRef.current--; }); }
         else trackSave(c.id, "conferences", u, () => setConferenceTrips(prev => prev.filter(x => x.id !== c.id)));
     };
-    const handleDeleteConference = (id: number) => { const u = conferenceTrips.filter(c => c.id !== id); setConferenceTrips(u); saveSection("conferences", u); };
+    const handleDeleteConference = (id: number) => { pendingSavesRef.current++; setConferenceTrips(prev => { const u = prev.filter(c => c.id !== id); saveSection("conferences", u).then(() => { pendingSavesRef.current--; }); return u; }); };
     const handleSaveMeeting = (m: Meeting) => {
         const exists = meetings.find(x => x.id === m.id);
         const u = exists ? meetings.map(x => x.id === m.id ? m : x) : [...meetings, m];
         setMeetings(u);
-        if (exists) saveSection("meetings", u);
+        if (exists) { pendingSavesRef.current++; saveSection("meetings", u).then(() => { pendingSavesRef.current--; }); }
         else trackSave(m.id, "meetings", u, () => setMeetings(prev => prev.filter(x => x.id !== m.id)));
     };
-    const handleDeleteMeeting = (id: number) => { const u = meetings.filter(m => m.id !== id); setMeetings(u); saveSection("meetings", u); };
-    const handleSaveDailyTargets = (t: DailyTarget[]) => { setDailyTargets(t); saveSection("dailyTargets", t); };
+    const handleDeleteMeeting = (id: number) => { pendingSavesRef.current++; setMeetings(prev => { const u = prev.filter(m => m.id !== id); saveSection("meetings", u).then(() => { pendingSavesRef.current--; }); return u; }); };
+    const handleSaveDailyTargets = (t: DailyTarget[]) => { setDailyTargets(t); pendingSavesRef.current++; saveSection("dailyTargets", t).then(() => { pendingSavesRef.current--; }); };
     const handleSaveIdea = (idea: IdeaPost) => {
         const exists = ideas.find(x => x.id === idea.id);
         const u = exists ? ideas.map(x => x.id === idea.id ? idea : x) : [idea, ...ideas];
         setIdeas(u);
-        if (exists) saveSection("ideas", u);
+        if (exists) { pendingSavesRef.current++; saveSection("ideas", u).then(() => { pendingSavesRef.current--; }); }
         else trackSave(idea.id, "ideas", u, () => setIdeas(prev => prev.filter(x => x.id !== idea.id)));
     };
-    const handleDeleteIdea = (id: number) => { const u = ideas.filter(i => i.id !== id); setIdeas(u); saveSection("ideas", u); };
+    const handleDeleteIdea = (id: number) => { pendingSavesRef.current++; setIdeas(prev => { const u = prev.filter(i => i.id !== id); saveSection("ideas", u).then(() => { pendingSavesRef.current--; }); return u; }); };
     const handleSaveAnalysis = (a: Analysis) => {
         const exists = analyses.find(x => x.id === a.id);
         const u = exists ? analyses.map(x => x.id === a.id ? a : x) : [...analyses, a];
         setAnalyses(u);
-        if (exists) saveSection("analyses", u);
+        if (exists) { pendingSavesRef.current++; saveSection("analyses", u).then(() => { pendingSavesRef.current--; }); }
         else trackSave(a.id, "analyses", u, () => setAnalyses(prev => prev.filter(x => x.id !== a.id)));
     };
-    const handleDeleteAnalysis = (id: number) => { const u = analyses.filter(a => a.id !== id); setAnalyses(u); saveSection("analyses", u); };
+    const handleDeleteAnalysis = (id: number) => { pendingSavesRef.current++; setAnalyses(prev => { const u = prev.filter(a => a.id !== id); saveSection("analyses", u).then(() => { pendingSavesRef.current--; }); return u; }); };
     const handleSaveChat = (post: IdeaPost) => {
         const exists = chatPosts.find(x => x.id === post.id);
         const u = exists ? chatPosts.map(x => x.id === post.id ? post : x) : [post, ...chatPosts];
         setChatPosts(u);
-        if (exists) saveSection("chatPosts", u);
+        if (exists) { pendingSavesRef.current++; saveSection("chatPosts", u).then(() => { pendingSavesRef.current--; }); }
         else trackSave(post.id, "chatPosts", u, () => setChatPosts(prev => prev.filter(x => x.id !== post.id)));
     };
-    const handleDeleteChat = (id: number) => { const u = chatPosts.filter(p => p.id !== id); setChatPosts(u); saveSection("chatPosts", u); };
+    const handleDeleteChat = (id: number) => { pendingSavesRef.current++; setChatPosts(prev => { const u = prev.filter(p => p.id !== id); saveSection("chatPosts", u).then(() => { pendingSavesRef.current--; }); return u; }); };
     const handleSaveEmoji = (name: string, emoji: string) => {
         const u = { ...customEmojis, [name]: emoji };
         setCustomEmojis(u); saveSection("customEmojis", u);
@@ -7286,35 +8587,80 @@ export default function DashboardPage() {
     // teamMemos stores kanban + chat + files in a single Redis key, so any handler
     // reading from a stale closure could overwrite another field's recent changes.
     const handleSaveTeamMemo = (teamName: string, card: TeamMemoCard) => {
-        let toSave: typeof teamMemos; let isNew = false;
+        let isNew = false;
+        pendingSavesRef.current++;
         setTeamMemos(prev => {
             const data = prev[teamName] || { kanban: [], chat: [], files: [] };
             const found = data.kanban.find(c => c.id === card.id);
             isNew = !found;
             const updated = found ? data.kanban.map(c => c.id === card.id ? card : c) : [...data.kanban, card];
-            toSave = { ...prev, [teamName]: { ...data, kanban: updated } };
+            const toSave = { ...prev, [teamName]: { ...data, kanban: updated } };
+            if (isNew) {
+                trackSave(card.id, "teamMemos", toSave, () => setTeamMemos(p => { const d = p[teamName] || { kanban: [], chat: [] }; return { ...p, [teamName]: { ...d, kanban: d.kanban.filter(c => c.id !== card.id) } }; }));
+                pendingSavesRef.current--; // trackSave manages its own ref
+            } else {
+                saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; });
+            }
             return toSave;
         });
-        if (isNew) trackSave(card.id, "teamMemos", toSave!, () => setTeamMemos(prev => { const d = prev[teamName] || { kanban: [], chat: [] }; return { ...prev, [teamName]: { ...d, kanban: d.kanban.filter(c => c.id !== card.id) } }; }));
-        else saveSection("teamMemos", toSave!);
     };
     const handleDeleteTeamMemo = (teamName: string, id: number) => {
-        let toSave: typeof teamMemos;
+        pendingSavesRef.current++;
         setTeamMemos(prev => {
             const data = prev[teamName] || { kanban: [], chat: [], files: [] };
-            toSave = { ...prev, [teamName]: { ...data, kanban: data.kanban.filter(c => c.id !== id) } };
+            const toSave = { ...prev, [teamName]: { ...data, kanban: data.kanban.filter(c => c.id !== id) } };
+            saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; });
             return toSave;
         });
-        saveSection("teamMemos", toSave!);
     };
     const handleReorderTeamMemo = (teamName: string, cards: TeamMemoCard[]) => {
-        let toSave: typeof teamMemos;
+        pendingSavesRef.current++;
         setTeamMemos(prev => {
             const data = prev[teamName] || { kanban: [], chat: [], files: [] };
-            toSave = { ...prev, [teamName]: { ...data, kanban: cards } };
+            const toSave = { ...prev, [teamName]: { ...data, kanban: cards } };
+            saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; });
             return toSave;
         });
-        saveSection("teamMemos", toSave!);
+    };
+    // ── Experiment Log Book handlers ──
+    const handleSaveExpLogBook = (teamName: string, book: ExpLogBook) => {
+        pendingSavesRef.current++;
+        setExperimentLogs(prev => {
+            const books = prev[teamName] || [];
+            const found = books.find(b => b.id === book.id);
+            const updated = found ? books.map(b => b.id === book.id ? book : b) : [...books, book];
+            const toSave = { ...prev, [teamName]: updated };
+            saveSection("experimentLogs", toSave).then(() => { pendingSavesRef.current--; });
+            return toSave;
+        });
+    };
+    const handleDeleteExpLogBook = (teamName: string, bookId: number) => {
+        pendingSavesRef.current++;
+        setExperimentLogs(prev => {
+            const toSave = { ...prev, [teamName]: (prev[teamName] || []).filter(b => b.id !== bookId) };
+            saveSection("experimentLogs", toSave).then(() => { pendingSavesRef.current--; });
+            return toSave;
+        });
+    };
+    // ── Analysis Log Book handlers ──
+    const handleSaveAnalysisLogBook = (teamName: string, book: AnalysisLogBook) => {
+        pendingSavesRef.current++;
+        setAnalysisLogs(prev => {
+            const books = prev[teamName] || [];
+            const found = books.find(b => b.id === book.id);
+            const updated = found ? books.map(b => b.id === book.id ? book : b) : [...books, book];
+            const toSave = { ...prev, [teamName]: updated };
+            saveSection("analysisLogs", toSave).then(() => { pendingSavesRef.current--; });
+            return toSave;
+        });
+    };
+    const handleDeleteAnalysisLogBook = (teamName: string, bookId: number) => {
+        pendingSavesRef.current++;
+        setAnalysisLogs(prev => {
+            const toSave = { ...prev, [teamName]: (prev[teamName] || []).filter(b => b.id !== bookId) };
+            saveSection("analysisLogs", toSave).then(() => { pendingSavesRef.current--; });
+            return toSave;
+        });
     };
     const handleAddTeamChat = (teamName: string, msg: TeamChatMsg) => {
         pendingSavesRef.current++;
@@ -7388,13 +8734,13 @@ export default function DashboardPage() {
         // Delete blob first (fire-and-forget), then update state
         const fileToDelete = (teamMemos[teamName]?.files || []).find(f => f.id === id);
         if (fileToDelete?.url?.startsWith("https://")) { fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: fileToDelete.url }), headers: { "Content-Type": "application/json" } }).catch(() => {}); }
-        let toSave: typeof teamMemos;
+        pendingSavesRef.current++;
         setTeamMemos(prev => {
             const data = prev[teamName] || { kanban: [], chat: [], files: [] };
-            toSave = { ...prev, [teamName]: { ...data, files: (data.files || []).filter(f => f.id !== id) } };
+            const toSave = { ...prev, [teamName]: { ...data, files: (data.files || []).filter(f => f.id !== id) } };
+            saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; });
             return toSave;
         });
-        saveSection("teamMemos", toSave!);
     };
 
     const handleAddLabChat = (msg: TeamChatMsg) => {
@@ -7420,10 +8766,17 @@ export default function DashboardPage() {
         });
     };
     const handleDeleteLabChat = (id: number) => {
-        setLabChat(prev => { const u = prev.filter(c => c.id !== id); saveSection("labChat", stripMsgFlags(u)); return u; });
+        pendingSavesRef.current++;
+        setLabChat(prev => {
+            const u = prev.filter(c => c.id !== id);
+            saveSection("labChat", stripMsgFlags(u)).then(() => { pendingSavesRef.current--; });
+            return u;
+        });
     };
     const handleClearLabChat = () => {
-        setLabChat([]); saveSection("labChat", []);
+        pendingSavesRef.current++;
+        setLabChat([]);
+        saveSection("labChat", []).then(() => { pendingSavesRef.current--; });
     };
     const handleUpdateLabChat = (msg: TeamChatMsg) => {
         pendingSavesRef.current++;
@@ -7434,15 +8787,26 @@ export default function DashboardPage() {
         });
     };
     const handleSaveLabBoard = (card: TeamMemoCard) => {
-        const exists = labBoard.some(c => c.id === card.id);
-        const u = exists ? labBoard.map(c => c.id === card.id ? card : c) : [...labBoard, card];
-        setLabBoard(u);
-        if (exists) saveSection("labBoard", u);
-        else trackSave(card.id, "labBoard", u, () => setLabBoard(prev => prev.filter(c => c.id !== card.id)));
+        pendingSavesRef.current++;
+        setLabBoard(prev => {
+            const exists = prev.some(c => c.id === card.id);
+            const u = exists ? prev.map(c => c.id === card.id ? card : c) : [...prev, card];
+            if (exists) {
+                saveSection("labBoard", u).then(() => { pendingSavesRef.current--; });
+            } else {
+                trackSave(card.id, "labBoard", u, () => setLabBoard(p => p.filter(c => c.id !== card.id)));
+                pendingSavesRef.current--; // trackSave manages its own ref
+            }
+            return u;
+        });
     };
     const handleDeleteLabBoard = (id: number) => {
-        const u = labBoard.filter(c => c.id !== id);
-        setLabBoard(u); saveSection("labBoard", u);
+        pendingSavesRef.current++;
+        setLabBoard(prev => {
+            const u = prev.filter(c => c.id !== id);
+            saveSection("labBoard", u).then(() => { pendingSavesRef.current--; });
+            return u;
+        });
     };
     const handleAddLabFile = (file: LabFile) => {
         const u = [...labFiles, file]; setLabFiles(u); trackSave(file.id, "labFiles", u, () => setLabFiles(prev => prev.filter(f => f.id !== file.id)));
@@ -7450,7 +8814,12 @@ export default function DashboardPage() {
     const handleDeleteLabFile = async (id: number) => {
         const file = labFiles.find(f => f.id === id);
         if (file?.url?.startsWith("https://")) { try { await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: file.url }), headers: { "Content-Type": "application/json" } }); } catch {} }
-        const u = labFiles.filter(f => f.id !== id); setLabFiles(u); saveSection("labFiles", u);
+        pendingSavesRef.current++;
+        setLabFiles(prev => {
+            const u = prev.filter(f => f.id !== id);
+            saveSection("labFiles", u).then(() => { pendingSavesRef.current--; });
+            return u;
+        });
     };
 
     // ─── Notification Center helpers ─────────────────────────────────────────
@@ -7478,28 +8847,68 @@ export default function DashboardPage() {
         personalMemos: { label: "메모", icon: "📝", tabId: "overview" },
         timetable: { label: "시간표", icon: "📚", tabId: "lectures" },
     };
-    const notiLogUnread = useMemo(() => notiLogs.filter(l => l.timestamp > notiLastSeen && l.userName !== userName).length, [notiLogs, notiLastSeen, userName]);
-
-    // Mention alerts: @mentions directed at current user across all chats
-    const mentionAlerts = useMemo(() => {
-        const alerts: Array<{ author: string; text: string; section: string; tabId: string; timestamp: number }> = [];
+    // Comprehensive alerts: @mentions, chats, board posts, announcements, updates
+    type AlertItem = { author: string; text: string; section: string; tabId: string; timestamp: number; type: "mention" | "chat" | "announcement" | "board" | "update" };
+    const alerts = useMemo(() => {
+        const items: AlertItem[] = [];
+        const seen = new Set<string>(); // prevent duplicates (mention + chat)
         const mentionTag = `@${userName}`;
+        const myTeams = userName === "박일웅" ? teamNames : teamNames.filter(t => teams[t]?.lead === userName || teams[t]?.members?.includes(userName));
+
+        // 1) @mentions — highest priority, across all chats
         labChat.filter(m => m.author !== userName && !m.deleted && m.text?.includes(mentionTag))
-            .forEach(m => alerts.push({ author: m.author, text: m.text, section: "연구실 채팅", tabId: "labChat", timestamp: m.id }));
+            .forEach(m => { seen.add(`lab_${m.id}`); items.push({ author: m.author, text: m.text, section: "연구실 채팅", tabId: "labChat", timestamp: m.id, type: "mention" }); });
         Object.entries(teamMemos).forEach(([tName, data]) => {
             (data.chat || []).filter(m => m.author !== userName && !m.deleted && m.text?.includes(mentionTag))
-                .forEach(m => alerts.push({ author: m.author, text: m.text, section: tName, tabId: `teamMemo_${tName}`, timestamp: m.id }));
+                .forEach(m => { seen.add(`tm_${tName}_${m.id}`); items.push({ author: m.author, text: m.text, section: tName, tabId: `teamMemo_${tName}`, timestamp: m.id, type: "mention" }); });
         });
         Object.entries(piChat).forEach(([name, msgs]) => {
             msgs.filter(m => m.author !== userName && !m.deleted && m.text?.includes(mentionTag))
-                .forEach(m => alerts.push({ author: m.author, text: m.text, section: `${name} 채팅`, tabId: `memo_${name}`, timestamp: m.id }));
+                .forEach(m => { seen.add(`pi_${name}_${m.id}`); items.push({ author: m.author, text: m.text, section: `${name} 채팅`, tabId: `memo_${name}`, timestamp: m.id, type: "mention" }); });
         });
-        return alerts.sort((a, b) => b.timestamp - a.timestamp);
-    }, [labChat, teamMemos, piChat, userName]);
 
-    const mentionUnread = useMemo(() => mentionAlerts.filter(a => a.timestamp > notiLastSeen).length, [mentionAlerts, notiLastSeen]);
-    const notiUnreadCount = mentionUnread + notiLogUnread;
-    const [notiTab, setNotiTab] = useState<"alerts" | "logs">("alerts");
+        // 2) Announcements — everyone sees these
+        announcements.filter(a => a.author !== userName)
+            .forEach(a => items.push({ author: a.author, text: a.text, section: "공지사항", tabId: "announcements", timestamp: new Date(a.date).getTime(), type: "announcement" }));
+
+        // 3) Lab chat messages (not already added as mentions)
+        labChat.filter(m => m.author !== userName && !m.deleted && !seen.has(`lab_${m.id}`))
+            .forEach(m => items.push({ author: m.author, text: m.text, section: "연구실 채팅", tabId: "labChat", timestamp: m.id, type: "chat" }));
+
+        // 4) Team chat messages (user's teams only, not already added as mentions)
+        myTeams.forEach(tName => {
+            (teamMemos[tName]?.chat || []).filter(m => m.author !== userName && !m.deleted && !seen.has(`tm_${tName}_${m.id}`))
+                .forEach(m => items.push({ author: m.author, text: m.text, section: tName, tabId: `teamMemo_${tName}`, timestamp: m.id, type: "chat" }));
+        });
+
+        // 5) PI chat messages directed to this user
+        (piChat[userName] || []).filter(m => m.author !== userName && !m.deleted && !seen.has(`pi_${userName}_${m.id}`))
+            .forEach(m => items.push({ author: m.author, text: m.text, section: "PI 채팅", tabId: `memo_${userName}`, timestamp: m.id, type: "chat" }));
+
+        // 6) Lab board new posts
+        labBoard.filter(b => b.author !== userName)
+            .forEach(b => items.push({ author: b.author, text: b.title, section: "게시판", tabId: "labChat", timestamp: b.id, type: "board" }));
+
+        // 7) Team board new posts (user's teams)
+        myTeams.forEach(tName => {
+            (teamMemos[tName]?.kanban || []).filter(c => c.author !== userName)
+                .forEach(c => items.push({ author: c.author, text: c.title, section: `${tName} 보드`, tabId: `teamMemo_${tName}`, timestamp: c.id, type: "board" }));
+        });
+
+        // 8) Modification logs as "update" alerts (non-chat sections only)
+        const chatSections = new Set(["labChat", "teamMemos", "piChat", "labBoard", "announcements"]);
+        notiLogs.filter(l => l.userName !== userName && !chatSections.has(l.section)).slice(0, 100)
+            .forEach(l => {
+                const sec = NOTI_SECTION_MAP[l.section] || { label: l.section, icon: "📋", tabId: "overview" };
+                items.push({ author: l.userName, text: `${sec.label}을(를) 업데이트했습니다`, section: sec.label, tabId: sec.tabId, timestamp: l.timestamp, type: "update" });
+            });
+
+        return items.sort((a, b) => b.timestamp - a.timestamp);
+    }, [labChat, teamMemos, piChat, userName, announcements, labBoard, teams, teamNames, notiLogs]);
+
+    const notiUnreadCount = useMemo(() => alerts.filter(a => a.timestamp > notiLastSeen).length, [alerts, notiLastSeen]);
+    const [notiFilter, setNotiFilter] = useState<"all" | "mention" | "chat" | "announcement" | "board" | "update">("all");
+    const filteredAlerts = useMemo(() => notiFilter === "all" ? alerts : alerts.filter(a => a.type === notiFilter), [alerts, notiFilter]);
     const openNoti = () => {
         setNotiOpen(true);
     };
@@ -7507,6 +8916,20 @@ export default function DashboardPage() {
         const now = Date.now();
         setNotiLastSeen(now);
         try { localStorage.setItem(`mftel_notiLastSeen_${userName}`, String(now)); } catch {}
+    };
+    const PUSH_CATEGORIES = [
+        { key: "chat", label: "채팅", desc: "연구실 채팅, 팀 메모, PI 채팅" },
+        { key: "announcement", label: "공지", desc: "공지사항" },
+        { key: "board", label: "게시판", desc: "게시판, 파일" },
+        { key: "research", label: "연구", desc: "논문, 보고서, 실험, 해석, 특허" },
+        { key: "other", label: "기타", desc: "일정, 할일, 목표, 학회 등" },
+    ];
+    const myPushPrefs = pushPrefs[userName] || {};
+    const togglePushPref = (cat: string) => {
+        const current = myPushPrefs[cat] !== false; // default true
+        const next = { ...pushPrefs, [userName]: { ...myPushPrefs, [cat]: !current } };
+        setPushPrefs(next);
+        fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "pushPrefs", data: next, userName }) }).catch(() => {});
     };
     const notiTimeAgo = (ts: number) => {
         const diff = Math.floor((Date.now() - ts) / 1000);
@@ -7629,7 +9052,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2">
                     <button onClick={openNoti} className="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                        {notiUnreadCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />}
+                        {notiUnreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center px-0.5">{notiUnreadCount > 99 ? "99+" : notiUnreadCount}</span>}
                     </button>
                     <div className="w-8 h-8 rounded-full flex items-center justify-center text-[16px] flex-shrink-0" style={{background:"rgba(59,130,246,0.1)", border:"1.5px solid rgba(59,130,246,0.25)"}}>{displayMembers[userName]?.emoji || "👤"}</div>
                 </div>
@@ -7686,7 +9109,7 @@ export default function DashboardPage() {
             )}
             <div className="flex flex-col h-[100dvh] overflow-hidden md:flex-row md:h-screen pt-[56px] md:pt-0">
                 {/* Desktop Sidebar */}
-                <div className="hidden md:flex md:w-[200px] md:h-screen flex-shrink-0 flex-col" style={{background:"#0F172A", borderRight:"1px solid #1E293B", boxShadow:"2px 0 8px rgba(0,0,0,0.05)"}}>
+                <div className="hidden md:flex md:w-[180px] md:h-screen flex-shrink-0 flex-col" style={{background:"#0F172A", borderRight:"1px solid #1E293B", boxShadow:"2px 0 8px rgba(0,0,0,0.05)"}}>
                     {/* Sidebar top: MFTEL logo */}
                     <button onClick={() => setActiveTab("overview")} className="flex items-center gap-2.5 px-3 pt-4 pb-3 relative z-10 flex-shrink-0 cursor-pointer w-full text-left" style={{borderBottom:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
                         <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center text-[13px] font-extrabold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", boxShadow: "0 2px 8px rgba(59,130,246,0.3)" }}>M</div>
@@ -7718,7 +9141,6 @@ export default function DashboardPage() {
                             const sectionBreaks: Record<string, string> = { announcements: "운영", todos: "내 노트", papers: "연구", conferenceTrips: "커뮤니케이션" };
                             const showBreak = !tab.id.startsWith("memo_") && !tab.id.startsWith("teamMemo_") && sectionBreaks[tab.id];
                             const showTeamMemoBreak = tab.id.startsWith("teamMemo_") && i > 0 && !tabs[i - 1].id.startsWith("teamMemo_");
-                            const showMemoBreak = false;
                             const isActive = activeTab === tab.id;
                             return (
                                 <div key={tab.id}>
@@ -7732,14 +9154,9 @@ export default function DashboardPage() {
                                             <div className="text-[10px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>팀 워크</div>
                                         </div>
                                     )}
-                                    {showMemoBreak && (
-                                        <div className="hidden md:block mt-4 mb-1 px-3">
-                                            <div className="text-[10px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>내 노트</div>
-                                        </div>
-                                    )}
                                     <button onClick={() => setActiveTab(tab.id)}
-                                        className="relative w-full flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[12.5px] whitespace-nowrap transition-all"
-                                        style={{ fontWeight: isActive ? 600 : 450, letterSpacing: "-0.01em", color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}
+                                        className="relative w-full flex items-center gap-2 px-3 py-1.5 rounded-[10px] whitespace-nowrap transition-all"
+                                        style={{ fontSize: "12.5px", fontWeight: isActive ? 600 : 450, letterSpacing: "-0.01em", color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}
                                         onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#E2E8F0"; } }}
                                         onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94A3B8"; } }}>
                                         {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-blue-400" />}
@@ -7818,34 +9235,44 @@ export default function DashboardPage() {
                         ) : null;
                     })()}
 
-                    {activeTab === "overview" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} chatPosts={chatPosts} personalMemos={personalMemos} teamMemos={teamMemos} meetings={meetings} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="team" statusMessages={statusMessages} members={displayMembers} teams={teams} />}
-                    {activeTab === "overview_me" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} chatPosts={chatPosts} personalMemos={personalMemos} teamMemos={teamMemos} meetings={meetings} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="personal" statusMessages={statusMessages} members={displayMembers} teams={teams} />}
+                    {activeTab === "overview" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} chatPosts={chatPosts} personalMemos={personalMemos} teamMemos={teamMemos} meetings={meetings} conferenceTrips={conferenceTrips} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="team" statusMessages={statusMessages} members={displayMembers} teams={teams} />}
+                    {activeTab === "overview_me" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} chatPosts={chatPosts} personalMemos={personalMemos} teamMemos={teamMemos} meetings={meetings} conferenceTrips={conferenceTrips} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="personal" statusMessages={statusMessages} members={displayMembers} teams={teams} />}
                     {activeTab === "announcements" && <AnnouncementView announcements={announcements} onAdd={handleAddAnn} onDelete={handleDelAnn} onUpdate={handleUpdateAnn} onReorder={list => { setAnnouncements(list); saveSection("announcements", list); }} philosophy={philosophy} onAddPhilosophy={handleAddPhil} onDeletePhilosophy={handleDelPhil} onUpdatePhilosophy={handleUpdatePhil} onReorderPhilosophy={list => { setPhilosophy(list); saveSection("philosophy", list); }} currentUser={userName} />}
                     {activeTab === "daily" && <DailyTargetView targets={dailyTargets} onSave={handleSaveDailyTargets} currentUser={userName} />}
-                    {activeTab === "papers" && <KanbanView papers={papers} filter={selectedPerson} onFilterPerson={setSelectedPerson} allPeople={allPeople} onClickPaper={p => setPaperModal({ paper: p, mode: "edit" })} onAddPaper={() => setPaperModal({ paper: null, mode: "add" })} onSavePaper={handleSavePaper} onDeletePaper={handleDeletePaper} onReorder={list => { setPapers(list); saveSection("papers", list); }} tagList={paperTagList} onSaveTags={handleSavePaperTags} teamNames={teamNames} currentUser={userName} />}
-                    {activeTab === "reports" && <ReportView reports={reports} currentUser={userName} onSave={handleSaveReport} onDelete={handleDeleteReport} onToggleDiscussion={r => handleSaveReport({ ...r, needsDiscussion: !r.needsDiscussion })} onReorder={list => { setReports(list); saveSection("reports", list); }} teamNames={teamNames} />}
-                    {activeTab === "experiments" && <ExperimentView experiments={experiments} onSave={handleSaveExperiment} onDelete={handleDeleteExperiment} currentUser={userName} equipmentList={equipmentList} onSaveEquipment={handleSaveEquipment} onToggleDiscussion={e => handleSaveExperiment({ ...e, needsDiscussion: !e.needsDiscussion })} onReorder={list => { setExperiments(list); saveSection("experiments", list); }} teamNames={teamNames} />}
-                    {activeTab === "analysis" && <AnalysisView analyses={analyses} onSave={handleSaveAnalysis} onDelete={handleDeleteAnalysis} currentUser={userName} toolList={analysisToolList} onSaveTools={handleSaveAnalysisTools} onToggleDiscussion={a => handleSaveAnalysis({ ...a, needsDiscussion: !a.needsDiscussion })} onReorder={list => { setAnalyses(list); saveSection("analyses", list); }} teamNames={teamNames} />}
-                    {activeTab === "todos" && <TodoList todos={todos} onToggle={handleToggleTodo} onAdd={handleAddTodo} onUpdate={handleUpdateTodo} onDelete={handleDeleteTodo} onReorder={list => { setTodos(list); saveSection("todos", list); }} currentUser={userName} />}
+                    {activeTab === "papers" && <KanbanView papers={papers} filter={selectedPerson} onFilterPerson={setSelectedPerson} allPeople={allPeople} onClickPaper={p => setPaperModal({ paper: p, mode: "edit" })} onAddPaper={() => setPaperModal({ paper: null, mode: "add" })} onSavePaper={handleSavePaper} onDeletePaper={handleDeletePaper} onReorder={list => { setPapers(list); pendingSavesRef.current++; saveSection("papers", list).then(() => { pendingSavesRef.current--; }); }} tagList={paperTagList} onSaveTags={handleSavePaperTags} teamNames={teamNames} currentUser={userName} />}
+                    {activeTab === "reports" && <ReportView reports={reports} currentUser={userName} onSave={handleSaveReport} onDelete={handleDeleteReport} onToggleDiscussion={r => handleSaveReport({ ...r, needsDiscussion: !r.needsDiscussion })} onReorder={list => { setReports(list); pendingSavesRef.current++; saveSection("reports", list).then(() => { pendingSavesRef.current--; }); }} teamNames={teamNames} />}
+                    {activeTab === "experiments" && <ExperimentView experiments={experiments} onSave={handleSaveExperiment} onDelete={handleDeleteExperiment} currentUser={userName} equipmentList={equipmentList} onSaveEquipment={handleSaveEquipment} onToggleDiscussion={e => handleSaveExperiment({ ...e, needsDiscussion: !e.needsDiscussion })} onReorder={list => { setExperiments(list); pendingSavesRef.current++; saveSection("experiments", list).then(() => { pendingSavesRef.current--; }); }} teamNames={teamNames} />}
+                    {activeTab === "analysis" && <AnalysisView analyses={analyses} onSave={handleSaveAnalysis} onDelete={handleDeleteAnalysis} currentUser={userName} toolList={analysisToolList} onSaveTools={handleSaveAnalysisTools} onToggleDiscussion={a => handleSaveAnalysis({ ...a, needsDiscussion: !a.needsDiscussion })} onReorder={list => { setAnalyses(list); pendingSavesRef.current++; saveSection("analyses", list).then(() => { pendingSavesRef.current--; }); }} teamNames={teamNames} />}
+                    {activeTab === "todos" && <TodoList todos={todos} onToggle={handleToggleTodo} onAdd={handleAddTodo} onUpdate={handleUpdateTodo} onDelete={handleDeleteTodo} onReorder={list => { setTodos(list); pendingSavesRef.current++; saveSection("todos", list).then(() => { pendingSavesRef.current--; }); }} currentUser={userName} />}
                     {activeTab === "teams" && <TeamOverview papers={papers} todos={todos} experiments={experiments} analyses={analyses} teams={teams} onSaveTeams={handleSaveTeams} currentUser={userName} />}
-                    {activeTab === "calendar" && <CalendarGrid data={[...vacations.map(v => ({ ...v, description: undefined })), ...schedule]} currentUser={userName} types={CALENDAR_TYPES} onToggle={handleCalendarToggle} dispatches={dispatches} onDispatchSave={(d) => { const u = d.id && dispatches.find(x => x.id === d.id) ? dispatches.map(x => x.id === d.id ? d : x) : [...dispatches, d]; setDispatches(u); saveSection("dispatches", u); }} onDispatchDelete={(id) => { const u = dispatches.filter(x => x.id !== id); setDispatches(u); saveSection("dispatches", u); }} />}
+                    {activeTab === "calendar" && (() => {
+                        const calDl: Array<{ title: string; date: string; type: string; color: string; icon: string; tab: string }> = [];
+                        papers.filter(p => p.deadline && p.status !== "completed").forEach(p => calDl.push({ title: p.title, date: p.deadline, type: "논문", color: CATEGORY_COLORS.paper, icon: "📄", tab: "papers" }));
+                        reports.filter(r => r.deadline && r.status !== "done").forEach(r => calDl.push({ title: r.title, date: r.deadline, type: "보고서", color: CATEGORY_COLORS.report, icon: "📋", tab: "reports" }));
+                        todos.filter(t => t.deadline && !t.done).forEach(t => calDl.push({ title: t.text, date: t.deadline, type: "할일", color: "#F59E0B", icon: "✅", tab: "todos" }));
+                        experiments.filter(e => e.endDate && e.status !== "completed").forEach(e => calDl.push({ title: e.title, date: e.endDate, type: "실험", color: CATEGORY_COLORS.experiment, icon: "🧪", tab: "experiments" }));
+                        analyses.filter(a => a.endDate && a.status !== "completed").forEach(a => calDl.push({ title: a.title, date: a.endDate, type: "해석", color: CATEGORY_COLORS.analysis, icon: "🖥️", tab: "analysis" }));
+                        ipPatents.filter(p => p.deadline && p.status !== "completed").forEach(p => calDl.push({ title: p.title, date: p.deadline, type: "특허", color: CATEGORY_COLORS.ip, icon: "💡", tab: "ip" }));
+                        conferenceTrips.forEach(c => calDl.push({ title: c.title, date: c.startDate, type: "학회", color: "#60A5FA", icon: "✈️", tab: "conferenceTrips" }));
+                        return <CalendarGrid data={[...vacations.map(v => ({ ...v, description: undefined })), ...schedule]} currentUser={userName} types={CALENDAR_TYPES} onToggle={handleCalendarToggle} dispatches={dispatches} onDispatchSave={(d) => { const u = d.id && dispatches.find(x => x.id === d.id) ? dispatches.map(x => x.id === d.id ? d : x) : [...dispatches, d]; setDispatches(u); saveSection("dispatches", u); }} onDispatchDelete={(id) => { const u = dispatches.filter(x => x.id !== id); setDispatches(u); saveSection("dispatches", u); }} deadlines={calDl} onNavigate={setActiveTab} />;
+                    })()}
                     {activeTab === "lectures" && <TimetableView blocks={timetable} onSave={handleTimetableSave} onDelete={handleTimetableDelete} />}
-                    {activeTab === "ip" && <IPView patents={ipPatents} onSave={handleSavePatent} onDelete={handleDeletePatent} currentUser={userName} onToggleDiscussion={p => handleSavePatent({ ...p, needsDiscussion: !p.needsDiscussion })} onReorder={list => { setIpPatents(list); saveSection("patents", list); }} teamNames={teamNames} />}
-                    {activeTab === "conferenceTrips" && <ConferenceTripView items={conferenceTrips} onSave={handleSaveConference} onDelete={handleDeleteConference} onReorder={list => { setConferenceTrips(list); saveSection("conferences", list); }} currentUser={userName} />}
+                    {activeTab === "ip" && <IPView patents={ipPatents} onSave={handleSavePatent} onDelete={handleDeletePatent} currentUser={userName} onToggleDiscussion={p => handleSavePatent({ ...p, needsDiscussion: !p.needsDiscussion })} onReorder={list => { setIpPatents(list); pendingSavesRef.current++; saveSection("patents", list).then(() => { pendingSavesRef.current--; }); }} teamNames={teamNames} />}
+                    {activeTab === "conferenceTrips" && <ConferenceTripView items={conferenceTrips} onSave={handleSaveConference} onDelete={handleDeleteConference} onReorder={list => { setConferenceTrips(list); pendingSavesRef.current++; saveSection("conferences", list).then(() => { pendingSavesRef.current--; }); }} currentUser={userName} />}
                     {activeTab === "meetings" && <MeetingView meetings={meetings} onSave={handleSaveMeeting} onDelete={handleDeleteMeeting} currentUser={userName} teamNames={teamNames} />}
-                    {activeTab === "resources" && <ResourceView resources={resources} onSave={handleSaveResource} onDelete={handleDeleteResource} onReorder={list => { setResources(list); saveSection("resources", list); }} currentUser={userName} />}
-                    {activeTab === "ideas" && <IdeasView ideas={ideas} onSave={handleSaveIdea} onDelete={handleDeleteIdea} onReorder={list => { setIdeas(list); saveSection("ideas", list); }} currentUser={userName} />}
-                    {activeTab === "chat" && <IdeasView ideas={chatPosts} onSave={handleSaveChat} onDelete={handleDeleteChat} onReorder={list => { setChatPosts(list); saveSection("chatPosts", list); }} currentUser={userName} />}
+                    {activeTab === "resources" && <ResourceView resources={resources} onSave={handleSaveResource} onDelete={handleDeleteResource} onReorder={list => { setResources(list); pendingSavesRef.current++; saveSection("resources", list).then(() => { pendingSavesRef.current--; }); }} currentUser={userName} />}
+                    {activeTab === "ideas" && <IdeasView ideas={ideas} onSave={handleSaveIdea} onDelete={handleDeleteIdea} onReorder={list => { setIdeas(list); pendingSavesRef.current++; saveSection("ideas", list).then(() => { pendingSavesRef.current--; }); }} currentUser={userName} />}
+                    {activeTab === "chat" && <IdeasView ideas={chatPosts} onSave={handleSaveChat} onDelete={handleDeleteChat} onReorder={list => { setChatPosts(list); pendingSavesRef.current++; saveSection("chatPosts", list).then(() => { pendingSavesRef.current--; }); }} currentUser={userName} />}
                     {activeTab === "settings" && <SettingsView currentUser={userName} customEmojis={customEmojis} onSaveEmoji={handleSaveEmoji} statusMessages={statusMessages} onSaveStatusMsg={handleSaveStatusMsg} />}
-                    {activeTab === "labChat" && <LabChatView chat={labChat} currentUser={userName} onAdd={handleAddLabChat} onUpdate={handleUpdateLabChat} onDelete={handleDeleteLabChat} onClear={handleClearLabChat} onRetry={handleRetryLabChat} files={labFiles} onAddFile={handleAddLabFile} onDeleteFile={handleDeleteLabFile} board={labBoard} onSaveBoard={handleSaveLabBoard} onDeleteBoard={handleDeleteLabBoard} />}
+                    {activeTab === "labChat" && <LabChatView chat={labChat} currentUser={userName} onAdd={handleAddLabChat} onUpdate={handleUpdateLabChat} onDelete={handleDeleteLabChat} onClear={handleClearLabChat} onRetry={handleRetryLabChat} files={labFiles} onAddFile={handleAddLabFile} onDeleteFile={handleDeleteLabFile} board={labBoard} onSaveBoard={handleSaveLabBoard} onDeleteBoard={handleDeleteLabBoard} readReceipts={readReceipts["labChat"]} />}
                     {activeTab.startsWith("teamMemo_") && (() => {
                         const tName = activeTab.replace("teamMemo_", "");
                         const data = teamMemos[tName] || { kanban: [], chat: [] };
-                        return <TeamMemoView teamName={tName} kanban={data.kanban} chat={data.chat} files={data.files || []} currentUser={userName} onSaveCard={c => handleSaveTeamMemo(tName, c)} onDeleteCard={id => handleDeleteTeamMemo(tName, id)} onReorderCards={cards => handleReorderTeamMemo(tName, cards)} onAddChat={msg => handleAddTeamChat(tName, msg)} onUpdateChat={msg => handleUpdateTeamChat(tName, msg)} onDeleteChat={id => handleDeleteTeamChat(tName, id)} onClearChat={() => handleClearTeamChat(tName)} onRetryChat={id => handleRetryTeamChat(tName, id)} onAddFile={f => handleAddTeamFile(tName, f)} onDeleteFile={id => handleDeleteTeamFile(tName, id)} />;
+                        return <TeamMemoView teamName={tName} kanban={data.kanban} chat={data.chat} files={data.files || []} currentUser={userName} onSaveCard={c => handleSaveTeamMemo(tName, c)} onDeleteCard={id => handleDeleteTeamMemo(tName, id)} onReorderCards={cards => handleReorderTeamMemo(tName, cards)} onAddChat={msg => handleAddTeamChat(tName, msg)} onUpdateChat={msg => handleUpdateTeamChat(tName, msg)} onDeleteChat={id => handleDeleteTeamChat(tName, id)} onClearChat={() => handleClearTeamChat(tName)} onRetryChat={id => handleRetryTeamChat(tName, id)} onAddFile={f => handleAddTeamFile(tName, f)} onDeleteFile={id => handleDeleteTeamFile(tName, id)} readReceipts={readReceipts[`teamMemo_${tName}`]} expLogBooks={experimentLogs[tName] || []} analysisLogBooks={analysisLogs[tName] || []} onSaveExpLogBook={b => handleSaveExpLogBook(tName, b)} onDeleteExpLogBook={id => handleDeleteExpLogBook(tName, id)} onSaveAnalysisLogBook={b => handleSaveAnalysisLogBook(tName, b)} onDeleteAnalysisLogBook={id => handleDeleteAnalysisLogBook(tName, id)} />;
                     })()}
                     {activeTab.startsWith("memo_") && (() => {
                         const name = activeTab.replace("memo_", "");
-                        return <PersonalMemoView memos={personalMemos[name] || []} onSave={m => handleSaveMemo(name, m)} onDelete={id => handleDeleteMemo(name, id)} files={personalFiles[name] || []} onAddFile={f => handleAddPersonalFile(name, f)} onDeleteFile={id => handleDeletePersonalFile(name, id)} chat={piChat[name] || []} onAddChat={msg => handleAddPiChat(name, msg)} onUpdateChat={msg => handleUpdatePiChat(name, msg)} onDeleteChat={id => handleDeletePiChat(name, id)} onClearChat={() => handleClearPiChat(name)} onRetryChat={id => handleRetryPiChat(name, id)} currentUser={userName} />;
+                        return <PersonalMemoView memos={personalMemos[name] || []} onSave={m => handleSaveMemo(name, m)} onDelete={id => handleDeleteMemo(name, id)} files={personalFiles[name] || []} onAddFile={f => handleAddPersonalFile(name, f)} onDeleteFile={id => handleDeletePersonalFile(name, id)} chat={piChat[name] || []} onAddChat={msg => handleAddPiChat(name, msg)} onUpdateChat={msg => handleUpdatePiChat(name, msg)} onDeleteChat={id => handleDeletePiChat(name, id)} onClearChat={() => handleClearPiChat(name)} onRetryChat={id => handleRetryPiChat(name, id)} currentUser={userName} readReceipts={readReceipts[`memo_${name}`]} />;
                     })()}
                 </div>
             </div>
@@ -7859,114 +9286,206 @@ export default function DashboardPage() {
                     {toast}
                 </div>
             )}
-        {/* Notification Panel */}
+        {/* Notification Panel — PC: right slide panel, Mobile: center modal */}
         {notiOpen && (
-            <div className="fixed inset-0 z-[80] flex items-start justify-center pt-[8vh]" style={{ background: "rgba(0,0,0,0.5)" }} onClick={() => setNotiOpen(false)}>
-                <div className="bg-white rounded-2xl w-full overflow-hidden" style={{ maxWidth: 520, boxShadow: "0 25px 60px rgba(0,0,0,0.25)" }} onClick={e => e.stopPropagation()}>
-                    {/* Header */}
-                    <div className="flex items-center justify-between px-5 border-b border-slate-200" style={{ height: 52 }}>
-                        <div className="flex items-center gap-1">
-                            {(["alerts", "logs"] as const).map(tab => {
-                                const isActive = notiTab === tab;
-                                const count = tab === "alerts" ? mentionUnread : notiLogUnread;
+            <div className="fixed inset-0 z-[80]" onClick={() => setNotiOpen(false)}>
+                {/* Backdrop */}
+                <div className="absolute inset-0 md:bg-black/20" style={{ background: "rgba(0,0,0,0.5)" }} />
+                {/* Mobile: center modal */}
+                <div className="md:hidden absolute inset-0 flex items-start justify-center pt-[8vh]">
+                    <div className="bg-white rounded-2xl w-full mx-4 overflow-hidden" style={{ maxWidth: 520, boxShadow: "0 25px 60px rgba(0,0,0,0.25)" }} onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between px-5 border-b border-slate-200" style={{ height: 48 }}>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[14px] font-semibold" style={{ color: "#1E293B" }}>알림</span>
+                                {notiUnreadCount > 0 && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: "#EF4444", color: "#fff" }}>{notiUnreadCount > 99 ? "99+" : notiUnreadCount}</span>}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => markNotiRead()}
+                                    className="text-[12px] text-slate-400 hover:text-slate-600 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors">
+                                    읽음
+                                </button>
+                                <button onClick={() => setNotiOpen(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            </div>
+                        </div>
+                        {/* Filter chips */}
+                        <div className="flex items-center gap-1 px-4 py-2 border-b border-slate-100 overflow-x-auto">
+                            {([
+                                { key: "all" as const, label: "전체", color: "#334155" },
+                                { key: "mention" as const, label: "멘션", color: "#EF4444" },
+                                { key: "chat" as const, label: "채팅", color: "#3B82F6" },
+                                { key: "announcement" as const, label: "공지", color: "#F59E0B" },
+                                { key: "board" as const, label: "게시글", color: "#10B981" },
+                                { key: "update" as const, label: "업데이트", color: "#8B5CF6" },
+                            ]).map(f => {
+                                const active = notiFilter === f.key;
+                                const count = f.key === "all" ? alerts.length : alerts.filter(a => a.type === f.key).length;
+                                if (f.key !== "all" && count === 0) return null;
                                 return (
-                                    <button key={tab} onClick={() => setNotiTab(tab)}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] transition-colors"
-                                        style={{ fontWeight: isActive ? 650 : 450, color: isActive ? "#1E293B" : "#94A3B8", background: isActive ? "#F1F5F9" : "transparent" }}>
-                                        {tab === "alerts" ? "알림" : "변경 기록"}
-                                        {count > 0 && <span className="px-1 py-0.5 rounded text-[10px] font-bold" style={{ background: tab === "alerts" ? "#EF4444" : "rgba(59,130,246,0.15)", color: tab === "alerts" ? "#fff" : "#3B82F6" }}>{count > 99 ? "99+" : count}</span>}
+                                    <button key={f.key} onClick={() => setNotiFilter(f.key)}
+                                        className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all whitespace-nowrap"
+                                        style={{ background: active ? f.color : "#F1F5F9", color: active ? "#fff" : "#64748B" }}>
+                                        {f.label}
+                                        {count > 0 && <span className="text-[9px] opacity-75">{count}</span>}
                                     </button>
                                 );
                             })}
                         </div>
+                        <div className="max-h-[55vh] overflow-y-auto modal-scroll">
+                            {filteredAlerts.slice(0, 50).map((alert, i) => {
+                                const isNew = alert.timestamp > notiLastSeen;
+                                const typeIcon = alert.type === "mention" ? "💬" : alert.type === "announcement" ? "📢" : alert.type === "board" ? "📌" : alert.type === "update" ? "🔄" : "💬";
+                                return (
+                                    <button key={`${alert.type}-${alert.timestamp}-${i}`} className="w-full flex items-start gap-3 px-4 py-2.5 text-left transition-colors hover:bg-slate-50"
+                                        onClick={() => { setActiveTab(alert.tabId); setNotiOpen(false); markNotiRead(); }}>
+                                        <span className="text-[16px] mt-0.5 flex-shrink-0">{alert.type === "mention" ? (MEMBERS[alert.author]?.emoji || "👤") : typeIcon}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-[12px] text-slate-700"><span className="font-semibold">{alert.author}</span><span className="text-slate-400"> · {alert.section}</span></div>
+                                            <div className="text-[11px] text-slate-500 mt-0.5 truncate">{alert.text.slice(0, 60)}</div>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                <span className="text-[9px] px-1 py-0.5 rounded-full font-medium" style={{
+                                                    background: alert.type === "mention" ? "rgba(239,68,68,0.1)" : alert.type === "announcement" ? "rgba(245,158,11,0.1)" : alert.type === "board" ? "rgba(16,185,129,0.1)" : alert.type === "update" ? "rgba(139,92,246,0.1)" : "rgba(59,130,246,0.1)",
+                                                    color: alert.type === "mention" ? "#EF4444" : alert.type === "announcement" ? "#F59E0B" : alert.type === "board" ? "#10B981" : alert.type === "update" ? "#8B5CF6" : "#3B82F6",
+                                                }}>{alert.type === "mention" ? "멘션" : alert.type === "announcement" ? "공지" : alert.type === "board" ? "게시글" : alert.type === "update" ? "업데이트" : "채팅"}</span>
+                                                <span className="text-[10px] text-slate-400">{notiTimeAgo(alert.timestamp)}</span>
+                                            </div>
+                                        </div>
+                                        {isNew && <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-2" />}
+                                    </button>
+                                );
+                            })}
+                            {filteredAlerts.length === 0 && <div className="py-10 text-center text-[13px] text-slate-400">알림이 없습니다</div>}
+                        </div>
+                    </div>
+                </div>
+                {/* PC: right slide panel */}
+                <div className="hidden md:flex absolute top-0 right-0 bottom-0 w-[420px] flex-col bg-white shadow-[-8px_0_30px_rgba(0,0,0,0.12)] animate-[slideInRight_0.2s_ease]"
+                    onClick={e => e.stopPropagation()}>
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-5 flex-shrink-0" style={{ height: 56, borderBottom: "1px solid #E2E8F0" }}>
                         <div className="flex items-center gap-2">
-                            <button onClick={() => { markNotiRead(); if (notiTab === "logs") setNotiLogs([]); }}
+                            <span className="text-[15px] font-semibold" style={{ color: "#1E293B" }}>알림</span>
+                            {notiUnreadCount > 0 && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: "#EF4444", color: "#fff" }}>{notiUnreadCount > 99 ? "99+" : notiUnreadCount}</span>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {!notiSettingsOpen && <button onClick={() => markNotiRead()}
                                 className="text-[12px] text-slate-400 hover:text-slate-600 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors">
-                                {notiTab === "alerts" ? "모두 읽음" : "모두 지우기"}
+                                모두 읽음
+                            </button>}
+                            <button onClick={() => setNotiSettingsOpen(v => !v)}
+                                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                                title="푸시 알림 설정">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
                             </button>
-                            <button onClick={() => setNotiOpen(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <button onClick={() => { setNotiOpen(false); setNotiSettingsOpen(false); }} className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 text-lg transition-colors">✕</button>
                         </div>
                     </div>
 
-                    {/* Alerts Tab */}
-                    {notiTab === "alerts" && (
-                        <div className="max-h-[60vh] overflow-y-auto modal-scroll">
-                            {mentionAlerts.length === 0 && (
-                                <div className="py-12 text-center">
-                                    <div className="text-[28px] mb-2">🔔</div>
-                                    <div className="text-[14px] text-slate-400">알림이 없습니다</div>
-                                    <div className="text-[12px] text-slate-300 mt-1">채팅에서 @멘션되면 여기에 표시됩니다</div>
-                                </div>
-                            )}
-                            {mentionAlerts.slice(0, 50).map((alert, i) => {
-                                const isNew = alert.timestamp > notiLastSeen;
-                                const prevAlert = mentionAlerts[i - 1];
-                                const prevDate = prevAlert ? new Date(prevAlert.timestamp).toLocaleDateString("ko-KR") : "";
-                                const currDate = new Date(alert.timestamp).toLocaleDateString("ko-KR");
-                                const showDate = currDate !== prevDate;
-                                return (
-                                    <div key={`${alert.timestamp}-${i}`}>
-                                        {showDate && <div className="px-5 pt-3 pb-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{currDate}</div>}
-                                        <button className="w-full flex items-start gap-3 px-5 py-2.5 text-left transition-colors hover:bg-slate-50"
-                                            onClick={() => { setActiveTab(alert.tabId); setNotiOpen(false); markNotiRead(); }}>
-                                            <span className="text-[18px] mt-0.5 flex-shrink-0">{MEMBERS[alert.author]?.emoji || "👤"}</span>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="text-[13px] text-slate-700">
-                                                    <span className="font-semibold">{alert.author}</span>
-                                                    <span className="text-slate-500">님이 </span>
-                                                    <span className="font-medium" style={{ color: isNew ? "#3B82F6" : "#64748B" }}>{alert.section}</span>
-                                                    <span className="text-slate-500">에서 멘션했습니다</span>
-                                                </div>
-                                                <div className="text-[12px] text-slate-500 mt-0.5 truncate">{alert.text.slice(0, 80)}</div>
-                                                <div className="text-[11px] text-slate-400 mt-0.5">{notiTimeAgo(alert.timestamp)}</div>
-                                            </div>
-                                            {isNew && <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-2" />}
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
+                    {/* Filter chips (hide when settings open) */}
+                    {!notiSettingsOpen && <div className="flex items-center gap-1 px-5 py-2 border-b border-slate-100 flex-shrink-0 overflow-x-auto">
+                        {([
+                            { key: "all" as const, label: "전체", color: "#334155" },
+                            { key: "mention" as const, label: "멘션", color: "#EF4444" },
+                            { key: "chat" as const, label: "채팅", color: "#3B82F6" },
+                            { key: "announcement" as const, label: "공지", color: "#F59E0B" },
+                            { key: "board" as const, label: "게시글", color: "#10B981" },
+                            { key: "update" as const, label: "업데이트", color: "#8B5CF6" },
+                        ]).map(f => {
+                            const active = notiFilter === f.key;
+                            const count = f.key === "all" ? alerts.length : alerts.filter(a => a.type === f.key).length;
+                            return (
+                                <button key={f.key} onClick={() => setNotiFilter(f.key)}
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all whitespace-nowrap"
+                                    style={{ background: active ? f.color : "#F1F5F9", color: active ? "#fff" : "#64748B" }}>
+                                    {f.label}
+                                    {count > 0 && <span className="text-[10px] opacity-75">{count}</span>}
+                                </button>
+                            );
+                        })}
+                    </div>}
 
-                    {/* Logs Tab */}
-                    {notiTab === "logs" && (
-                        <div className="max-h-[60vh] overflow-y-auto modal-scroll">
-                            {notiLogs.length === 0 && (
-                                <div className="py-12 text-center text-[14px] text-slate-400">변경 기록이 없습니다</div>
-                            )}
-                            {notiLogs.filter(l => l.userName !== userName).slice(0, 100).map((log, i) => {
-                                const sec = NOTI_SECTION_MAP[log.section] || { label: log.section, icon: "📋", tabId: "overview" };
-                                const isNew = log.timestamp > notiLastSeen;
-                                const prevLog = notiLogs.filter(l => l.userName !== userName)[i - 1];
-                                const prevDate = prevLog ? new Date(prevLog.timestamp).toLocaleDateString("ko-KR") : "";
-                                const currDate = new Date(log.timestamp).toLocaleDateString("ko-KR");
-                                const showDate = currDate !== prevDate;
-                                return (
-                                    <div key={`${log.timestamp}-${i}`}>
-                                        {showDate && <div className="px-5 pt-3 pb-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{currDate}</div>}
-                                        <button className="w-full flex items-start gap-3 px-5 py-2.5 text-left transition-colors hover:bg-slate-50"
-                                            onClick={() => { setActiveTab(sec.tabId); setNotiOpen(false); }}>
-                                            <span className="text-[18px] mt-0.5 flex-shrink-0">{sec.icon}</span>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="text-[13px] text-slate-700">
-                                                    <span className="font-semibold">{log.userName}</span>
-                                                    <span className="text-slate-500">님이 </span>
-                                                    <span className="font-medium" style={{ color: isNew ? "#3B82F6" : "#64748B" }}>{sec.label}</span>
-                                                    <span className="text-slate-500">을(를) 수정했습니다</span>
+                    {/* Scrollable content */}
+                    <div className="flex-1 overflow-y-auto modal-scroll">
+                        {/* Push settings view */}
+                        {notiSettingsOpen && (
+                            <div className="px-5 py-4">
+                                <div className="text-[13px] font-semibold mb-1" style={{ color: "#1E293B" }}>푸시 알림 설정</div>
+                                <div className="text-[11px] text-slate-400 mb-4">카테고리별로 모바일/데스크톱 푸시 알림을 켜거나 끌 수 있습니다</div>
+                                <div className="space-y-1">
+                                    {PUSH_CATEGORIES.map(cat => {
+                                        const enabled = myPushPrefs[cat.key] !== false;
+                                        return (
+                                            <button key={cat.key} onClick={() => togglePushPref(cat.key)}
+                                                className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors hover:bg-slate-50"
+                                                style={{ background: enabled ? "rgba(59,130,246,0.04)" : "transparent" }}>
+                                                <div className="text-left">
+                                                    <div className="text-[13px] font-medium" style={{ color: "#334155" }}>{cat.label}</div>
+                                                    <div className="text-[11px]" style={{ color: "#94A3B8" }}>{cat.desc}</div>
                                                 </div>
-                                                <div className="text-[11px] text-slate-400 mt-0.5">{notiTimeAgo(log.timestamp)}</div>
+                                                <div className="relative w-10 h-[22px] rounded-full transition-colors flex-shrink-0 ml-3"
+                                                    style={{ background: enabled ? "#3B82F6" : "#CBD5E1" }}>
+                                                    <div className="absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow-sm transition-all"
+                                                        style={{ left: enabled ? 20 : 2 }} />
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <div className="mt-4 px-2 text-[11px] text-slate-400">
+                                    설정은 자동 저장됩니다. 꺼진 카테고리의 알림은 앱 내에서는 보이지만 푸시 알림은 발송되지 않습니다.
+                                </div>
+                            </div>
+                        )}
+                        {!notiSettingsOpen && filteredAlerts.length === 0 && (
+                            <div className="py-16 text-center">
+                                <div className="text-[32px] mb-3">🔔</div>
+                                <div className="text-[14px] text-slate-400 font-medium">알림이 없습니다</div>
+                                <div className="text-[12px] text-slate-300 mt-1">멘션, 채팅, 공지, 업데이트 알림이 여기에 표시됩니다</div>
+                            </div>
+                        )}
+                        {!notiSettingsOpen && filteredAlerts.slice(0, 100).map((alert, i) => {
+                            const isNew = alert.timestamp > notiLastSeen;
+                            const prev = filteredAlerts[i - 1];
+                            const prevDate = prev ? new Date(prev.timestamp).toLocaleDateString("ko-KR") : "";
+                            const currDate = new Date(alert.timestamp).toLocaleDateString("ko-KR");
+                            const showDate = currDate !== prevDate;
+                            const typeIcon = alert.type === "mention" ? "💬" : alert.type === "announcement" ? "📢" : alert.type === "board" ? "📌" : alert.type === "update" ? "🔄" : "💬";
+                            const typeLabel = alert.type === "mention" ? "에서 멘션했습니다"
+                                : alert.type === "announcement" ? "을(를) 등록했습니다"
+                                : alert.type === "board" ? "에 새 글을 작성했습니다"
+                                : alert.type === "update" ? "을(를) 업데이트했습니다"
+                                : "에서 메시지를 보냈습니다";
+                            return (
+                                <div key={`${alert.type}-${alert.timestamp}-${i}`}>
+                                    {showDate && <div className="px-5 pt-3.5 pb-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{currDate}</div>}
+                                    <button className="w-full flex items-start gap-3 px-5 py-3 text-left transition-colors hover:bg-slate-50"
+                                        onClick={() => { setActiveTab(alert.tabId); setNotiOpen(false); markNotiRead(); }}>
+                                        <span className="text-[18px] mt-0.5 flex-shrink-0">{alert.type === "mention" ? (MEMBERS[alert.author]?.emoji || "👤") : typeIcon}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-[13px] text-slate-700">
+                                                <span className="font-semibold">{alert.author}</span>
+                                                <span className="text-slate-500">님이 </span>
+                                                <span className="font-medium" style={{ color: isNew ? "#3B82F6" : "#64748B" }}>{alert.section}</span>
+                                                <span className="text-slate-500">{typeLabel}</span>
                                             </div>
-                                            {isNew && <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-2" />}
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
+                                            <div className="text-[12px] text-slate-500 mt-0.5 line-clamp-2">{alert.text.slice(0, 120)}</div>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{
+                                                    background: alert.type === "mention" ? "rgba(239,68,68,0.1)" : alert.type === "announcement" ? "rgba(245,158,11,0.1)" : alert.type === "board" ? "rgba(16,185,129,0.1)" : alert.type === "update" ? "rgba(139,92,246,0.1)" : "rgba(59,130,246,0.1)",
+                                                    color: alert.type === "mention" ? "#EF4444" : alert.type === "announcement" ? "#F59E0B" : alert.type === "board" ? "#10B981" : alert.type === "update" ? "#8B5CF6" : "#3B82F6",
+                                                }}>{alert.type === "mention" ? "멘션" : alert.type === "announcement" ? "공지" : alert.type === "board" ? "게시글" : alert.type === "update" ? "업데이트" : "채팅"}</span>
+                                                <span className="text-[11px] text-slate-400">{notiTimeAgo(alert.timestamp)}</span>
+                                            </div>
+                                        </div>
+                                        {isNew && <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-2" />}
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
 
                     {/* Footer */}
-                    <div className="flex items-center justify-center px-4 py-2 border-t border-slate-100" style={{ background: "#FAFBFC" }}>
-                        <span className="text-[11px] text-slate-400">{notiTab === "alerts" ? "@멘션 알림 — 향후 모바일 푸시 대상" : "다른 멤버의 최근 수정 기록"}</span>
+                    <div className="flex items-center justify-center px-4 py-2.5 border-t border-slate-100 flex-shrink-0" style={{ background: "#FAFBFC" }}>
+                        <span className="text-[11px] text-slate-400">멘션 · 채팅 · 공지 · 게시글 · 업데이트</span>
                     </div>
                 </div>
             </div>
