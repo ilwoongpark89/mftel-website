@@ -38,7 +38,7 @@ const ALLOWED_SECTIONS = new Set([
     "reports", "teams", "dailyTargets", "philosophy", "resources",
     "ideas", "analyses", "chatPosts", "customEmojis", "statusMessages",
     "equipmentList", "personalMemos", "personalFiles", "piChat", "teamMemos", "labChat", "labBoard", "labFiles", "meetings", "analysisToolList", "paperTagList",
-    "members", "online", "dispatches", "readReceipts", "pushPrefs", "experimentLogs", "analysisLogs",
+    "members", "online", "dispatches", "readReceipts", "pushPrefs", "experimentLogs", "analysisLogs", "experimentLogCategories", "analysisLogCategories",
 ]);
 
 async function appendLog(logKey: string, entry: Record<string, unknown>) {
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 
         if (section === 'all') {
             // Return all dashboard data at once
-            const keys = ["announcements","papers","experiments","todos","conferences","lectures","patents","vacations","schedule","timetable","reports","teams","dailyTargets","philosophy","resources","ideas","analyses","chatPosts","customEmojis","statusMessages","equipmentList","personalMemos","personalFiles","piChat","teamMemos","labChat","labBoard","labFiles","meetings","analysisToolList","paperTagList","members","dispatches","readReceipts","pushPrefs","experimentLogs","analysisLogs"];
+            const keys = ["announcements","papers","experiments","todos","conferences","lectures","patents","vacations","schedule","timetable","reports","teams","dailyTargets","philosophy","resources","ideas","analyses","chatPosts","customEmojis","statusMessages","equipmentList","personalMemos","personalFiles","piChat","teamMemos","labChat","labBoard","labFiles","meetings","analysisToolList","paperTagList","members","dispatches","readReceipts","pushPrefs","experimentLogs","analysisLogs","experimentLogCategories","analysisLogCategories"];
             const results = await Promise.all(keys.map(k => getKey(`${DASHBOARD_PREFIX}${k}`)));
             const out: Record<string, unknown> = {};
             keys.forEach((k, i) => { out[k] = results[i] ? JSON.parse(results[i] as string) : null; });

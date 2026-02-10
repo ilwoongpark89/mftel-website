@@ -174,10 +174,8 @@ type Analysis = { id: number; title: string; tool: string; status: string; assig
 const DEFAULT_PATENTS: Patent[] = [];
 const DEFAULT_TIMETABLE: TimetableBlock[] = [];
 
-type ExpLogEntry = { id: number; title: string; date: string; author: string; conditions: string; specimen: string; data: string; notes: string; imageUrl?: string; createdAt: string };
-type ExpLogBook = { id: number; name: string; createdAt: string; entries: ExpLogEntry[] };
-type AnalysisLogEntry = { id: number; title: string; date: string; author: string; tool: string; meshInfo: string; boundaryConditions: string; results: string; notes: string; imageUrl?: string; createdAt: string };
-type AnalysisLogBook = { id: number; name: string; createdAt: string; entries: AnalysisLogEntry[] };
+type ExpLogEntry = { id: number; title: string; date: string; author: string; conditions: string; specimen: string; data: string; notes: string; imageUrl?: string; createdAt: string; category?: string };
+type AnalysisLogEntry = { id: number; title: string; date: string; author: string; tool: string; meshInfo: string; boundaryConditions: string; results: string; notes: string; imageUrl?: string; createdAt: string; category?: string };
 
 // ─── Shared: Multi-select pill helper ────────────────────────────────────────
 
@@ -6221,15 +6219,16 @@ const TEAM_MEMO_COLORS = MEMO_COLORS;
 const MEMO_COL_MIGRATE = (s: string) => (s === "done" || s === "right") ? "right" : "left";
 const MEMO_COLUMNS = [{ key: "left", label: "진행", color: "#3b82f6" }, { key: "right", label: "완료", color: "#8b5cf6" }];
 
-function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, onDeleteCard, onReorderCards, onAddChat, onUpdateChat, onDeleteChat, onClearChat, onRetryChat, onAddFile, onDeleteFile, readReceipts, expLogBooks, analysisLogBooks, onSaveExpLogBook, onDeleteExpLogBook, onSaveAnalysisLogBook, onDeleteAnalysisLogBook }: {
+function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, onDeleteCard, onReorderCards, onAddChat, onUpdateChat, onDeleteChat, onClearChat, onRetryChat, onAddFile, onDeleteFile, readReceipts, expLogEntries, analysisLogEntries, expCategories, analysisCategories, onSaveExpEntry, onDeleteExpEntry, onSaveExpCategories, onSaveAnalysisEntry, onDeleteAnalysisEntry, onSaveAnalysisCategories }: {
     teamName: string; kanban: TeamMemoCard[]; chat: TeamChatMsg[]; files: LabFile[]; currentUser: string;
     onSaveCard: (card: TeamMemoCard) => void; onDeleteCard: (id: number) => void; onReorderCards: (cards: TeamMemoCard[]) => void;
     onAddChat: (msg: TeamChatMsg) => void; onUpdateChat: (msg: TeamChatMsg) => void; onDeleteChat: (id: number) => void; onClearChat: () => void; onRetryChat: (id: number) => void;
     onAddFile: (f: LabFile) => void; onDeleteFile: (id: number) => void;
     readReceipts?: Record<string, number>;
-    expLogBooks: ExpLogBook[]; analysisLogBooks: AnalysisLogBook[];
-    onSaveExpLogBook: (book: ExpLogBook) => void; onDeleteExpLogBook: (bookId: number) => void;
-    onSaveAnalysisLogBook: (book: AnalysisLogBook) => void; onDeleteAnalysisLogBook: (bookId: number) => void;
+    expLogEntries: ExpLogEntry[]; analysisLogEntries: AnalysisLogEntry[];
+    expCategories: string[]; analysisCategories: string[];
+    onSaveExpEntry: (e: ExpLogEntry) => void; onDeleteExpEntry: (id: number) => void; onSaveExpCategories: (cats: string[]) => void;
+    onSaveAnalysisEntry: (e: AnalysisLogEntry) => void; onDeleteAnalysisEntry: (id: number) => void; onSaveAnalysisCategories: (cats: string[]) => void;
 }) {
     const MEMBERS = useContext(MembersContext);
     const confirmDel = useContext(ConfirmDeleteContext);
@@ -6261,12 +6260,12 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
     const [mobileTab, setMobileTab] = useState<"chat"|"board"|"files"|"expLogs"|"analysisLogs">("chat");
     const [replyTo, setReplyTo] = useState<TeamChatMsg | null>(null);
-    const [expSubTab, setExpSubTab] = useState<string>("전체");
-    const [analysisSubTab, setAnalysisSubTab] = useState<string>("전체");
+    const [expSubTab, setExpSubTab] = useState("전체");
+    const [analysisSubTab, setAnalysisSubTab] = useState("전체");
     const [showExpMgr, setShowExpMgr] = useState(false);
     const [showAnalysisMgr, setShowAnalysisMgr] = useState(false);
-    const [newExpName, setNewExpName] = useState("");
-    const [newAnalysisName, setNewAnalysisName] = useState("");
+    const [newExpCat, setNewExpCat] = useState("");
+    const [newAnalysisCat, setNewAnalysisCat] = useState("");
     const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
     const [moreMenuMsgId, setMoreMenuMsgId] = useState<number | null>(null);
     const mention = useMention();
@@ -6381,9 +6380,9 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                     </button>
                 ))}
             </div>
-            {/* Desktop tab bar — only expLogs/analysisLogs toggle (desktop only) */}
+            {/* Desktop tab bar — tabs + management buttons on right (desktop only) */}
             <div className="hidden md:flex items-center border-b border-slate-200 bg-white flex-shrink-0 -mt-1 md:col-span-full">
-                <div className="flex overflow-x-auto flex-1 min-w-0">
+                <div className="flex flex-1 min-w-0">
                     {([["chat","💬","채팅/보드/파일"],["expLogs","🧪","실험일지"],["analysisLogs","🖥️","해석일지"]] as const).map(([id,icon,label]) => (
                         <button key={id} onClick={() => setMobileTab(id as typeof mobileTab)}
                             className={`px-4 py-2.5 text-[13px] font-semibold transition-colors whitespace-nowrap ${(id === "chat" ? showClassicCols : mobileTab === id) ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400 hover:text-slate-600"}`}>
@@ -6391,79 +6390,73 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                         </button>
                     ))}
                 </div>
-                {mobileTab === "expLogs" && (
-                    <button onClick={() => setShowExpMgr(!showExpMgr)} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200 whitespace-nowrap mr-2 flex-shrink-0">✏️ 실험일지 관리</button>
-                )}
-                {mobileTab === "analysisLogs" && (
-                    <button onClick={() => setShowAnalysisMgr(!showAnalysisMgr)} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200 whitespace-nowrap mr-2 flex-shrink-0">💻 해석일지 관리</button>
-                )}
+                <div className="flex items-center gap-2 mr-2 flex-shrink-0">
+                    <button onClick={() => { setShowExpMgr(!showExpMgr); setShowAnalysisMgr(false); }} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200 whitespace-nowrap">✏️ 실험일지 관리</button>
+                    <button onClick={() => { setShowAnalysisMgr(!showAnalysisMgr); setShowExpMgr(false); }} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200 whitespace-nowrap">💻 해석일지 관리</button>
+                </div>
             </div>
-            {/* Sub-tabs for experiment/analysis logs */}
-            {mobileTab === "expLogs" && (
-                <div className="md:col-span-full flex items-center gap-1 px-1 py-1.5 bg-slate-50 border-b border-slate-200 overflow-x-auto flex-shrink-0">
-                    <button onClick={() => setShowExpMgr(!showExpMgr)} className="md:hidden px-2.5 py-1 bg-slate-200 text-slate-600 rounded-full text-[11px] font-medium hover:bg-slate-300 whitespace-nowrap flex-shrink-0">✏️ 관리</button>
-                    {["전체", ...expLogBooks.map(b => b.name)].map(name => (
+            {/* Management modals — identical to 📋 태그 관리 pattern */}
+            {showExpMgr && (
+                <div className="md:col-span-full mb-2 p-3 bg-white border border-slate-200 rounded-lg">
+                    <div className="text-[13px] font-semibold text-slate-600 mb-2">실험일지 목록</div>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                        {expCategories.map(t => (
+                            <span key={t} className="flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-full text-[12px] text-slate-700">
+                                {t}
+                                <button onClick={() => { if (expSubTab === t) setExpSubTab("전체"); onSaveExpCategories(expCategories.filter(x => x !== t)); }} className="text-slate-400 hover:text-red-500 text-[11px]">✕</button>
+                            </span>
+                        ))}
+                        {expCategories.length === 0 && <span className="text-[12px] text-slate-400">등록된 실험일지가 없습니다</span>}
+                    </div>
+                    <div className="flex gap-2">
+                        <input value={newExpCat} onChange={e => setNewExpCat(e.target.value)} placeholder="새 실험일지 이름 (예: DWO 실험)"
+                            className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            onKeyDown={e => { if (e.key === "Enter" && newExpCat.trim() && !expCategories.includes(newExpCat.trim())) { onSaveExpCategories([...expCategories, newExpCat.trim()]); setNewExpCat(""); } }} />
+                        <button onClick={() => { if (newExpCat.trim() && !expCategories.includes(newExpCat.trim())) { onSaveExpCategories([...expCategories, newExpCat.trim()]); setNewExpCat(""); } }}
+                            className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">추가</button>
+                    </div>
+                </div>
+            )}
+            {showAnalysisMgr && (
+                <div className="md:col-span-full mb-2 p-3 bg-white border border-slate-200 rounded-lg">
+                    <div className="text-[13px] font-semibold text-slate-600 mb-2">해석일지 목록</div>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                        {analysisCategories.map(t => (
+                            <span key={t} className="flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-full text-[12px] text-slate-700">
+                                {t}
+                                <button onClick={() => { if (analysisSubTab === t) setAnalysisSubTab("전체"); onSaveAnalysisCategories(analysisCategories.filter(x => x !== t)); }} className="text-slate-400 hover:text-red-500 text-[11px]">✕</button>
+                            </span>
+                        ))}
+                        {analysisCategories.length === 0 && <span className="text-[12px] text-slate-400">등록된 해석일지가 없습니다</span>}
+                    </div>
+                    <div className="flex gap-2">
+                        <input value={newAnalysisCat} onChange={e => setNewAnalysisCat(e.target.value)} placeholder="새 해석일지 이름 (예: PCM 해석)"
+                            className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            onKeyDown={e => { if (e.key === "Enter" && newAnalysisCat.trim() && !analysisCategories.includes(newAnalysisCat.trim())) { onSaveAnalysisCategories([...analysisCategories, newAnalysisCat.trim()]); setNewAnalysisCat(""); } }} />
+                        <button onClick={() => { if (newAnalysisCat.trim() && !analysisCategories.includes(newAnalysisCat.trim())) { onSaveAnalysisCategories([...analysisCategories, newAnalysisCat.trim()]); setNewAnalysisCat(""); } }}
+                            className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">추가</button>
+                    </div>
+                </div>
+            )}
+            {/* Sub-tabs — underline style, only when expLogs or analysisLogs tab is active */}
+            {mobileTab === "expLogs" && expCategories.length > 0 && (
+                <div className="md:col-span-full flex items-center border-b border-slate-200 bg-white overflow-x-auto flex-shrink-0" style={{scrollbarWidth:"none"}}>
+                    {["전체", ...expCategories].map(name => (
                         <button key={name} onClick={() => setExpSubTab(name)}
-                            className="px-3 py-1 rounded-full text-[12px] font-medium transition-all flex-shrink-0 whitespace-nowrap"
-                            style={{ background: expSubTab === name ? "#3B82F6" : "transparent", color: expSubTab === name ? "#fff" : "#64748B", border: expSubTab === name ? "1px solid #3B82F6" : "1px solid #CBD5E1" }}>
+                            className={`px-3 py-2 text-[13px] font-medium transition-colors whitespace-nowrap flex-shrink-0 ${expSubTab === name ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400 hover:text-slate-600"}`}>
                             {name}
                         </button>
                     ))}
                 </div>
             )}
-            {mobileTab === "analysisLogs" && (
-                <div className="md:col-span-full flex items-center gap-1 px-1 py-1.5 bg-slate-50 border-b border-slate-200 overflow-x-auto flex-shrink-0">
-                    <button onClick={() => setShowAnalysisMgr(!showAnalysisMgr)} className="md:hidden px-2.5 py-1 bg-slate-200 text-slate-600 rounded-full text-[11px] font-medium hover:bg-slate-300 whitespace-nowrap flex-shrink-0">💻 관리</button>
-                    {["전체", ...analysisLogBooks.map(b => b.name)].map(name => (
+            {mobileTab === "analysisLogs" && analysisCategories.length > 0 && (
+                <div className="md:col-span-full flex items-center border-b border-slate-200 bg-white overflow-x-auto flex-shrink-0" style={{scrollbarWidth:"none"}}>
+                    {["전체", ...analysisCategories].map(name => (
                         <button key={name} onClick={() => setAnalysisSubTab(name)}
-                            className="px-3 py-1 rounded-full text-[12px] font-medium transition-all flex-shrink-0 whitespace-nowrap"
-                            style={{ background: analysisSubTab === name ? "#3B82F6" : "transparent", color: analysisSubTab === name ? "#fff" : "#64748B", border: analysisSubTab === name ? "1px solid #3B82F6" : "1px solid #CBD5E1" }}>
+                            className={`px-3 py-2 text-[13px] font-medium transition-colors whitespace-nowrap flex-shrink-0 ${analysisSubTab === name ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400 hover:text-slate-600"}`}>
                             {name}
                         </button>
                     ))}
-                </div>
-            )}
-            {/* Management modals */}
-            {showExpMgr && mobileTab === "expLogs" && (
-                <div className="md:col-span-full mb-2 p-3 bg-white border border-slate-200 rounded-lg">
-                    <div className="text-[13px] font-semibold text-slate-600 mb-2">실험일지 관리</div>
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                        {expLogBooks.map(b => (
-                            <span key={b.id} className="flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-full text-[12px] text-slate-700">
-                                {b.name}
-                                <button onClick={() => confirmDel(() => { if (expSubTab === b.name) setExpSubTab("전체"); onDeleteExpLogBook(b.id); })} className="text-slate-400 hover:text-red-500 text-[11px]">✕</button>
-                            </span>
-                        ))}
-                        {expLogBooks.length === 0 && <span className="text-[12px] text-slate-400">등록된 실험일지가 없습니다</span>}
-                    </div>
-                    <div className="flex gap-2">
-                        <input value={newExpName} onChange={e => setNewExpName(e.target.value)} placeholder="새 실험일지 이름 (예: DWO 실험)"
-                            className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                            onKeyDown={e => { if (e.key === "Enter" && newExpName.trim()) { onSaveExpLogBook({ id: Date.now(), name: newExpName.trim(), createdAt: new Date().toISOString().split("T")[0], entries: [] }); setNewExpName(""); } }} />
-                        <button onClick={() => { if (newExpName.trim()) { onSaveExpLogBook({ id: Date.now(), name: newExpName.trim(), createdAt: new Date().toISOString().split("T")[0], entries: [] }); setNewExpName(""); } }}
-                            className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">추가</button>
-                    </div>
-                </div>
-            )}
-            {showAnalysisMgr && mobileTab === "analysisLogs" && (
-                <div className="md:col-span-full mb-2 p-3 bg-white border border-slate-200 rounded-lg">
-                    <div className="text-[13px] font-semibold text-slate-600 mb-2">해석일지 관리</div>
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                        {analysisLogBooks.map(b => (
-                            <span key={b.id} className="flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-full text-[12px] text-slate-700">
-                                {b.name}
-                                <button onClick={() => confirmDel(() => { if (analysisSubTab === b.name) setAnalysisSubTab("전체"); onDeleteAnalysisLogBook(b.id); })} className="text-slate-400 hover:text-red-500 text-[11px]">✕</button>
-                            </span>
-                        ))}
-                        {analysisLogBooks.length === 0 && <span className="text-[12px] text-slate-400">등록된 해석일지가 없습니다</span>}
-                    </div>
-                    <div className="flex gap-2">
-                        <input value={newAnalysisName} onChange={e => setNewAnalysisName(e.target.value)} placeholder="새 해석일지 이름 (예: PCM 해석)"
-                            className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                            onKeyDown={e => { if (e.key === "Enter" && newAnalysisName.trim()) { onSaveAnalysisLogBook({ id: Date.now(), name: newAnalysisName.trim(), createdAt: new Date().toISOString().split("T")[0], entries: [] }); setNewAnalysisName(""); } }} />
-                        <button onClick={() => { if (newAnalysisName.trim()) { onSaveAnalysisLogBook({ id: Date.now(), name: newAnalysisName.trim(), createdAt: new Date().toISOString().split("T")[0], entries: [] }); setNewAnalysisName(""); } }}
-                            className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">추가</button>
-                    </div>
                 </div>
             )}
             {/* Board */}
@@ -6794,75 +6787,28 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
 
             {/* Experiment Logs Tab */}
             {mobileTab === "expLogs" && (() => {
-                const selectedBook = expSubTab === "전체" ? null : expLogBooks.find(b => b.name === expSubTab);
-                const allEntries = expSubTab === "전체" ? expLogBooks.flatMap(b => b.entries) : (selectedBook?.entries || []);
+                const filtered = expSubTab === "전체" ? expLogEntries : expLogEntries.filter(e => e.category === expSubTab);
                 const displayName = expSubTab === "전체" ? "전체 실험일지" : expSubTab;
                 return (
                     <div className="flex-1 min-h-0 overflow-y-auto md:col-span-full">
-                        {expLogBooks.length === 0 ? (
-                            <div className="text-center py-16">
-                                <div className="text-[40px] mb-3">🧪</div>
-                                <div className="text-[15px] text-slate-400 mb-1">아직 실험일지가 없습니다</div>
-                                <div className="text-[13px] text-slate-300 mb-4">{`"✏️ 실험일지 관리" 버튼으로 일지를 만들어주세요`}</div>
-                                <button onClick={() => setShowExpMgr(true)} className="px-4 py-2 bg-blue-500 text-white rounded-xl text-[14px] font-medium hover:bg-blue-600">✏️ 실험일지 만들기</button>
-                            </div>
-                        ) : (
-                            <ExpLogView teamName={displayName} entries={allEntries} onSave={entry => {
-                                if (selectedBook) {
-                                    const updated = { ...selectedBook, entries: selectedBook.entries.find(e => e.id === entry.id) ? selectedBook.entries.map(e => e.id === entry.id ? entry : e) : [...selectedBook.entries, entry] };
-                                    onSaveExpLogBook(updated);
-                                } else {
-                                    // "전체" 모드: find which book the entry belongs to, or add to first book
-                                    const ownerBook = expLogBooks.find(b => b.entries.some(e => e.id === entry.id));
-                                    if (ownerBook) {
-                                        onSaveExpLogBook({ ...ownerBook, entries: ownerBook.entries.map(e => e.id === entry.id ? entry : e) });
-                                    } else {
-                                        const target = expLogBooks[0];
-                                        onSaveExpLogBook({ ...target, entries: [...target.entries, entry] });
-                                    }
-                                }
-                            }} onDelete={id => {
-                                const ownerBook = expLogBooks.find(b => b.entries.some(e => e.id === id));
-                                if (ownerBook) onSaveExpLogBook({ ...ownerBook, entries: ownerBook.entries.filter(e => e.id !== id) });
-                            }} currentUser={currentUser} />
-                        )}
+                        <ExpLogView teamName={displayName} entries={filtered} onSave={entry => {
+                            const tagged = expSubTab !== "전체" && !entry.category ? { ...entry, category: expSubTab } : entry;
+                            onSaveExpEntry(tagged);
+                        }} onDelete={id => onDeleteExpEntry(id)} currentUser={currentUser} categories={expCategories} />
                     </div>
                 );
             })()}
 
             {/* Analysis Logs Tab */}
             {mobileTab === "analysisLogs" && (() => {
-                const selectedBook = analysisSubTab === "전체" ? null : analysisLogBooks.find(b => b.name === analysisSubTab);
-                const allEntries = analysisSubTab === "전체" ? analysisLogBooks.flatMap(b => b.entries) : (selectedBook?.entries || []);
+                const filtered = analysisSubTab === "전체" ? analysisLogEntries : analysisLogEntries.filter(e => e.category === analysisSubTab);
                 const displayName = analysisSubTab === "전체" ? "전체 해석일지" : analysisSubTab;
                 return (
                     <div className="flex-1 min-h-0 overflow-y-auto md:col-span-full">
-                        {analysisLogBooks.length === 0 ? (
-                            <div className="text-center py-16">
-                                <div className="text-[40px] mb-3">🖥️</div>
-                                <div className="text-[15px] text-slate-400 mb-1">아직 해석일지가 없습니다</div>
-                                <div className="text-[13px] text-slate-300 mb-4">{`"💻 해석일지 관리" 버튼으로 일지를 만들어주세요`}</div>
-                                <button onClick={() => setShowAnalysisMgr(true)} className="px-4 py-2 bg-blue-500 text-white rounded-xl text-[14px] font-medium hover:bg-blue-600">💻 해석일지 만들기</button>
-                            </div>
-                        ) : (
-                            <AnalysisLogView bookName={displayName} entries={allEntries} onSave={entry => {
-                                if (selectedBook) {
-                                    const updated = { ...selectedBook, entries: selectedBook.entries.find(e => e.id === entry.id) ? selectedBook.entries.map(e => e.id === entry.id ? entry : e) : [...selectedBook.entries, entry] };
-                                    onSaveAnalysisLogBook(updated);
-                                } else {
-                                    const ownerBook = analysisLogBooks.find(b => b.entries.some(e => e.id === entry.id));
-                                    if (ownerBook) {
-                                        onSaveAnalysisLogBook({ ...ownerBook, entries: ownerBook.entries.map(e => e.id === entry.id ? entry : e) });
-                                    } else {
-                                        const target = analysisLogBooks[0];
-                                        onSaveAnalysisLogBook({ ...target, entries: [...target.entries, entry] });
-                                    }
-                                }
-                            }} onDelete={id => {
-                                const ownerBook = analysisLogBooks.find(b => b.entries.some(e => e.id === id));
-                                if (ownerBook) onSaveAnalysisLogBook({ ...ownerBook, entries: ownerBook.entries.filter(e => e.id !== id) });
-                            }} currentUser={currentUser} />
-                        )}
+                        <AnalysisLogView bookName={displayName} entries={filtered} onSave={entry => {
+                            const tagged = analysisSubTab !== "전체" && !entry.category ? { ...entry, category: analysisSubTab } : entry;
+                            onSaveAnalysisEntry(tagged);
+                        }} onDelete={id => onDeleteAnalysisEntry(id)} currentUser={currentUser} categories={analysisCategories} />
                     </div>
                 );
             })()}
@@ -6926,13 +6872,14 @@ function MiniBar({ items, maxVal }: { items: Array<{ label: string; count: numbe
 
 // ─── Analysis Log View (per-book analysis daily log) ─────────────────────────
 
-function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser }: {
-    bookName: string; entries: AnalysisLogEntry[]; onSave: (e: AnalysisLogEntry) => void; onDelete: (id: number) => void; currentUser: string;
+function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser, categories }: {
+    bookName: string; entries: AnalysisLogEntry[]; onSave: (e: AnalysisLogEntry) => void; onDelete: (id: number) => void; currentUser: string; categories?: string[];
 }) {
     const MEMBERS = useContext(MembersContext);
     const confirmDelete = useContext(ConfirmDeleteContext);
     const [formOpen, setFormOpen] = useState(false);
     const [editEntry, setEditEntry] = useState<AnalysisLogEntry | null>(null);
+    const [category, setCategory] = useState("");
     const [title, setTitle] = useState("");
     const [date, setDate] = useState(() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; });
     const [tool, setTool] = useState("");
@@ -6946,8 +6893,8 @@ function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser }: {
     const [search, setSearch] = useState("");
     const todayStr = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; })();
 
-    const openAdd = () => { setEditEntry(null); setTitle(""); setDate(todayStr); setTool(""); setMeshInfo(""); setBoundaryConditions(""); setResults(""); setNotes(""); setImgUrl(""); setFormOpen(true); };
-    const openEdit = (e: AnalysisLogEntry) => { setEditEntry(e); setTitle(e.title); setDate(e.date); setTool(e.tool); setMeshInfo(e.meshInfo); setBoundaryConditions(e.boundaryConditions); setResults(e.results); setNotes(e.notes); setImgUrl(e.imageUrl || ""); setFormOpen(true); };
+    const openAdd = () => { setEditEntry(null); setTitle(""); setDate(todayStr); setTool(""); setMeshInfo(""); setBoundaryConditions(""); setResults(""); setNotes(""); setImgUrl(""); setCategory(""); setFormOpen(true); };
+    const openEdit = (e: AnalysisLogEntry) => { setEditEntry(e); setTitle(e.title); setDate(e.date); setTool(e.tool); setMeshInfo(e.meshInfo); setBoundaryConditions(e.boundaryConditions); setResults(e.results); setNotes(e.notes); setImgUrl(e.imageUrl || ""); setCategory(e.category || ""); setFormOpen(true); };
     const handleImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file) return;
         setImgUploading(true);
@@ -6957,8 +6904,8 @@ function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser }: {
     const handleSubmit = () => {
         if (!title.trim()) return;
         const entry: AnalysisLogEntry = editEntry
-            ? { ...editEntry, title: title.trim(), date, tool, meshInfo, boundaryConditions, results, notes, imageUrl: imgUrl || undefined, createdAt: editEntry.createdAt }
-            : { id: Date.now(), title: title.trim(), date, author: currentUser, tool, meshInfo, boundaryConditions, results, notes, imageUrl: imgUrl || undefined, createdAt: todayStr };
+            ? { ...editEntry, title: title.trim(), date, tool, meshInfo, boundaryConditions, results, notes, imageUrl: imgUrl || undefined, createdAt: editEntry.createdAt, category: category || undefined }
+            : { id: Date.now(), title: title.trim(), date, author: currentUser, tool, meshInfo, boundaryConditions, results, notes, imageUrl: imgUrl || undefined, createdAt: todayStr, category: category || undefined };
         onSave(entry);
         setFormOpen(false);
     };
@@ -7025,6 +6972,7 @@ function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser }: {
                                                 <div className="flex-1 min-w-0">
                                                     <div className="text-[15px] font-semibold text-slate-800 leading-snug">{entry.title}</div>
                                                     <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                                        {entry.category && <span className="text-[11px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{entry.category}</span>}
                                                         {entry.tool && <span className="text-[12px] text-slate-500">🔧 {entry.tool}</span>}
                                                         {entry.meshInfo && <span className="text-[12px] text-slate-400 truncate max-w-[200px]">📐 {entry.meshInfo}</span>}
                                                     </div>
@@ -7102,6 +7050,15 @@ function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser }: {
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">날짜</label>
                                     <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                                 </div>
+                                {categories && categories.length > 0 && (
+                                    <div>
+                                        <label className="text-[12px] font-semibold text-slate-500 mb-1 block">📂 분류</label>
+                                        <select value={category} onChange={e => setCategory(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white">
+                                            <option value="">미분류</option>
+                                            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </div>
+                                )}
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">🔧 해석 도구</label>
                                     <input value={tool} onChange={e => setTool(e.target.value)} placeholder="예: ANSYS Fluent 2024R2, OpenFOAM v2312..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
@@ -7148,13 +7105,14 @@ function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser }: {
 
 // ─── Experiment Log View (per-team daily log) ────────────────────────────────
 
-function ExpLogView({ teamName, entries, onSave, onDelete, currentUser }: {
-    teamName: string; entries: ExpLogEntry[]; onSave: (e: ExpLogEntry) => void; onDelete: (id: number) => void; currentUser: string;
+function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categories }: {
+    teamName: string; entries: ExpLogEntry[]; onSave: (e: ExpLogEntry) => void; onDelete: (id: number) => void; currentUser: string; categories?: string[];
 }) {
     const MEMBERS = useContext(MembersContext);
     const confirmDelete = useContext(ConfirmDeleteContext);
     const [formOpen, setFormOpen] = useState(false);
     const [editEntry, setEditEntry] = useState<ExpLogEntry | null>(null);
+    const [category, setCategory] = useState("");
     const [title, setTitle] = useState("");
     const [date, setDate] = useState(() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; });
     const [conditions, setConditions] = useState("");
@@ -7168,8 +7126,8 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser }: {
 
     const todayStr = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; })();
 
-    const openAdd = () => { setEditEntry(null); setTitle(""); setDate(todayStr); setConditions(""); setSpecimen(""); setDataField(""); setNotes(""); setImgUrl(""); setFormOpen(true); };
-    const openEdit = (e: ExpLogEntry) => { setEditEntry(e); setTitle(e.title); setDate(e.date); setConditions(e.conditions); setSpecimen(e.specimen || ""); setDataField(e.data || ""); setNotes(e.notes || ""); setImgUrl(e.imageUrl || ""); setFormOpen(true); };
+    const openAdd = () => { setEditEntry(null); setTitle(""); setDate(todayStr); setConditions(""); setSpecimen(""); setDataField(""); setNotes(""); setImgUrl(""); setCategory(""); setFormOpen(true); };
+    const openEdit = (e: ExpLogEntry) => { setEditEntry(e); setTitle(e.title); setDate(e.date); setConditions(e.conditions); setSpecimen(e.specimen || ""); setDataField(e.data || ""); setNotes(e.notes || ""); setImgUrl(e.imageUrl || ""); setCategory(e.category || ""); setFormOpen(true); };
     const handleImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file) return;
         setImgUploading(true);
@@ -7180,8 +7138,8 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser }: {
         if (!title.trim()) return;
         const now = todayStr;
         const entry: ExpLogEntry = editEntry
-            ? { ...editEntry, title: title.trim(), date, conditions, specimen, data: dataField, notes, imageUrl: imgUrl || undefined, createdAt: editEntry.createdAt }
-            : { id: Date.now(), title: title.trim(), date, author: currentUser, conditions, specimen, data: dataField, notes, imageUrl: imgUrl || undefined, createdAt: now };
+            ? { ...editEntry, title: title.trim(), date, conditions, specimen, data: dataField, notes, imageUrl: imgUrl || undefined, createdAt: editEntry.createdAt, category: category || undefined }
+            : { id: Date.now(), title: title.trim(), date, author: currentUser, conditions, specimen, data: dataField, notes, imageUrl: imgUrl || undefined, createdAt: now, category: category || undefined };
         onSave(entry);
         setFormOpen(false);
     };
@@ -7255,6 +7213,7 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser }: {
                                                 <div className="flex-1 min-w-0">
                                                     <div className="text-[15px] font-semibold text-slate-800 leading-snug">{entry.title}</div>
                                                     <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                                        {entry.category && <span className="text-[11px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{entry.category}</span>}
                                                         {entry.specimen && <span className="text-[12px] text-slate-500">🔬 {entry.specimen}</span>}
                                                         {entry.conditions && <span className="text-[12px] text-slate-400 truncate max-w-[200px]">⚙️ {entry.conditions}</span>}
                                                     </div>
@@ -7330,6 +7289,15 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser }: {
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">실험 날짜</label>
                                     <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                                 </div>
+                                {categories && categories.length > 0 && (
+                                    <div>
+                                        <label className="text-[12px] font-semibold text-slate-500 mb-1 block">📂 분류</label>
+                                        <select value={category} onChange={e => setCategory(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white">
+                                            <option value="">미분류</option>
+                                            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </div>
+                                )}
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">⚙️ 실험 조건</label>
                                     <textarea value={conditions} onChange={e => setConditions(e.target.value)} placeholder="유속, 온도, 압력, 히터 전력, 냉각수 유량 등" rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
@@ -8096,8 +8064,10 @@ export default function DashboardPage() {
     const [readReceipts, setReadReceipts] = useState<Record<string, Record<string, number>>>({});
     const [pushPrefs, setPushPrefs] = useState<Record<string, Record<string, boolean>>>({});
     const [notiSettingsOpen, setNotiSettingsOpen] = useState(false);
-    const [experimentLogs, setExperimentLogs] = useState<Record<string, ExpLogBook[]>>({});
-    const [analysisLogs, setAnalysisLogs] = useState<Record<string, AnalysisLogBook[]>>({});
+    const [experimentLogs, setExperimentLogs] = useState<Record<string, ExpLogEntry[]>>({});
+    const [analysisLogs, setAnalysisLogs] = useState<Record<string, AnalysisLogEntry[]>>({});
+    const [expLogCategories, setExpLogCategories] = useState<Record<string, string[]>>({});
+    const [analysisLogCategories, setAnalysisLogCategories] = useState<Record<string, string[]>>({});
 
     const tabs = [
         { id: "overview", label: "연구실 현황", icon: "🏠" },
@@ -8253,30 +8223,58 @@ export default function DashboardPage() {
             if (d.readReceipts) setReadReceipts(d.readReceipts);
             if (d.pushPrefs) setPushPrefs(d.pushPrefs);
             if (d.experimentLogs) {
-                // Migrate old flat format (Record<string, ExpLogEntry[]>) → new book format (Record<string, ExpLogBook[]>)
+                // Migrate: if old book format (has 'entries'), flatten to flat entries with category
                 const raw = d.experimentLogs as Record<string, unknown>;
-                const migrated: Record<string, ExpLogBook[]> = {};
+                const migrated: Record<string, ExpLogEntry[]> = {};
+                const migratedCats: Record<string, string[]> = {};
                 for (const [team, val] of Object.entries(raw)) {
                     if (Array.isArray(val) && val.length > 0 && 'entries' in val[0]) {
-                        migrated[team] = val as ExpLogBook[];
+                        // Book format → flatten
+                        const books = val as Array<{ name: string; entries: ExpLogEntry[] }>;
+                        migrated[team] = books.flatMap(b => b.entries.map(e => ({ ...e, category: e.category || b.name })));
+                        migratedCats[team] = books.map(b => b.name);
                     } else if (Array.isArray(val)) {
-                        migrated[team] = val.length > 0 ? [{ id: 1, name: "실험일지", createdAt: new Date().toISOString().split("T")[0], entries: val as ExpLogEntry[] }] : [];
+                        migrated[team] = val as ExpLogEntry[];
                     }
                 }
                 setExperimentLogs(migrated);
+                // Seed categories from migrated books if not already loaded
+                if (Object.keys(migratedCats).length > 0) {
+                    setExpLogCategories(prev => {
+                        const merged = { ...prev };
+                        for (const [t, cats] of Object.entries(migratedCats)) {
+                            if (!merged[t] || merged[t].length === 0) merged[t] = cats;
+                        }
+                        return merged;
+                    });
+                }
             }
             if (d.analysisLogs) {
                 const rawA = d.analysisLogs as Record<string, unknown>;
-                const migratedA: Record<string, AnalysisLogBook[]> = {};
+                const migratedA: Record<string, AnalysisLogEntry[]> = {};
+                const migratedACats: Record<string, string[]> = {};
                 for (const [team, val] of Object.entries(rawA)) {
                     if (Array.isArray(val) && val.length > 0 && 'entries' in val[0]) {
-                        migratedA[team] = val as AnalysisLogBook[];
+                        const books = val as Array<{ name: string; entries: AnalysisLogEntry[] }>;
+                        migratedA[team] = books.flatMap(b => b.entries.map(e => ({ ...e, category: e.category || b.name })));
+                        migratedACats[team] = books.map(b => b.name);
                     } else if (Array.isArray(val)) {
-                        migratedA[team] = val.length > 0 ? [{ id: 1, name: "해석일지", createdAt: new Date().toISOString().split("T")[0], entries: val as AnalysisLogEntry[] }] : [];
+                        migratedA[team] = val as AnalysisLogEntry[];
                     }
                 }
                 setAnalysisLogs(migratedA);
+                if (Object.keys(migratedACats).length > 0) {
+                    setAnalysisLogCategories(prev => {
+                        const merged = { ...prev };
+                        for (const [t, cats] of Object.entries(migratedACats)) {
+                            if (!merged[t] || merged[t].length === 0) merged[t] = cats;
+                        }
+                        return merged;
+                    });
+                }
             }
+            if (d.experimentLogCategories) setExpLogCategories(d.experimentLogCategories);
+            if (d.analysisLogCategories) setAnalysisLogCategories(d.analysisLogCategories);
             if (d.analysisToolList) setAnalysisToolList(d.analysisToolList);
             if (d.paperTagList) setPaperTagList(d.paperTagList);
             if (d.members && Object.keys(d.members).length > 0) {
@@ -8680,43 +8678,59 @@ export default function DashboardPage() {
             return toSave;
         });
     };
-    // ── Experiment Log Book handlers ──
-    const handleSaveExpLogBook = (teamName: string, book: ExpLogBook) => {
+    // ── Experiment Log entry handlers (flat) ──
+    const handleSaveExpLogEntry = (teamName: string, entry: ExpLogEntry) => {
         pendingSavesRef.current++;
         setExperimentLogs(prev => {
-            const books = prev[teamName] || [];
-            const found = books.find(b => b.id === book.id);
-            const updated = found ? books.map(b => b.id === book.id ? book : b) : [...books, book];
+            const entries = prev[teamName] || [];
+            const found = entries.find(e => e.id === entry.id);
+            const updated = found ? entries.map(e => e.id === entry.id ? entry : e) : [...entries, entry];
             const toSave = { ...prev, [teamName]: updated };
             saveSection("experimentLogs", toSave).then(() => { pendingSavesRef.current--; });
             return toSave;
         });
     };
-    const handleDeleteExpLogBook = (teamName: string, bookId: number) => {
+    const handleDeleteExpLogEntry = (teamName: string, entryId: number) => {
         pendingSavesRef.current++;
         setExperimentLogs(prev => {
-            const toSave = { ...prev, [teamName]: (prev[teamName] || []).filter(b => b.id !== bookId) };
+            const toSave = { ...prev, [teamName]: (prev[teamName] || []).filter(e => e.id !== entryId) };
             saveSection("experimentLogs", toSave).then(() => { pendingSavesRef.current--; });
             return toSave;
         });
     };
-    // ── Analysis Log Book handlers ──
-    const handleSaveAnalysisLogBook = (teamName: string, book: AnalysisLogBook) => {
+    const handleSaveExpLogCategories = (teamName: string, cats: string[]) => {
+        pendingSavesRef.current++;
+        setExpLogCategories(prev => {
+            const toSave = { ...prev, [teamName]: cats };
+            saveSection("experimentLogCategories", toSave).then(() => { pendingSavesRef.current--; });
+            return toSave;
+        });
+    };
+    // ── Analysis Log entry handlers (flat) ──
+    const handleSaveAnalysisLogEntry = (teamName: string, entry: AnalysisLogEntry) => {
         pendingSavesRef.current++;
         setAnalysisLogs(prev => {
-            const books = prev[teamName] || [];
-            const found = books.find(b => b.id === book.id);
-            const updated = found ? books.map(b => b.id === book.id ? book : b) : [...books, book];
+            const entries = prev[teamName] || [];
+            const found = entries.find(e => e.id === entry.id);
+            const updated = found ? entries.map(e => e.id === entry.id ? entry : e) : [...entries, entry];
             const toSave = { ...prev, [teamName]: updated };
             saveSection("analysisLogs", toSave).then(() => { pendingSavesRef.current--; });
             return toSave;
         });
     };
-    const handleDeleteAnalysisLogBook = (teamName: string, bookId: number) => {
+    const handleDeleteAnalysisLogEntry = (teamName: string, entryId: number) => {
         pendingSavesRef.current++;
         setAnalysisLogs(prev => {
-            const toSave = { ...prev, [teamName]: (prev[teamName] || []).filter(b => b.id !== bookId) };
+            const toSave = { ...prev, [teamName]: (prev[teamName] || []).filter(e => e.id !== entryId) };
             saveSection("analysisLogs", toSave).then(() => { pendingSavesRef.current--; });
+            return toSave;
+        });
+    };
+    const handleSaveAnalysisLogCategories = (teamName: string, cats: string[]) => {
+        pendingSavesRef.current++;
+        setAnalysisLogCategories(prev => {
+            const toSave = { ...prev, [teamName]: cats };
+            saveSection("analysisLogCategories", toSave).then(() => { pendingSavesRef.current--; });
             return toSave;
         });
     };
@@ -9326,7 +9340,7 @@ export default function DashboardPage() {
                     {activeTab.startsWith("teamMemo_") && (() => {
                         const tName = activeTab.replace("teamMemo_", "");
                         const data = teamMemos[tName] || { kanban: [], chat: [] };
-                        return <TeamMemoView teamName={tName} kanban={data.kanban} chat={data.chat} files={data.files || []} currentUser={userName} onSaveCard={c => handleSaveTeamMemo(tName, c)} onDeleteCard={id => handleDeleteTeamMemo(tName, id)} onReorderCards={cards => handleReorderTeamMemo(tName, cards)} onAddChat={msg => handleAddTeamChat(tName, msg)} onUpdateChat={msg => handleUpdateTeamChat(tName, msg)} onDeleteChat={id => handleDeleteTeamChat(tName, id)} onClearChat={() => handleClearTeamChat(tName)} onRetryChat={id => handleRetryTeamChat(tName, id)} onAddFile={f => handleAddTeamFile(tName, f)} onDeleteFile={id => handleDeleteTeamFile(tName, id)} readReceipts={readReceipts[`teamMemo_${tName}`]} expLogBooks={experimentLogs[tName] || []} analysisLogBooks={analysisLogs[tName] || []} onSaveExpLogBook={b => handleSaveExpLogBook(tName, b)} onDeleteExpLogBook={id => handleDeleteExpLogBook(tName, id)} onSaveAnalysisLogBook={b => handleSaveAnalysisLogBook(tName, b)} onDeleteAnalysisLogBook={id => handleDeleteAnalysisLogBook(tName, id)} />;
+                        return <TeamMemoView teamName={tName} kanban={data.kanban} chat={data.chat} files={data.files || []} currentUser={userName} onSaveCard={c => handleSaveTeamMemo(tName, c)} onDeleteCard={id => handleDeleteTeamMemo(tName, id)} onReorderCards={cards => handleReorderTeamMemo(tName, cards)} onAddChat={msg => handleAddTeamChat(tName, msg)} onUpdateChat={msg => handleUpdateTeamChat(tName, msg)} onDeleteChat={id => handleDeleteTeamChat(tName, id)} onClearChat={() => handleClearTeamChat(tName)} onRetryChat={id => handleRetryTeamChat(tName, id)} onAddFile={f => handleAddTeamFile(tName, f)} onDeleteFile={id => handleDeleteTeamFile(tName, id)} readReceipts={readReceipts[`teamMemo_${tName}`]} expLogEntries={experimentLogs[tName] || []} analysisLogEntries={analysisLogs[tName] || []} expCategories={expLogCategories[tName] || []} analysisCategories={analysisLogCategories[tName] || []} onSaveExpEntry={e => handleSaveExpLogEntry(tName, e)} onDeleteExpEntry={id => handleDeleteExpLogEntry(tName, id)} onSaveExpCategories={cats => handleSaveExpLogCategories(tName, cats)} onSaveAnalysisEntry={e => handleSaveAnalysisLogEntry(tName, e)} onDeleteAnalysisEntry={id => handleDeleteAnalysisLogEntry(tName, id)} onSaveAnalysisCategories={cats => handleSaveAnalysisLogCategories(tName, cats)} />;
                     })()}
                     {activeTab.startsWith("memo_") && (() => {
                         const name = activeTab.replace("memo_", "");
