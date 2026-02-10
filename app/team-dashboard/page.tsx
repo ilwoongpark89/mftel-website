@@ -6219,15 +6219,12 @@ const TEAM_MEMO_COLORS = MEMO_COLORS;
 const MEMO_COL_MIGRATE = (s: string) => (s === "done" || s === "right") ? "right" : "left";
 const MEMO_COLUMNS = [{ key: "left", label: "진행", color: "#3b82f6" }, { key: "right", label: "완료", color: "#8b5cf6" }];
 
-function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, onDeleteCard, onReorderCards, onAddChat, onUpdateChat, onDeleteChat, onClearChat, onRetryChat, onAddFile, onDeleteFile, readReceipts, expCategories, analysisCategories, onSaveExpCategories, onSaveAnalysisCategories }: {
+function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, onDeleteCard, onReorderCards, onAddChat, onUpdateChat, onDeleteChat, onClearChat, onRetryChat, onAddFile, onDeleteFile, readReceipts }: {
     teamName: string; kanban: TeamMemoCard[]; chat: TeamChatMsg[]; files: LabFile[]; currentUser: string;
     onSaveCard: (card: TeamMemoCard) => void; onDeleteCard: (id: number) => void; onReorderCards: (cards: TeamMemoCard[]) => void;
     onAddChat: (msg: TeamChatMsg) => void; onUpdateChat: (msg: TeamChatMsg) => void; onDeleteChat: (id: number) => void; onClearChat: () => void; onRetryChat: (id: number) => void;
     onAddFile: (f: LabFile) => void; onDeleteFile: (id: number) => void;
     readReceipts?: Record<string, number>;
-    expCategories: string[]; analysisCategories: string[];
-    onSaveExpCategories: (cats: string[]) => void;
-    onSaveAnalysisCategories: (cats: string[]) => void;
 }) {
     const MEMBERS = useContext(MembersContext);
     const confirmDel = useContext(ConfirmDeleteContext);
@@ -6259,10 +6256,6 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
     const [mobileTab, setMobileTab] = useState<"chat"|"board"|"files">("chat");
     const [replyTo, setReplyTo] = useState<TeamChatMsg | null>(null);
-    const [showExpMgr, setShowExpMgr] = useState(false);
-    const [showAnalysisMgr, setShowAnalysisMgr] = useState(false);
-    const [newExpCat, setNewExpCat] = useState("");
-    const [newAnalysisCat, setNewAnalysisCat] = useState("");
     const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
     const [moreMenuMsgId, setMoreMenuMsgId] = useState<number | null>(null);
     const mention = useMention();
@@ -6375,71 +6368,6 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                     </button>
                 ))}
             </div>
-            {/* Desktop: management buttons (top-right, minimal) */}
-            <div className="hidden md:flex items-center justify-end gap-2 flex-shrink-0 -mt-1 mb-1 md:col-span-full">
-                <button onClick={() => { setShowExpMgr(true); setShowAnalysisMgr(false); }} className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[11px] font-medium hover:bg-slate-200 whitespace-nowrap">✏️ 실험일지 관리</button>
-                <button onClick={() => { setShowAnalysisMgr(true); setShowExpMgr(false); }} className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[11px] font-medium hover:bg-slate-200 whitespace-nowrap">💻 해석일지 관리</button>
-            </div>
-            {/* Experiment log management — overlay modal */}
-            {showExpMgr && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowExpMgr(false)}>
-                    <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:480}} onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-3">
-                            <h3 className="text-[15px] font-bold text-slate-800">실험일지 관리</h3>
-                            <button onClick={() => setShowExpMgr(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 mb-3">
-                            {expCategories.map(t => (
-                                <span key={t} className="flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-full text-[12px] text-slate-700">
-                                    {t}
-                                    <button onClick={() => onSaveExpCategories(expCategories.filter(x => x !== t))} className="text-slate-400 hover:text-red-500 text-[11px]">✕</button>
-                                </span>
-                            ))}
-                            {expCategories.length === 0 && <span className="text-[12px] text-slate-400">등록된 실험일지가 없습니다</span>}
-                        </div>
-                        <div className="flex gap-2">
-                            <input value={newExpCat} onChange={e => setNewExpCat(e.target.value)} placeholder="새 실험일지 이름 입력"
-                                className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                onKeyDown={e => { if (e.key === "Enter" && newExpCat.trim() && !expCategories.includes(newExpCat.trim())) { onSaveExpCategories([...expCategories, newExpCat.trim()]); setNewExpCat(""); } }} />
-                            <button onClick={() => { if (newExpCat.trim() && !expCategories.includes(newExpCat.trim())) { onSaveExpCategories([...expCategories, newExpCat.trim()]); setNewExpCat(""); } }}
-                                className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">추가</button>
-                        </div>
-                        <div className="flex justify-end mt-4">
-                            <button onClick={() => setShowExpMgr(false)} className="px-4 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] font-medium hover:bg-slate-200">닫기</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            {/* Analysis log management — overlay modal */}
-            {showAnalysisMgr && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowAnalysisMgr(false)}>
-                    <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:480}} onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-3">
-                            <h3 className="text-[15px] font-bold text-slate-800">해석일지 관리</h3>
-                            <button onClick={() => setShowAnalysisMgr(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 mb-3">
-                            {analysisCategories.map(t => (
-                                <span key={t} className="flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-full text-[12px] text-slate-700">
-                                    {t}
-                                    <button onClick={() => onSaveAnalysisCategories(analysisCategories.filter(x => x !== t))} className="text-slate-400 hover:text-red-500 text-[11px]">✕</button>
-                                </span>
-                            ))}
-                            {analysisCategories.length === 0 && <span className="text-[12px] text-slate-400">등록된 해석일지가 없습니다</span>}
-                        </div>
-                        <div className="flex gap-2">
-                            <input value={newAnalysisCat} onChange={e => setNewAnalysisCat(e.target.value)} placeholder="새 해석일지 이름 입력"
-                                className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                onKeyDown={e => { if (e.key === "Enter" && newAnalysisCat.trim() && !analysisCategories.includes(newAnalysisCat.trim())) { onSaveAnalysisCategories([...analysisCategories, newAnalysisCat.trim()]); setNewAnalysisCat(""); } }} />
-                            <button onClick={() => { if (newAnalysisCat.trim() && !analysisCategories.includes(newAnalysisCat.trim())) { onSaveAnalysisCategories([...analysisCategories, newAnalysisCat.trim()]); setNewAnalysisCat(""); } }}
-                                className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">추가</button>
-                        </div>
-                        <div className="flex justify-end mt-4">
-                            <button onClick={() => setShowAnalysisMgr(false)} className="px-4 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] font-medium hover:bg-slate-200">닫기</button>
-                        </div>
-                    </div>
-                </div>
-            )}
             {/* Board */}
             <div className={`flex-col min-w-0 ${mobileTab === "board" ? "flex flex-1 min-h-0" : "hidden"} md:flex`}>
                 <div className="flex items-center justify-between mb-2">
@@ -8022,6 +7950,10 @@ export default function DashboardPage() {
     const [analysisLogs, setAnalysisLogs] = useState<Record<string, AnalysisLogEntry[]>>({});
     const [expLogCategories, setExpLogCategories] = useState<Record<string, string[]>>({});
     const [analysisLogCategories, setAnalysisLogCategories] = useState<Record<string, string[]>>({});
+    const [showExpMgr, setShowExpMgr] = useState(false);
+    const [showAnalysisMgr, setShowAnalysisMgr] = useState(false);
+    const [newExpCat, setNewExpCat] = useState("");
+    const [newAnalysisCat, setNewAnalysisCat] = useState("");
 
     const tabs = [
         { id: "overview", label: "연구실 현황", icon: "🏠" },
@@ -9293,24 +9225,96 @@ export default function DashboardPage() {
                     {activeTab !== "overview" && activeTab !== "overview_me" && (() => {
                         const extraTabs: Record<string, { icon: string; label: string }> = { teams: { icon: "👥", label: "팀 관리" }, settings: { icon: "⚙️", label: "설정" } };
                         let found = tabs.find(t => t.id === activeTab) || extraTabs[activeTab];
-                        // Handle log sub-page titles
                         if (!found && activeTab.startsWith("expLog_")) {
                             const parts = activeTab.replace("expLog_", "").split("_");
-                            const catName = parts.slice(1).join("_");
-                            found = { icon: "✏️", label: `${catName} (실험일지)` };
+                            found = { icon: "✏️", label: `${parts.slice(1).join("_")} (실험일지)` };
                         }
                         if (!found && activeTab.startsWith("analysisLog_")) {
                             const parts = activeTab.replace("analysisLog_", "").split("_");
-                            const catName = parts.slice(1).join("_");
-                            found = { icon: "💻", label: `${catName} (해석일지)` };
+                            found = { icon: "💻", label: `${parts.slice(1).join("_")} (해석일지)` };
                         }
+                        const isTeamPage = activeTab.startsWith("teamMemo_");
+                        const teamName4Header = isTeamPage ? activeTab.replace("teamMemo_", "") : "";
                         return found ? (
-                            <div className="mb-6 flex-shrink-0 hidden md:block">
+                            <div className={`${isTeamPage ? "mb-3" : "mb-6"} flex-shrink-0 hidden md:flex items-center justify-between`}>
                                 <h2 className="text-[24px] font-bold tracking-tight" style={{color:"#0F172A", letterSpacing:"-0.02em", lineHeight:"1.3"}}>
                                     {found.icon} {found.label}
                                 </h2>
+                                {isTeamPage && (
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => { setShowExpMgr(true); setShowAnalysisMgr(false); }} className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[11px] font-medium hover:bg-slate-200 whitespace-nowrap">✏️ 실험일지 관리</button>
+                                        <button onClick={() => { setShowAnalysisMgr(true); setShowExpMgr(false); }} className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[11px] font-medium hover:bg-slate-200 whitespace-nowrap">💻 해석일지 관리</button>
+                                    </div>
+                                )}
                             </div>
                         ) : null;
+                    })()}
+                    {/* Experiment log management — overlay modal */}
+                    {showExpMgr && (() => {
+                        const tName = activeTab.replace("teamMemo_", "");
+                        const cats = expLogCategories[tName] || [];
+                        return (
+                            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowExpMgr(false)}>
+                                <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:480}} onClick={e => e.stopPropagation()}>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="text-[15px] font-bold text-slate-800">실험일지 관리</h3>
+                                        <button onClick={() => setShowExpMgr(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5 mb-3">
+                                        {cats.map(t => (
+                                            <span key={t} className="flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-full text-[12px] text-slate-700">
+                                                {t}
+                                                <button onClick={() => handleSaveExpLogCategories(tName, cats.filter(x => x !== t))} className="text-slate-400 hover:text-red-500 text-[11px]">✕</button>
+                                            </span>
+                                        ))}
+                                        {cats.length === 0 && <span className="text-[12px] text-slate-400">등록된 실험일지가 없습니다</span>}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <input value={newExpCat} onChange={e => setNewExpCat(e.target.value)} placeholder="새 실험일지 이름 입력"
+                                            className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                            onKeyDown={e => { if (e.key === "Enter" && newExpCat.trim() && !cats.includes(newExpCat.trim())) { handleSaveExpLogCategories(tName, [...cats, newExpCat.trim()]); setNewExpCat(""); } }} />
+                                        <button onClick={() => { if (newExpCat.trim() && !cats.includes(newExpCat.trim())) { handleSaveExpLogCategories(tName, [...cats, newExpCat.trim()]); setNewExpCat(""); } }}
+                                            className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">추가</button>
+                                    </div>
+                                    <div className="flex justify-end mt-4">
+                                        <button onClick={() => setShowExpMgr(false)} className="px-4 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] font-medium hover:bg-slate-200">닫기</button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
+                    {showAnalysisMgr && (() => {
+                        const tName = activeTab.replace("teamMemo_", "");
+                        const cats = analysisLogCategories[tName] || [];
+                        return (
+                            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowAnalysisMgr(false)}>
+                                <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:480}} onClick={e => e.stopPropagation()}>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="text-[15px] font-bold text-slate-800">해석일지 관리</h3>
+                                        <button onClick={() => setShowAnalysisMgr(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5 mb-3">
+                                        {cats.map(t => (
+                                            <span key={t} className="flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-full text-[12px] text-slate-700">
+                                                {t}
+                                                <button onClick={() => handleSaveAnalysisLogCategories(tName, cats.filter(x => x !== t))} className="text-slate-400 hover:text-red-500 text-[11px]">✕</button>
+                                            </span>
+                                        ))}
+                                        {cats.length === 0 && <span className="text-[12px] text-slate-400">등록된 해석일지가 없습니다</span>}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <input value={newAnalysisCat} onChange={e => setNewAnalysisCat(e.target.value)} placeholder="새 해석일지 이름 입력"
+                                            className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                            onKeyDown={e => { if (e.key === "Enter" && newAnalysisCat.trim() && !cats.includes(newAnalysisCat.trim())) { handleSaveAnalysisLogCategories(tName, [...cats, newAnalysisCat.trim()]); setNewAnalysisCat(""); } }} />
+                                        <button onClick={() => { if (newAnalysisCat.trim() && !cats.includes(newAnalysisCat.trim())) { handleSaveAnalysisLogCategories(tName, [...cats, newAnalysisCat.trim()]); setNewAnalysisCat(""); } }}
+                                            className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">추가</button>
+                                    </div>
+                                    <div className="flex justify-end mt-4">
+                                        <button onClick={() => setShowAnalysisMgr(false)} className="px-4 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] font-medium hover:bg-slate-200">닫기</button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
                     })()}
 
                     {activeTab === "overview" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} chatPosts={chatPosts} personalMemos={personalMemos} teamMemos={teamMemos} meetings={meetings} conferenceTrips={conferenceTrips} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="team" statusMessages={statusMessages} members={displayMembers} teams={teams} />}
@@ -9346,7 +9350,7 @@ export default function DashboardPage() {
                     {activeTab.startsWith("teamMemo_") && (() => {
                         const tName = activeTab.replace("teamMemo_", "");
                         const data = teamMemos[tName] || { kanban: [], chat: [] };
-                        return <TeamMemoView teamName={tName} kanban={data.kanban} chat={data.chat} files={data.files || []} currentUser={userName} onSaveCard={c => handleSaveTeamMemo(tName, c)} onDeleteCard={id => handleDeleteTeamMemo(tName, id)} onReorderCards={cards => handleReorderTeamMemo(tName, cards)} onAddChat={msg => handleAddTeamChat(tName, msg)} onUpdateChat={msg => handleUpdateTeamChat(tName, msg)} onDeleteChat={id => handleDeleteTeamChat(tName, id)} onClearChat={() => handleClearTeamChat(tName)} onRetryChat={id => handleRetryTeamChat(tName, id)} onAddFile={f => handleAddTeamFile(tName, f)} onDeleteFile={id => handleDeleteTeamFile(tName, id)} readReceipts={readReceipts[`teamMemo_${tName}`]} expCategories={expLogCategories[tName] || []} analysisCategories={analysisLogCategories[tName] || []} onSaveExpCategories={cats => handleSaveExpLogCategories(tName, cats)} onSaveAnalysisCategories={cats => handleSaveAnalysisLogCategories(tName, cats)} />;
+                        return <TeamMemoView teamName={tName} kanban={data.kanban} chat={data.chat} files={data.files || []} currentUser={userName} onSaveCard={c => handleSaveTeamMemo(tName, c)} onDeleteCard={id => handleDeleteTeamMemo(tName, id)} onReorderCards={cards => handleReorderTeamMemo(tName, cards)} onAddChat={msg => handleAddTeamChat(tName, msg)} onUpdateChat={msg => handleUpdateTeamChat(tName, msg)} onDeleteChat={id => handleDeleteTeamChat(tName, id)} onClearChat={() => handleClearTeamChat(tName)} onRetryChat={id => handleRetryTeamChat(tName, id)} onAddFile={f => handleAddTeamFile(tName, f)} onDeleteFile={id => handleDeleteTeamFile(tName, id)} readReceipts={readReceipts[`teamMemo_${tName}`]} />;
                     })()}
                     {activeTab.startsWith("memo_") && (() => {
                         const name = activeTab.replace("memo_", "");
