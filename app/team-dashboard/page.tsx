@@ -6773,7 +6773,22 @@ function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser, cat
     const [imgUploading, setImgUploading] = useState(false);
     const [expandedId, setExpandedId] = useState<number | null>(null);
     const [search, setSearch] = useState("");
+    const [localPending, setLocalPending] = useState<AnalysisLogEntry[]>([]);
     const todayStr = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; })();
+
+    // Clear pending when parent props catch up
+    useEffect(() => {
+        if (localPending.length === 0) return;
+        const ids = new Set(entries.map(e => e.id));
+        setLocalPending(prev => { const next = prev.filter(e => !ids.has(e.id)); return next.length === prev.length ? prev : next; });
+    }, [entries]);
+
+    // Merge props + optimistic local entries
+    const mergedEntries = useMemo(() => {
+        const ids = new Set(entries.map(e => e.id));
+        const updated = entries.map(e => { const p = localPending.find(l => l.id === e.id); return p || e; });
+        return [...updated, ...localPending.filter(e => !ids.has(e.id))];
+    }, [entries, localPending]);
 
     const openAdd = () => { setEditEntry(null); setTitle(""); setDate(todayStr); setTool(""); setMeshInfo(""); setBoundaryConditions(""); setResults(""); setNotes(""); setImgUrl(""); setCategory(""); setFormOpen(true); };
     const openEdit = (e: AnalysisLogEntry) => { setEditEntry(e); setTitle(e.title); setDate(e.date); setTool(e.tool); setMeshInfo(e.meshInfo); setBoundaryConditions(e.boundaryConditions); setResults(e.results); setNotes(e.notes); setImgUrl(e.imageUrl || ""); setCategory(e.category || ""); setFormOpen(true); };
@@ -6788,11 +6803,12 @@ function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser, cat
         const entry: AnalysisLogEntry = editEntry
             ? { ...editEntry, title: title.trim(), date, tool, meshInfo, boundaryConditions, results, notes, imageUrl: imgUrl || undefined, createdAt: editEntry.createdAt, category: category || undefined }
             : { id: Date.now(), title: title.trim(), date, author: currentUser, tool, meshInfo, boundaryConditions, results, notes, imageUrl: imgUrl || undefined, createdAt: todayStr, category: category || undefined };
+        setLocalPending(prev => [...prev.filter(e => e.id !== entry.id), entry]);
         onSave(entry);
         setFormOpen(false);
     };
 
-    const sorted = useMemo(() => [...entries].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id), [entries]);
+    const sorted = useMemo(() => [...mergedEntries].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id), [mergedEntries]);
     const filtered = useMemo(() => {
         if (!search.trim()) return sorted;
         const q = search.toLowerCase();
@@ -6820,14 +6836,14 @@ function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser, cat
                 <h2 className="text-[20px] font-bold text-slate-900">💻 {bookName}</h2>
                 <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-xl text-[14px] font-medium hover:bg-blue-600 transition-colors shadow-sm">+ 기록 추가</button>
             </div>
-            {entries.length > 3 && (
+            {mergedEntries.length > 3 && (
                 <div className="mb-4">
                     <input value={search} onChange={e => setSearch(e.target.value)} placeholder="도구, 격자, 경계조건, 결과 검색..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                 </div>
             )}
             <div className="flex items-center gap-4 mb-4 text-[13px] text-slate-500">
-                <span>전체 <span className="font-bold text-slate-700">{entries.length}</span>건</span>
-                <span>오늘 <span className="font-bold text-blue-600">{entries.filter(e => e.date === todayStr).length}</span>건</span>
+                <span>전체 <span className="font-bold text-slate-700">{mergedEntries.length}</span>건</span>
+                <span>오늘 <span className="font-bold text-blue-600">{mergedEntries.filter(e => e.date === todayStr).length}</span>건</span>
             </div>
             {dateGroups.length === 0 ? (
                 <div className="text-center py-16">
@@ -7005,8 +7021,23 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
     const [imgUploading, setImgUploading] = useState(false);
     const [expandedId, setExpandedId] = useState<number | null>(null);
     const [search, setSearch] = useState("");
+    const [localPending, setLocalPending] = useState<ExpLogEntry[]>([]);
 
     const todayStr = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; })();
+
+    // Clear pending when parent props catch up
+    useEffect(() => {
+        if (localPending.length === 0) return;
+        const ids = new Set(entries.map(e => e.id));
+        setLocalPending(prev => { const next = prev.filter(e => !ids.has(e.id)); return next.length === prev.length ? prev : next; });
+    }, [entries]);
+
+    // Merge props + optimistic local entries
+    const mergedEntries = useMemo(() => {
+        const ids = new Set(entries.map(e => e.id));
+        const updated = entries.map(e => { const p = localPending.find(l => l.id === e.id); return p || e; });
+        return [...updated, ...localPending.filter(e => !ids.has(e.id))];
+    }, [entries, localPending]);
 
     const openAdd = () => { setEditEntry(null); setTitle(""); setDate(todayStr); setConditions(""); setSpecimen(""); setDataField(""); setNotes(""); setImgUrl(""); setCategory(""); setFormOpen(true); };
     const openEdit = (e: ExpLogEntry) => { setEditEntry(e); setTitle(e.title); setDate(e.date); setConditions(e.conditions); setSpecimen(e.specimen || ""); setDataField(e.data || ""); setNotes(e.notes || ""); setImgUrl(e.imageUrl || ""); setCategory(e.category || ""); setFormOpen(true); };
@@ -7022,12 +7053,13 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
         const entry: ExpLogEntry = editEntry
             ? { ...editEntry, title: title.trim(), date, conditions, specimen, data: dataField, notes, imageUrl: imgUrl || undefined, createdAt: editEntry.createdAt, category: category || undefined }
             : { id: Date.now(), title: title.trim(), date, author: currentUser, conditions, specimen, data: dataField, notes, imageUrl: imgUrl || undefined, createdAt: now, category: category || undefined };
+        setLocalPending(prev => [...prev.filter(e => e.id !== entry.id), entry]);
         onSave(entry);
         setFormOpen(false);
     };
 
     // Sort by date descending, group by date
-    const sorted = useMemo(() => [...entries].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id), [entries]);
+    const sorted = useMemo(() => [...mergedEntries].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id), [mergedEntries]);
     const filtered = useMemo(() => {
         if (!search.trim()) return sorted;
         const q = search.toLowerCase();
@@ -7057,7 +7089,7 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
             </div>
 
             {/* Search */}
-            {entries.length > 3 && (
+            {mergedEntries.length > 3 && (
                 <div className="mb-4">
                     <input value={search} onChange={e => setSearch(e.target.value)} placeholder="실험명, 조건, 데이터 검색..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                 </div>
@@ -7065,8 +7097,8 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
 
             {/* Stats */}
             <div className="flex items-center gap-4 mb-4 text-[13px] text-slate-500">
-                <span>전체 <span className="font-bold text-slate-700">{entries.length}</span>건</span>
-                <span>오늘 <span className="font-bold text-blue-600">{entries.filter(e => e.date === todayStr).length}</span>건</span>
+                <span>전체 <span className="font-bold text-slate-700">{mergedEntries.length}</span>건</span>
+                <span>오늘 <span className="font-bold text-blue-600">{mergedEntries.filter(e => e.date === todayStr).length}</span>건</span>
             </div>
 
             {/* Date-grouped list */}
