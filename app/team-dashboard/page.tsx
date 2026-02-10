@@ -6655,6 +6655,9 @@ export default function DashboardPage() {
     const [cmdKIdx, setCmdKIdx] = useState(0);
     const cmdKRef = useRef<HTMLInputElement>(null);
     const cmdKListRef = useRef<HTMLDivElement>(null);
+    const [notiOpen, setNotiOpen] = useState(false);
+    const [notiLogs, setNotiLogs] = useState<Array<{ userName: string; section: string; action: string; timestamp: number }>>([]);
+    const [notiLastSeen, setNotiLastSeen] = useState(0);
     const [selectedPerson, setSelectedPerson] = useState("전체");
     const [onlineUsers, setOnlineUsers] = useState<Array<{ name: string; timestamp: number }>>([]);
     const [members, setMembers] = useState<Record<string, { team: string; role: string; emoji: string }>>(DEFAULT_MEMBERS);
@@ -6876,6 +6879,14 @@ export default function DashboardPage() {
         try { await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "online", action: "heartbeat", userName }) }); } catch { /* ignore */ }
     }, [userName]);
 
+    const fetchLogs = useCallback(async () => {
+        try {
+            const res = await fetch("/api/dashboard?section=logs");
+            const d = await res.json();
+            if (d.data) setNotiLogs(d.data);
+        } catch { /* ignore */ }
+    }, []);
+
     const handleLogin = async (name: string, password: string, rememberMe: boolean): Promise<string | null> => {
         try {
             const res = await fetch("/api/dashboard-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "login", userName: name, password }) });
@@ -6928,12 +6939,13 @@ export default function DashboardPage() {
     useEffect(() => {
         if (!loggedIn) return;
         // Use intervals starting at 0 for initial fetch to avoid lint warning about setState in effect body
-        const d = setTimeout(() => { fetchData(); fetchOnline(); }, 0);
+        const d = setTimeout(() => { fetchData(); fetchOnline(); fetchLogs(); }, 0);
         const a = setInterval(fetchData, 5000);
         const b = setInterval(fetchOnline, 5000);
         const c = setInterval(sendHeartbeat, 10000);
-        return () => { clearTimeout(d); clearInterval(a); clearInterval(b); clearInterval(c); };
-    }, [loggedIn, fetchData, fetchOnline, sendHeartbeat]);
+        const l = setInterval(fetchLogs, 30000);
+        return () => { clearTimeout(d); clearInterval(a); clearInterval(b); clearInterval(c); clearInterval(l); };
+    }, [loggedIn, fetchData, fetchOnline, sendHeartbeat, fetchLogs]);
 
     useEffect(() => {
         if (!userName) return;
@@ -6948,6 +6960,15 @@ export default function DashboardPage() {
         try {
             const saved = localStorage.getItem(`mftel_chatReadTs_${userName}`);
             if (saved) setChatReadTs(JSON.parse(saved));
+        } catch {}
+    }, [userName]);
+
+    // notiLastSeen: init from localStorage
+    useEffect(() => {
+        if (!userName) return;
+        try {
+            const saved = localStorage.getItem(`mftel_notiLastSeen_${userName}`);
+            if (saved) setNotiLastSeen(Number(saved));
         } catch {}
     }, [userName]);
 
@@ -7330,6 +7351,47 @@ export default function DashboardPage() {
         const u = labFiles.filter(f => f.id !== id); setLabFiles(u); saveSection("labFiles", u);
     };
 
+    // ─── Notification Center helpers ─────────────────────────────────────────
+    const NOTI_SECTION_MAP: Record<string, { label: string; icon: string; tabId: string }> = {
+        papers: { label: "논문", icon: "📄", tabId: "papers" },
+        reports: { label: "보고서", icon: "📋", tabId: "reports" },
+        experiments: { label: "실험", icon: "🧪", tabId: "experiments" },
+        analyses: { label: "해석", icon: "🖥️", tabId: "analysis" },
+        todos: { label: "할일", icon: "✅", tabId: "todos" },
+        patents: { label: "특허", icon: "💡", tabId: "ip" },
+        announcements: { label: "공지", icon: "📢", tabId: "announcements" },
+        conferences: { label: "학회", icon: "✈️", tabId: "conferenceTrips" },
+        meetings: { label: "회의", icon: "📝", tabId: "meetings" },
+        resources: { label: "자료", icon: "📁", tabId: "resources" },
+        ideas: { label: "아이디어", icon: "💡", tabId: "ideas" },
+        chatPosts: { label: "잡담", icon: "💬", tabId: "chat" },
+        teams: { label: "팀", icon: "👥", tabId: "teams" },
+        dailyTargets: { label: "오늘 목표", icon: "🎯", tabId: "daily" },
+        schedule: { label: "일정", icon: "📅", tabId: "calendar" },
+        philosophy: { label: "연구 철학", icon: "📢", tabId: "announcements" },
+        labChat: { label: "연구실 채팅", icon: "💬", tabId: "labChat" },
+        labBoard: { label: "게시판", icon: "📌", tabId: "labChat" },
+        teamMemos: { label: "팀 메모", icon: "📌", tabId: "overview" },
+        piChat: { label: "PI 채팅", icon: "💬", tabId: "overview" },
+        personalMemos: { label: "메모", icon: "📝", tabId: "overview" },
+        timetable: { label: "시간표", icon: "📚", tabId: "lectures" },
+    };
+    const notiUnreadCount = useMemo(() => notiLogs.filter(l => l.timestamp > notiLastSeen && l.userName !== userName).length, [notiLogs, notiLastSeen, userName]);
+    const openNoti = () => {
+        setNotiOpen(true);
+        const now = Date.now();
+        setNotiLastSeen(now);
+        try { localStorage.setItem(`mftel_notiLastSeen_${userName}`, String(now)); } catch {}
+    };
+    const notiTimeAgo = (ts: number) => {
+        const diff = Math.floor((Date.now() - ts) / 1000);
+        if (diff < 60) return "방금 전";
+        if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
+        if (diff < 604800) return `${Math.floor(diff / 86400)}일 전`;
+        return new Date(ts).toLocaleDateString("ko-KR");
+    };
+
     // Tab notification: flash title + favicon badge when hidden & unread
     const totalUnread = useMemo(() => {
         const labNew = labChat.filter(m => m.author !== userName && m.id > (chatReadTs.labChat || 0)).length;
@@ -7439,7 +7501,13 @@ export default function DashboardPage() {
             <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-[56px] px-4" style={{background:"#0F172A", boxShadow:"0 1px 4px rgba(0,0,0,0.2)"}}>
                 <button onClick={() => setMobileMenuOpen(true)} className="text-[22px] text-white w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/10">☰</button>
                 <span className="text-[15px] font-bold text-white truncate">{(() => { const found = tabs.find(t => t.id === activeTab); const extra: Record<string, string> = { teams: "팀 관리", settings: "설정" }; return found ? `${found.icon} ${found.label}` : extra[activeTab] || "대시보드"; })()}</span>
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-[16px] flex-shrink-0" style={{background:"rgba(59,130,246,0.1)", border:"1.5px solid rgba(59,130,246,0.25)"}}>{displayMembers[userName]?.emoji || "👤"}</div>
+                <div className="flex items-center gap-2">
+                    <button onClick={openNoti} className="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                        {notiUnreadCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />}
+                    </button>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[16px] flex-shrink-0" style={{background:"rgba(59,130,246,0.1)", border:"1.5px solid rgba(59,130,246,0.25)"}}>{displayMembers[userName]?.emoji || "👤"}</div>
+                </div>
             </div>
             {/* Mobile slide menu */}
             {mobileMenuOpen && (
@@ -7508,6 +7576,16 @@ export default function DashboardPage() {
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                         <span className="flex-1 text-left">검색</span>
                         <kbd className="px-1 py-0.5 text-[10px] rounded" style={{ background: "rgba(255,255,255,0.1)", color: "#475569" }}>⌘K</kbd>
+                    </button>
+                    {/* Notification Bell */}
+                    <button onClick={openNoti}
+                        className="hidden md:flex items-center gap-2 mx-2 mt-1 px-2.5 py-1.5 rounded-lg text-[12px] transition-colors"
+                        style={{ background: "transparent", color: "#64748B" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#94A3B8"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#64748B"; }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                        <span className="flex-1 text-left">알림</span>
+                        {notiUnreadCount > 0 && <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold" style={{ background: "#EF4444", color: "#fff" }}>{notiUnreadCount > 99 ? "99+" : notiUnreadCount}</span>}
                     </button>
                     {/* Sidebar nav */}
                     <div className="flex-1 min-h-0 flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto p-3 md:p-0 md:pt-2 md:pb-2 md:px-1 gap-px dark-scrollbar">
@@ -7656,6 +7734,60 @@ export default function DashboardPage() {
                     {toast}
                 </div>
             )}
+        {/* Notification Panel */}
+        {notiOpen && (
+            <div className="fixed inset-0 z-[80] flex items-start justify-center pt-[8vh]" style={{ background: "rgba(0,0,0,0.5)" }} onClick={() => setNotiOpen(false)}>
+                <div className="bg-white rounded-2xl w-full overflow-hidden" style={{ maxWidth: 520, boxShadow: "0 25px 60px rgba(0,0,0,0.25)" }} onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center justify-between px-5 border-b border-slate-200" style={{ height: 52 }}>
+                        <div className="flex items-center gap-2">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                            <span className="text-[15px] font-bold text-slate-800">알림</span>
+                            {notiUnreadCount > 0 && <span className="px-1.5 py-0.5 rounded-full text-[11px] font-bold" style={{ background: "#EF4444", color: "#fff" }}>{notiUnreadCount}</span>}
+                        </div>
+                        <button onClick={() => setNotiOpen(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                    </div>
+                    <div className="max-h-[60vh] overflow-y-auto modal-scroll">
+                        {notiLogs.length === 0 && (
+                            <div className="py-12 text-center text-[14px] text-slate-400">아직 알림이 없습니다</div>
+                        )}
+                        {notiLogs.filter(l => l.userName !== userName).slice(0, 100).map((log, i) => {
+                            const sec = NOTI_SECTION_MAP[log.section] || { label: log.section, icon: "📋", tabId: "overview" };
+                            const isNew = log.timestamp > notiLastSeen;
+                            const prevLog = notiLogs.filter(l => l.userName !== userName)[i - 1];
+                            const prevDate = prevLog ? new Date(prevLog.timestamp).toLocaleDateString("ko-KR") : "";
+                            const currDate = new Date(log.timestamp).toLocaleDateString("ko-KR");
+                            const showDate = currDate !== prevDate;
+                            return (
+                                <div key={`${log.timestamp}-${i}`}>
+                                    {showDate && <div className="px-5 pt-3 pb-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{currDate}</div>}
+                                    <button
+                                        className="w-full flex items-start gap-3 px-5 py-2.5 text-left transition-colors hover:bg-slate-50"
+                                        onClick={() => { setActiveTab(sec.tabId); setNotiOpen(false); }}>
+                                        <span className="text-[18px] mt-0.5 flex-shrink-0">{sec.icon}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-[13px] text-slate-700">
+                                                <span className="font-semibold">{log.userName}</span>
+                                                <span className="text-slate-500">님이 </span>
+                                                <span className="font-medium" style={{ color: isNew ? "#3B82F6" : "#64748B" }}>{sec.label}</span>
+                                                <span className="text-slate-500">을(를) 수정했습니다</span>
+                                            </div>
+                                            <div className="text-[11px] text-slate-400 mt-0.5">{notiTimeAgo(log.timestamp)}</div>
+                                        </div>
+                                        {isNew && <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-2" />}
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    {notiLogs.length > 0 && (
+                        <div className="flex items-center justify-center px-4 py-2.5 border-t border-slate-100" style={{ background: "#FAFBFC" }}>
+                            <span className="text-[12px] text-slate-400">최근 수정 기록이 표시됩니다</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+        )}
+
         {/* Cmd+K Search Palette */}
         {cmdKOpen && (
             <div className="fixed inset-0 z-[80] flex items-start justify-center pt-[12vh]" style={{background:"rgba(0,0,0,0.5)"}} onClick={() => setCmdKOpen(false)}>
