@@ -26,6 +26,11 @@ const MEMBER_NAMES = Object.keys(MEMBERS).filter(k => k !== "박일웅");
 // Context for dynamic member data (customEmojis merged)
 const MembersContext = createContext<Record<string, { team: string; role: string; emoji: string }>>(DEFAULT_MEMBERS);
 const SavingContext = createContext<Set<number>>(new Set());
+function SavingBadge({ id }: { id: number }) {
+    const s = useContext(SavingContext);
+    if (!s.has(id)) return null;
+    return <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded-full animate-pulse ml-1">저장 중</span>;
+}
 
 type TeamData = { lead: string; members: string[]; color: string; emoji?: string };
 
@@ -363,15 +368,13 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
                     </div>
                 </div>
                 <div className="flex items-center justify-between p-4 border-t border-slate-200">
-                    <div>
-                        {isEdit && onDelete && (
-                            <button onClick={() => { onDelete(paper!.id); onClose(); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
-                        )}
-                    </div>
                     <div className="flex gap-2">
                         <button onClick={onClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                         <button onClick={() => { if (handleSave()) onClose(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
+                    {isEdit && onDelete && (
+                        <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(paper!.id); onClose(); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                    )}
                 </div>
             </div>
         </div>
@@ -392,7 +395,10 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
     const [selected, setSelected] = useState<Paper | null>(null);
     const [detailComment, setDetailComment] = useState("");
     const composingRef = useRef(false);
-    const addDetailComment = () => { if (!detailComment.trim() || !selected) return; const u = { ...selected, comments: [...selected.comments, { id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] }; onSavePaper(u); setSelected(u); setDetailComment(""); };
+    // Comment draft
+    useEffect(() => { if (selected) { const d = loadDraft(`comment_paper_${selected.id}`); if (d) setDetailComment(d); else setDetailComment(""); } }, [selected?.id]);
+    useEffect(() => { if (selected) saveDraft(`comment_paper_${selected.id}`, detailComment); }, [detailComment, selected?.id]);
+    const addDetailComment = () => { if (!detailComment.trim() || !selected) return; clearDraft(`comment_paper_${selected.id}`); const u = { ...selected, comments: [...selected.comments, { id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] }; onSavePaper(u); setSelected(u); setDetailComment(""); };
     const delDetailComment = (cid: number) => { if (!selected) return; const u = { ...selected, comments: selected.comments.filter(c => c.id !== cid) }; onSavePaper(u); setSelected(u); };
     const completedPapers = filtered.filter(p => PAPER_STATUS_MIGRATE(p.status) === "completed");
     const kanbanFiltered = filtered.filter(p => PAPER_STATUS_MIGRATE(p.status) !== "completed");
@@ -407,13 +413,14 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                     <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedPapers.length})</button>
                 </div>
             </div>
-            {/* Compact filter row: team chips | divider | member avatars */}
+            {/* Filter rows */}
             {(teamNames && teamNames.length > 0 || allPeople) && (
-                <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1" style={{scrollbarWidth:"none"}}>
+                <div className="space-y-2 mb-3">
+                    {/* Row 1: team chips */}
                     {teamNames && teamNames.length > 0 && (
-                        <>
+                        <div className="flex items-center gap-2">
                             <span className="text-[11px] font-semibold flex-shrink-0" style={{color:"#94A3B8"}}>팀</span>
-                            <div className="flex items-center gap-1 flex-shrink-0">
+                            <div className="flex items-center gap-1 flex-wrap">
                                 {["전체", ...teamNames].map(t => (
                                     <button key={t} onClick={() => setFilterTeam(t)}
                                         className="px-2.5 py-1 rounded-full text-[12px] font-medium transition-all flex-shrink-0"
@@ -426,30 +433,25 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                                     </button>
                                 ))}
                             </div>
-                        </>
+                        </div>
                     )}
-                    {teamNames && teamNames.length > 0 && allPeople && onFilterPerson && (
-                        <div className="w-px h-5 bg-slate-200 flex-shrink-0 mx-1" />
-                    )}
+                    {/* Row 2: member chips (emoji + name) */}
                     {allPeople && onFilterPerson && (
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                            {allPeople.map(p => (
-                                <button key={p} onClick={() => onFilterPerson(p)} title={p}
-                                    className="flex-shrink-0 transition-all"
-                                    style={{
-                                        width: p === "전체" ? "auto" : 30, height: p === "전체" ? "auto" : 30,
-                                        borderRadius: p === "전체" ? 9999 : "50%",
-                                        padding: p === "전체" ? "3px 10px" : 0,
-                                        display: "flex", alignItems: "center", justifyContent: "center",
-                                        fontSize: p === "전체" ? 12 : 15,
-                                        fontWeight: filter === p ? 600 : 500,
-                                        background: filter === p ? (p === "전체" ? "#3B82F6" : "#EFF6FF") : (p === "전체" ? "transparent" : "#F1F5F9"),
-                                        color: filter === p ? (p === "전체" ? "#FFFFFF" : "#3B82F6") : "#64748B",
-                                        border: filter === p && p !== "전체" ? "2px solid #3B82F6" : p === "전체" ? (filter === p ? "1px solid #3B82F6" : "1px solid #CBD5E1") : "2px solid transparent",
-                                    }}>
-                                    {p === "전체" ? "전체" : (MEMBERS[p]?.emoji || p[0])}
-                                </button>
-                            ))}
+                        <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-semibold flex-shrink-0" style={{color:"#94A3B8"}}>멤버</span>
+                            <div className="flex items-center gap-1 overflow-x-auto pb-0.5" style={{scrollbarWidth:"none", whiteSpace:"nowrap"}}>
+                                {allPeople.map(p => (
+                                    <button key={p} onClick={() => onFilterPerson(p)}
+                                        className="px-2.5 py-1 rounded-full text-[12px] font-medium transition-all flex-shrink-0"
+                                        style={{
+                                            background: filter === p ? "#3B82F6" : "transparent",
+                                            color: filter === p ? "#FFFFFF" : "#64748B",
+                                            border: filter === p ? "1px solid #3B82F6" : "1px solid #CBD5E1",
+                                        }}>
+                                        {p === "전체" ? "전체" : `${MEMBERS[p]?.emoji || "👤"} ${p}`}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>
@@ -499,7 +501,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                                         onClick={() => setSelected(p)}
                                         className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === p.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
                                         style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${st.color}` }}>
-                                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{p.title}</div>
+                                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{p.title}<SavingBadge id={p.id} /></div>
                                         <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
                                             {p.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md flex-shrink-0" style={{background:"#EFF6FF", color:"#3B82F6", fontWeight:500}}>{p.team}</span>}
                                             {p.tags.slice(0, 2).map(t => <span key={t} className="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">{t}</span>)}
@@ -532,7 +534,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                         <div key={p.id} onClick={() => setSelected(p)}
                             className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
                             style={{ borderLeft: "3px solid #059669" }}>
-                            <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{p.title}</div>
+                            <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{p.title}<SavingBadge id={p.id} /></div>
                             {p.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{p.team}</span>}
                             {p.journal !== "TBD" && <div className="text-[12px] text-slate-500 italic mb-1 truncate">{p.journal}</div>}
                             <div className="flex gap-1 flex-wrap mb-1.5">
@@ -612,23 +614,24 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                                         </div>
                                     ))}
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 items-center">
                                     <input value={detailComment} onChange={e => setDetailComment(e.target.value)}
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                         onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
                                         placeholder="댓글 입력..." className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                                     <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">등록</button>
                                 </div>
+                                {detailComment && hasDraft(`comment_paper_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-100">
-                            <div className="flex items-center gap-2">
+                            <button onClick={() => { onClickPaper(selected); setSelected(null); setDetailComment(""); }} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
+                            <div className="flex items-center gap-3">
                                 {onDeletePaper && (currentUser === selected.creator || currentUser === "박일웅") && (
-                                    <button onClick={() => { onDeletePaper(selected.id); setSelected(null); setDetailComment(""); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                                    <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDeletePaper(selected.id); setSelected(null); setDetailComment(""); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                                 )}
-                                <button onClick={() => { onClickPaper(selected); setSelected(null); setDetailComment(""); }} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
+                                <button onClick={() => { setSelected(null); setDetailComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                             </div>
-                            <button onClick={() => { setSelected(null); setDetailComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                         </div>
                     </div>
                 </div>
@@ -770,11 +773,11 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                     </div>
                 </div>
                 <div className="flex items-center justify-between p-4 border-t border-slate-200">
-                    <div>{isEdit && onDelete && <button onClick={() => { onDelete(report!.id); onClose(); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}</div>
                     <div className="flex gap-2">
                         <button onClick={onClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                         <button onClick={() => { if (handleSave()) onClose(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
+                    {isEdit && onDelete && <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(report!.id); onClose(); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
                 </div>
             </div>
         </div>
@@ -794,7 +797,10 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
     const [selected, setSelected] = useState<Report | null>(null);
     const [detailComment, setDetailComment] = useState("");
     const composingRef = useRef(false);
-    const addDetailComment = () => { if (!detailComment.trim() || !selected) return; const u = { ...selected, comments: [...selected.comments, { id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] }; onSave(u); setSelected(u); setDetailComment(""); };
+    // Comment draft
+    useEffect(() => { if (selected) { const d = loadDraft(`comment_report_${selected.id}`); if (d) setDetailComment(d); else setDetailComment(""); } }, [selected?.id]);
+    useEffect(() => { if (selected) saveDraft(`comment_report_${selected.id}`, detailComment); }, [detailComment, selected?.id]);
+    const addDetailComment = () => { if (!detailComment.trim() || !selected) return; clearDraft(`comment_report_${selected.id}`); const u = { ...selected, comments: [...selected.comments, { id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] }; onSave(u); setSelected(u); setDetailComment(""); };
     const delDetailComment = (cid: number) => { if (!selected) return; const u = { ...selected, comments: selected.comments.filter(c => c.id !== cid) }; onSave(u); setSelected(u); };
     const completedReports = filteredReports.filter(r => r.status === "done");
     const kanbanFilteredReports = filteredReports.filter(r => r.status !== "done");
@@ -834,7 +840,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                                             onClick={() => setSelected(r)}
                                             className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === r.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
                                             style={{ borderLeft: r.needsDiscussion ? "3px solid #EF4444" : `3px solid ${cfg.color}` }}>
-                                            <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{r.title}</div>
+                                            <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{r.title}<SavingBadge id={r.id} /></div>
                                             <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
                                                 {r.category && <span className={`text-[10.5px] px-1.5 py-0.5 rounded flex-shrink-0 ${r.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`} style={{fontWeight:500}}>{r.category}</span>}
                                                 {r.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{r.team}</span>}
@@ -871,7 +877,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                                 {r.category && <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${r.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`}>{r.category}</span>}
                                 {r.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{r.team}</span>}
                             </div>
-                            <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{r.title}</div>
+                            <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{r.title}<SavingBadge id={r.id} /></div>
                             <div className="flex justify-between items-center">
                                 <div className="flex gap-1 flex-wrap">
                                     {r.assignees.slice(0, 3).map(a => <span key={a} className="text-[11px] px-1.5 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[a]?.emoji}{a}</span>)}
@@ -965,23 +971,24 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                                         </div>
                                     ))}
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 items-center">
                                     <input value={detailComment} onChange={e => setDetailComment(e.target.value)}
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                         onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
                                         placeholder="댓글 입력..." className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                                     <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">등록</button>
                                 </div>
+                                {detailComment && hasDraft(`comment_report_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-100">
-                            <div className="flex items-center gap-2">
+                            <button onClick={() => { setEditing(selected); setSelected(null); setDetailComment(""); }} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
+                            <div className="flex items-center gap-3">
                                 {(currentUser === selected.creator || currentUser === "박일웅") && (
-                                    <button onClick={() => { onDelete(selected.id); setSelected(null); setDetailComment(""); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                                    <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(selected.id); setSelected(null); setDetailComment(""); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                                 )}
-                                <button onClick={() => { setEditing(selected); setSelected(null); setDetailComment(""); }} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
+                                <button onClick={() => { setSelected(null); setDetailComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                             </div>
-                            <button onClick={() => { setSelected(null); setDetailComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                         </div>
                     </div>
                 </div>
@@ -1684,11 +1691,11 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
                     </div>
                 </div>
                 <div className="flex items-center justify-between p-4 border-t border-slate-200">
-                    <div>{isEdit && onDelete && <button onClick={() => { onDelete(experiment!.id); onClose(); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}</div>
                     <div className="flex gap-2">
                         <button onClick={onClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                         <button onClick={() => { if (handleSave()) onClose(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
+                    {isEdit && onDelete && <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(experiment!.id); onClose(); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
                 </div>
             </div>
         </div>
@@ -1710,7 +1717,10 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
     const [selected, setSelected] = useState<Experiment | null>(null);
     const [detailComment, setDetailComment] = useState("");
     const composingRef = useRef(false);
-    const addDetailComment = () => { if (!detailComment.trim() || !selected) return; const u = { ...selected, logs: [{ id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR") }, ...selected.logs] }; onSave(u); setSelected(u); setDetailComment(""); };
+    // Comment draft
+    useEffect(() => { if (selected) { const d = loadDraft(`comment_exp_${selected.id}`); if (d) setDetailComment(d); else setDetailComment(""); } }, [selected?.id]);
+    useEffect(() => { if (selected) saveDraft(`comment_exp_${selected.id}`, detailComment); }, [detailComment, selected?.id]);
+    const addDetailComment = () => { if (!detailComment.trim() || !selected) return; clearDraft(`comment_exp_${selected.id}`); const u = { ...selected, logs: [{ id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR") }, ...selected.logs] }; onSave(u); setSelected(u); setDetailComment(""); };
     const delDetailComment = (cid: number) => { if (!selected) return; const u = { ...selected, logs: selected.logs.filter(c => c.id !== cid) }; onSave(u); setSelected(u); };
     const completedExperiments = filteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) === "completed");
     const kanbanFilteredExperiments = filteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) !== "completed");
@@ -1767,7 +1777,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                                         onClick={() => setSelected(exp)}
                                         className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === exp.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
                                         style={{ borderLeft: exp.needsDiscussion ? "3px solid #EF4444" : `3px solid ${cfg.color}` }}>
-                                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{exp.title}</div>
+                                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{exp.title}<SavingBadge id={exp.id} /></div>
                                         <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
                                             <span className="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">🔧 {exp.equipment}</span>
                                             {exp.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{exp.team}</span>}
@@ -1799,7 +1809,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                         <div key={exp.id} onClick={() => setSelected(exp)}
                             className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
                             style={{ borderLeft: "3px solid #059669" }}>
-                            <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{exp.title}</div>
+                            <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{exp.title}<SavingBadge id={exp.id} /></div>
                             <div className="flex items-center gap-1.5 mb-1">
                                 <span className="text-[11px] text-slate-500">🔧 {exp.equipment}</span>
                                 {exp.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{exp.team}</span>}
@@ -1889,23 +1899,24 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                                         </div>
                                     ))}
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 items-center">
                                     <input value={detailComment} onChange={e => setDetailComment(e.target.value)}
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                         onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
                                         placeholder="실험 일지 작성..." className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                                     <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">등록</button>
                                 </div>
+                                {detailComment && hasDraft(`comment_exp_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-100">
-                            <div className="flex items-center gap-2">
+                            <button onClick={() => { setEditing(selected); setSelected(null); setDetailComment(""); }} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
+                            <div className="flex items-center gap-3">
                                 {(currentUser === selected.creator || currentUser === "박일웅") && (
-                                    <button onClick={() => { onDelete(selected.id); setSelected(null); setDetailComment(""); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                                    <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(selected.id); setSelected(null); setDetailComment(""); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                                 )}
-                                <button onClick={() => { setEditing(selected); setSelected(null); setDetailComment(""); }} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
+                                <button onClick={() => { setSelected(null); setDetailComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                             </div>
-                            <button onClick={() => { setSelected(null); setDetailComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                         </div>
                     </div>
                 </div>
@@ -2027,11 +2038,11 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
                     </div>
                 </div>
                 <div className="flex items-center justify-between p-4 border-t border-slate-200">
-                    <div>{isEdit && onDelete && <button onClick={() => { onDelete(analysis!.id); onClose(); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}</div>
                     <div className="flex gap-2">
                         <button onClick={onClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                         <button onClick={() => { if (handleSave()) onClose(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
+                    {isEdit && onDelete && <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(analysis!.id); onClose(); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
                 </div>
             </div>
         </div>
@@ -2053,7 +2064,10 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
     const [selected, setSelected] = useState<Analysis | null>(null);
     const [detailComment, setDetailComment] = useState("");
     const composingRef = useRef(false);
-    const addDetailComment = () => { if (!detailComment.trim() || !selected) return; const u = { ...selected, logs: [{ id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR") }, ...selected.logs] }; onSave(u); setSelected(u); setDetailComment(""); };
+    // Comment draft
+    useEffect(() => { if (selected) { const d = loadDraft(`comment_analysis_${selected.id}`); if (d) setDetailComment(d); else setDetailComment(""); } }, [selected?.id]);
+    useEffect(() => { if (selected) saveDraft(`comment_analysis_${selected.id}`, detailComment); }, [detailComment, selected?.id]);
+    const addDetailComment = () => { if (!detailComment.trim() || !selected) return; clearDraft(`comment_analysis_${selected.id}`); const u = { ...selected, logs: [{ id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR") }, ...selected.logs] }; onSave(u); setSelected(u); setDetailComment(""); };
     const delDetailComment = (cid: number) => { if (!selected) return; const u = { ...selected, logs: selected.logs.filter(c => c.id !== cid) }; onSave(u); setSelected(u); };
     const completedAnalyses = filteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) === "completed");
     const kanbanFilteredAnalyses = filteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) !== "completed");
@@ -2110,7 +2124,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                                         onClick={() => setSelected(a)}
                                         className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === a.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
                                         style={{ borderLeft: a.needsDiscussion ? "3px solid #EF4444" : `3px solid ${cfg.color}` }}>
-                                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{a.title}</div>
+                                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{a.title}<SavingBadge id={a.id} /></div>
                                         <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
                                             <span className="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">🖥️ {a.tool}</span>
                                             {a.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{a.team}</span>}
@@ -2142,7 +2156,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                         <div key={a.id} onClick={() => setSelected(a)}
                             className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
                             style={{ borderLeft: "3px solid #059669" }}>
-                            <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{a.title}</div>
+                            <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{a.title}<SavingBadge id={a.id} /></div>
                             <div className="flex items-center gap-1.5 mb-1">
                                 <span className="text-[11px] text-slate-500">🖥️ {a.tool}</span>
                                 {a.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{a.team}</span>}
@@ -2232,23 +2246,24 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                                         </div>
                                     ))}
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 items-center">
                                     <input value={detailComment} onChange={e => setDetailComment(e.target.value)}
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                         onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
                                         placeholder="해석 일지 작성..." className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                                     <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">등록</button>
                                 </div>
+                                {detailComment && hasDraft(`comment_analysis_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-100">
-                            <div className="flex items-center gap-2">
+                            <button onClick={() => { setEditing(selected); setSelected(null); setDetailComment(""); }} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
+                            <div className="flex items-center gap-3">
                                 {(currentUser === selected.creator || currentUser === "박일웅") && (
-                                    <button onClick={() => { onDelete(selected.id); setSelected(null); setDetailComment(""); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                                    <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(selected.id); setSelected(null); setDetailComment(""); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                                 )}
-                                <button onClick={() => { setEditing(selected); setSelected(null); setDetailComment(""); }} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
+                                <button onClick={() => { setSelected(null); setDetailComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                             </div>
-                            <button onClick={() => { setSelected(null); setDetailComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                         </div>
                     </div>
                 </div>
@@ -2493,7 +2508,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                                                 </label>
                                             )}
                                             <div className={`text-[14px] leading-relaxed ${col.id === "completed" ? "text-slate-500" : "text-slate-700"}`}>
-                                                {PRIORITY_ICON[todo.priority] || ""} {todo.text}
+                                                {PRIORITY_ICON[todo.priority] || ""} {todo.text}<SavingBadge id={todo.id} />
                                                 {col.id !== "completed" && todo.priority === "highest" && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-bold align-middle">매우높음</span>}
                                             </div>
                                             {col.id !== "completed" && (todo.progress ?? 0) > 0 && (
@@ -2517,7 +2532,6 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                                                 )}
                                             </div>
                                         </div>
-                                        <button onClick={() => onDelete(todo.id)} className="text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity mt-1">✕</button>
                                     </div>
                                 </div>
                             ))}
@@ -2595,12 +2609,12 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                             </div>
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-200">
-                            <button onClick={() => { onDelete(editingTodo.id); setEditingTodo(null); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                             <div className="flex gap-2">
                                 <button onClick={() => setEditingTodo(null)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                                 <button onClick={() => { onUpdate({ ...editingTodo, text: newText, assignees: newAssignees.length > 0 ? newAssignees : editingTodo.assignees, priority: newPriority, deadline: newDeadline, progress: newProgress, comments: editComments }); setEditingTodo(null); }}
                                     className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                             </div>
+                            <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(editingTodo.id); setEditingTodo(null); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                         </div>
                     </div>
                 </div>
@@ -2788,11 +2802,11 @@ function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams
                             </div>
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-200">
-                            <div>{editingTeam && isPI && <button onClick={() => { handleDelete(editingTeam); setEditingTeam(null); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}</div>
                             <div className="flex gap-2">
                                 <button onClick={() => { setEditingTeam(null); setAddingTeam(false); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                                 <button onClick={handleSave} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                             </div>
+                            {editingTeam && isPI && <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { handleDelete(editingTeam); setEditingTeam(null); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
                         </div>
                     </div>
                 </div>
@@ -2846,12 +2860,12 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
                     {teamNames && <TeamSelect teamNames={teamNames} selected={team} onSelect={setTeam} />}
                 </div>
                 <div className="flex items-center justify-between p-4 border-t border-slate-200">
-                    <div>{isEdit && onDelete && <button onClick={() => { onDelete(patent!.id); onClose(); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}</div>
                     <div className="flex gap-2">
                         <button onClick={onClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                         <button onClick={() => { if (title.trim()) { onSave({ id: patent?.id ?? Date.now(), title, deadline, status, assignees, creator: patent?.creator || currentUser, createdAt: patent?.createdAt || new Date().toLocaleString("ko-KR"), team }); onClose(); } }}
                             className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
+                    {isEdit && onDelete && <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(patent!.id); onClose(); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
                 </div>
             </div>
         </div>
@@ -2902,7 +2916,7 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
                                         onClick={() => setEditing(p)}
                                         className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === p.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
                                         style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${cfg.color}` }}>
-                                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{p.title}</div>
+                                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{p.title}<SavingBadge id={p.id} /></div>
                                         <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
                                             {p.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{p.team}</span>}
                                             {p.deadline && <span className="text-[10.5px] px-1.5 py-0.5 rounded bg-red-50 text-red-500 flex-shrink-0" style={{fontWeight:500}}>~{p.deadline}</span>}
@@ -2934,7 +2948,7 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
                         <div key={p.id} onClick={() => setEditing(p)}
                             className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
                             style={{ borderLeft: "3px solid #22c55e" }}>
-                            <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{p.title}</div>
+                            <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{p.title}<SavingBadge id={p.id} /></div>
                             {p.team && <div className="mb-1"><span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{p.team}</span></div>}
                             <div className="flex justify-between items-center">
                                 <div className="flex gap-1 flex-wrap">
@@ -3279,13 +3293,26 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
 
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState("");
-    const openAdd = (status?: string) => { setAdding(true); setEditing(null); setTitle(""); setStartDate(""); setEndDate(""); setHomepage(""); setFee(""); setParticipants([]); setFormStatus(status || "관심"); setComments([]); setNewComment(""); };
-    const openEdit = (c: ConferenceTrip) => { setEditing(c); setAdding(false); setTitle(c.title); setStartDate(c.startDate); setEndDate(c.endDate); setHomepage(c.homepage); setFee(c.fee); setParticipants(c.participants); setFormStatus(c.status || "관심"); setComments(c.comments || []); setNewComment(""); };
-    const closeModal = () => { setAdding(false); setEditing(null); };
+    const [confDraftLoaded, setConfDraftLoaded] = useState(false);
+
+    const openAdd = (status?: string) => {
+        setEditing(null); setParticipants([]); setFormStatus(status || "관심"); setComments([]); setNewComment("");
+        const d = loadDraft("conf_add");
+        if (d) { try { const p = JSON.parse(d); setTitle(p.title || ""); setStartDate(p.startDate || ""); setEndDate(p.endDate || ""); setHomepage(p.homepage || ""); setFee(p.fee || ""); setConfDraftLoaded(true); } catch { setTitle(""); setStartDate(""); setEndDate(""); setHomepage(""); setFee(""); setConfDraftLoaded(false); } }
+        else { setTitle(""); setStartDate(""); setEndDate(""); setHomepage(""); setFee(""); setConfDraftLoaded(false); }
+        setAdding(true);
+    };
+    const openEdit = (c: ConferenceTrip) => { setEditing(c); setAdding(false); setTitle(c.title); setStartDate(c.startDate); setEndDate(c.endDate); setHomepage(c.homepage); setFee(c.fee); setParticipants(c.participants); setFormStatus(c.status || "관심"); setComments(c.comments || []); setNewComment(""); setConfDraftLoaded(false); };
+    const closeModal = () => { if (adding && (title.trim() || homepage.trim() || fee.trim())) saveDraft("conf_add", JSON.stringify({ title, startDate, endDate, homepage, fee })); setAdding(false); setEditing(null); setConfDraftLoaded(false); };
+
+    // Draft auto-save for add form
+    useEffect(() => { if (adding && !editing) saveDraft("conf_add", JSON.stringify({ title, startDate, endDate, homepage, fee })); }, [title, startDate, endDate, homepage, fee, adding, editing]);
 
     const handleSave = () => {
         if (!title.trim()) return false;
+        clearDraft("conf_add");
         onSave({ id: editing?.id ?? Date.now(), title: title.trim(), startDate, endDate, homepage: homepage.trim(), fee: fee.trim(), participants, creator: editing?.creator || currentUser, createdAt: editing?.createdAt || new Date().toISOString(), status: formStatus, comments, needsDiscussion: editing?.needsDiscussion });
+        setConfDraftLoaded(false);
         return true;
     };
 
@@ -3310,42 +3337,67 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
         setDraggedId(null);
     };
 
+    // Sort by startDate ascending and group by month
+    const sorted = useMemo(() => [...items].sort((a, b) => {
+        const da = a.startDate || "9999-12-31";
+        const db = b.startDate || "9999-12-31";
+        return da.localeCompare(db);
+    }), [items]);
+
+    const monthGroups = useMemo(() => {
+        const groups: { label: string; key: string; items: ConferenceTrip[] }[] = [];
+        for (const c of sorted) {
+            const d = c.startDate ? new Date(c.startDate) : null;
+            const key = d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` : "no-date";
+            const label = d ? `📅 ${d.getFullYear()}년 ${d.getMonth() + 1}월` : "📅 날짜 미정";
+            let group = groups.find(g => g.key === key);
+            if (!group) { group = { label, key, items: [] }; groups.push(group); }
+            group.items.push(c);
+        }
+        return groups;
+    }, [sorted]);
+
     return (
         <div>
-            <button onClick={() => openAdd()} className="mb-3 px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">+ 학회/출장 추가</button>
-            <div className="grid grid-cols-3 gap-3">
-                {items.map(c => {
-                    const cmt = c.comments || [];
-                    return (
-                    <div key={c.id} onClick={() => openEdit(c)}
-                        className={`bg-white rounded-xl p-4 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${c.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}>
-                        <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
-                            <input type="checkbox" checked={!!c.needsDiscussion} onChange={() => onSave({ ...c, needsDiscussion: !c.needsDiscussion })} className="w-3 h-3 accent-red-500" />
-                            <span className={`text-[11px] font-medium ${c.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
-                        </label>
-                        <div className="text-[14px] font-semibold text-slate-800 mb-1">{c.title}</div>
-                        {(c.startDate || c.endDate) && <div className="text-[12px] text-slate-500 mb-0.5">📅 {formatPeriod(c.startDate, c.endDate)}</div>}
-                        {c.homepage && <div className="text-[11px] text-blue-500 mb-0.5 truncate" onClick={e => { e.stopPropagation(); try { const u = new URL(c.homepage); if (["http:", "https:"].includes(u.protocol)) window.open(c.homepage, "_blank", "noopener"); } catch {} }}>🔗 {c.homepage}</div>}
-                        {c.fee && <div className="text-[12px] text-slate-500 mb-0.5">💰 {c.fee}</div>}
-                        {c.participants.length > 0 && (
-                            <div className="flex flex-wrap gap-0.5 mt-1.5">
-                                {c.participants.map(p => <span key={p} className="text-[10px] px-1 py-0.5 rounded bg-blue-50 text-blue-600">{MEMBERS[p]?.emoji || "👤"}{p}</span>)}
-                            </div>
-                        )}
-                        <div className="border-t border-slate-100 pt-1.5 mt-2">
-                            {cmt.length > 0 ? (
-                                <div className="text-[11px] text-slate-500 truncate">
-                                    <span className="font-medium text-slate-600">{MEMBERS[cmt.slice(-1)[0]?.author]?.emoji}{cmt.slice(-1)[0]?.author}</span> {cmt.slice(-1)[0]?.text}
+            <button onClick={() => openAdd()} className="mb-4 px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">+ 학회/출장 추가</button>
+            {items.length === 0 && <div className="text-center py-12 text-slate-400 text-[14px]">등록된 학회/출장이 없습니다</div>}
+            {monthGroups.map(group => (
+                <div key={group.key} className="mb-6">
+                    <h3 className="text-[15px] font-bold text-slate-700 mb-3 pb-2 border-b border-slate-200">{group.label}</h3>
+                    <div className="grid grid-cols-3 gap-3">
+                        {group.items.map(c => {
+                            const cmt = c.comments || [];
+                            return (
+                            <div key={c.id} onClick={() => openEdit(c)}
+                                className={`bg-white rounded-xl p-4 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${c.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}>
+                                <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
+                                    <input type="checkbox" checked={!!c.needsDiscussion} onChange={() => onSave({ ...c, needsDiscussion: !c.needsDiscussion })} className="w-3 h-3 accent-red-500" />
+                                    <span className={`text-[11px] font-medium ${c.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
+                                </label>
+                                <div className="text-[14px] font-semibold text-slate-800 mb-1">{c.title}<SavingBadge id={c.id} /></div>
+                                {(c.startDate || c.endDate) && <div className="text-[12px] text-slate-500 mb-0.5">📅 {formatPeriod(c.startDate, c.endDate)}</div>}
+                                {c.homepage && <div className="text-[11px] text-blue-500 mb-0.5 truncate" onClick={e => { e.stopPropagation(); try { const u = new URL(c.homepage); if (["http:", "https:"].includes(u.protocol)) window.open(c.homepage, "_blank", "noopener"); } catch {} }}>🔗 {c.homepage}</div>}
+                                {c.fee && <div className="text-[12px] text-slate-500 mb-0.5">💰 {c.fee}</div>}
+                                {c.participants.length > 0 && (
+                                    <div className="flex flex-wrap gap-0.5 mt-1.5">
+                                        {c.participants.map(p => <span key={p} className="text-[10px] px-1 py-0.5 rounded bg-blue-50 text-blue-600">{MEMBERS[p]?.emoji || "👤"}{p}</span>)}
+                                    </div>
+                                )}
+                                <div className="border-t border-slate-100 pt-1.5 mt-2">
+                                    {cmt.length > 0 ? (
+                                        <div className="text-[11px] text-slate-500 truncate">
+                                            <span className="font-medium text-slate-600">{MEMBERS[cmt.slice(-1)[0]?.author]?.emoji}{cmt.slice(-1)[0]?.author}</span> {cmt.slice(-1)[0]?.text}
+                                        </div>
+                                    ) : (
+                                        <div className="text-[11px] text-slate-300">💬 댓글 없음</div>
+                                    )}
                                 </div>
-                            ) : (
-                                <div className="text-[11px] text-slate-300">💬 댓글 없음</div>
-                            )}
-                        </div>
+                            </div>
+                            );
+                        })}
                     </div>
-                    );
-                })}
-                {items.length === 0 && <div className="text-center py-12 text-slate-400 text-[14px] col-span-full">등록된 학회/출장이 없습니다</div>}
-            </div>
+                </div>
+            ))}
 
             {modal && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={closeModal}>
@@ -3355,6 +3407,12 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
                             <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
+                            {confDraftLoaded && !isEdit && (
+                                <div className="flex items-center justify-between px-3 py-2 rounded-lg text-[13px]" style={{background:"#FEF3C7", color:"#92400E", border:"1px solid #FDE68A"}}>
+                                    <span>임시저장된 글이 있습니다</span>
+                                    <button onClick={() => { setTitle(""); setStartDate(""); setEndDate(""); setHomepage(""); setFee(""); clearDraft("conf_add"); setConfDraftLoaded(false); }} className="text-amber-600 hover:text-amber-800 font-medium ml-2">삭제</button>
+                                </div>
+                            )}
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">학회/출장 이름 *</label>
                                 <input value={title} onChange={e => setTitle(e.target.value)} placeholder="예: NURETH-21" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
@@ -3412,11 +3470,11 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
                             </div>
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-200">
-                            <div>{isEdit && <button onClick={() => { onDelete(editing!.id); closeModal(); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}</div>
                             <div className="flex gap-2">
                                 <button onClick={closeModal} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                                <button onClick={() => { if (handleSave()) closeModal(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
+                                <button onClick={() => { if (handleSave()) { setAdding(false); setEditing(null); setConfDraftLoaded(false); } }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                             </div>
+                            {isEdit && <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(editing!.id); closeModal(); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
                         </div>
                     </div>
                 </div>
@@ -3436,20 +3494,32 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
     const [nasPath, setNasPath] = useState("");
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState("");
+    const [resDraftLoaded, setResDraftLoaded] = useState(false);
 
     const dragRes = useRef<number | null>(null);
     const [dragOverRes, setDragOverRes] = useState<number | null>(null);
 
-    const openAdd = () => { setAdding(true); setEditing(null); setTitle(""); setLink(""); setNasPath(""); setComments([]); setNewComment(""); };
-    const openEdit = (r: Resource) => { setEditing(r); setAdding(false); setTitle(r.title); setLink(r.link); setNasPath(r.nasPath); setComments(r.comments || []); setNewComment(""); };
-    const closeModal = () => { setAdding(false); setEditing(null); };
+    const openAdd = () => {
+        setEditing(null); setComments([]); setNewComment("");
+        const d = loadDraft("resource_add");
+        if (d) { try { const p = JSON.parse(d); setTitle(p.title || ""); setLink(p.link || ""); setNasPath(p.nasPath || ""); setResDraftLoaded(true); } catch { setTitle(""); setLink(""); setNasPath(""); setResDraftLoaded(false); } }
+        else { setTitle(""); setLink(""); setNasPath(""); setResDraftLoaded(false); }
+        setAdding(true);
+    };
+    const openEdit = (r: Resource) => { setEditing(r); setAdding(false); setTitle(r.title); setLink(r.link); setNasPath(r.nasPath); setComments(r.comments || []); setNewComment(""); setResDraftLoaded(false); };
+    const closeModal = () => { if (adding && (title.trim() || link.trim() || nasPath.trim())) saveDraft("resource_add", JSON.stringify({ title, link, nasPath })); setAdding(false); setEditing(null); setResDraftLoaded(false); };
     const modal = adding || editing !== null;
     const isEdit = !!editing;
 
+    // Draft auto-save for add form
+    useEffect(() => { if (adding && !editing) saveDraft("resource_add", JSON.stringify({ title, link, nasPath })); }, [title, link, nasPath, adding, editing]);
+
     const handleSave = () => {
         if (!title.trim()) return;
+        clearDraft("resource_add");
         onSave({ id: editing?.id ?? Date.now(), title, link, nasPath, author: editing?.author || currentUser, date: editing?.date || new Date().toLocaleDateString("ko-KR"), comments, needsDiscussion: editing?.needsDiscussion });
-        closeModal();
+        setResDraftLoaded(false);
+        setAdding(false); setEditing(null); // close without re-saving draft
     };
     const addComment = () => {
         if (!newComment.trim()) return;
@@ -3476,7 +3546,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
                                 <input type="checkbox" checked={!!r.needsDiscussion} onChange={() => onSave({ ...r, needsDiscussion: !r.needsDiscussion })} className="w-3 h-3 accent-red-500" />
                                 <span className={`text-[11px] font-medium ${r.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                             </label>
-                            <div className="text-[14px] font-semibold text-slate-800 mb-2 break-words">{r.title}</div>
+                            <div className="text-[14px] font-semibold text-slate-800 mb-2 break-words">{r.title}<SavingBadge id={r.id} /></div>
                             {r.link && (
                                 <div className="text-[12px] text-blue-500 mb-1 truncate" onClick={e => { e.stopPropagation(); try { const u = new URL(r.link); if (["http:", "https:"].includes(u.protocol)) window.open(r.link, "_blank", "noopener"); } catch {} }}>
                                     🔗 {r.link}
@@ -3512,6 +3582,12 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
                             <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
+                            {resDraftLoaded && !isEdit && (
+                                <div className="flex items-center justify-between px-3 py-2 rounded-lg text-[13px]" style={{background:"#FEF3C7", color:"#92400E", border:"1px solid #FDE68A"}}>
+                                    <span>임시저장된 글이 있습니다</span>
+                                    <button onClick={() => { setTitle(""); setLink(""); setNasPath(""); clearDraft("resource_add"); setResDraftLoaded(false); }} className="text-amber-600 hover:text-amber-800 font-medium ml-2">삭제</button>
+                                </div>
+                            )}
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">자료 이름 *</label>
                                 <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
@@ -3547,11 +3623,11 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
                             </div>
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-200">
-                            <div>{isEdit && <button onClick={() => { onDelete(editing!.id); closeModal(); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}</div>
                             <div className="flex gap-2">
                                 <button onClick={closeModal} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                                 <button onClick={handleSave} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                             </div>
+                            {isEdit && <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(editing!.id); closeModal(); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
                         </div>
                     </div>
                 </div>
@@ -3575,11 +3651,18 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
     const composingRef = useRef(false);
     const dragIdea = useRef<number | null>(null);
     const [dragOverIdea, setDragOverIdea] = useState<number | null>(null);
+    const [draftLoaded, setDraftLoaded] = useState(false);
 
-    const openDetail = (idea: IdeaPost) => { setSelected(idea); setNewComment(""); setIsEditing(false); };
+    const openDetail = (idea: IdeaPost) => { setSelected(idea); setNewComment(loadDraft(`comment_ideas_${idea.id}`)); setIsEditing(false); };
     const closeDetail = () => { setSelected(null); setIsEditing(false); };
-    const openAdd = () => { setAdding(true); setTitle(""); setBody(""); setIdeaColor(MEMO_COLORS[0]); setIdeaBorder(""); };
-    const closeAdd = () => setAdding(false);
+    const openAdd = () => {
+        setIdeaColor(MEMO_COLORS[0]); setIdeaBorder("");
+        const d = loadDraft("ideas_add");
+        if (d) { try { const p = JSON.parse(d); setTitle(p.title || ""); setBody(p.content || ""); setDraftLoaded(true); } catch { setTitle(""); setBody(""); setDraftLoaded(false); } }
+        else { setTitle(""); setBody(""); setDraftLoaded(false); }
+        setAdding(true);
+    };
+    const closeAdd = () => { if (title.trim() || body.trim()) saveDraft("ideas_add", JSON.stringify({ title, content: body })); setAdding(false); setDraftLoaded(false); };
     const startEdit = () => { if (!selected) return; setTitle(selected.title); setBody(selected.body); setIdeaColor(selected.color || MEMO_COLORS[0]); setIdeaBorder(selected.borderColor || ""); setIsEditing(true); };
     const saveEdit = () => {
         if (!selected || !title.trim()) return;
@@ -3587,14 +3670,22 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
         onSave(updated); setSelected(updated); setIsEditing(false);
     };
 
+    // Draft auto-save for add form
+    useEffect(() => { if (adding) saveDraft("ideas_add", JSON.stringify({ title, content: body })); }, [title, body, adding]);
+
     const handleCreate = () => {
         if (!title.trim()) return;
+        clearDraft("ideas_add");
         onSave({ id: Date.now(), title: title.trim(), body: body.trim(), author: currentUser, date: new Date().toLocaleDateString("ko-KR"), comments: [], color: ideaColor, borderColor: ideaBorder });
-        closeAdd();
+        setDraftLoaded(false); setAdding(false);
     };
+
+    // Comment draft for ideas detail
+    useEffect(() => { if (selected) saveDraft(`comment_ideas_${selected.id}`, newComment); }, [newComment, selected?.id]);
 
     const addComment = () => {
         if (!newComment.trim() || !selected) return;
+        clearDraft(`comment_ideas_${selected.id}`);
         const updated = { ...selected, comments: [...selected.comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] };
         onSave(updated);
         setSelected(updated);
@@ -3628,7 +3719,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                             <span className={`text-[11px] font-medium ${idea.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                         </label>
                         <div className="flex items-start justify-between mb-2">
-                            <div className="text-[14px] font-semibold text-slate-800 break-words flex-1">{idea.title}</div>
+                            <div className="text-[14px] font-semibold text-slate-800 break-words flex-1">{idea.title}<SavingBadge id={idea.id} /></div>
                             <span className="text-[11px] text-slate-400 ml-2 whitespace-nowrap">{idea.date}</span>
                         </div>
                         {idea.body && <div className="text-[13px] text-slate-600 mb-3 line-clamp-3 break-words">{idea.body}</div>}
@@ -3663,6 +3754,12 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                             <button onClick={closeAdd} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
+                            {draftLoaded && (
+                                <div className="flex items-center justify-between px-3 py-2 rounded-lg text-[13px]" style={{background:"#FEF3C7", color:"#92400E", border:"1px solid #FDE68A"}}>
+                                    <span>임시저장된 글이 있습니다</span>
+                                    <button onClick={() => { setTitle(""); setBody(""); clearDraft("ideas_add"); setDraftLoaded(false); }} className="text-amber-600 hover:text-amber-800 font-medium ml-2">삭제</button>
+                                </div>
+                            )}
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">제목 *</label>
                                 <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
@@ -3708,7 +3805,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                                     ))}
                                     {selected.comments.length === 0 && <div className="text-[12px] text-slate-300 py-3 text-center">아직 댓글이 없습니다</div>}
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 items-center">
                                     <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글 작성..."
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                         onCompositionStart={() => { composingRef.current = true; }}
@@ -3716,18 +3813,19 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                                         onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
                                     <button onClick={addComment} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium">전송</button>
                                 </div>
+                                {newComment && hasDraft(`comment_ideas_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-200">
-                            <div className="flex items-center gap-2">
+                            {(currentUser === selected.author || currentUser === "박일웅") && (
+                                <button onClick={startEdit} className="px-3 py-1.5 text-[13px] text-blue-600 hover:bg-blue-50 rounded-lg font-medium">수정</button>
+                            )}
+                            <div className="flex items-center gap-3">
                                 {(currentUser === selected.author || currentUser === "박일웅") && (
-                                    <button onClick={startEdit} className="px-3 py-1.5 text-[13px] text-blue-600 hover:bg-blue-50 rounded-lg font-medium">수정</button>
+                                    <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(selected.id); closeDetail(); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                                 )}
-                                {(currentUser === selected.author || currentUser === "박일웅") && (
-                                    <button onClick={() => { onDelete(selected.id); closeDetail(); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
-                                )}
+                                <button onClick={closeDetail} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                             </div>
-                            <button onClick={closeDetail} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                         </div>
                     </div>
                 </div>
@@ -3764,9 +3862,9 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
     );
 }
 
-function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder, philosophy, onAddPhilosophy, onDeletePhilosophy, onUpdatePhilosophy, currentUser }: {
+function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder, philosophy, onAddPhilosophy, onDeletePhilosophy, onUpdatePhilosophy, onReorderPhilosophy, currentUser }: {
     announcements: Announcement[]; onAdd: (text: string, pinned?: boolean) => void; onDelete: (id: number) => void; onUpdate: (ann: Announcement) => void; onReorder: (list: Announcement[]) => void;
-    philosophy: Announcement[]; onAddPhilosophy: (text: string) => void; onDeletePhilosophy: (id: number) => void; onUpdatePhilosophy: (p: Announcement) => void;
+    philosophy: Announcement[]; onAddPhilosophy: (text: string) => void; onDeletePhilosophy: (id: number) => void; onUpdatePhilosophy: (p: Announcement) => void; onReorderPhilosophy: (list: Announcement[]) => void;
     currentUser: string;
 }) {
     const COLS = [
@@ -3782,6 +3880,7 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
     const [editText, setEditText] = useState("");
     const [draggedItem, setDraggedItem] = useState<{ id: number; col: ColKey } | null>(null);
     const [dropCol, setDropCol] = useState<ColKey | null>(null);
+    const [dropIdx, setDropIdx] = useState<number>(-1);
 
     const isLeader = currentUser === "박일웅" || Object.values(DEFAULT_TEAMS).some(t => t.lead === currentUser);
     const isPI = currentUser === "박일웅";
@@ -3817,23 +3916,54 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
         else onDelete(item.id);
     };
 
-    const handleDrop = (targetCol: ColKey) => {
-        if (!draggedItem || draggedItem.col === targetCol) { setDraggedItem(null); setDropCol(null); return; }
-        const srcCol = draggedItem.col;
-        if (srcCol === "urgent" && targetCol === "general") {
-            const ann = announcements.find(a => a.id === draggedItem.id);
-            if (ann) onUpdate({ ...ann, pinned: false });
-        } else if (srcCol === "general" && targetCol === "urgent") {
-            const ann = announcements.find(a => a.id === draggedItem.id);
-            if (ann) onUpdate({ ...ann, pinned: true });
-        } else if ((srcCol === "urgent" || srcCol === "general") && targetCol === "culture") {
-            const ann = announcements.find(a => a.id === draggedItem.id);
-            if (ann) { onDelete(ann.id); onAddPhilosophy(ann.text); }
-        } else if (srcCol === "culture" && (targetCol === "urgent" || targetCol === "general")) {
-            const phil = philosophy.find(p => p.id === draggedItem.id);
-            if (phil) { onDeletePhilosophy(phil.id); onAdd(phil.text, targetCol === "urgent"); }
+    const calcAnnDropIdx = (e: React.DragEvent, colEl: HTMLElement): number => {
+        const cards = Array.from(colEl.querySelectorAll("[data-ann-card]"));
+        for (let i = 0; i < cards.length; i++) {
+            const rect = cards[i].getBoundingClientRect();
+            if (e.clientY < rect.top + rect.height / 2) return i;
         }
-        setDraggedItem(null); setDropCol(null);
+        return cards.length;
+    };
+
+    const handleDrop = (targetCol: ColKey, e: React.DragEvent) => {
+        if (!draggedItem) { setDraggedItem(null); setDropCol(null); setDropIdx(-1); return; }
+        const targetItems = colData[targetCol];
+        const idx = dropIdx >= 0 ? dropIdx : targetItems.length;
+        if (draggedItem.col === targetCol) {
+            // Same-column reorder
+            const oldIdx = targetItems.findIndex(it => it.id === draggedItem.id);
+            if (oldIdx < 0 || oldIdx === idx || oldIdx === idx - 1) { setDraggedItem(null); setDropCol(null); setDropIdx(-1); return; }
+            const arr = [...targetItems];
+            const [moved] = arr.splice(oldIdx, 1);
+            const insertAt = idx > oldIdx ? idx - 1 : idx;
+            arr.splice(insertAt, 0, moved);
+            if (targetCol === "culture") {
+                onReorderPhilosophy(arr.map(({ _col, ...rest }) => rest));
+            } else {
+                // Rebuild full announcements: replace items of this column type while keeping the other type intact
+                const otherPinned = targetCol === "urgent" ? false : true;
+                const others = announcements.filter(a => a.pinned === otherPinned);
+                const reordered = arr.map(({ _col, ...rest }) => rest);
+                onReorder([...reordered, ...others]);
+            }
+        } else {
+            // Cross-column move
+            const srcCol = draggedItem.col;
+            if (srcCol === "urgent" && targetCol === "general") {
+                const ann = announcements.find(a => a.id === draggedItem.id);
+                if (ann) onUpdate({ ...ann, pinned: false });
+            } else if (srcCol === "general" && targetCol === "urgent") {
+                const ann = announcements.find(a => a.id === draggedItem.id);
+                if (ann) onUpdate({ ...ann, pinned: true });
+            } else if ((srcCol === "urgent" || srcCol === "general") && targetCol === "culture") {
+                const ann = announcements.find(a => a.id === draggedItem.id);
+                if (ann) { onDelete(ann.id); onAddPhilosophy(ann.text); }
+            } else if (srcCol === "culture" && (targetCol === "urgent" || targetCol === "general")) {
+                const phil = philosophy.find(p => p.id === draggedItem.id);
+                if (phil) { onDeletePhilosophy(phil.id); onAdd(phil.text, targetCol === "urgent"); }
+            }
+        }
+        setDraggedItem(null); setDropCol(null); setDropIdx(-1);
     };
 
     return (
@@ -3845,9 +3975,9 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
                     const colCfg = col;
                     return (
                         <div key={col.key} className="flex-1 min-w-0"
-                            onDragOver={e => { e.preventDefault(); setDropCol(col.key); }}
-                            onDragLeave={() => setDropCol(null)}
-                            onDrop={() => handleDrop(col.key)}>
+                            onDragOver={e => { e.preventDefault(); setDropCol(col.key); setDropIdx(calcAnnDropIdx(e, e.currentTarget as HTMLElement)); }}
+                            onDragLeave={() => { setDropCol(null); setDropIdx(-1); }}
+                            onDrop={e => handleDrop(col.key, e)}>
                             {/* Column header */}
                             <div className="flex items-center justify-between mb-3 pb-2" style={{ borderBottom: `2.5px solid ${colCfg.color}` }}>
                                 <div className="flex items-center gap-2">
@@ -3873,18 +4003,14 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
                             {/* Cards */}
                             <div className={`min-h-[60px] space-y-2 rounded-lg transition-colors ${dropCol === col.key && draggedItem && draggedItem.col !== col.key ? "bg-blue-50/60" : ""}`}>
                                 {items.map(item => (
-                                    <div key={item.id} draggable
+                                    <div key={item.id} draggable data-ann-card
                                         onDragStart={() => setDraggedItem({ id: item.id, col: col.key })}
-                                        onDragEnd={() => { setDraggedItem(null); setDropCol(null); }}
+                                        onDragEnd={() => { setDraggedItem(null); setDropCol(null); setDropIdx(-1); }}
                                         onClick={() => { if (isPI || currentUser === item.author) openEdit(item); }}
                                         className={`group/card bg-white rounded-xl p-3.5 cursor-grab transition-all flex flex-col ${draggedItem?.id === item.id ? "opacity-40" : ""}`}
                                         style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.08)", borderLeft: `4px solid ${colCfg.color}` }}>
                                         <div className="flex items-start justify-between">
-                                            <span className="text-[14px] text-slate-800 whitespace-pre-wrap break-words line-clamp-4 flex-1" style={{ lineHeight: 1.6 }}>{item.text}</span>
-                                            {(isPI || currentUser === item.author) && (
-                                                <button onClick={e => { e.stopPropagation(); deleteItem(item); }}
-                                                    className="text-slate-300 hover:text-red-500 text-[13px] ml-2 flex-shrink-0 opacity-0 group-hover/card:opacity-100 transition-opacity">✕</button>
-                                            )}
+                                            <span className="text-[14px] text-slate-800 whitespace-pre-wrap break-words line-clamp-4 flex-1" style={{ lineHeight: 1.6 }}>{item.text}<SavingBadge id={item.id} /></span>
                                         </div>
                                         <div className="mt-auto pt-2 text-[11px] text-slate-400">{item.author} · {item.date}</div>
                                     </div>
@@ -3910,11 +4036,11 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
                                 className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" autoFocus />
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-200">
-                            <button onClick={() => { deleteItem(editing); setEditing(null); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                             <div className="flex gap-2">
                                 <button onClick={() => setEditing(null)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                                 <button onClick={saveEdit} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                             </div>
+                            <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { deleteItem(editing); setEditing(null); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                         </div>
                     </div>
                 </div>
@@ -4198,7 +4324,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                         <span className={`text-[10px] font-medium ${m.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                                     </label>
                                     <div className="flex items-start justify-between mb-1">
-                                        <div className="text-[13px] font-semibold text-slate-800 break-words flex-1">{m.title}</div>
+                                        <div className="text-[13px] font-semibold text-slate-800 break-words flex-1">{m.title}<SavingBadge id={m.id} /></div>
                                         <span className="text-[10px] text-slate-400 ml-1 whitespace-nowrap">{m.updatedAt}</span>
                                     </div>
                                     {m.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-3 break-words">{m.content}</div>}
@@ -4247,7 +4373,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                 {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mb-1 cursor-pointer" onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                 {msg.text && <div className="whitespace-pre-wrap">{msg.text}</div>}
                                 <div className={`text-[10px] mt-0.5 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>
-                                    {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-300">⚠️ 전송 실패 <button onClick={(e) => { e.stopPropagation(); onRetryChat(msg.id); }} className="underline hover:text-red-200 ml-0.5">재전송</button></span> : msg.date}
+                                    {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-300">⚠️ 전송 실패 <button onClick={(e) => { e.stopPropagation(); onRetryChat(msg.id); }} className="underline hover:text-red-200 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={(e) => { e.stopPropagation(); onDeleteChat(msg.id); }} className="underline hover:text-red-200">삭제</button></span> : msg.date}
                                 </div>
                             </div>
                             {msg.author === currentUser && !msg._sending && !msg._failed && (
@@ -4368,20 +4494,26 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
     meeting: Meeting | null; onSave: (m: Meeting) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; teamNames: string[];
 }) {
     const isEdit = !!meeting;
-    const [title, setTitle] = useState(meeting?.title || "");
+    const [title, setTitle] = useState(() => { if (meeting) return meeting.title; const d = loadDraft("meeting_add"); if (d) { try { return JSON.parse(d).title || ""; } catch {} } return ""; });
     const [goal, setGoal] = useState(meeting?.goal || "");
-    const [summary, setSummary] = useState(meeting?.summary || "");
+    const [summary, setSummary] = useState(() => { if (meeting) return meeting.summary || ""; const d = loadDraft("meeting_add"); if (d) { try { return JSON.parse(d).content || ""; } catch {} } return ""; });
     const [date, setDate] = useState(meeting?.date || new Date().toISOString().split("T")[0]);
     const [assignees, setAssignees] = useState<string[]>(meeting?.assignees || []);
     const [team, setTeam] = useState(meeting?.team || "");
     const [comments, setComments] = useState<Comment[]>(meeting?.comments || []);
     const [newComment, setNewComment] = useState("");
     const composingRef = useRef(false);
+    const [meetingDraftLoaded] = useState(() => { if (meeting) return false; const d = loadDraft("meeting_add"); if (d) { try { const p = JSON.parse(d); return !!(p.title || p.content); } catch {} } return false; });
+    const [meetingDraftVisible, setMeetingDraftVisible] = useState(meetingDraftLoaded);
+
+    // Draft auto-save for add form
+    useEffect(() => { if (!isEdit) saveDraft("meeting_add", JSON.stringify({ title, content: summary })); }, [title, summary, isEdit]);
 
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const handleSave = () => {
         if (!title.trim()) return;
+        if (!isEdit) { clearDraft("meeting_add"); setMeetingDraftVisible(false); }
         onSave({ id: meeting?.id ?? Date.now(), title: title.trim(), goal: goal.trim(), summary: summary.trim(), date, assignees, status: "done", creator: meeting?.creator || currentUser, createdAt: meeting?.createdAt || new Date().toLocaleString("ko-KR"), comments, team, needsDiscussion: meeting?.needsDiscussion });
     };
     const addComment = () => {
@@ -4390,14 +4522,22 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
         setNewComment("");
     };
 
+    const handleClose = () => { if (!isEdit && (title.trim() || summary.trim())) saveDraft("meeting_add", JSON.stringify({ title, content: summary })); onClose(); };
+
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={handleClose}>
             <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "회의록 수정" : "회의록 작성"}</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                    <button onClick={handleClose} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
                 </div>
                 <div className="p-4 space-y-3">
+                    {meetingDraftVisible && !isEdit && (
+                        <div className="flex items-center justify-between px-3 py-2 rounded-lg text-[13px]" style={{background:"#FEF3C7", color:"#92400E", border:"1px solid #FDE68A"}}>
+                            <span>임시저장된 글이 있습니다</span>
+                            <button onClick={() => { setTitle(""); setSummary(""); clearDraft("meeting_add"); setMeetingDraftVisible(false); }} className="text-amber-600 hover:text-amber-800 font-medium ml-2">삭제</button>
+                        </div>
+                    )}
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">회의 이름 *</label>
                         <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
@@ -4444,13 +4584,11 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
                     </div>
                 </div>
                 <div className="flex items-center justify-between p-4 border-t border-slate-200">
-                    <div>
-                        {isEdit && onDelete && <button onClick={() => { onDelete(meeting!.id); onClose(); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
-                    </div>
                     <div className="flex gap-2">
-                        <button onClick={onClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                        <button onClick={handleClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                         <button onClick={() => { handleSave(); onClose(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
+                    {isEdit && onDelete && <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDelete(meeting!.id); onClose(); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
                 </div>
             </div>
         </div>
@@ -4484,7 +4622,7 @@ function MeetingView({ meetings, onSave, onDelete, currentUser, teamNames }: {
                             <span className={`text-[11px] font-medium ${m.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                         </label>
                         <div className="flex items-start justify-between mb-1">
-                            <div className="text-[14px] font-semibold text-slate-800 break-words flex-1">{m.title}</div>
+                            <div className="text-[14px] font-semibold text-slate-800 break-words flex-1">{m.title}<SavingBadge id={m.id} /></div>
                             <span className="text-[11px] text-slate-400 ml-2 whitespace-nowrap">{m.date}</span>
                         </div>
                         {m.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold self-start mb-1">{m.team}</span>}
@@ -4541,6 +4679,9 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, onRetry, fil
     const [selectedCard, setSelectedCard] = useState<TeamMemoCard | null>(null);
     const [boardComment, setBoardComment] = useState("");
     const [boardEditing, setBoardEditing] = useState(false);
+    // Lab board comment draft
+    const openBoardDetail = (card: TeamMemoCard) => { setSelectedCard(card); setBoardComment(loadDraft(`comment_labboard_${card.id}`)); };
+    useEffect(() => { if (selectedCard) saveDraft(`comment_labboard_${selectedCard.id}`, boardComment); }, [boardComment, selectedCard?.id]);
     const [mobileTab, setMobileTab] = useState<"chat"|"board"|"files">("chat");
 
     const send = () => {
@@ -4596,17 +4737,15 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, onRetry, fil
                     {board.map(card => {
                         const cmts = card.comments || [];
                         return (
-                            <div key={card.id} onClick={() => setSelectedCard(card)}
+                            <div key={card.id} onClick={() => openBoardDetail(card)}
                                 className={`rounded-xl p-3 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col group relative`}
                                 style={{ background: card.color || "#fff", border: "1px solid #E2E8F0", borderLeft: card.needsDiscussion ? "3px solid #EF4444" : undefined }}>
-                                <button onClick={e => { e.stopPropagation(); onDeleteBoard(card.id); }}
-                                    className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                 <label className="flex items-center gap-1 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
                                     <input type="checkbox" checked={!!card.needsDiscussion} onChange={() => onSaveBoard({ ...card, needsDiscussion: !card.needsDiscussion })} className="w-3 h-3 accent-red-500" />
                                     <span className={`text-[10px] font-medium ${card.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                                 </label>
                                 <div className="flex items-start justify-between mb-1">
-                                    <h4 className="text-[13px] font-semibold text-slate-800 break-words flex-1">{card.title}</h4>
+                                    <h4 className="text-[13px] font-semibold text-slate-800 break-words flex-1">{card.title}<SavingBadge id={card.id} /></h4>
                                     <span className="text-[10px] text-slate-400 ml-1 whitespace-nowrap">{card.updatedAt}</span>
                                 </div>
                                 {card.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-2 break-words">{card.content}</div>}
@@ -4658,7 +4797,7 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, onRetry, fil
                                 {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[300px] rounded-md mb-1.5 cursor-pointer" onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                 {msg.text && <div className="whitespace-pre-wrap">{msg.text}</div>}
                                 <div className={`text-[11px] mt-1 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>
-                                    {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-300">⚠️ 전송 실패 <button onClick={(e) => { e.stopPropagation(); onRetry(msg.id); }} className="underline hover:text-red-200 ml-0.5">재전송</button></span> : msg.date}
+                                    {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-300">⚠️ 전송 실패 <button onClick={(e) => { e.stopPropagation(); onRetry(msg.id); }} className="underline hover:text-red-200 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={(e) => { e.stopPropagation(); onDelete(msg.id); }} className="underline hover:text-red-200">삭제</button></span> : msg.date}
                                 </div>
                             </div>
                             {msg.author === currentUser && !msg._sending && !msg._failed && (
@@ -4726,25 +4865,26 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, onRetry, fil
                                     ))}
                                     {(selectedCard.comments || []).length === 0 && <div className="text-[12px] text-slate-300 py-3 text-center">아직 댓글이 없습니다</div>}
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 items-center">
                                     <input value={boardComment} onChange={e => setBoardComment(e.target.value)} placeholder="댓글 작성..."
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                        onKeyDown={e => chatKeyDown(e, () => { if (!boardComment.trim()) return; const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: Date.now(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); })} />
-                                    <button onClick={() => { if (!boardComment.trim()) return; const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: Date.now(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); }}
+                                        onKeyDown={e => chatKeyDown(e, () => { if (!boardComment.trim()) return; clearDraft(`comment_labboard_${selectedCard.id}`); const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: Date.now(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); })} />
+                                    <button onClick={() => { if (!boardComment.trim()) return; clearDraft(`comment_labboard_${selectedCard.id}`); const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: Date.now(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); }}
                                         className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium">전송</button>
                                 </div>
+                                {boardComment && hasDraft(`comment_labboard_${selectedCard.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-200">
-                            <div className="flex items-center gap-2">
+                            {(currentUser === selectedCard.author || currentUser === "박일웅") && (
+                                <button onClick={() => { setBoardTitle(selectedCard.title); setBoardContent(selectedCard.content); setBoardColor(selectedCard.color); setBoardEditing(true); }} className="px-3 py-1.5 text-[13px] text-blue-600 hover:bg-blue-50 rounded-lg font-medium">수정</button>
+                            )}
+                            <div className="flex items-center gap-3">
                                 {(currentUser === selectedCard.author || currentUser === "박일웅") && (
-                                    <button onClick={() => { setBoardTitle(selectedCard.title); setBoardContent(selectedCard.content); setBoardColor(selectedCard.color); setBoardEditing(true); }} className="px-3 py-1.5 text-[13px] text-blue-600 hover:bg-blue-50 rounded-lg font-medium">수정</button>
+                                    <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDeleteBoard(selectedCard.id); setSelectedCard(null); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                                 )}
-                                {(currentUser === selectedCard.author || currentUser === "박일웅") && (
-                                    <button onClick={() => { onDeleteBoard(selectedCard.id); setSelectedCard(null); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
-                                )}
+                                <button onClick={() => { setSelectedCard(null); setBoardComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                             </div>
-                            <button onClick={() => { setSelectedCard(null); setBoardComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                         </div>
                     </div>
                 </div>
@@ -4949,7 +5089,8 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
         else { setTitle(""); setContent(""); setCardDraftLoaded(false); }
         setShowForm(true);
     };
-    const openDetail = (c: TeamMemoCard) => { setSelected(c); setIsEditing(false); setNewComment(""); };
+    const teamMemoDraftKey = (id: number) => `comment_teammemo_${teamName}_${id}`;
+    const openDetail = (c: TeamMemoCard) => { setSelected(c); setIsEditing(false); setNewComment(loadDraft(teamMemoDraftKey(c.id))); };
     const startEdit = () => {
         if (!selected) return;
         setEditing(selected); setTitle(selected.title); setContent(selected.content); setCol(MEMO_COL_MIGRATE(selected.status)); setColor(selected.color); setBorderClr(selected.borderColor || ""); setIsEditing(true);
@@ -4965,8 +5106,12 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
         onSaveCard({ id: Date.now(), title: title.trim() || "제목 없음", content, status: col, color, borderColor: borderClr, author: currentUser, updatedAt: now, comments: [] });
         setShowForm(false); clearDraft(cardDraftKey); setCardDraftLoaded(false);
     };
+    // Team memo comment draft
+    useEffect(() => { if (selected && !isEditing) saveDraft(teamMemoDraftKey(selected.id), newComment); }, [newComment, selected?.id, isEditing]);
+
     const addComment = () => {
         if (!newComment.trim() || !selected) return;
+        clearDraft(teamMemoDraftKey(selected.id));
         const updated = { ...selected, comments: [...(selected.comments || []), { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR") }] };
         onSaveCard(updated); setSelected(updated); setNewComment("");
     };
@@ -5069,14 +5214,12 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                     onClick={() => openDetail(card)}
                                     className={`rounded-xl p-3 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col group relative ${draggedId === card.id ? "opacity-40" : ""}`}
                                     style={{ background: card.color || "#fff", border: card.borderColor ? `2px solid ${card.borderColor}` : "1px solid #E2E8F0", borderLeft: card.needsDiscussion && !card.borderColor ? "3px solid #EF4444" : undefined }}>
-                                    <button onClick={e => { e.stopPropagation(); onDeleteCard(card.id); }}
-                                        className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                     <label className="flex items-center gap-1 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
                                         <input type="checkbox" checked={!!card.needsDiscussion} onChange={() => onSaveCard({ ...card, needsDiscussion: !card.needsDiscussion })} className="w-3 h-3 accent-red-500" />
                                         <span className={`text-[10px] font-medium ${card.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                                     </label>
                                     <div className="flex items-start justify-between mb-1">
-                                        <h4 className="text-[13px] font-semibold text-slate-800 break-words flex-1">{card.title}</h4>
+                                        <h4 className="text-[13px] font-semibold text-slate-800 break-words flex-1">{card.title}<SavingBadge id={card.id} /></h4>
                                         <span className="text-[10px] text-slate-400 ml-1 whitespace-nowrap">{card.updatedAt}</span>
                                     </div>
                                     {card.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-2 break-words">{card.content}</div>}
@@ -5172,7 +5315,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                         </div>
                                         {isMe && (
                                             <div className="text-[11px] text-slate-400 mt-0.5 px-1">
-                                                {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-500">⚠️ 전송 실패 <button onClick={() => onRetryChat(msg.id)} className="underline hover:text-red-600 ml-0.5">재전송</button></span> : timeStr}
+                                                {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-500">⚠️ 전송 실패 <button onClick={() => onRetryChat(msg.id)} className="underline hover:text-red-600 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={() => onDeleteChat(msg.id)} className="underline hover:text-red-600">삭제</button></span> : timeStr}
                                             </div>
                                         )}
                                         {!msg._sending && !msg._failed && Object.keys(reactions).length > 0 && (
@@ -5256,21 +5399,22 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                     ))}
                                     {(selected.comments || []).length === 0 && <div className="text-[12px] text-slate-300 py-3 text-center">아직 댓글이 없습니다</div>}
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 items-center">
                                     <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글 작성..."
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                         onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
                                     <button onClick={addComment} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium flex-shrink-0">전송</button>
                                 </div>
+                                {newComment && hasDraft(teamMemoDraftKey(selected.id)) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-200">
-                            <div className="flex items-center gap-2">
-                                <button onClick={startEdit} className="px-3 py-1.5 text-[13px] text-blue-600 hover:bg-blue-50 rounded-lg font-medium">수정</button>
-                                <button onClick={() => { onDeleteCard(selected.id); setSelected(null); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                            <button onClick={startEdit} className="px-3 py-1.5 text-[13px] text-blue-600 hover:bg-blue-50 rounded-lg font-medium">수정</button>
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onDeleteCard(selected.id); setSelected(null); } }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                                <button onClick={() => setSelected(null)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                             </div>
-                            <button onClick={() => setSelected(null)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
                         </div>
                     </div>
                 </div>
@@ -5414,8 +5558,9 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
     // Todo summary
     const activeTodos = ft.filter(t => !t.done).length;
 
-    // Recent announcements (last 3)
-    const recentAnn = [...announcements].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 3);
+    // Urgent & general announcements for overview
+    const urgentAnn = announcements.filter(a => a.pinned).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 12);
+    const generalAnn = announcements.filter(a => !a.pinned).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 12);
 
     // My items (always filtered to currentUser)
     const myPapers = papers.filter(p => p.assignees.includes(currentUser));
@@ -5445,10 +5590,9 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                         </span>
                         {onlineUsers.length > 0 && (
                             <div className="flex items-center gap-1.5 ml-1">
-                                {onlineUsers.slice(0, 3).map(u => (
+                                {onlineUsers.map(u => (
                                     <span key={u.name} className="text-[12px] font-medium" style={{color:"#64748B"}} title={u.name}>{MEMBERS[u.name]?.emoji || "👤"} {u.name}</span>
                                 ))}
-                                {onlineUsers.length > 3 && <span className="text-[12px]" style={{color:"#94A3B8", fontWeight:500}}>+{onlineUsers.length - 3}명</span>}
                             </div>
                         )}
                     </div>
@@ -5456,22 +5600,23 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
             )}
             {/* Personal mode header */}
             {isPersonal && (
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl px-6 py-4 text-white flex items-center gap-6 flex-wrap">
+                <div className="bg-white border border-slate-200 rounded-2xl px-6 py-4 flex items-center justify-between flex-wrap gap-4">
                     <div className="flex items-center gap-3 flex-shrink-0">
-                        <span className="text-2xl">{members[currentUser]?.emoji || "👤"}</span>
+                        <div className="w-[42px] h-[42px] rounded-full flex items-center justify-center text-[20px]" style={{background:"#F1F5F9", border:"2px solid #E2E8F0"}}>{members[currentUser]?.emoji || "👤"}</div>
                         <div>
-                            <h2 className="text-[18px] font-bold text-white leading-tight">{currentUser}</h2>
-                            <div className="text-[12px] text-blue-200">{members[currentUser]?.team} {members[currentUser]?.role && `· ${members[currentUser]?.role}`}</div>
+                            <h2 className="text-[18px] font-bold text-slate-800 leading-tight">{currentUser}</h2>
+                            <div className="text-[12px] text-slate-400">{members[currentUser]?.team} {members[currentUser]?.role && `· ${members[currentUser]?.role}`}</div>
                         </div>
+                        {myTarget && (
+                            <div className="text-[13px] text-slate-500 max-w-[320px] truncate ml-3 px-3 py-1 rounded-lg" style={{background:"#F8FAFC"}}>📌 {myTarget.text}</div>
+                        )}
                     </div>
-                    <div className="flex items-center gap-4 flex-wrap">
-                        {myTarget ? (
-                            <div className="text-[13px] text-blue-100 max-w-[320px] truncate">📌 {myTarget.text}</div>
-                        ) : (
-                            <span className="text-[13px] text-blue-200">오늘 목표 미작성 · <button onClick={() => onNavigate("daily")} className="underline underline-offset-2 text-white font-medium">작성하기</button></span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {!myTarget && (
+                            <button onClick={() => onNavigate("daily")} className="px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors" style={{background:"#EFF6FF", color:"#3B82F6", border:"1px solid #DBEAFE"}} onMouseEnter={e => (e.currentTarget.style.background = "#DBEAFE")} onMouseLeave={e => (e.currentTarget.style.background = "#EFF6FF")}>🎯 오늘 목표 작성하기</button>
                         )}
                         {!statusMessages[currentUser] && (
-                            <span className="text-[13px] text-blue-200">한마디 미작성 · <button onClick={() => onNavigate("settings")} className="underline underline-offset-2 text-white font-medium">작성하기</button></span>
+                            <button onClick={() => onNavigate("settings")} className="px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors" style={{background:"#F0FDF4", color:"#16A34A", border:"1px solid #DCFCE7"}} onMouseEnter={e => (e.currentTarget.style.background = "#DCFCE7")} onMouseLeave={e => (e.currentTarget.style.background = "#F0FDF4")}>💬 한마디 작성하기</button>
                         )}
                     </div>
                 </div>
@@ -5514,8 +5659,116 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                 </div>
             </div>
 
-            {/* Row 2: 논의 필요 + (오늘목표 현황 or 투두) + 최근 공지 */}
+            {/* Row 2: 오늘 목표 현황 (full width) / 내 To-do (personal) */}
+            {isPersonal ? (
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
+                    <button onClick={() => onNavigate("todos")} className="w-full text-left">
+                        <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
+                            내 To-do
+                            {myTodos.length > 0 && <span className="min-w-[20px] h-[20px] flex items-center justify-center rounded-full bg-red-500 text-white text-[12px] font-bold">{myTodos.length}</span>}
+                        </h3>
+                    </button>
+                    {myTodos.length === 0 ? (
+                        <div className="text-[13px] text-slate-300 text-center py-6">할 일 없음</div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {myTodos.map(t => (
+                                <div key={t.id} className="flex items-start gap-1.5 text-[12px] text-slate-600 p-2.5 rounded-lg hover:bg-slate-50" style={{background:"#F8FAFC"}}>
+                                    <span className="shrink-0">{PRIORITY_ICON[t.priority]}</span>
+                                    <span className="leading-relaxed">{t.text}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
+                    <button onClick={() => onNavigate("daily")} className="w-full text-left">
+                        <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
+                            오늘 목표 현황
+                            <span className="text-[12px] font-medium text-slate-400">{targetsWritten}/{MEMBER_NAMES.length}</span>
+                        </h3>
+                    </button>
+                    <div className="mb-4">
+                        <div className="w-full rounded-[3px] h-[6px]" style={{background:"#F1F5F9"}}>
+                            <div className="h-[6px] rounded-[3px]" style={{ width: `${MEMBER_NAMES.length > 0 ? (targetsWritten / MEMBER_NAMES.length) * 100 : 0}%`, background: "linear-gradient(90deg, #3B82F6, #22C55E)", transition: "width 1s cubic-bezier(0.4, 0, 0.2, 1)" }} />
+                        </div>
+                    </div>
+                    {targetsMissing.length > 0 && (
+                        <div className="mb-4">
+                            <div className="text-[12px] text-slate-400 mb-1.5">미작성:</div>
+                            <div className="flex flex-wrap gap-1.5">
+                                {targetsMissing.map(name => (
+                                    <span key={name} className="text-[11px] px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-100">{MEMBERS[name]?.emoji} {name}</span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {targetsMissing.length === 0 && (
+                        <div className="text-[13px] text-emerald-500 font-medium mb-4">전원 작성 완료</div>
+                    )}
+                    {todayTargets.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {todayTargets.map(t => (
+                                <div key={t.name} className="flex items-start gap-2.5 p-3 rounded-xl" style={{background:"#F8FAFC"}}>
+                                    <span className="text-[15px] shrink-0">{MEMBERS[t.name]?.emoji}</span>
+                                    <div className="min-w-0">
+                                        <div className="text-[12px] font-semibold text-slate-700">{t.name}</div>
+                                        <div className="text-[12px] text-slate-500 leading-relaxed mt-0.5">{t.text}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Row 3: 긴급 공지 | 일반 공지 | 논의 필요 */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
+                {/* 긴급 공지 */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
+                    <button onClick={() => onNavigate("announcements")} className="w-full text-left">
+                        <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
+                            🚨 긴급 공지
+                            {urgentAnn.length > 0 && <span className="px-1.5 py-0.5 rounded-md bg-red-50 text-red-500 text-[11px] font-semibold">{urgentAnn.length}</span>}
+                        </h3>
+                    </button>
+                    {urgentAnn.length === 0 ? (
+                        <div className="text-[13px] text-slate-300 text-center py-6">긴급 공지 없음</div>
+                    ) : (
+                        <div className="space-y-2 max-h-[260px] overflow-y-auto">
+                            {urgentAnn.map(ann => (
+                                <div key={ann.id} className="p-3 rounded-xl cursor-pointer transition-colors" style={{background:"#FEF2F2", borderLeft:"3px solid #EF4444"}} onMouseEnter={e => (e.currentTarget.style.background = "#FEE2E2")} onMouseLeave={e => (e.currentTarget.style.background = "#FEF2F2")}>
+                                    <div className="text-[13px] leading-relaxed" style={{color:"#334155", fontWeight:500}}>{ann.text.length > 50 ? ann.text.slice(0, 50) + "..." : ann.text}</div>
+                                    <div className="text-[11px] mt-1" style={{color:"#94A3B8"}}>{members[ann.author]?.emoji} {ann.author} · {ann.date}</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* 일반 공지 */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
+                    <button onClick={() => onNavigate("announcements")} className="w-full text-left">
+                        <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
+                            📌 일반 공지
+                            {generalAnn.length > 0 && <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-500 text-[11px] font-semibold">{generalAnn.length}</span>}
+                        </h3>
+                    </button>
+                    {generalAnn.length === 0 ? (
+                        <div className="text-[13px] text-slate-300 text-center py-6">일반 공지 없음</div>
+                    ) : (
+                        <div className="space-y-2 max-h-[260px] overflow-y-auto">
+                            {generalAnn.map(ann => (
+                                <div key={ann.id} className="p-3 rounded-xl cursor-pointer transition-colors" style={{background:"#EFF6FF", borderLeft:"3px solid #3B82F6"}} onMouseEnter={e => (e.currentTarget.style.background = "#DBEAFE")} onMouseLeave={e => (e.currentTarget.style.background = "#EFF6FF")}>
+                                    <div className="text-[13px] leading-relaxed" style={{color:"#334155", fontWeight:500}}>{ann.text.length > 50 ? ann.text.slice(0, 50) + "..." : ann.text}</div>
+                                    <div className="text-[11px] mt-1" style={{color:"#94A3B8"}}>{members[ann.author]?.emoji} {ann.author} · {ann.date}</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
                 {/* 논의 필요 */}
                 <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
                     <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
@@ -5525,9 +5778,9 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                     {discussionItems.length === 0 ? (
                         <div className="text-[13px] text-slate-300 text-center py-6">논의 필요 항목 없음</div>
                     ) : (
-                        <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                        <div className="space-y-1.5 max-h-[260px] overflow-y-auto">
                             {discussionItems.slice(0, 10).map((item, i) => (
-                                <button key={i} onClick={() => onNavigate(item.tab)} className="w-full flex items-start gap-2.5 p-3.5 rounded-xl text-left transition-all group" style={{background:"#FEF2F2", borderLeft:"3px solid #EF4444"}}>
+                                <button key={i} onClick={() => onNavigate(item.tab)} className="w-full flex items-start gap-2.5 p-3 rounded-xl text-left transition-all group" style={{background:"#FEF2F2", borderLeft:"3px solid #EF4444"}}>
                                     <span className="text-[13px] mt-0.5">{item.icon}</span>
                                     <div className="flex-1 min-w-0">
                                         <div className="text-[13.5px] text-slate-800 leading-snug truncate group-hover:text-red-600 transition-colors" style={{fontWeight:600}}>{item.title}</div>
@@ -5536,85 +5789,6 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                                 </button>
                             ))}
                             {discussionItems.length > 10 && <div className="text-[12px] text-slate-400 text-center py-1">+{discussionItems.length - 10}개 더</div>}
-                        </div>
-                    )}
-                </div>
-
-                {/* 오늘 목표 현황 (team) / 투두 리스트 (personal) */}
-                {isPersonal ? (
-                    <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
-                        <button onClick={() => onNavigate("todos")} className="w-full text-left">
-                            <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
-                                내 To-do
-                                {myTodos.length > 0 && <span className="min-w-[20px] h-[20px] flex items-center justify-center rounded-full bg-red-500 text-white text-[12px] font-bold">{myTodos.length}</span>}
-                            </h3>
-                        </button>
-                        {myTodos.length === 0 ? (
-                            <div className="text-[13px] text-slate-300 text-center py-6">할 일 없음</div>
-                        ) : (
-                            <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
-                                {myTodos.map(t => (
-                                    <div key={t.id} className="flex items-start gap-1.5 text-[12px] text-slate-600 p-1.5 rounded hover:bg-slate-50">
-                                        <span className="shrink-0">{PRIORITY_ICON[t.priority]}</span>
-                                        <span className="leading-relaxed">{t.text}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
-                        <button onClick={() => onNavigate("daily")} className="w-full text-left">
-                            <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
-                                오늘 목표 현황
-                                <span className="text-[12px] font-medium text-slate-400">{targetsWritten}/{MEMBER_NAMES.length}</span>
-                            </h3>
-                        </button>
-                        <div className="mb-3">
-                            <div className="w-full rounded-[3px] h-[6px]" style={{background:"#F1F5F9"}}>
-                                <div className="h-[6px] rounded-[3px]" style={{ width: `${MEMBER_NAMES.length > 0 ? (targetsWritten / MEMBER_NAMES.length) * 100 : 0}%`, background: "linear-gradient(90deg, #3B82F6, #22C55E)", transition: "width 1s cubic-bezier(0.4, 0, 0.2, 1)" }} />
-                            </div>
-                        </div>
-                        {targetsMissing.length > 0 ? (
-                            <div>
-                                <div className="text-[12px] text-slate-400 mb-1.5">미작성:</div>
-                                <div className="flex flex-wrap gap-1">
-                                    {targetsMissing.map(name => (
-                                        <span key={name} className="text-[11px] px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-100">{MEMBERS[name]?.emoji} {name}</span>
-                                    ))}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="text-[13px] text-emerald-500 font-medium text-center py-2">전원 작성 완료</div>
-                        )}
-                        {todayTargets.length > 0 && (
-                            <div className="mt-3 space-y-1 max-h-[140px] overflow-y-auto">
-                                {todayTargets.map(t => (
-                                    <div key={t.name} className="flex items-start gap-2 py-1">
-                                        <span className="text-[11px] font-medium text-slate-500 shrink-0 mt-0.5">{MEMBERS[t.name]?.emoji} {t.name}</span>
-                                        <span className="text-[12px] text-slate-600 leading-relaxed">{t.text.length > 40 ? t.text.slice(0, 40) + "..." : t.text}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* 최근 공지 */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
-                    <button onClick={() => onNavigate("announcements")} className="w-full text-left">
-                        <h3 className="text-[16px] font-bold text-slate-900 mb-4">최근 공지</h3>
-                    </button>
-                    {recentAnn.length === 0 ? (
-                        <div className="text-[13px] text-slate-300 text-center py-6">공지 없음</div>
-                    ) : (
-                        <div className="space-y-2">
-                            {recentAnn.map(ann => (
-                                <div key={ann.id} className="p-3.5 rounded-[10px] cursor-pointer transition-colors" style={{background:"#F8FAFC"}} onMouseEnter={e => (e.currentTarget.style.background = "#F1F5F9")} onMouseLeave={e => (e.currentTarget.style.background = "#F8FAFC")}>
-                                    <div className="text-[13px] leading-relaxed" style={{color:"#334155", fontWeight:500}}>{ann.text.length > 60 ? ann.text.slice(0, 60) + "..." : ann.text}</div>
-                                    <div className="text-[11px] mt-1.5" style={{color:"#94A3B8"}}>{members[ann.author]?.emoji} {ann.author} · {ann.date}</div>
-                                </div>
-                            ))}
                         </div>
                     )}
                 </div>
@@ -5910,6 +6084,7 @@ export default function DashboardPage() {
     const allPeople = useMemo(() => ["전체", ...memberNames], [memberNames]);
 
     const [savingIds, setSavingIds] = useState<Set<number>>(new Set());
+    const pendingSavesRef = useRef(0);
     const [toast, setToast] = useState("");
     useEffect(() => { if (toast) { const t = setTimeout(() => setToast(""), 3000); return () => clearTimeout(t); } }, [toast]);
 
@@ -5919,13 +6094,17 @@ export default function DashboardPage() {
 
     const trackSave = useCallback((itemId: number, section: string, data: unknown, rollback: () => void) => {
         setSavingIds(prev => new Set(prev).add(itemId));
+        pendingSavesRef.current++;
         saveSection(section, data).then(ok => {
+            pendingSavesRef.current--;
             setSavingIds(prev => { const s = new Set(prev); s.delete(itemId); return s; });
             if (!ok) { rollback(); setToast("저장에 실패했습니다. 다시 시도해주세요."); }
         });
     }, [saveSection]);
 
     const fetchData = useCallback(async () => {
+        // Skip polling if saves are in-flight to avoid overwriting optimistic state
+        if (pendingSavesRef.current > 0) return;
         try {
             const res = await fetch("/api/dashboard?section=all");
             const d = await res.json();
@@ -6054,9 +6233,10 @@ export default function DashboardPage() {
     }, [userName]);
 
     // chatReadTs: mark current tab as read (on tab switch + when new msgs arrive while viewing)
-    const activeChatLen = activeTab === "labChat" ? labChat.length
-        : activeTab.startsWith("teamMemo_") ? (teamMemos[activeTab.replace("teamMemo_", "")]?.chat || []).length
-        : activeTab.startsWith("memo_") ? (piChat[activeTab.replace("memo_", "")] || []).length : -1;
+    const activeChatLen = activeTab === "labChat" ? (labChat.length + labBoard.length)
+        : activeTab.startsWith("teamMemo_") ? ((teamMemos[activeTab.replace("teamMemo_", "")]?.chat || []).length + (teamMemos[activeTab.replace("teamMemo_", "")]?.kanban || []).length)
+        : activeTab.startsWith("memo_") ? (piChat[activeTab.replace("memo_", "")] || []).length
+        : activeTab === "announcements" ? announcements.length : -1;
     useEffect(() => {
         if (!userName || activeChatLen < 0) return;
         setChatReadTs(prev => {
@@ -6068,13 +6248,13 @@ export default function DashboardPage() {
 
     // Handlers
     const handleToggleTodo = (id: number) => { const u = todos.map(t => t.id === id ? { ...t, done: !t.done } : t); setTodos(u); saveSection("todos", u); };
-    const handleAddTodo = (t: Todo) => { const u = [...todos, t]; setTodos(u); trackSave(t.id, "todos", u, () => setTodos(todos)); };
+    const handleAddTodo = (t: Todo) => { const u = [...todos, t]; setTodos(u); trackSave(t.id, "todos", u, () => setTodos(prev => prev.filter(x => x.id !== t.id))); };
     const handleDeleteTodo = (id: number) => { const u = todos.filter(t => t.id !== id); setTodos(u); saveSection("todos", u); };
     const handleUpdateTodo = (t: Todo) => { const u = todos.map(x => x.id === t.id ? t : x); setTodos(u); saveSection("todos", u); };
-    const handleAddAnn = (text: string, pinned = false) => { const nid = Date.now(); const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned }, ...announcements]; setAnnouncements(u); trackSave(nid, "announcements", u, () => setAnnouncements(announcements)); };
+    const handleAddAnn = (text: string, pinned = false) => { const nid = Date.now(); const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned }, ...announcements]; setAnnouncements(u); trackSave(nid, "announcements", u, () => setAnnouncements(prev => prev.filter(a => a.id !== nid))); };
     const handleDelAnn = (id: number) => { const u = announcements.filter(a => a.id !== id); setAnnouncements(u); saveSection("announcements", u); };
     const handleUpdateAnn = (ann: Announcement) => { const u = announcements.map(a => a.id === ann.id ? ann : a); setAnnouncements(u); saveSection("announcements", u); };
-    const handleAddPhil = (text: string) => { const nid = Date.now(); const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned: false }, ...philosophy]; setPhilosophy(u); trackSave(nid, "philosophy", u, () => setPhilosophy(philosophy)); };
+    const handleAddPhil = (text: string) => { const nid = Date.now(); const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned: false }, ...philosophy]; setPhilosophy(u); trackSave(nid, "philosophy", u, () => setPhilosophy(prev => prev.filter(p => p.id !== nid))); };
     const handleDelPhil = (id: number) => { const u = philosophy.filter(p => p.id !== id); setPhilosophy(u); saveSection("philosophy", u); };
     const handleUpdatePhil = (p: Announcement) => { const u = philosophy.map(x => x.id === p.id ? p : x); setPhilosophy(u); saveSection("philosophy", u); };
 
@@ -6083,7 +6263,7 @@ export default function DashboardPage() {
         const u = exists ? papers.map(x => x.id === p.id ? p : x) : [...papers, p];
         setPapers(u); setPaperModal(null);
         if (exists) saveSection("papers", u);
-        else trackSave(p.id, "papers", u, () => setPapers(papers));
+        else trackSave(p.id, "papers", u, () => setPapers(prev => prev.filter(x => x.id !== p.id)));
     };
     const handleDeletePaper = (id: number) => { const u = papers.filter(p => p.id !== id); setPapers(u); saveSection("papers", u); };
 
@@ -6092,7 +6272,7 @@ export default function DashboardPage() {
         const u = exists ? experiments.map(x => x.id === e.id ? e : x) : [...experiments, e];
         setExperiments(u);
         if (exists) saveSection("experiments", u);
-        else trackSave(e.id, "experiments", u, () => setExperiments(experiments));
+        else trackSave(e.id, "experiments", u, () => setExperiments(prev => prev.filter(x => x.id !== e.id)));
     };
     const handleDeleteExperiment = (id: number) => { const u = experiments.filter(e => e.id !== id); setExperiments(u); saveSection("experiments", u); };
 
@@ -6101,7 +6281,7 @@ export default function DashboardPage() {
         const u = exists ? reports.map(x => x.id === r.id ? r : x) : [...reports, r];
         setReports(u);
         if (exists) saveSection("reports", u);
-        else trackSave(r.id, "reports", u, () => setReports(reports));
+        else trackSave(r.id, "reports", u, () => setReports(prev => prev.filter(x => x.id !== r.id)));
     };
     const handleDeleteReport = (id: number) => { const u = reports.filter(r => r.id !== id); setReports(u); saveSection("reports", u); };
 
@@ -6137,7 +6317,7 @@ export default function DashboardPage() {
         const u = exists ? ipPatents.map(x => x.id === p.id ? p : x) : [...ipPatents, p];
         setIpPatents(u);
         if (exists) saveSection("patents", u);
-        else trackSave(p.id, "patents", u, () => setIpPatents(ipPatents));
+        else trackSave(p.id, "patents", u, () => setIpPatents(prev => prev.filter(x => x.id !== p.id)));
     };
     const handleDeletePatent = (id: number) => { const u = ipPatents.filter(p => p.id !== id); setIpPatents(u); saveSection("patents", u); };
     const handleSaveResource = (r: Resource) => {
@@ -6145,7 +6325,7 @@ export default function DashboardPage() {
         const u = exists ? resources.map(x => x.id === r.id ? r : x) : [...resources, r];
         setResources(u);
         if (exists) saveSection("resources", u);
-        else trackSave(r.id, "resources", u, () => setResources(resources));
+        else trackSave(r.id, "resources", u, () => setResources(prev => prev.filter(x => x.id !== r.id)));
     };
     const handleDeleteResource = (id: number) => { const u = resources.filter(r => r.id !== id); setResources(u); saveSection("resources", u); };
     const handleSaveConference = (c: ConferenceTrip) => {
@@ -6153,7 +6333,7 @@ export default function DashboardPage() {
         const u = exists ? conferenceTrips.map(x => x.id === c.id ? c : x) : [...conferenceTrips, c];
         setConferenceTrips(u);
         if (exists) saveSection("conferences", u);
-        else trackSave(c.id, "conferences", u, () => setConferenceTrips(conferenceTrips));
+        else trackSave(c.id, "conferences", u, () => setConferenceTrips(prev => prev.filter(x => x.id !== c.id)));
     };
     const handleDeleteConference = (id: number) => { const u = conferenceTrips.filter(c => c.id !== id); setConferenceTrips(u); saveSection("conferences", u); };
     const handleSaveMeeting = (m: Meeting) => {
@@ -6161,7 +6341,7 @@ export default function DashboardPage() {
         const u = exists ? meetings.map(x => x.id === m.id ? m : x) : [...meetings, m];
         setMeetings(u);
         if (exists) saveSection("meetings", u);
-        else trackSave(m.id, "meetings", u, () => setMeetings(meetings));
+        else trackSave(m.id, "meetings", u, () => setMeetings(prev => prev.filter(x => x.id !== m.id)));
     };
     const handleDeleteMeeting = (id: number) => { const u = meetings.filter(m => m.id !== id); setMeetings(u); saveSection("meetings", u); };
     const handleSaveDailyTargets = (t: DailyTarget[]) => { setDailyTargets(t); saveSection("dailyTargets", t); };
@@ -6170,7 +6350,7 @@ export default function DashboardPage() {
         const u = exists ? ideas.map(x => x.id === idea.id ? idea : x) : [idea, ...ideas];
         setIdeas(u);
         if (exists) saveSection("ideas", u);
-        else trackSave(idea.id, "ideas", u, () => setIdeas(ideas));
+        else trackSave(idea.id, "ideas", u, () => setIdeas(prev => prev.filter(x => x.id !== idea.id)));
     };
     const handleDeleteIdea = (id: number) => { const u = ideas.filter(i => i.id !== id); setIdeas(u); saveSection("ideas", u); };
     const handleSaveAnalysis = (a: Analysis) => {
@@ -6178,7 +6358,7 @@ export default function DashboardPage() {
         const u = exists ? analyses.map(x => x.id === a.id ? a : x) : [...analyses, a];
         setAnalyses(u);
         if (exists) saveSection("analyses", u);
-        else trackSave(a.id, "analyses", u, () => setAnalyses(analyses));
+        else trackSave(a.id, "analyses", u, () => setAnalyses(prev => prev.filter(x => x.id !== a.id)));
     };
     const handleDeleteAnalysis = (id: number) => { const u = analyses.filter(a => a.id !== id); setAnalyses(u); saveSection("analyses", u); };
     const handleSaveChat = (post: IdeaPost) => {
@@ -6186,7 +6366,7 @@ export default function DashboardPage() {
         const u = exists ? chatPosts.map(x => x.id === post.id ? post : x) : [post, ...chatPosts];
         setChatPosts(u);
         if (exists) saveSection("chatPosts", u);
-        else trackSave(post.id, "chatPosts", u, () => setChatPosts(chatPosts));
+        else trackSave(post.id, "chatPosts", u, () => setChatPosts(prev => prev.filter(x => x.id !== post.id)));
     };
     const handleDeleteChat = (id: number) => { const u = chatPosts.filter(p => p.id !== id); setChatPosts(u); saveSection("chatPosts", u); };
     const handleSaveEmoji = (name: string, emoji: string) => {
@@ -6207,7 +6387,7 @@ export default function DashboardPage() {
         const u = { ...personalMemos, [memberName]: updated };
         setPersonalMemos(u);
         if (found) saveSection("personalMemos", u);
-        else trackSave(memo.id, "personalMemos", u, () => setPersonalMemos(personalMemos));
+        else trackSave(memo.id, "personalMemos", u, () => setPersonalMemos(prev => { const arr = prev[memberName] || []; return { ...prev, [memberName]: arr.filter(m => m.id !== memo.id) }; }));
     };
     const handleDeleteMemo = (memberName: string, id: number) => {
         const updated = (personalMemos[memberName] || []).filter(m => m.id !== id);
@@ -6216,7 +6396,7 @@ export default function DashboardPage() {
     };
     const handleAddPersonalFile = (name: string, f: LabFile) => {
         const u = { ...personalFiles, [name]: [...(personalFiles[name] || []), f] };
-        setPersonalFiles(u); trackSave(f.id, "personalFiles", u, () => setPersonalFiles(personalFiles));
+        setPersonalFiles(u); trackSave(f.id, "personalFiles", u, () => setPersonalFiles(prev => ({ ...prev, [name]: (prev[name] || []).filter(x => x.id !== f.id) })));
     };
     const handleDeletePersonalFile = (name: string, id: number) => {
         const u = { ...personalFiles, [name]: (personalFiles[name] || []).filter(f => f.id !== id) };
@@ -6255,7 +6435,7 @@ export default function DashboardPage() {
         const u = { ...teamMemos, [teamName]: { ...data, kanban: updated } };
         setTeamMemos(u);
         if (found) saveSection("teamMemos", u);
-        else trackSave(card.id, "teamMemos", u, () => setTeamMemos(teamMemos));
+        else trackSave(card.id, "teamMemos", u, () => setTeamMemos(prev => { const d = prev[teamName] || { kanban: [], chat: [] }; return { ...prev, [teamName]: { ...d, kanban: d.kanban.filter(c => c.id !== card.id) } }; }));
     };
     const handleDeleteTeamMemo = (teamName: string, id: number) => {
         const data = teamMemos[teamName] || { kanban: [], chat: [] };
@@ -6311,7 +6491,7 @@ export default function DashboardPage() {
     const handleAddTeamFile = (teamName: string, file: LabFile) => {
         const data = teamMemos[teamName] || { kanban: [], chat: [] };
         const u = { ...teamMemos, [teamName]: { ...data, files: [...(data.files || []), file] } };
-        setTeamMemos(u); trackSave(file.id, "teamMemos", u, () => setTeamMemos(teamMemos));
+        setTeamMemos(u); trackSave(file.id, "teamMemos", u, () => setTeamMemos(prev => { const d = prev[teamName] || { kanban: [], chat: [] }; return { ...prev, [teamName]: { ...d, files: (d.files || []).filter(f => f.id !== file.id) } }; }));
     };
     const handleDeleteTeamFile = async (teamName: string, id: number) => {
         const data = teamMemos[teamName] || { kanban: [], chat: [] };
@@ -6351,14 +6531,14 @@ export default function DashboardPage() {
         const u = exists ? labBoard.map(c => c.id === card.id ? card : c) : [...labBoard, card];
         setLabBoard(u);
         if (exists) saveSection("labBoard", u);
-        else trackSave(card.id, "labBoard", u, () => setLabBoard(labBoard));
+        else trackSave(card.id, "labBoard", u, () => setLabBoard(prev => prev.filter(c => c.id !== card.id)));
     };
     const handleDeleteLabBoard = (id: number) => {
         const u = labBoard.filter(c => c.id !== id);
         setLabBoard(u); saveSection("labBoard", u);
     };
     const handleAddLabFile = (file: LabFile) => {
-        const u = [...labFiles, file]; setLabFiles(u); trackSave(file.id, "labFiles", u, () => setLabFiles(labFiles));
+        const u = [...labFiles, file]; setLabFiles(u); trackSave(file.id, "labFiles", u, () => setLabFiles(prev => prev.filter(f => f.id !== file.id)));
     };
     const handleDeleteLabFile = async (id: number) => {
         const file = labFiles.find(f => f.id === id);
@@ -6392,8 +6572,14 @@ export default function DashboardPage() {
     };
 
     const unreadCounts: Record<string, number> = {
-        labChat: labChat.filter(m => m.author !== userName && m.id > (chatReadTs.labChat || 0)).length,
-        ...Object.fromEntries(teamNames.map(t => [`teamMemo_${t}`, (teamMemos[t]?.chat || []).filter(m => m.author !== userName && m.id > (chatReadTs[`teamMemo_${t}`] || 0)).length])),
+        labChat: labChat.filter(m => m.author !== userName && m.id > (chatReadTs.labChat || 0)).length + labBoard.filter(c => c.author !== userName && c.id > (chatReadTs.labChat || 0)).length,
+        announcements: announcements.filter(a => a.author !== userName && new Date(a.date).getTime() > (chatReadTs.announcements || 0)).length,
+        ...Object.fromEntries(teamNames.map(t => {
+            const ts = chatReadTs[`teamMemo_${t}`] || 0;
+            const chatNew = (teamMemos[t]?.chat || []).filter(m => m.author !== userName && m.id > ts).length;
+            const boardNew = (teamMemos[t]?.kanban || []).filter(c => c.author !== userName && c.id > ts).length;
+            return [`teamMemo_${t}`, chatNew + boardNew];
+        })),
         ...Object.fromEntries(memberNames.map(name => [`memo_${name}`, (piChat[name] || []).filter(m => m.author !== userName && m.id > (chatReadTs[`memo_${name}`] || 0)).length])),
     };
 
@@ -6413,13 +6599,13 @@ export default function DashboardPage() {
                 <div className="md:hidden fixed inset-0 z-50" onClick={() => setMobileMenuOpen(false)}>
                     <div className="absolute inset-0" style={{background:"rgba(0,0,0,0.5)"}} />
                     <div className="absolute left-0 top-0 bottom-0 w-[280px] flex flex-col overflow-y-auto dark-scrollbar" style={{background:"#0F172A"}} onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center gap-3 px-5 pt-5 pb-4 flex-shrink-0" style={{borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
+                        <button onClick={() => { setActiveTab("overview"); setMobileMenuOpen(false); }} className="flex items-center gap-3 px-5 pt-5 pb-4 flex-shrink-0 w-full text-left cursor-pointer" style={{borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
                             <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-[17px] font-extrabold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", boxShadow: "0 2px 8px rgba(59,130,246,0.3)" }}>M</div>
                             <div className="min-w-0">
                                 <div className="text-[15px] tracking-tight text-white" style={{fontWeight:750}}>MFTEL</div>
                                 <div className="text-[10.5px] truncate" style={{color:"#64748B"}}>Multiphase Flow & Thermal Energy</div>
                             </div>
-                        </div>
+                        </button>
                         <div className="flex-1 min-h-0 overflow-y-auto pt-2 pb-2 dark-scrollbar">
                             {tabs.map((tab, i) => {
                                 const sectionBreaks: Record<string, string> = { announcements: "운영", todos: "내 노트", papers: "연구", conferenceTrips: "커뮤니케이션" };
@@ -6462,10 +6648,10 @@ export default function DashboardPage() {
                 {/* Desktop Sidebar */}
                 <div className="hidden md:flex md:w-[240px] md:h-screen flex-shrink-0 flex-col" style={{background:"#0F172A", borderRight:"1px solid #1E293B", boxShadow:"2px 0 8px rgba(0,0,0,0.1)"}}>
                     {/* Sidebar top: MFTEL logo */}
-                    <a href="/" className="flex items-center gap-3 px-5 pt-5 pb-4 relative z-10 flex-shrink-0 cursor-pointer no-underline" style={{borderBottom:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
+                    <button onClick={() => setActiveTab("overview")} className="flex items-center gap-3 px-5 pt-5 pb-4 relative z-10 flex-shrink-0 cursor-pointer w-full text-left" style={{borderBottom:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
                         <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-[17px] font-extrabold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", boxShadow: "0 2px 8px rgba(59,130,246,0.3)" }}>M</div>
                         <div className="text-[15px] tracking-tight text-white" style={{fontWeight:750}}>MFTEL</div>
-                    </a>
+                    </button>
                     {/* Sidebar nav */}
                     <div className="flex-1 min-h-0 flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto p-3 md:p-0 md:pt-2 md:pb-2 gap-px dark-scrollbar">
                         {tabs.map((tab, i) => {
@@ -6574,7 +6760,7 @@ export default function DashboardPage() {
 
                     {activeTab === "overview" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} chatPosts={chatPosts} personalMemos={personalMemos} teamMemos={teamMemos} meetings={meetings} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="team" statusMessages={statusMessages} members={displayMembers} teams={teams} />}
                     {activeTab === "overview_me" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} chatPosts={chatPosts} personalMemos={personalMemos} teamMemos={teamMemos} meetings={meetings} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="personal" statusMessages={statusMessages} members={displayMembers} teams={teams} />}
-                    {activeTab === "announcements" && <AnnouncementView announcements={announcements} onAdd={handleAddAnn} onDelete={handleDelAnn} onUpdate={handleUpdateAnn} onReorder={list => { setAnnouncements(list); saveSection("announcements", list); }} philosophy={philosophy} onAddPhilosophy={handleAddPhil} onDeletePhilosophy={handleDelPhil} onUpdatePhilosophy={handleUpdatePhil} currentUser={userName} />}
+                    {activeTab === "announcements" && <AnnouncementView announcements={announcements} onAdd={handleAddAnn} onDelete={handleDelAnn} onUpdate={handleUpdateAnn} onReorder={list => { setAnnouncements(list); saveSection("announcements", list); }} philosophy={philosophy} onAddPhilosophy={handleAddPhil} onDeletePhilosophy={handleDelPhil} onUpdatePhilosophy={handleUpdatePhil} onReorderPhilosophy={list => { setPhilosophy(list); saveSection("philosophy", list); }} currentUser={userName} />}
                     {activeTab === "daily" && <DailyTargetView targets={dailyTargets} onSave={handleSaveDailyTargets} currentUser={userName} />}
                     {activeTab === "papers" && <KanbanView papers={papers} filter={selectedPerson} onFilterPerson={setSelectedPerson} allPeople={allPeople} onClickPaper={p => setPaperModal({ paper: p, mode: "edit" })} onAddPaper={() => setPaperModal({ paper: null, mode: "add" })} onSavePaper={handleSavePaper} onDeletePaper={handleDeletePaper} onReorder={list => { setPapers(list); saveSection("papers", list); }} tagList={paperTagList} onSaveTags={handleSavePaperTags} teamNames={teamNames} currentUser={userName} />}
                     {activeTab === "reports" && <ReportView reports={reports} currentUser={userName} onSave={handleSaveReport} onDelete={handleDeleteReport} onToggleDiscussion={r => handleSaveReport({ ...r, needsDiscussion: !r.needsDiscussion })} onReorder={list => { setReports(list); saveSection("reports", list); }} teamNames={teamNames} />}

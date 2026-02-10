@@ -160,7 +160,7 @@ export default function Navbar() {
                     <button
                         onClick={() => setIsOpen(!isOpen)}
                         className={cn(
-                            "p-2 transition-colors z-[60]",
+                            "p-2 transition-colors z-[10000] relative",
                             isOpen ? "text-white" : useDarkText ? "text-foreground" : "text-white"
                         )}
                         aria-label="Toggle menu"
@@ -178,7 +178,7 @@ export default function Navbar() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="lg:hidden fixed inset-0 z-50 bg-slate-900"
+                        className="lg:hidden fixed inset-0 z-[9999] bg-slate-900"
                     >
                         <div className="flex flex-col items-center justify-center h-full space-y-5">
                             {navItems.map((item, i) => {

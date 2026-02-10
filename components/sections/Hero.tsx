@@ -167,19 +167,19 @@ export default function Hero() {
     /* ── Mobile: static background, no animations ── */
     if (isMobile) {
         return (
-            <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-900">
-                <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 z-[10]">
+            <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-900 pt-20">
+                <div className="container relative mx-auto px-6 z-[10]">
                     <div className="max-w-4xl mx-auto text-center">
-                        <h1 className="text-5xl font-bold tracking-tight text-white mb-2 leading-[1.1]">
+                        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2 leading-[1.15]">
                             {line1}
                         </h1>
-                        <h1 className="text-5xl font-bold tracking-tight mb-2 leading-[1.1] text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-rose-300">
+                        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2 leading-[1.15] text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-rose-300">
                             {line2a} {line2b}
                         </h1>
-                        <h1 className="text-5xl font-bold tracking-tight text-white mb-8 leading-[1.1]">
+                        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-6 leading-[1.15]">
                             {line3}
                         </h1>
-                        <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed">
+                        <p className="text-base sm:text-lg text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">
                             {t("hero.description")}
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">

@@ -152,7 +152,7 @@ export default function ChatWidget() {
   };
 
   return (
-    <>
+    <div className="hidden md:block">
       {/* Shake Animation */}
       <style jsx>{`
         @keyframes shake {
@@ -352,6 +352,6 @@ export default function ChatWidget() {
           )}
         </div>
       </button>
-    </>
+    </div>
   );
 }

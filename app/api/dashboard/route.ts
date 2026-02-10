@@ -37,7 +37,7 @@ const ALLOWED_SECTIONS = new Set([
     "lectures", "patents", "vacations", "schedule", "timetable",
     "reports", "teams", "dailyTargets", "philosophy", "resources",
     "ideas", "analyses", "chatPosts", "customEmojis", "statusMessages",
-    "equipmentList", "personalMemos", "teamMemos", "labChat", "labFiles", "meetings", "analysisToolList", "paperTagList",
+    "equipmentList", "personalMemos", "personalFiles", "piChat", "teamMemos", "labChat", "labBoard", "labFiles", "meetings", "analysisToolList", "paperTagList",
     "members", "online", "dispatches",
 ]);
 
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 
         if (section === 'all') {
             // Return all dashboard data at once
-            const keys = ["announcements","papers","experiments","todos","conferences","lectures","patents","vacations","schedule","timetable","reports","teams","dailyTargets","philosophy","resources","ideas","analyses","chatPosts","customEmojis","statusMessages","equipmentList","personalMemos","teamMemos","labChat","labFiles","meetings","analysisToolList","paperTagList","members","dispatches"];
+            const keys = ["announcements","papers","experiments","todos","conferences","lectures","patents","vacations","schedule","timetable","reports","teams","dailyTargets","philosophy","resources","ideas","analyses","chatPosts","customEmojis","statusMessages","equipmentList","personalMemos","personalFiles","piChat","teamMemos","labChat","labBoard","labFiles","meetings","analysisToolList","paperTagList","members","dispatches"];
             const results = await Promise.all(keys.map(k => getKey(`${DASHBOARD_PREFIX}${k}`)));
             const out: Record<string, unknown> = {};
             keys.forEach((k, i) => { out[k] = results[i] ? JSON.parse(results[i] as string) : null; });
