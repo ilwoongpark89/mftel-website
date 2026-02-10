@@ -4248,6 +4248,9 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
     const chatFileRef = useRef<HTMLInputElement>(null);
     const composingRef = useRef(false);
     const chatEndRef = useRef<HTMLDivElement>(null);
+    const piChatContainerRef = useRef<HTMLDivElement>(null);
+    const piChatDidInit = useRef(false);
+    const scrollPiChat = useCallback(() => { const el = piChatContainerRef.current; if (el) el.scrollTop = el.scrollHeight; }, []);
 
     const openDetail = (m: Memo) => { setSelected(m); setIsEditing(false); setNewComment(""); };
     const startEdit = () => { if (!selected) return; setTitle(selected.title); setContent(selected.content); setColor(selected.color); setBorderColor(selected.borderColor || ""); setIsEditing(true); };
@@ -4298,7 +4301,10 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
         }
     };
 
-    useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [chat.length]);
+    useEffect(() => {
+        if (!piChatDidInit.current && chat.length > 0) { piChatDidInit.current = true; setTimeout(scrollPiChat, 150); }
+        else { requestAnimationFrame(scrollPiChat); }
+    }, [chat.length, scrollPiChat]);
 
     return (
         <div className="grid gap-3 flex-1 min-h-0" style={{gridTemplateColumns:"1.2fr 0.8fr 1fr"}}>
@@ -4364,13 +4370,13 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                         <button onClick={() => { if (confirm("채팅을 모두 삭제하시겠습니까?")) onClearChat(); }} className="text-[12px] text-slate-400 hover:text-red-500">초기화</button>
                     )}
                 </div>
-                <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                <div ref={piChatContainerRef} className="flex-1 overflow-y-auto p-3 space-y-2">
                     {chat.length === 0 && <div className="text-center py-12 text-slate-400 text-[12px]">PI와 대화를 시작하세요</div>}
                     {chat.map(msg => (
                         <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`} style={{ opacity: msg._sending ? 0.7 : 1 }}>
                             <div className={`inline-block max-w-[90%] px-3.5 py-2.5 text-[13.5px] leading-relaxed ${msg.author === currentUser ? "text-white rounded-[16px_16px_4px_16px]" : "text-slate-700 rounded-[16px_16px_16px_4px]"}`} style={{background: msg.author === currentUser ? "#3B82F6" : "#F1F5F9"}}>
                                 {msg.author !== currentUser && <div className="text-[11px] font-bold mb-0.5">{MEMBERS[msg.author]?.emoji || "👤"} {msg.author}</div>}
-                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mb-1 cursor-pointer" onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
+                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mb-1 cursor-pointer" onLoad={scrollPiChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                 {msg.text && <div className="whitespace-pre-wrap">{msg.text}</div>}
                                 <div className={`text-[10px] mt-0.5 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>
                                     {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-300">⚠️ 전송 실패 <button onClick={(e) => { e.stopPropagation(); onRetryChat(msg.id); }} className="underline hover:text-red-200 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={(e) => { e.stopPropagation(); onDeleteChat(msg.id); }} className="underline hover:text-red-200">삭제</button></span> : msg.date}
@@ -4671,6 +4677,9 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, onRetry, fil
     const [previewImg, setPreviewImg] = useState("");
     const chatFileRef = useRef<HTMLInputElement>(null);
     const endRef = useRef<HTMLDivElement>(null);
+    const labChatContainerRef = useRef<HTMLDivElement>(null);
+    const labChatDidInit = useRef(false);
+    const scrollLabChat = useCallback(() => { const el = labChatContainerRef.current; if (el) el.scrollTop = el.scrollHeight; }, []);
     const composingRef = useRef(false);
     const [boardAdding, setBoardAdding] = useState(false);
     const [boardTitle, setBoardTitle] = useState("");
@@ -4714,7 +4723,10 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, onRetry, fil
         setBoardAdding(false);
     };
 
-    useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [chat.length]);
+    useEffect(() => {
+        if (!labChatDidInit.current && chat.length > 0) { labChatDidInit.current = true; setTimeout(scrollLabChat, 150); }
+        else { requestAnimationFrame(scrollLabChat); }
+    }, [chat.length, scrollLabChat]);
 
     return (
         <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{gridTemplateColumns:"1fr 1fr 2fr"}}>
@@ -4788,13 +4800,13 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, onRetry, fil
                         <button onClick={() => { if (confirm("채팅을 모두 삭제하시겠습니까?")) onClear(); }} className="text-[12px] text-slate-400 hover:text-red-500 transition-colors">초기화</button>
                     )}
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                <div ref={labChatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
                     {chat.length === 0 && <div className="text-center py-16 text-slate-400 text-[14px]">메시지가 없습니다. 자유롭게 대화해 보세요!</div>}
                     {chat.map(msg => (
                         <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`} style={{ opacity: msg._sending ? 0.7 : 1 }}>
                             <div className={`inline-block max-w-[75%] px-3.5 py-2.5 text-[13.5px] leading-relaxed ${msg.author === currentUser ? "text-white rounded-[16px_16px_4px_16px]" : "text-slate-700 rounded-[16px_16px_16px_4px]"}`} style={{background: msg.author === currentUser ? "#3B82F6" : "#F1F5F9"}}>
                                 {msg.author !== currentUser && <div className="text-[12px] font-bold mb-0.5">{MEMBERS[msg.author]?.emoji || "👤"} {msg.author}</div>}
-                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[300px] rounded-md mb-1.5 cursor-pointer" onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
+                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[300px] rounded-md mb-1.5 cursor-pointer" onLoad={scrollLabChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                 {msg.text && <div className="whitespace-pre-wrap">{msg.text}</div>}
                                 <div className={`text-[11px] mt-1 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>
                                     {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-300">⚠️ 전송 실패 <button onClick={(e) => { e.stopPropagation(); onRetry(msg.id); }} className="underline hover:text-red-200 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={(e) => { e.stopPropagation(); onDelete(msg.id); }} className="underline hover:text-red-200">삭제</button></span> : msg.date}
@@ -5066,6 +5078,9 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     const chatFileRef = useRef<HTMLInputElement>(null);
     const [newComment, setNewComment] = useState("");
     const chatEndRef = useRef<HTMLDivElement>(null);
+    const teamChatContainerRef = useRef<HTMLDivElement>(null);
+    const teamChatDidInit = useRef(false);
+    const scrollTeamChat = useCallback(() => { const el = teamChatContainerRef.current; if (el) el.scrollTop = el.scrollHeight; }, []);
     const composingRef = useRef(false);
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
@@ -5158,7 +5173,10 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
         }
     };
 
-    useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [chat.length]);
+    useEffect(() => {
+        if (!teamChatDidInit.current && chat.length > 0) { teamChatDidInit.current = true; setTimeout(scrollTeamChat, 150); }
+        else { requestAnimationFrame(scrollTeamChat); }
+    }, [chat.length, scrollTeamChat]);
 
     return (
         <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{gridTemplateColumns:"1fr 1fr 2fr"}}>
@@ -5265,7 +5283,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                         <button onClick={() => { if (confirm("채팅을 모두 삭제하시겠습니까?")) onClearChat(); }} className="text-[11px] text-slate-400 hover:text-red-500 transition-colors">초기화</button>
                     )}
                 </div>
-                <div className="flex-1 overflow-y-auto px-3 py-2">
+                <div ref={teamChatContainerRef} className="flex-1 overflow-y-auto px-3 py-2">
                     {chat.length === 0 && <div className="text-center py-6 text-slate-400 text-[12px]">메시지가 없습니다</div>}
                     {chat.map((msg, idx) => {
                         const prev = idx > 0 ? chat[idx - 1] : null;
@@ -5310,7 +5328,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                             </div>
                                         )}
                                         <div className="px-4 py-3 text-[13.5px] leading-relaxed text-slate-700" style={{ background: isMe ? "#DCF0FF" : "#F8F9FA", borderRadius: isMe ? "12px 4px 12px 12px" : "4px 12px 12px 12px" }}>
-                                            {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[250px] rounded-md mb-1.5 cursor-pointer" onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
+                                            {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[250px] rounded-md mb-1.5 cursor-pointer" onLoad={scrollTeamChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                             {msg.text && <div className="whitespace-pre-wrap break-words">{msg.text}</div>}
                                         </div>
                                         {isMe && (
