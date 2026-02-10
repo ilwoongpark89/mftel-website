@@ -240,7 +240,7 @@ function useMention() {
     const filtered = useMemo(() => {
         const q = filter.toLowerCase();
         const list = q ? ALL_MEMBER_NAMES.filter(n => n.includes(q) || (DEFAULT_MEMBERS[n]?.team || "").toLowerCase().includes(q)) : ALL_MEMBER_NAMES;
-        return list.slice(0, 8);
+        return list.slice(0, 6);
     }, [filter]);
     const check = useCallback((text: string, pos: number) => {
         const before = text.slice(0, pos);
@@ -270,7 +270,7 @@ function useMention() {
 function MentionPopup({ m, onSelect }: { m: ReturnType<typeof useMention>; onSelect: (name: string) => void }) {
     if (!m.open || m.filtered.length === 0) return null;
     return (
-        <div className="absolute bottom-full left-0 right-0 z-50 bg-white rounded-lg shadow-lg border border-slate-200 py-1 mb-1 max-h-[200px] overflow-y-auto">
+        <div className="absolute bottom-full left-0 right-0 z-50 bg-white rounded-lg shadow-lg border border-slate-200 py-1 mb-1" onWheel={e => e.stopPropagation()}>
             {m.filtered.map((name, i) => (
                 <button key={name} type="button" onMouseDown={e => e.preventDefault()} onClick={() => onSelect(name)}
                     className="w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors"
