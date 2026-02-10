@@ -7584,7 +7584,7 @@ export default function DashboardPage() {
                         onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#94A3B8"; }}
                         onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#64748B"; }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                        <span className="flex-1 text-left">알림</span>
+                        <span className="flex-1 text-left">변경 기록</span>
                         {notiUnreadCount > 0 && <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold" style={{ background: "#EF4444", color: "#fff" }}>{notiUnreadCount > 99 ? "99+" : notiUnreadCount}</span>}
                     </button>
                     {/* Sidebar nav */}
@@ -7741,14 +7741,24 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between px-5 border-b border-slate-200" style={{ height: 52 }}>
                         <div className="flex items-center gap-2">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                            <span className="text-[15px] font-bold text-slate-800">알림</span>
+                            <span className="text-[15px] font-bold text-slate-800">변경 기록</span>
                             {notiUnreadCount > 0 && <span className="px-1.5 py-0.5 rounded-full text-[11px] font-bold" style={{ background: "#EF4444", color: "#fff" }}>{notiUnreadCount}</span>}
                         </div>
-                        <button onClick={() => setNotiOpen(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                        <div className="flex items-center gap-2">
+                            {notiLogs.length > 0 && (
+                                <button onClick={() => {
+                                    const now = Date.now();
+                                    setNotiLastSeen(now);
+                                    try { localStorage.setItem(`mftel_notiLastSeen_${userName}`, String(now)); } catch {}
+                                    setNotiLogs([]);
+                                }} className="text-[12px] text-slate-400 hover:text-slate-600 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors">모두 지우기</button>
+                            )}
+                            <button onClick={() => setNotiOpen(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                        </div>
                     </div>
                     <div className="max-h-[60vh] overflow-y-auto modal-scroll">
                         {notiLogs.length === 0 && (
-                            <div className="py-12 text-center text-[14px] text-slate-400">아직 알림이 없습니다</div>
+                            <div className="py-12 text-center text-[14px] text-slate-400">변경 기록이 없습니다</div>
                         )}
                         {notiLogs.filter(l => l.userName !== userName).slice(0, 100).map((log, i) => {
                             const sec = NOTI_SECTION_MAP[log.section] || { label: log.section, icon: "📋", tabId: "overview" };
@@ -7781,7 +7791,7 @@ export default function DashboardPage() {
                     </div>
                     {notiLogs.length > 0 && (
                         <div className="flex items-center justify-center px-4 py-2.5 border-t border-slate-100" style={{ background: "#FAFBFC" }}>
-                            <span className="text-[12px] text-slate-400">최근 수정 기록이 표시됩니다</span>
+                            <span className="text-[12px] text-slate-400">다른 멤버의 최근 수정 기록</span>
                         </div>
                     )}
                 </div>
