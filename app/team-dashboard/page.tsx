@@ -6650,6 +6650,11 @@ export default function DashboardPage() {
     const [authChecked, setAuthChecked] = useState(false);
     const [activeTab, setActiveTab] = useState("overview");
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [cmdKOpen, setCmdKOpen] = useState(false);
+    const [cmdKQuery, setCmdKQuery] = useState("");
+    const [cmdKIdx, setCmdKIdx] = useState(0);
+    const cmdKRef = useRef<HTMLInputElement>(null);
+    const cmdKListRef = useRef<HTMLDivElement>(null);
     const [selectedPerson, setSelectedPerson] = useState("전체");
     const [onlineUsers, setOnlineUsers] = useState<Array<{ name: string; timestamp: number }>>([]);
     const [members, setMembers] = useState<Record<string, { team: string; role: string; emoji: string }>>(DEFAULT_MEMBERS);
@@ -6737,6 +6742,69 @@ export default function DashboardPage() {
     const [toast, setToast] = useState("");
     useEffect(() => { if (toast) { const t = setTimeout(() => setToast(""), 3000); return () => clearTimeout(t); } }, [toast]);
 
+    // ─── Cmd+K Global Search ─────────────────────────────────────────────────
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+                e.preventDefault();
+                setCmdKOpen(o => { if (!o) { setCmdKQuery(""); setCmdKIdx(0); } return !o; });
+            }
+        };
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
+    }, []);
+    useEffect(() => { if (cmdKOpen) setTimeout(() => cmdKRef.current?.focus(), 50); }, [cmdKOpen]);
+    useEffect(() => {
+        if (cmdKOpen && cmdKListRef.current) {
+            const el = cmdKListRef.current.querySelector(`[data-cmdk-idx="${cmdKIdx}"]`);
+            el?.scrollIntoView({ block: "nearest" });
+        }
+    }, [cmdKIdx, cmdKOpen]);
+
+    const cmdKResults = useMemo(() => {
+        const q = cmdKQuery.trim().toLowerCase();
+        type SR = { type: string; icon: string; title: string; subtitle: string; tabId: string };
+        const r: SR[] = [];
+        const M = 4;
+        if (!q) return tabs.map(t => ({ type: "nav", icon: t.icon, title: t.label, subtitle: "", tabId: t.id }));
+
+        // Tab navigation
+        tabs.filter(t => t.label.toLowerCase().includes(q)).forEach(t => r.push({ type: "이동", icon: t.icon, title: t.label, subtitle: "탭 이동", tabId: t.id }));
+        // Papers
+        papers.filter(p => p.title.toLowerCase().includes(q) || p.journal?.toLowerCase().includes(q) || p.assignees.some(a => a.includes(q)) || p.tags?.some(t => t.toLowerCase().includes(q))).slice(0, M).forEach(p => r.push({ type: "논문", icon: "📄", title: p.title, subtitle: `${p.journal || ""} · ${p.assignees.join(", ")}`, tabId: "papers" }));
+        // Reports
+        reports.filter(p => p.title.toLowerCase().includes(q) || p.assignees.some(a => a.includes(q))).slice(0, M).forEach(p => r.push({ type: "보고서", icon: "📋", title: p.title, subtitle: p.assignees.join(", "), tabId: "reports" }));
+        // Experiments
+        experiments.filter(p => p.title.toLowerCase().includes(q) || p.equipment?.toLowerCase().includes(q) || p.assignees.some(a => a.includes(q))).slice(0, M).forEach(p => r.push({ type: "실험", icon: "🧪", title: p.title, subtitle: `${p.equipment || ""} · ${p.assignees.join(", ")}`, tabId: "experiments" }));
+        // Analyses
+        analyses.filter(p => p.title.toLowerCase().includes(q) || p.tool?.toLowerCase().includes(q) || p.assignees.some(a => a.includes(q))).slice(0, M).forEach(p => r.push({ type: "해석", icon: "🖥️", title: p.title, subtitle: `${p.tool || ""} · ${p.assignees.join(", ")}`, tabId: "analysis" }));
+        // Todos
+        todos.filter(p => p.text.toLowerCase().includes(q) || p.assignees.some(a => a.includes(q))).slice(0, M).forEach(p => r.push({ type: "할일", icon: "✅", title: p.text, subtitle: p.assignees.join(", "), tabId: "todos" }));
+        // Patents
+        ipPatents.filter(p => p.title.toLowerCase().includes(q) || p.assignees.some(a => a.includes(q))).slice(0, M).forEach(p => r.push({ type: "특허", icon: "💡", title: p.title, subtitle: p.assignees.join(", "), tabId: "ip" }));
+        // Announcements
+        announcements.filter(a => a.text.toLowerCase().includes(q) || a.author.includes(q)).slice(0, M).forEach(a => r.push({ type: "공지", icon: "📢", title: a.text.slice(0, 80), subtitle: a.author, tabId: "announcements" }));
+        // Conferences
+        conferenceTrips.filter(c => c.title.toLowerCase().includes(q) || c.participants.some(p => p.includes(q))).slice(0, M).forEach(c => r.push({ type: "학회", icon: "✈️", title: c.title, subtitle: c.participants.join(", "), tabId: "conferenceTrips" }));
+        // Meetings
+        meetings.filter(m => m.title.toLowerCase().includes(q) || m.goal?.toLowerCase().includes(q)).slice(0, M).forEach(m => r.push({ type: "회의", icon: "📝", title: m.title, subtitle: m.goal || "", tabId: "meetings" }));
+        // Resources
+        resources.filter(p => p.title.toLowerCase().includes(q) || p.author.includes(q)).slice(0, M).forEach(p => r.push({ type: "자료", icon: "📁", title: p.title, subtitle: p.author, tabId: "resources" }));
+        // Ideas
+        ideas.filter(p => p.title.toLowerCase().includes(q) || p.body?.toLowerCase().includes(q) || p.author.includes(q)).slice(0, M).forEach(p => r.push({ type: "아이디어", icon: "💡", title: p.title, subtitle: p.author, tabId: "ideas" }));
+        // Lab board
+        labBoard.filter(b => b.title.toLowerCase().includes(q) || b.content?.toLowerCase().includes(q) || b.author.includes(q)).slice(0, M).forEach(b => r.push({ type: "게시판", icon: "📌", title: b.title, subtitle: b.author, tabId: "labChat" }));
+        // Team memo boards
+        Object.entries(teamMemos).forEach(([tName, data]) => {
+            data.kanban?.filter(c => c.title.toLowerCase().includes(q) || c.content?.toLowerCase().includes(q) || c.author?.includes(q)).slice(0, M).forEach(c => r.push({ type: `${tName}`, icon: "📌", title: c.title, subtitle: c.author || "", tabId: `teamMemo_${tName}` }));
+        });
+        // Daily targets
+        dailyTargets.filter(d => d.text.toLowerCase().includes(q) || d.name.includes(q)).slice(0, M).forEach(d => r.push({ type: "목표", icon: "🎯", title: `${d.name}: ${d.text.slice(0, 60)}`, subtitle: d.date, tabId: "daily" }));
+        return r;
+    }, [cmdKQuery, tabs, papers, reports, experiments, analyses, todos, ipPatents, announcements, conferenceTrips, meetings, resources, ideas, labBoard, teamMemos, dailyTargets]);
+
+    const handleCmdKSelect = useCallback((tabId: string) => { setActiveTab(tabId); setCmdKOpen(false); }, []);
+
     const saveSection = useCallback(async (section: string, data: unknown): Promise<boolean> => {
         try { const r = await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section, data, userName }) }); return r.ok; } catch { return false; }
     }, [userName]);
@@ -6757,6 +6825,8 @@ export default function DashboardPage() {
         try {
             const res = await fetch("/api/dashboard?section=all");
             const d = await res.json();
+            // Re-check after fetch — a save may have started during the network round-trip
+            if (pendingSavesRef.current > 0) return;
             if (d.announcements) setAnnouncements(d.announcements);
             if (d.papers) setPapers(d.papers);
             if (d.experiments) setExperiments(d.experiments);
@@ -7124,12 +7194,12 @@ export default function DashboardPage() {
         saveSection("teamMemos", toSave!);
     };
     const handleAddTeamChat = (teamName: string, msg: TeamChatMsg) => {
+        pendingSavesRef.current++;
         setTeamMemos(prev => {
             const data = prev[teamName] || { kanban: [], chat: [], files: [] };
             const newChat = [...data.chat, { ...msg, _sending: true }];
             const next = { ...prev, [teamName]: { ...data, chat: newChat } };
             const cleanToSave = { ...next, [teamName]: { ...next[teamName], chat: stripMsgFlags(newChat) } };
-            pendingSavesRef.current++;
             saveSection("teamMemos", cleanToSave).then(ok => {
                 pendingSavesRef.current--;
                 setTeamMemos(p => {
@@ -7141,10 +7211,10 @@ export default function DashboardPage() {
         });
     };
     const handleRetryTeamChat = (teamName: string, msgId: number) => {
+        pendingSavesRef.current++;
         setTeamMemos(prev => {
             const td = prev[teamName] || { kanban: [], chat: [] };
             const updated = { ...prev, [teamName]: { ...td, chat: td.chat.map(m => m.id === msgId ? { ...m, _sending: true, _failed: undefined } : m) } };
-            pendingSavesRef.current++;
             saveSection("teamMemos", { ...updated, [teamName]: { ...updated[teamName], chat: stripMsgFlags(updated[teamName].chat) } }).then(ok => {
                 pendingSavesRef.current--;
                 setTeamMemos(p => {
@@ -7429,6 +7499,16 @@ export default function DashboardPage() {
                         <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center text-[13px] font-extrabold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", boxShadow: "0 2px 8px rgba(59,130,246,0.3)" }}>M</div>
                         <div className="text-[13.5px] tracking-tight text-white" style={{fontWeight:750}}>MFTEL</div>
                     </button>
+                    {/* Cmd+K Search Button */}
+                    <button onClick={() => { setCmdKOpen(true); setCmdKQuery(""); setCmdKIdx(0); }}
+                        className="hidden md:flex items-center gap-2 mx-2 mt-2 px-2.5 py-1.5 rounded-lg text-[12px] transition-colors"
+                        style={{ background: "rgba(255,255,255,0.05)", color: "#64748B", border: "1px solid rgba(255,255,255,0.08)" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "#94A3B8"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#64748B"; }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <span className="flex-1 text-left">검색</span>
+                        <kbd className="px-1 py-0.5 text-[10px] rounded" style={{ background: "rgba(255,255,255,0.1)", color: "#475569" }}>⌘K</kbd>
+                    </button>
                     {/* Sidebar nav */}
                     <div className="flex-1 min-h-0 flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto p-3 md:p-0 md:pt-2 md:pb-2 md:px-1 gap-px dark-scrollbar">
                         {tabs.map((tab, i) => {
@@ -7576,6 +7656,64 @@ export default function DashboardPage() {
                     {toast}
                 </div>
             )}
+        {/* Cmd+K Search Palette */}
+        {cmdKOpen && (
+            <div className="fixed inset-0 z-[80] flex items-start justify-center pt-[12vh]" style={{background:"rgba(0,0,0,0.5)"}} onClick={() => setCmdKOpen(false)}>
+                <div className="bg-white rounded-2xl w-full overflow-hidden" style={{ maxWidth: 560, boxShadow: "0 25px 60px rgba(0,0,0,0.25)" }} onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center gap-3 px-4 border-b border-slate-200" style={{height:52}}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <input ref={cmdKRef} value={cmdKQuery} onChange={e => { setCmdKQuery(e.target.value); setCmdKIdx(0); }}
+                            onKeyDown={e => {
+                                if (e.key === "Escape") { setCmdKOpen(false); return; }
+                                if (e.key === "ArrowDown") { e.preventDefault(); setCmdKIdx(i => Math.min(i + 1, cmdKResults.length - 1)); return; }
+                                if (e.key === "ArrowUp") { e.preventDefault(); setCmdKIdx(i => Math.max(i - 1, 0)); return; }
+                                if (e.key === "Enter" && cmdKResults[cmdKIdx]) { e.preventDefault(); handleCmdKSelect(cmdKResults[cmdKIdx].tabId); return; }
+                            }}
+                            placeholder="검색하거나 이동할 페이지 입력..."
+                            className="flex-1 text-[15px] bg-transparent outline-none placeholder:text-slate-400" />
+                        <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[11px] font-medium text-slate-400 bg-slate-100 rounded border border-slate-200">ESC</kbd>
+                    </div>
+                    <div ref={cmdKListRef} className="max-h-[50vh] overflow-y-auto modal-scroll py-1">
+                        {!cmdKQuery.trim() && <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-5 pt-2 pb-1">빠른 이동</div>}
+                        {cmdKResults.length === 0 && cmdKQuery.trim() && <div className="py-10 text-center text-[14px] text-slate-400">검색 결과가 없습니다</div>}
+                        {(() => {
+                            const groups: Record<string, typeof cmdKResults> = {};
+                            cmdKResults.forEach(item => { (groups[item.type] ||= []).push(item); });
+                            let gi = 0;
+                            return Object.entries(groups).map(([type, items]) => (
+                                <div key={type}>
+                                    {cmdKQuery.trim() && <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-5 pt-3 pb-1">{type}</div>}
+                                    {items.map(item => {
+                                        const idx = gi++;
+                                        const active = idx === cmdKIdx;
+                                        return (
+                                            <button key={`${item.tabId}-${idx}`} data-cmdk-idx={idx}
+                                                className="w-full flex items-center gap-3 px-5 py-2 text-left transition-colors"
+                                                style={{ background: active ? "#F1F5F9" : "transparent" }}
+                                                onMouseEnter={() => setCmdKIdx(idx)}
+                                                onClick={() => handleCmdKSelect(item.tabId)}>
+                                                <span className="text-[16px] flex-shrink-0">{item.icon}</span>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-[14px] text-slate-700 truncate" style={{ fontWeight: active ? 600 : 400 }}>{item.title}</div>
+                                                    {item.subtitle && <div className="text-[12px] text-slate-400 truncate">{item.subtitle}</div>}
+                                                </div>
+                                                {active && <span className="text-[12px] text-slate-400 flex-shrink-0">↵</span>}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            ));
+                        })()}
+                    </div>
+                    <div className="flex items-center gap-4 px-4 py-2 border-t border-slate-100" style={{background:"#FAFBFC"}}>
+                        <span className="text-[11px] text-slate-400"><kbd className="px-1 py-0.5 bg-white border border-slate-200 rounded text-[10px] mr-1">↑↓</kbd> 이동</span>
+                        <span className="text-[11px] text-slate-400"><kbd className="px-1 py-0.5 bg-white border border-slate-200 rounded text-[10px] mr-1">↵</kbd> 선택</span>
+                        <span className="text-[11px] text-slate-400"><kbd className="px-1 py-0.5 bg-white border border-slate-200 rounded text-[10px] mr-1">ESC</kbd> 닫기</span>
+                    </div>
+                </div>
+            </div>
+        )}
+
         {confirmDialog}
         </div>
         </ConfirmDeleteContext.Provider>
