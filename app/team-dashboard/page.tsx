@@ -887,10 +887,12 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
     const [editing, setEditing] = useState<Report | null>(null);
     const [addCategory, setAddCategory] = useState<string | null>(null);
     const [filterTeam, setFilterTeam] = useState("전체");
+    const [filterPerson, setFilterPerson] = useState("전체");
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Report | null>(null);
-    const filteredReports = filterTeam === "전체" ? reports : reports.filter(r => r.team === filterTeam);
+    const teamFiltered = filterTeam === "전체" ? reports : reports.filter(r => r.team === filterTeam);
+    const filteredReports = filterPerson === "전체" ? teamFiltered : teamFiltered.filter(r => r.assignees?.includes(filterPerson));
     const [showCompleted, setShowCompleted] = useState(false);
     const [selected, setSelected] = useState<Report | null>(null);
     const [detailComment, setDetailComment] = useState("");
@@ -905,12 +907,49 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
     const kanbanFilteredReports = filteredReports.filter(r => r.status !== "done");
     return (
         <div>
-            <div className="mb-3 flex gap-2">
-                <button onClick={() => setAddCategory("계획서")} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">+ 계획서 등록</button>
-                <button onClick={() => setAddCategory("보고서")} className="px-4 py-2 bg-violet-500 text-white rounded-lg text-[14px] font-medium hover:bg-violet-600">+ 보고서 등록</button>
-                <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedReports.length})</button>
+            <div className="mb-3 flex items-center justify-end">
+                <div className="flex items-center gap-2">
+                    <button onClick={() => setAddCategory("계획서")} className="px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 계획서 등록</button>
+                    <button onClick={() => setAddCategory("보고서")} className="px-3.5 py-1.5 bg-violet-500 text-white rounded-lg text-[13px] font-medium hover:bg-violet-600 transition-colors">+ 보고서 등록</button>
+                    <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedReports.length})</button>
+                </div>
             </div>
-            {teamNames && teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
+            <div className="space-y-2 mb-3">
+                {teamNames && teamNames.length > 0 && (
+                    <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-semibold flex-shrink-0" style={{color:"#94A3B8"}}>팀</span>
+                        <div className="flex items-center gap-1 flex-wrap">
+                            {["전체", ...teamNames].map(t => (
+                                <button key={t} onClick={() => setFilterTeam(t)}
+                                    className="px-2.5 py-1 rounded-full text-[12px] font-medium transition-all flex-shrink-0"
+                                    style={{
+                                        background: filterTeam === t ? "#3B82F6" : "transparent",
+                                        color: filterTeam === t ? "#FFFFFF" : "#64748B",
+                                        border: filterTeam === t ? "1px solid #3B82F6" : "1px solid #CBD5E1",
+                                    }}>
+                                    {t}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-semibold flex-shrink-0" style={{color:"#94A3B8"}}>멤버</span>
+                    <div className="flex items-center gap-1 overflow-x-auto pb-0.5" style={{scrollbarWidth:"none", whiteSpace:"nowrap"}}>
+                        {["전체", ...MEMBER_NAMES].map(p => (
+                            <button key={p} onClick={() => setFilterPerson(p)}
+                                className="px-2.5 py-1 rounded-full text-[12px] font-medium transition-all flex-shrink-0"
+                                style={{
+                                    background: filterPerson === p ? "#3B82F6" : "transparent",
+                                    color: filterPerson === p ? "#FFFFFF" : "#64748B",
+                                    border: filterPerson === p ? "1px solid #3B82F6" : "1px solid #CBD5E1",
+                                }}>
+                                {p === "전체" ? "전체" : `${MEMBERS[p]?.emoji || ""} ${p}`}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
             {!showCompleted && (
             <div className="flex gap-3 pb-2">
                 {REPORT_STATUS_KEYS.map(status => {
@@ -1811,10 +1850,12 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
     const [showEqMgr, setShowEqMgr] = useState(false);
     const [newEq, setNewEq] = useState("");
     const [filterTeam, setFilterTeam] = useState("전체");
+    const [filterPerson, setFilterPerson] = useState("전체");
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Experiment | null>(null);
-    const filteredExperiments = filterTeam === "전체" ? experiments : experiments.filter(e => e.team === filterTeam);
+    const teamFilteredExperiments = filterTeam === "전체" ? experiments : experiments.filter(e => e.team === filterTeam);
+    const filteredExperiments = filterPerson === "전체" ? teamFilteredExperiments : teamFilteredExperiments.filter(e => e.assignees?.includes(filterPerson));
     const [showCompleted, setShowCompleted] = useState(false);
     const [selected, setSelected] = useState<Experiment | null>(null);
     const [detailComment, setDetailComment] = useState("");
@@ -1829,10 +1870,12 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
     const kanbanFilteredExperiments = filteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) !== "completed");
     return (
         <div>
-            <div className="mb-3 flex items-center gap-2">
-                <button onClick={() => setAdding(true)} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">+ 실험 등록</button>
-                <button onClick={() => setShowEqMgr(!showEqMgr)} className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-[13px] font-medium hover:bg-slate-200">🔧 실험 장치 관리</button>
-                <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedExperiments.length})</button>
+            <div className="mb-3 flex items-center justify-end">
+                <div className="flex items-center gap-2">
+                    <button onClick={() => setAdding(true)} className="px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 실험 등록</button>
+                    <button onClick={() => setShowEqMgr(!showEqMgr)} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200">🔧 실험 장치 관리</button>
+                    <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedExperiments.length})</button>
+                </div>
             </div>
             {showEqMgr && (
                 <div className="mb-4 p-3 bg-white border border-slate-200 rounded-lg">
@@ -1854,7 +1897,42 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                     </div>
                 </div>
             )}
-            {teamNames && teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
+            <div className="space-y-2 mb-3">
+                {teamNames && teamNames.length > 0 && (
+                    <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-semibold flex-shrink-0" style={{color:"#94A3B8"}}>팀</span>
+                        <div className="flex items-center gap-1 flex-wrap">
+                            {["전체", ...teamNames].map(t => (
+                                <button key={t} onClick={() => setFilterTeam(t)}
+                                    className="px-2.5 py-1 rounded-full text-[12px] font-medium transition-all flex-shrink-0"
+                                    style={{
+                                        background: filterTeam === t ? "#3B82F6" : "transparent",
+                                        color: filterTeam === t ? "#FFFFFF" : "#64748B",
+                                        border: filterTeam === t ? "1px solid #3B82F6" : "1px solid #CBD5E1",
+                                    }}>
+                                    {t}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-semibold flex-shrink-0" style={{color:"#94A3B8"}}>멤버</span>
+                    <div className="flex items-center gap-1 overflow-x-auto pb-0.5" style={{scrollbarWidth:"none", whiteSpace:"nowrap"}}>
+                        {["전체", ...MEMBER_NAMES].map(p => (
+                            <button key={p} onClick={() => setFilterPerson(p)}
+                                className="px-2.5 py-1 rounded-full text-[12px] font-medium transition-all flex-shrink-0"
+                                style={{
+                                    background: filterPerson === p ? "#3B82F6" : "transparent",
+                                    color: filterPerson === p ? "#FFFFFF" : "#64748B",
+                                    border: filterPerson === p ? "1px solid #3B82F6" : "1px solid #CBD5E1",
+                                }}>
+                                {p === "전체" ? "전체" : `${MEMBERS[p]?.emoji || ""} ${p}`}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
             {!showCompleted && (
             <div className="flex gap-3 pb-2">
                 {EXP_STATUS_KEYS.map(status => {
@@ -2162,10 +2240,12 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
     const [showToolMgr, setShowToolMgr] = useState(false);
     const [newTool, setNewTool] = useState("");
     const [filterTeam, setFilterTeam] = useState("전체");
+    const [filterPerson, setFilterPerson] = useState("전체");
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Analysis | null>(null);
-    const filteredAnalyses = filterTeam === "전체" ? analyses : analyses.filter(a => a.team === filterTeam);
+    const teamFilteredAnalyses = filterTeam === "전체" ? analyses : analyses.filter(a => a.team === filterTeam);
+    const filteredAnalyses = filterPerson === "전체" ? teamFilteredAnalyses : teamFilteredAnalyses.filter(a => a.assignees?.includes(filterPerson));
     const [showCompleted, setShowCompleted] = useState(false);
     const [selected, setSelected] = useState<Analysis | null>(null);
     const [detailComment, setDetailComment] = useState("");
@@ -2180,10 +2260,12 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
     const kanbanFilteredAnalyses = filteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) !== "completed");
     return (
         <div>
-            <div className="mb-3 flex items-center gap-2">
-                <button onClick={() => setAdding(true)} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">+ 해석 등록</button>
-                <button onClick={() => setShowToolMgr(!showToolMgr)} className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-[13px] font-medium hover:bg-slate-200">🔧 해석 도구 관리</button>
-                <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedAnalyses.length})</button>
+            <div className="mb-3 flex items-center justify-end">
+                <div className="flex items-center gap-2">
+                    <button onClick={() => setAdding(true)} className="px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 해석 등록</button>
+                    <button onClick={() => setShowToolMgr(!showToolMgr)} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200">🔧 해석 도구 관리</button>
+                    <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedAnalyses.length})</button>
+                </div>
             </div>
             {showToolMgr && (
                 <div className="mb-4 p-3 bg-white border border-slate-200 rounded-lg">
@@ -2205,7 +2287,42 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                     </div>
                 </div>
             )}
-            {teamNames && teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
+            <div className="space-y-2 mb-3">
+                {teamNames && teamNames.length > 0 && (
+                    <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-semibold flex-shrink-0" style={{color:"#94A3B8"}}>팀</span>
+                        <div className="flex items-center gap-1 flex-wrap">
+                            {["전체", ...teamNames].map(t => (
+                                <button key={t} onClick={() => setFilterTeam(t)}
+                                    className="px-2.5 py-1 rounded-full text-[12px] font-medium transition-all flex-shrink-0"
+                                    style={{
+                                        background: filterTeam === t ? "#3B82F6" : "transparent",
+                                        color: filterTeam === t ? "#FFFFFF" : "#64748B",
+                                        border: filterTeam === t ? "1px solid #3B82F6" : "1px solid #CBD5E1",
+                                    }}>
+                                    {t}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-semibold flex-shrink-0" style={{color:"#94A3B8"}}>멤버</span>
+                    <div className="flex items-center gap-1 overflow-x-auto pb-0.5" style={{scrollbarWidth:"none", whiteSpace:"nowrap"}}>
+                        {["전체", ...MEMBER_NAMES].map(p => (
+                            <button key={p} onClick={() => setFilterPerson(p)}
+                                className="px-2.5 py-1 rounded-full text-[12px] font-medium transition-all flex-shrink-0"
+                                style={{
+                                    background: filterPerson === p ? "#3B82F6" : "transparent",
+                                    color: filterPerson === p ? "#FFFFFF" : "#64748B",
+                                    border: filterPerson === p ? "1px solid #3B82F6" : "1px solid #CBD5E1",
+                                }}>
+                                {p === "전체" ? "전체" : `${MEMBERS[p]?.emoji || ""} ${p}`}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
             {!showCompleted && (
             <div className="flex gap-3 pb-2">
                 {ANALYSIS_STATUS_KEYS.map(status => {
@@ -2423,20 +2540,40 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
 
     return (
         <div>
-            {/* Person filter */}
-            <div className="flex flex-nowrap overflow-x-auto gap-1 mb-3 md:flex-wrap md:overflow-visible">
-                <button onClick={() => setFilterPeople([])} className={`px-2 py-0.5 rounded-full text-[12px] font-medium shrink-0 ${filterPeople.length === 0 ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>전체</button>
-                {MEMBER_NAMES.map(name => (
-                    <button key={name} onClick={() => setFilterPeople(filterPeople.includes(name) ? filterPeople.filter(n => n !== name) : [...filterPeople, name])}
-                        className={`px-2 py-0.5 rounded-full text-[12px] font-medium shrink-0 ${filterPeople.includes(name) ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
-                        {MEMBERS[name]?.emoji} {name}
-                    </button>
-                ))}
+            {/* Action buttons */}
+            <div className="mb-3 flex items-center justify-end">
+                <div className="flex items-center gap-2">
+                    <button onClick={() => setShowForm(!showForm)} className="hidden md:inline-flex px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 할 일 추가</button>
+                    <span className="text-[13px] text-slate-400">{doneCount}/{totalCount} 완료</span>
+                </div>
             </div>
-            {/* Stats + Add button */}
-            <div className="flex items-center gap-3 mb-3">
-                <button onClick={() => setShowForm(!showForm)} className="hidden md:inline-flex px-4 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600">+ 할 일 추가</button>
-                <span className="text-[13px] text-slate-400">{doneCount}/{totalCount} 완료</span>
+            {/* Member filter */}
+            <div className="space-y-2 mb-3">
+                <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-semibold flex-shrink-0" style={{color:"#94A3B8"}}>멤버</span>
+                    <div className="flex items-center gap-1 overflow-x-auto pb-0.5" style={{scrollbarWidth:"none", whiteSpace:"nowrap"}}>
+                        <button onClick={() => setFilterPeople([])}
+                            className="px-2.5 py-1 rounded-full text-[12px] font-medium transition-all flex-shrink-0"
+                            style={{
+                                background: filterPeople.length === 0 ? "#3B82F6" : "transparent",
+                                color: filterPeople.length === 0 ? "#FFFFFF" : "#64748B",
+                                border: filterPeople.length === 0 ? "1px solid #3B82F6" : "1px solid #CBD5E1",
+                            }}>
+                            전체
+                        </button>
+                        {MEMBER_NAMES.map(name => (
+                            <button key={name} onClick={() => setFilterPeople(filterPeople.includes(name) ? filterPeople.filter(n => n !== name) : [...filterPeople, name])}
+                                className="px-2.5 py-1 rounded-full text-[12px] font-medium transition-all flex-shrink-0"
+                                style={{
+                                    background: filterPeople.includes(name) ? "#3B82F6" : "transparent",
+                                    color: filterPeople.includes(name) ? "#FFFFFF" : "#64748B",
+                                    border: filterPeople.includes(name) ? "1px solid #3B82F6" : "1px solid #CBD5E1",
+                                }}>
+                                {`${MEMBERS[name]?.emoji || ""} ${name}`}
+                            </button>
+                        ))}
+                    </div>
+                </div>
             </div>
             {/* Add form — inline on desktop, modal on mobile */}
             {showForm && (
@@ -2988,20 +3125,59 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
     const [editing, setEditing] = useState<Patent | null>(null);
     const [adding, setAdding] = useState(false);
     const [filterTeam, setFilterTeam] = useState("전체");
+    const [filterPerson, setFilterPerson] = useState("전체");
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const dragItem = useRef<Patent | null>(null);
-    const filteredPatents = filterTeam === "전체" ? patents : patents.filter(p => p.team === filterTeam);
+    const teamFilteredPatents = filterTeam === "전체" ? patents : patents.filter(p => p.team === filterTeam);
+    const filteredPatents = filterPerson === "전체" ? teamFilteredPatents : teamFilteredPatents.filter(p => p.assignees?.includes(filterPerson));
     const [showCompleted, setShowCompleted] = useState(false);
     const completedPatents = filteredPatents.filter(p => p.status === "completed");
     const kanbanFilteredPatents = filteredPatents.filter(p => p.status !== "completed");
     return (
         <div>
-            <div className="mb-3 flex items-center gap-2">
-                <button onClick={() => setAdding(true)} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">+ 지식재산권 등록</button>
-                <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedPatents.length})</button>
+            <div className="mb-3 flex items-center justify-end">
+                <div className="flex items-center gap-2">
+                    <button onClick={() => setAdding(true)} className="px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 지식재산권 등록</button>
+                    <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedPatents.length})</button>
+                </div>
             </div>
-            {teamNames && teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
+            <div className="space-y-2 mb-3">
+                {teamNames && teamNames.length > 0 && (
+                    <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-semibold flex-shrink-0" style={{color:"#94A3B8"}}>팀</span>
+                        <div className="flex items-center gap-1 flex-wrap">
+                            {["전체", ...teamNames].map(t => (
+                                <button key={t} onClick={() => setFilterTeam(t)}
+                                    className="px-2.5 py-1 rounded-full text-[12px] font-medium transition-all flex-shrink-0"
+                                    style={{
+                                        background: filterTeam === t ? "#3B82F6" : "transparent",
+                                        color: filterTeam === t ? "#FFFFFF" : "#64748B",
+                                        border: filterTeam === t ? "1px solid #3B82F6" : "1px solid #CBD5E1",
+                                    }}>
+                                    {t}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-semibold flex-shrink-0" style={{color:"#94A3B8"}}>멤버</span>
+                    <div className="flex items-center gap-1 overflow-x-auto pb-0.5" style={{scrollbarWidth:"none", whiteSpace:"nowrap"}}>
+                        {["전체", ...MEMBER_NAMES].map(p => (
+                            <button key={p} onClick={() => setFilterPerson(p)}
+                                className="px-2.5 py-1 rounded-full text-[12px] font-medium transition-all flex-shrink-0"
+                                style={{
+                                    background: filterPerson === p ? "#3B82F6" : "transparent",
+                                    color: filterPerson === p ? "#FFFFFF" : "#64748B",
+                                    border: filterPerson === p ? "1px solid #3B82F6" : "1px solid #CBD5E1",
+                                }}>
+                                {p === "전체" ? "전체" : `${MEMBERS[p]?.emoji || ""} ${p}`}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
             {!showCompleted && (
             <div className="flex gap-3 pb-2">
                 {IP_STATUS_KEYS.map(status => {
