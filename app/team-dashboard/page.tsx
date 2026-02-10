@@ -7031,7 +7031,7 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
     const filtered = useMemo(() => {
         if (!search.trim()) return sorted;
         const q = search.toLowerCase();
-        return sorted.filter(e => e.title.toLowerCase().includes(q) || e.conditions.toLowerCase().includes(q) || e.specimen?.toLowerCase().includes(q) || e.data?.toLowerCase().includes(q) || e.notes?.toLowerCase().includes(q) || e.author.includes(q));
+        return sorted.filter(e => e.title.toLowerCase().includes(q) || e.conditions.toLowerCase().includes(q) || e.data?.toLowerCase().includes(q) || e.notes?.toLowerCase().includes(q) || e.author.includes(q));
     }, [sorted, search]);
 
     const dateGroups = useMemo(() => {
@@ -7059,7 +7059,7 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
             {/* Search */}
             {entries.length > 3 && (
                 <div className="mb-4">
-                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="실험명, 조건, 시편, 데이터 검색..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="실험명, 조건, 데이터 검색..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                 </div>
             )}
 
@@ -7096,7 +7096,6 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
                                                     <div className="text-[15px] font-semibold text-slate-800 leading-snug">{entry.title}</div>
                                                     <div className="flex items-center gap-3 mt-1 flex-wrap">
                                                         {entry.category && <span className="text-[11px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{entry.category}</span>}
-                                                        {entry.specimen && <span className="text-[12px] text-slate-500">🔬 {entry.specimen}</span>}
                                                         {entry.conditions && <span className="text-[12px] text-slate-400 truncate max-w-[200px]">⚙️ {entry.conditions}</span>}
                                                     </div>
                                                 </div>
@@ -7112,12 +7111,6 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
                                                             <div className="rounded-lg p-3" style={{background:"#F8FAFC"}}>
                                                                 <div className="text-[11px] font-bold text-slate-400 mb-1">⚙️ 실험 조건</div>
                                                                 <div className="text-[13px] text-slate-700 whitespace-pre-wrap leading-relaxed">{entry.conditions}</div>
-                                                            </div>
-                                                        )}
-                                                        {entry.specimen && (
-                                                            <div className="rounded-lg p-3" style={{background:"#F0F9FF"}}>
-                                                                <div className="text-[11px] font-bold text-slate-400 mb-1">🔬 시편 종류</div>
-                                                                <div className="text-[13px] text-slate-700 whitespace-pre-wrap leading-relaxed">{entry.specimen}</div>
                                                             </div>
                                                         )}
                                                         {entry.data && (
@@ -7182,11 +7175,7 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
                                 )}
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">⚙️ 실험 조건</label>
-                                    <textarea value={conditions} onChange={e => setConditions(e.target.value)} placeholder="유속, 온도, 압력, 히터 전력, 냉각수 유량 등" rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
-                                </div>
-                                <div>
-                                    <label className="text-[12px] font-semibold text-slate-500 mb-1 block">🔬 시편 종류</label>
-                                    <input value={specimen} onChange={e => setSpecimen(e.target.value)} placeholder="예: Cu 20×20mm, SiC 코팅, FC-72 ..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                    <textarea value={conditions} onChange={e => setConditions(e.target.value)} placeholder="유속, 온도, 압력, 히터 전력, 냉각수 유량, 시편 종류(Cu 20×20mm, SiC 코팅 등) ..." rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
                                 </div>
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">📊 데이터</label>
@@ -7954,6 +7943,9 @@ export default function DashboardPage() {
     const [showAnalysisMgr, setShowAnalysisMgr] = useState(false);
     const [newExpCat, setNewExpCat] = useState("");
     const [newAnalysisCat, setNewAnalysisCat] = useState("");
+    const [editingCat, setEditingCat] = useState<string | null>(null);
+    const [editingCatVal, setEditingCatVal] = useState("");
+    const [confirmDelCat, setConfirmDelCat] = useState<string | null>(null);
 
     const tabs = [
         { id: "overview", label: "연구실 현황", icon: "🏠" },
@@ -8620,6 +8612,31 @@ export default function DashboardPage() {
             return toSave;
         });
     };
+    const handleRenameExpLogCategory = (teamName: string, oldName: string, newName: string) => {
+        if (!newName.trim() || newName === oldName) return;
+        handleSaveExpLogCategories(teamName, (expLogCategories[teamName] || []).map(c => c === oldName ? newName : c));
+        // Update entries referencing old category
+        pendingSavesRef.current++;
+        setExperimentLogs(prev => {
+            const entries = (prev[teamName] || []).map(e => e.category === oldName ? { ...e, category: newName } : e);
+            const toSave = { ...prev, [teamName]: entries };
+            saveSection("experimentLogs", toSave).then(() => { pendingSavesRef.current--; });
+            return toSave;
+        });
+        if (activeTab === `expLog_${teamName}_${oldName}`) setActiveTab(`expLog_${teamName}_${newName}`);
+    };
+    const handleRenameAnalysisLogCategory = (teamName: string, oldName: string, newName: string) => {
+        if (!newName.trim() || newName === oldName) return;
+        handleSaveAnalysisLogCategories(teamName, (analysisLogCategories[teamName] || []).map(c => c === oldName ? newName : c));
+        pendingSavesRef.current++;
+        setAnalysisLogs(prev => {
+            const entries = (prev[teamName] || []).map(e => e.category === oldName ? { ...e, category: newName } : e);
+            const toSave = { ...prev, [teamName]: entries };
+            saveSection("analysisLogs", toSave).then(() => { pendingSavesRef.current--; });
+            return toSave;
+        });
+        if (activeTab === `analysisLog_${teamName}_${oldName}`) setActiveTab(`analysisLog_${teamName}_${newName}`);
+    };
     const handleAddTeamChat = (teamName: string, msg: TeamChatMsg) => {
         pendingSavesRef.current++;
         setTeamMemos(prev => {
@@ -9254,17 +9271,25 @@ export default function DashboardPage() {
                         const tName = activeTab.replace("teamMemo_", "");
                         const cats = expLogCategories[tName] || [];
                         return (
-                            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowExpMgr(false)}>
-                                <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:480}} onClick={e => e.stopPropagation()}>
+                            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setShowExpMgr(false); setEditingCat(null); setConfirmDelCat(null); }}>
+                                <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:480}} onClick={e => { e.stopPropagation(); if (editingCat) { const nv = editingCatVal.trim(); if (nv && nv !== editingCat) handleRenameExpLogCategory(tName, editingCat, nv); setEditingCat(null); } setConfirmDelCat(null); }}>
                                     <div className="flex items-center justify-between mb-3">
                                         <h3 className="text-[15px] font-bold text-slate-800">실험일지 관리</h3>
-                                        <button onClick={() => setShowExpMgr(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                                        <button onClick={() => { setShowExpMgr(false); setEditingCat(null); setConfirmDelCat(null); }} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
                                     </div>
                                     <div className="flex flex-wrap gap-1.5 mb-3">
                                         {cats.map(t => (
-                                            <span key={t} className="flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-full text-[12px] text-slate-700">
-                                                {t}
-                                                <button onClick={() => handleSaveExpLogCategories(tName, cats.filter(x => x !== t))} className="text-slate-400 hover:text-red-500 text-[11px]">✕</button>
+                                            <span key={t} className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] transition-colors ${confirmDelCat === t ? "bg-red-50 border border-red-300 text-red-600" : "bg-slate-50 border border-slate-200 text-slate-700"}`} onClick={e => e.stopPropagation()}>
+                                                {editingCat === t ? (
+                                                    <input autoFocus value={editingCatVal} onChange={e => setEditingCatVal(e.target.value)}
+                                                        className="bg-transparent border-none outline-none text-[12px] w-20 min-w-0"
+                                                        onKeyDown={e => { if (e.key === "Enter") { const nv = editingCatVal.trim(); if (nv && nv !== t) handleRenameExpLogCategory(tName, t, nv); setEditingCat(null); } if (e.key === "Escape") setEditingCat(null); }}
+                                                        onBlur={() => { const nv = editingCatVal.trim(); if (nv && nv !== t) handleRenameExpLogCategory(tName, t, nv); setEditingCat(null); }} />
+                                                ) : (
+                                                    <span className="cursor-pointer" onClick={() => { setEditingCat(t); setEditingCatVal(t); setConfirmDelCat(null); }}>{confirmDelCat === t ? "삭제하시겠습니까?" : t}</span>
+                                                )}
+                                                <button onClick={(e) => { e.stopPropagation(); if (confirmDelCat === t) { handleSaveExpLogCategories(tName, cats.filter(x => x !== t)); setConfirmDelCat(null); } else { setConfirmDelCat(t); setEditingCat(null); } }}
+                                                    className={`text-[11px] ${confirmDelCat === t ? "text-red-500 font-bold" : "text-slate-400 hover:text-red-500"}`}>{confirmDelCat === t ? "확인" : "✕"}</button>
                                             </span>
                                         ))}
                                         {cats.length === 0 && <span className="text-[12px] text-slate-400">등록된 실험일지가 없습니다</span>}
@@ -9272,12 +9297,13 @@ export default function DashboardPage() {
                                     <div className="flex gap-2">
                                         <input value={newExpCat} onChange={e => setNewExpCat(e.target.value)} placeholder="새 실험일지 이름 입력"
                                             className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                            onKeyDown={e => { if (e.key === "Enter" && newExpCat.trim() && !cats.includes(newExpCat.trim())) { handleSaveExpLogCategories(tName, [...cats, newExpCat.trim()]); setNewExpCat(""); } }} />
-                                        <button onClick={() => { if (newExpCat.trim() && !cats.includes(newExpCat.trim())) { handleSaveExpLogCategories(tName, [...cats, newExpCat.trim()]); setNewExpCat(""); } }}
+                                            onKeyDown={e => { if (e.key === "Enter" && newExpCat.trim() && !cats.includes(newExpCat.trim())) { handleSaveExpLogCategories(tName, [...cats, newExpCat.trim()]); setNewExpCat(""); } }}
+                                            onClick={e => e.stopPropagation()} />
+                                        <button onClick={(e) => { e.stopPropagation(); if (newExpCat.trim() && !cats.includes(newExpCat.trim())) { handleSaveExpLogCategories(tName, [...cats, newExpCat.trim()]); setNewExpCat(""); } }}
                                             className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">추가</button>
                                     </div>
                                     <div className="flex justify-end mt-4">
-                                        <button onClick={() => setShowExpMgr(false)} className="px-4 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] font-medium hover:bg-slate-200">닫기</button>
+                                        <button onClick={() => { setShowExpMgr(false); setEditingCat(null); setConfirmDelCat(null); }} className="px-4 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] font-medium hover:bg-slate-200">닫기</button>
                                     </div>
                                 </div>
                             </div>
@@ -9287,17 +9313,25 @@ export default function DashboardPage() {
                         const tName = activeTab.replace("teamMemo_", "");
                         const cats = analysisLogCategories[tName] || [];
                         return (
-                            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowAnalysisMgr(false)}>
-                                <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:480}} onClick={e => e.stopPropagation()}>
+                            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setShowAnalysisMgr(false); setEditingCat(null); setConfirmDelCat(null); }}>
+                                <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:480}} onClick={e => { e.stopPropagation(); if (editingCat) { const nv = editingCatVal.trim(); if (nv && nv !== editingCat) handleRenameAnalysisLogCategory(tName, editingCat, nv); setEditingCat(null); } setConfirmDelCat(null); }}>
                                     <div className="flex items-center justify-between mb-3">
                                         <h3 className="text-[15px] font-bold text-slate-800">해석일지 관리</h3>
-                                        <button onClick={() => setShowAnalysisMgr(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                                        <button onClick={() => { setShowAnalysisMgr(false); setEditingCat(null); setConfirmDelCat(null); }} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
                                     </div>
                                     <div className="flex flex-wrap gap-1.5 mb-3">
                                         {cats.map(t => (
-                                            <span key={t} className="flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-full text-[12px] text-slate-700">
-                                                {t}
-                                                <button onClick={() => handleSaveAnalysisLogCategories(tName, cats.filter(x => x !== t))} className="text-slate-400 hover:text-red-500 text-[11px]">✕</button>
+                                            <span key={t} className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] transition-colors ${confirmDelCat === t ? "bg-red-50 border border-red-300 text-red-600" : "bg-slate-50 border border-slate-200 text-slate-700"}`} onClick={e => e.stopPropagation()}>
+                                                {editingCat === t ? (
+                                                    <input autoFocus value={editingCatVal} onChange={e => setEditingCatVal(e.target.value)}
+                                                        className="bg-transparent border-none outline-none text-[12px] w-20 min-w-0"
+                                                        onKeyDown={e => { if (e.key === "Enter") { const nv = editingCatVal.trim(); if (nv && nv !== t) handleRenameAnalysisLogCategory(tName, t, nv); setEditingCat(null); } if (e.key === "Escape") setEditingCat(null); }}
+                                                        onBlur={() => { const nv = editingCatVal.trim(); if (nv && nv !== t) handleRenameAnalysisLogCategory(tName, t, nv); setEditingCat(null); }} />
+                                                ) : (
+                                                    <span className="cursor-pointer" onClick={() => { setEditingCat(t); setEditingCatVal(t); setConfirmDelCat(null); }}>{confirmDelCat === t ? "삭제하시겠습니까?" : t}</span>
+                                                )}
+                                                <button onClick={(e) => { e.stopPropagation(); if (confirmDelCat === t) { handleSaveAnalysisLogCategories(tName, cats.filter(x => x !== t)); setConfirmDelCat(null); } else { setConfirmDelCat(t); setEditingCat(null); } }}
+                                                    className={`text-[11px] ${confirmDelCat === t ? "text-red-500 font-bold" : "text-slate-400 hover:text-red-500"}`}>{confirmDelCat === t ? "확인" : "✕"}</button>
                                             </span>
                                         ))}
                                         {cats.length === 0 && <span className="text-[12px] text-slate-400">등록된 해석일지가 없습니다</span>}
@@ -9305,12 +9339,13 @@ export default function DashboardPage() {
                                     <div className="flex gap-2">
                                         <input value={newAnalysisCat} onChange={e => setNewAnalysisCat(e.target.value)} placeholder="새 해석일지 이름 입력"
                                             className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                            onKeyDown={e => { if (e.key === "Enter" && newAnalysisCat.trim() && !cats.includes(newAnalysisCat.trim())) { handleSaveAnalysisLogCategories(tName, [...cats, newAnalysisCat.trim()]); setNewAnalysisCat(""); } }} />
-                                        <button onClick={() => { if (newAnalysisCat.trim() && !cats.includes(newAnalysisCat.trim())) { handleSaveAnalysisLogCategories(tName, [...cats, newAnalysisCat.trim()]); setNewAnalysisCat(""); } }}
+                                            onKeyDown={e => { if (e.key === "Enter" && newAnalysisCat.trim() && !cats.includes(newAnalysisCat.trim())) { handleSaveAnalysisLogCategories(tName, [...cats, newAnalysisCat.trim()]); setNewAnalysisCat(""); } }}
+                                            onClick={e => e.stopPropagation()} />
+                                        <button onClick={(e) => { e.stopPropagation(); if (newAnalysisCat.trim() && !cats.includes(newAnalysisCat.trim())) { handleSaveAnalysisLogCategories(tName, [...cats, newAnalysisCat.trim()]); setNewAnalysisCat(""); } }}
                                             className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">추가</button>
                                     </div>
                                     <div className="flex justify-end mt-4">
-                                        <button onClick={() => setShowAnalysisMgr(false)} className="px-4 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] font-medium hover:bg-slate-200">닫기</button>
+                                        <button onClick={() => { setShowAnalysisMgr(false); setEditingCat(null); setConfirmDelCat(null); }} className="px-4 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] font-medium hover:bg-slate-200">닫기</button>
                                     </div>
                                 </div>
                             </div>
