@@ -6380,22 +6380,12 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                     </button>
                 ))}
             </div>
-            {/* Desktop tab bar — tabs + management buttons on right (desktop only) */}
-            <div className="hidden md:flex items-center border-b border-slate-200 bg-white flex-shrink-0 -mt-1 md:col-span-full">
-                <div className="flex flex-1 min-w-0">
-                    {([["chat","💬","채팅/보드/파일"],["expLogs","🧪","실험일지"],["analysisLogs","🖥️","해석일지"]] as const).map(([id,icon,label]) => (
-                        <button key={id} onClick={() => setMobileTab(id as typeof mobileTab)}
-                            className={`px-4 py-2.5 text-[13px] font-semibold transition-colors whitespace-nowrap ${(id === "chat" ? showClassicCols : mobileTab === id) ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400 hover:text-slate-600"}`}>
-                            {icon} {label}
-                        </button>
-                    ))}
-                </div>
-                <div className="flex items-center gap-2 mr-2 flex-shrink-0">
-                    <button onClick={() => { setShowExpMgr(!showExpMgr); setShowAnalysisMgr(false); }} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200 whitespace-nowrap">✏️ 실험일지 관리</button>
-                    <button onClick={() => { setShowAnalysisMgr(!showAnalysisMgr); setShowExpMgr(false); }} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200 whitespace-nowrap">💻 해석일지 관리</button>
-                </div>
+            {/* Desktop: management buttons + sub-menu row (no tab bar) */}
+            <div className="hidden md:flex items-center justify-end gap-2 flex-shrink-0 -mt-1 mb-1 md:col-span-full">
+                <button onClick={() => { setShowExpMgr(!showExpMgr); setShowAnalysisMgr(false); }} className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[11px] font-medium hover:bg-slate-200 whitespace-nowrap">✏️ 실험일지 관리</button>
+                <button onClick={() => { setShowAnalysisMgr(!showAnalysisMgr); setShowExpMgr(false); }} className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[11px] font-medium hover:bg-slate-200 whitespace-nowrap">💻 해석일지 관리</button>
             </div>
-            {/* Management modals — identical to 📋 태그 관리 pattern */}
+            {/* Management modals — 📋 태그 관리 pattern */}
             {showExpMgr && (
                 <div className="md:col-span-full mb-2 p-3 bg-white border border-slate-200 rounded-lg">
                     <div className="text-[13px] font-semibold text-slate-600 mb-2">실험일지 목록</div>
@@ -6438,23 +6428,20 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                     </div>
                 </div>
             )}
-            {/* Sub-tabs — underline style, only when expLogs or analysisLogs tab is active */}
-            {mobileTab === "expLogs" && expCategories.length > 0 && (
-                <div className="md:col-span-full flex items-center border-b border-slate-200 bg-white overflow-x-auto flex-shrink-0" style={{scrollbarWidth:"none"}}>
-                    {["전체", ...expCategories].map(name => (
-                        <button key={name} onClick={() => setExpSubTab(name)}
-                            className={`px-3 py-2 text-[13px] font-medium transition-colors whitespace-nowrap flex-shrink-0 ${expSubTab === name ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400 hover:text-slate-600"}`}>
-                            {name}
+            {/* Sub-menu: categories created via management appear here as navigation */}
+            {(expCategories.length > 0 || analysisCategories.length > 0) && (
+                <div className="hidden md:flex md:col-span-full items-center border-b border-slate-200 bg-white overflow-x-auto flex-shrink-0" style={{scrollbarWidth:"none"}}>
+                    {expCategories.map(name => (
+                        <button key={`exp_${name}`} onClick={() => { if (mobileTab === "expLogs" && expSubTab === name) { setMobileTab("chat"); setExpSubTab("전체"); } else { setMobileTab("expLogs"); setExpSubTab(name); } }}
+                            className={`px-3 py-2 text-[13px] font-medium transition-colors whitespace-nowrap flex-shrink-0 ${mobileTab === "expLogs" && expSubTab === name ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400 hover:text-slate-600"}`}>
+                            🧪 {name}
                         </button>
                     ))}
-                </div>
-            )}
-            {mobileTab === "analysisLogs" && analysisCategories.length > 0 && (
-                <div className="md:col-span-full flex items-center border-b border-slate-200 bg-white overflow-x-auto flex-shrink-0" style={{scrollbarWidth:"none"}}>
-                    {["전체", ...analysisCategories].map(name => (
-                        <button key={name} onClick={() => setAnalysisSubTab(name)}
-                            className={`px-3 py-2 text-[13px] font-medium transition-colors whitespace-nowrap flex-shrink-0 ${analysisSubTab === name ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400 hover:text-slate-600"}`}>
-                            {name}
+                    {expCategories.length > 0 && analysisCategories.length > 0 && <div className="w-px h-4 bg-slate-200 mx-1 flex-shrink-0" />}
+                    {analysisCategories.map(name => (
+                        <button key={`ana_${name}`} onClick={() => { if (mobileTab === "analysisLogs" && analysisSubTab === name) { setMobileTab("chat"); setAnalysisSubTab("전체"); } else { setMobileTab("analysisLogs"); setAnalysisSubTab(name); } }}
+                            className={`px-3 py-2 text-[13px] font-medium transition-colors whitespace-nowrap flex-shrink-0 ${mobileTab === "analysisLogs" && analysisSubTab === name ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400 hover:text-slate-600"}`}>
+                            🖥️ {name}
                         </button>
                     ))}
                 </div>
