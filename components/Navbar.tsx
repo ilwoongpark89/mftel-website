@@ -178,19 +178,8 @@ export default function Navbar() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="lg:hidden fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-lg"
+                        className="lg:hidden fixed inset-0 z-50 bg-slate-900"
                     >
-                        {/* Close button */}
-                        <div className="absolute top-0 right-0 p-4 pt-6">
-                            <button
-                                onClick={() => setIsOpen(false)}
-                                className="p-2 text-white"
-                                aria-label="Close menu"
-                            >
-                                <X className="h-6 w-6" />
-                            </button>
-                        </div>
-
                         <div className="flex flex-col items-center justify-center h-full space-y-5">
                             {navItems.map((item, i) => {
                                 const sectionId = item.href.replace("#", "");

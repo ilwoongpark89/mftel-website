@@ -25,6 +25,7 @@ const MEMBER_NAMES = Object.keys(MEMBERS).filter(k => k !== "박일웅");
 
 // Context for dynamic member data (customEmojis merged)
 const MembersContext = createContext<Record<string, { team: string; role: string; emoji: string }>>(DEFAULT_MEMBERS);
+const SavingContext = createContext<Set<number>>(new Set());
 
 type TeamData = { lead: string; members: string[]; color: string; emoji?: string };
 
@@ -35,15 +36,27 @@ const DEFAULT_TEAMS: Record<string, TeamData> = {};
 const chatKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>, send: () => void, composing?: React.MutableRefObject<boolean>) => {
     if (composing?.current) return;
     if (e.key !== "Enter") return;
-    if ("ontouchstart" in window) return; // mobile: button only
     if (e.shiftKey) return; // shift+enter: newline
     e.preventDefault(); send();
 };
+
+// Draft auto-save helpers
+const DRAFT_PFX = "mftel_draft_";
+const saveDraft = (key: string, val: string) => { try { if (val.trim()) localStorage.setItem(DRAFT_PFX + key, val); else localStorage.removeItem(DRAFT_PFX + key); } catch {} };
+const loadDraft = (key: string) => { try { return localStorage.getItem(DRAFT_PFX + key) || ""; } catch { return ""; } };
+const clearDraft = (key: string) => { try { localStorage.removeItem(DRAFT_PFX + key); } catch {} };
+const hasDraft = (key: string) => { try { return !!localStorage.getItem(DRAFT_PFX + key); } catch { return false; } };
+
+// Strip optimistic flags before persisting chat to server
+const stripMsgFlags = (msgs: TeamChatMsg[]): TeamChatMsg[] => msgs.map(({ _sending, _failed, ...rest }) => rest as TeamChatMsg);
 
 const statusText = (hex: string) => {
     const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
     return (r * 299 + g * 587 + b * 114) / 1000 < 160 ? "#FFFFFF" : "#1E293B";
 };
+
+// Shared category colors (soft tones matching pipeline palettes)
+const CATEGORY_COLORS = { paper: "#60A5FA", report: "#FDBA74", experiment: "#F87171", analysis: "#A78BFA", ip: "#2DD4BF" } as const;
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
     planning: { label: "기획", color: "#BFDBFE" },
@@ -118,7 +131,7 @@ type Resource = { id: number; title: string; link: string; nasPath: string; auth
 type IdeaPost = { id: number; title: string; body: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean; color?: string; borderColor?: string };
 type Memo = { id: number; title: string; content: string; color: string; borderColor?: string; updatedAt: string; needsDiscussion?: boolean; comments?: Comment[] };
 type TeamMemoCard = { id: number; title: string; content: string; status: string; color: string; borderColor?: string; author: string; updatedAt: string; comments?: Comment[]; needsDiscussion?: boolean };
-type TeamChatMsg = { id: number; author: string; text: string; date: string; imageUrl?: string };
+type TeamChatMsg = { id: number; author: string; text: string; date: string; imageUrl?: string; replyTo?: { id: number; author: string; text: string }; reactions?: Record<string, string[]>; _sending?: boolean; _failed?: boolean };
 type LabFile = { id: number; name: string; size: number; url: string; type: string; uploader: string; date: string };
 type ConferenceTrip = { id: number; title: string; startDate: string; endDate: string; homepage: string; fee: string; participants: string[]; creator: string; createdAt: string; status?: string; comments?: Comment[]; needsDiscussion?: boolean };
 type Meeting = { id: number; title: string; goal: string; summary: string; date: string; assignees: string[]; status: string; creator: string; createdAt: string; comments: Comment[]; team?: string; needsDiscussion?: boolean };
@@ -385,22 +398,60 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
     const kanbanFiltered = filtered.filter(p => PAPER_STATUS_MIGRATE(p.status) !== "completed");
     return (
         <div>
-            <div className="mb-3 flex items-center gap-2">
-                <button onClick={onAddPaper} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600 transition-colors">+ 논문 등록</button>
-                <button onClick={() => setShowTagMgr(!showTagMgr)} className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-[13px] font-medium hover:bg-slate-200">🏷️ 논문 태그 관리</button>
-                <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedPapers.length})</button>
+            {/* Title row with action buttons */}
+            <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-[17px] font-bold text-slate-800">논문</h2>
+                <div className="flex items-center gap-2">
+                    <button onClick={onAddPaper} className="px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 논문 등록</button>
+                    <button onClick={() => setShowTagMgr(!showTagMgr)} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200">🏷️ 태그 관리</button>
+                    <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedPapers.length})</button>
+                </div>
             </div>
-            {teamNames && teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
-            {allPeople && onFilterPerson && (
-                <div className="flex items-center gap-1 mb-3 overflow-x-auto pb-1" style={{scrollbarWidth:"none"}}>
-                    <span className="text-[11px] font-semibold mr-1 flex-shrink-0" style={{color:"#94A3B8"}}>멤버:</span>
-                    {allPeople.map(p => (
-                        <button key={p} onClick={() => onFilterPerson(p)}
-                            className={`px-2.5 py-1 rounded-md text-[12px] font-medium transition-all whitespace-nowrap flex-shrink-0 ${filter === p ? "" : "hover:bg-slate-50"}`}
-                            style={{ background: filter === p ? "rgba(59,130,246,0.1)" : "transparent", color: filter === p ? "#3B82F6" : "#64748B", fontWeight: filter === p ? 600 : 500 }}>
-                            {p !== "전체" && <span className="mr-0.5">{MEMBERS[p]?.emoji}</span>}{p}
-                        </button>
-                    ))}
+            {/* Compact filter row: team chips | divider | member avatars */}
+            {(teamNames && teamNames.length > 0 || allPeople) && (
+                <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1" style={{scrollbarWidth:"none"}}>
+                    {teamNames && teamNames.length > 0 && (
+                        <>
+                            <span className="text-[11px] font-semibold flex-shrink-0" style={{color:"#94A3B8"}}>팀</span>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                                {["전체", ...teamNames].map(t => (
+                                    <button key={t} onClick={() => setFilterTeam(t)}
+                                        className="px-2.5 py-1 rounded-full text-[12px] font-medium transition-all flex-shrink-0"
+                                        style={{
+                                            background: filterTeam === t ? "#3B82F6" : "transparent",
+                                            color: filterTeam === t ? "#FFFFFF" : "#64748B",
+                                            border: filterTeam === t ? "1px solid #3B82F6" : "1px solid #CBD5E1",
+                                        }}>
+                                        {t}
+                                    </button>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                    {teamNames && teamNames.length > 0 && allPeople && onFilterPerson && (
+                        <div className="w-px h-5 bg-slate-200 flex-shrink-0 mx-1" />
+                    )}
+                    {allPeople && onFilterPerson && (
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                            {allPeople.map(p => (
+                                <button key={p} onClick={() => onFilterPerson(p)} title={p}
+                                    className="flex-shrink-0 transition-all"
+                                    style={{
+                                        width: p === "전체" ? "auto" : 30, height: p === "전체" ? "auto" : 30,
+                                        borderRadius: p === "전체" ? 9999 : "50%",
+                                        padding: p === "전체" ? "3px 10px" : 0,
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        fontSize: p === "전체" ? 12 : 15,
+                                        fontWeight: filter === p ? 600 : 500,
+                                        background: filter === p ? (p === "전체" ? "#3B82F6" : "#EFF6FF") : (p === "전체" ? "transparent" : "#F1F5F9"),
+                                        color: filter === p ? (p === "전체" ? "#FFFFFF" : "#3B82F6") : "#64748B",
+                                        border: filter === p && p !== "전체" ? "2px solid #3B82F6" : p === "전체" ? (filter === p ? "1px solid #3B82F6" : "1px solid #CBD5E1") : "2px solid transparent",
+                                    }}>
+                                    {p === "전체" ? "전체" : (MEMBERS[p]?.emoji || p[0])}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
             {showTagMgr && (
@@ -3714,129 +3765,155 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
 }
 
 function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder, philosophy, onAddPhilosophy, onDeletePhilosophy, onUpdatePhilosophy, currentUser }: {
-    announcements: Announcement[]; onAdd: (text: string) => void; onDelete: (id: number) => void; onUpdate: (ann: Announcement) => void; onReorder: (list: Announcement[]) => void;
+    announcements: Announcement[]; onAdd: (text: string, pinned?: boolean) => void; onDelete: (id: number) => void; onUpdate: (ann: Announcement) => void; onReorder: (list: Announcement[]) => void;
     philosophy: Announcement[]; onAddPhilosophy: (text: string) => void; onDeletePhilosophy: (id: number) => void; onUpdatePhilosophy: (p: Announcement) => void;
     currentUser: string;
 }) {
+    const COLS = [
+        { key: "urgent", label: "🚨 긴급", color: "#EF4444", accent: "#FEE2E2" },
+        { key: "general", label: "📌 일반", color: "#3B82F6", accent: "#DBEAFE" },
+        { key: "culture", label: "🎯 문화", color: "#8B5CF6", accent: "#EDE9FE" },
+    ] as const;
+    type ColKey = typeof COLS[number]["key"];
+
+    const [addingCol, setAddingCol] = useState<ColKey | null>(null);
     const [newText, setNewText] = useState("");
-    const [newPhil, setNewPhil] = useState("");
-    const [editingAnn, setEditingAnn] = useState<Announcement | null>(null);
+    const [editing, setEditing] = useState<(Announcement & { _col: ColKey }) | null>(null);
     const [editText, setEditText] = useState("");
-    const [editPinned, setEditPinned] = useState(false);
-    const [editingPhil, setEditingPhil] = useState<Announcement | null>(null);
-    const [editPhilText, setEditPhilText] = useState("");
+    const [draggedItem, setDraggedItem] = useState<{ id: number; col: ColKey } | null>(null);
+    const [dropCol, setDropCol] = useState<ColKey | null>(null);
+
     const isLeader = currentUser === "박일웅" || Object.values(DEFAULT_TEAMS).some(t => t.lead === currentUser);
     const isPI = currentUser === "박일웅";
-    const dragAnn = useRef<number | null>(null);
-    const [dragOverAnn, setDragOverAnn] = useState<number | null>(null);
-    const pinned = announcements.filter(a => a.pinned);
-    const unpinned = announcements.filter(a => !a.pinned);
-    const sorted = [...pinned, ...unpinned];
 
-    const openEditAnn = (ann: Announcement) => { setEditingAnn(ann); setEditText(ann.text); setEditPinned(ann.pinned); };
-    const saveEditAnn = () => { if (!editingAnn || !editText.trim()) return; onUpdate({ ...editingAnn, text: editText.trim(), pinned: editPinned }); setEditingAnn(null); };
-    const openEditPhil = (p: Announcement) => { setEditingPhil(p); setEditPhilText(p.text); };
-    const saveEditPhil = () => { if (!editingPhil || !editPhilText.trim()) return; onUpdatePhilosophy({ ...editingPhil, text: editPhilText.trim() }); setEditingPhil(null); };
+    // Draft
+    useEffect(() => { const d = loadDraft("ann_board"); if (d) setNewText(d); }, []);
+    useEffect(() => { if (addingCol) saveDraft("ann_board", newText); }, [newText, addingCol]);
+
+    // Build column data
+    const colData: Record<ColKey, (Announcement & { _col: ColKey })[]> = {
+        urgent: announcements.filter(a => a.pinned).map(a => ({ ...a, _col: "urgent" as ColKey })),
+        general: announcements.filter(a => !a.pinned).map(a => ({ ...a, _col: "general" as ColKey })),
+        culture: philosophy.map(p => ({ ...p, _col: "culture" as ColKey })),
+    };
+
+    const openAdd = (col: ColKey) => { setAddingCol(col); setNewText(""); };
+    const submitAdd = () => {
+        if (!newText.trim() || !addingCol) return;
+        if (addingCol === "urgent") onAdd(newText.trim(), true);
+        else if (addingCol === "general") onAdd(newText.trim(), false);
+        else onAddPhilosophy(newText.trim());
+        setNewText(""); setAddingCol(null); clearDraft("ann_board");
+    };
+    const openEdit = (item: Announcement & { _col: ColKey }) => { setEditing(item); setEditText(item.text); };
+    const saveEdit = () => {
+        if (!editing || !editText.trim()) return;
+        if (editing._col === "culture") onUpdatePhilosophy({ ...editing, text: editText.trim() });
+        else onUpdate({ ...editing, text: editText.trim() });
+        setEditing(null);
+    };
+    const deleteItem = (item: Announcement & { _col: ColKey }) => {
+        if (item._col === "culture") onDeletePhilosophy(item.id);
+        else onDelete(item.id);
+    };
+
+    const handleDrop = (targetCol: ColKey) => {
+        if (!draggedItem || draggedItem.col === targetCol) { setDraggedItem(null); setDropCol(null); return; }
+        const srcCol = draggedItem.col;
+        if (srcCol === "urgent" && targetCol === "general") {
+            const ann = announcements.find(a => a.id === draggedItem.id);
+            if (ann) onUpdate({ ...ann, pinned: false });
+        } else if (srcCol === "general" && targetCol === "urgent") {
+            const ann = announcements.find(a => a.id === draggedItem.id);
+            if (ann) onUpdate({ ...ann, pinned: true });
+        } else if ((srcCol === "urgent" || srcCol === "general") && targetCol === "culture") {
+            const ann = announcements.find(a => a.id === draggedItem.id);
+            if (ann) { onDelete(ann.id); onAddPhilosophy(ann.text); }
+        } else if (srcCol === "culture" && (targetCol === "urgent" || targetCol === "general")) {
+            const phil = philosophy.find(p => p.id === draggedItem.id);
+            if (phil) { onDeletePhilosophy(phil.id); onAdd(phil.text, targetCol === "urgent"); }
+        }
+        setDraggedItem(null); setDropCol(null);
+    };
 
     return (
-        <div className="space-y-8">
-            {/* 📢 공지사항 */}
-            <div>
-                {isLeader && (
-                    <div className="flex gap-2 mb-3">
-                        <textarea value={newText} onChange={e => setNewText(e.target.value)} placeholder="공지사항 작성..."
-                            className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" rows={2}
-                            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && newText.trim()) { e.preventDefault(); onAdd(newText.trim()); setNewText(""); } }} />
-                        <button onClick={() => { if (newText.trim()) { onAdd(newText.trim()); setNewText(""); } }} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 self-end">게시</button>
-                    </div>
-                )}
-                {announcements.length === 0 && <div className="text-center py-8 text-slate-400 text-[14px]">공지사항이 없습니다</div>}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-stretch">{sorted.map((ann, idx) => (
-                    <div key={ann.id} draggable
-                        onDragStart={() => { dragAnn.current = idx; }}
-                        onDragOver={e => { e.preventDefault(); setDragOverAnn(idx); }}
-                        onDragEnd={() => { dragAnn.current = null; setDragOverAnn(null); }}
-                        onDrop={() => { if (dragAnn.current !== null && dragAnn.current !== idx) { const reordered = [...sorted]; const [moved] = reordered.splice(dragAnn.current, 1); reordered.splice(idx, 0, moved); onReorder(reordered); } dragAnn.current = null; setDragOverAnn(null); }}
-                        onClick={() => { if ((currentUser === ann.author || isPI) && !dragAnn.current) openEditAnn(ann); }}
-                        className={`bg-white border rounded-xl p-4 cursor-grab transition-all flex flex-col ${ann.pinned ? "border-amber-300 bg-amber-50/50" : "border-slate-200 hover:border-slate-300"} ${dragOverAnn === idx ? "bg-blue-50" : ""} ${(currentUser === ann.author || isPI) ? "hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)]" : ""}`}>
-                        <div className="flex items-start justify-between mb-1">
-                            <div className="flex-1">{ann.pinned && <span className="text-[11px] font-semibold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mr-2">📌</span>}<span className="text-[14px] text-slate-800 whitespace-pre-wrap break-words" style={{lineHeight:1.6}}>{ann.text}</span></div>
-                            {(currentUser === ann.author || isPI) && <button onClick={e => { e.stopPropagation(); onDelete(ann.id); }} className="text-slate-400 hover:text-red-500 text-[13px] ml-2 flex-shrink-0">✕</button>}
-                        </div>
-                        <div className="mt-auto pt-2 text-[12px] text-slate-400">{ann.author} · {ann.date}</div>
-                    </div>
-                ))}</div>
-            </div>
-
-            {/* 공지사항 수정 모달 */}
-            {editingAnn && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditingAnn(null)}>
-                    <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between p-4 border-b border-slate-200">
-                            <h3 className="text-[15px] font-bold text-slate-800">공지사항 수정</h3>
-                            <button onClick={() => setEditingAnn(null)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
-                        </div>
-                        <div className="p-4 space-y-3">
-                            <textarea value={editText} onChange={e => setEditText(e.target.value)} rows={4}
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" autoFocus />
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" checked={editPinned} onChange={e => setEditPinned(e.target.checked)} className="w-4 h-4 accent-amber-500" />
-                                <span className="text-[14px] text-slate-700">📌 상단 고정</span>
-                            </label>
-                        </div>
-                        <div className="flex items-center justify-between p-4 border-t border-slate-200">
-                            <button onClick={() => { onDelete(editingAnn.id); setEditingAnn(null); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
-                            <div className="flex gap-2">
-                                <button onClick={() => setEditingAnn(null)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                                <button onClick={saveEditAnn} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
+        <div>
+            <h2 className="text-[17px] font-bold text-slate-800 mb-4">📢 공지사항</h2>
+            <div className="flex gap-4">
+                {COLS.map(col => {
+                    const items = colData[col.key];
+                    const colCfg = col;
+                    return (
+                        <div key={col.key} className="flex-1 min-w-0"
+                            onDragOver={e => { e.preventDefault(); setDropCol(col.key); }}
+                            onDragLeave={() => setDropCol(null)}
+                            onDrop={() => handleDrop(col.key)}>
+                            {/* Column header */}
+                            <div className="flex items-center justify-between mb-3 pb-2" style={{ borderBottom: `2.5px solid ${colCfg.color}` }}>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[14px] font-bold" style={{ color: "#334155" }}>{colCfg.label}</span>
+                                    <span className="text-[12px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: colCfg.accent, color: colCfg.color }}>{items.length}</span>
+                                </div>
+                                {isLeader && (
+                                    <button onClick={() => openAdd(col.key)} className="w-6 h-6 flex items-center justify-center rounded-md text-[14px] hover:bg-slate-100 transition-colors" style={{ color: colCfg.color }}>+</button>
+                                )}
+                            </div>
+                            {/* Add input */}
+                            {addingCol === col.key && (
+                                <div className="mb-3 rounded-xl p-3" style={{ background: "#F8F9FA", border: `1px solid ${colCfg.accent}` }}>
+                                    <textarea value={newText} onChange={e => setNewText(e.target.value)} placeholder="내용 작성..."
+                                        className="w-full bg-transparent text-[14px] focus:outline-none resize-none" rows={2} autoFocus
+                                        onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && newText.trim()) { e.preventDefault(); submitAdd(); } if (e.key === "Escape") { setAddingCol(null); setNewText(""); } }} />
+                                    <div className="flex justify-end gap-1.5 mt-1">
+                                        <button onClick={() => { setAddingCol(null); setNewText(""); }} className="px-2.5 py-1 text-[12px] text-slate-400 hover:text-slate-600">취소</button>
+                                        <button onClick={submitAdd} className="px-3 py-1 rounded-lg text-[12px] font-medium text-white" style={{ background: colCfg.color }}>게시</button>
+                                    </div>
+                                </div>
+                            )}
+                            {/* Cards */}
+                            <div className={`min-h-[60px] space-y-2 rounded-lg transition-colors ${dropCol === col.key && draggedItem && draggedItem.col !== col.key ? "bg-blue-50/60" : ""}`}>
+                                {items.map(item => (
+                                    <div key={item.id} draggable
+                                        onDragStart={() => setDraggedItem({ id: item.id, col: col.key })}
+                                        onDragEnd={() => { setDraggedItem(null); setDropCol(null); }}
+                                        onClick={() => { if (isPI || currentUser === item.author) openEdit(item); }}
+                                        className={`group/card bg-white rounded-xl p-3.5 cursor-grab transition-all flex flex-col ${draggedItem?.id === item.id ? "opacity-40" : ""}`}
+                                        style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.08)", borderLeft: `4px solid ${colCfg.color}` }}>
+                                        <div className="flex items-start justify-between">
+                                            <span className="text-[14px] text-slate-800 whitespace-pre-wrap break-words line-clamp-4 flex-1" style={{ lineHeight: 1.6 }}>{item.text}</span>
+                                            {(isPI || currentUser === item.author) && (
+                                                <button onClick={e => { e.stopPropagation(); deleteItem(item); }}
+                                                    className="text-slate-300 hover:text-red-500 text-[13px] ml-2 flex-shrink-0 opacity-0 group-hover/card:opacity-100 transition-opacity">✕</button>
+                                            )}
+                                        </div>
+                                        <div className="mt-auto pt-2 text-[11px] text-slate-400">{item.author} · {item.date}</div>
+                                    </div>
+                                ))}
+                                {items.length === 0 && !addingCol && (
+                                    <div className="text-center py-8 text-[12px] text-slate-300">—</div>
+                                )}
                             </div>
                         </div>
-                    </div>
-                </div>
-            )}
-
-            {/* 🧭 문화 */}
-            <div>
-                <h3 className="text-[16px] font-bold text-slate-900 mb-4">🧭 문화</h3>
-                {isLeader && (
-                    <div className="flex gap-2 mb-3">
-                        <textarea value={newPhil} onChange={e => setNewPhil(e.target.value)} placeholder="연구실 문화 작성..."
-                            className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" rows={2}
-                            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && newPhil.trim()) { e.preventDefault(); onAddPhilosophy(newPhil.trim()); setNewPhil(""); } }} />
-                        <button onClick={() => { if (newPhil.trim()) { onAddPhilosophy(newPhil.trim()); setNewPhil(""); } }} className="px-4 py-2 bg-violet-500 text-white rounded-lg text-[13px] font-medium hover:bg-violet-600 self-end">게시</button>
-                    </div>
-                )}
-                {philosophy.length === 0 && <div className="text-center py-8 text-slate-400 text-[14px]">등록된 내용이 없습니다</div>}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-stretch">{philosophy.map(p => (
-                    <div key={p.id} className={`bg-white border border-slate-200 rounded-xl p-4 flex flex-col ${isPI ? "cursor-pointer hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)]" : ""}`}
-                        style={{borderLeft:"3px solid #8B5CF6"}}
-                        onClick={() => { if (isPI) openEditPhil(p); }}>
-                        <div className="flex items-start justify-between mb-1">
-                            <div className="flex-1"><span className="text-[14px] text-slate-800 whitespace-pre-wrap break-words" style={{lineHeight:1.6}}>{p.text}</span></div>
-                            {isPI && <button onClick={e => { e.stopPropagation(); onDeletePhilosophy(p.id); }} className="text-slate-400 hover:text-red-500 text-[13px] ml-2 flex-shrink-0">✕</button>}
-                        </div>
-                        <div className="mt-auto pt-2 text-[12px] text-slate-400">{p.author} · {p.date}</div>
-                    </div>
-                ))}</div>
+                    );
+                })}
             </div>
-
-            {/* 문화 수정 모달 */}
-            {editingPhil && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditingPhil(null)}>
+            {/* Edit modal */}
+            {editing && (
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditing(null)}>
                     <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
-                            <h3 className="text-[15px] font-bold text-slate-800">문화 수정</h3>
-                            <button onClick={() => setEditingPhil(null)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <h3 className="text-[15px] font-bold text-slate-800">{editing._col === "culture" ? "문화" : "공지사항"} 수정</h3>
+                            <button onClick={() => setEditing(null)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
                         </div>
                         <div className="p-4">
-                            <textarea value={editPhilText} onChange={e => setEditPhilText(e.target.value)} rows={4}
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-violet-500/20 resize-none" autoFocus />
+                            <textarea value={editText} onChange={e => setEditText(e.target.value)} rows={4}
+                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" autoFocus />
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-200">
-                            <button onClick={() => { onDeletePhilosophy(editingPhil.id); setEditingPhil(null); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                            <button onClick={() => { deleteItem(editing); setEditing(null); }} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
                             <div className="flex gap-2">
-                                <button onClick={() => setEditingPhil(null)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                                <button onClick={saveEditPhil} className="px-4 py-2 text-[14px] bg-violet-500 text-white rounded-lg hover:bg-violet-600 font-medium">저장</button>
+                                <button onClick={() => setEditing(null)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                                <button onClick={saveEdit} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                             </div>
                         </div>
                     </div>
@@ -4023,10 +4100,10 @@ function ColorPicker({ color, onColor, compact }: { color: string; onColor: (c: 
     );
 }
 
-function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteFile, chat, onAddChat, onDeleteChat, onClearChat, currentUser }: {
+function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteFile, chat, onAddChat, onDeleteChat, onClearChat, onRetryChat, currentUser }: {
     memos: Memo[]; onSave: (m: Memo) => void; onDelete: (id: number) => void;
     files: LabFile[]; onAddFile: (f: LabFile) => void; onDeleteFile: (id: number) => void;
-    chat: TeamChatMsg[]; onAddChat: (msg: TeamChatMsg) => void; onDeleteChat: (id: number) => void; onClearChat: () => void;
+    chat: TeamChatMsg[]; onAddChat: (msg: TeamChatMsg) => void; onDeleteChat: (id: number) => void; onClearChat: () => void; onRetryChat: (id: number) => void;
     currentUser: string;
 }) {
     const MEMBERS = useContext(MembersContext);
@@ -4164,14 +4241,16 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                 <div className="flex-1 overflow-y-auto p-3 space-y-2">
                     {chat.length === 0 && <div className="text-center py-12 text-slate-400 text-[12px]">PI와 대화를 시작하세요</div>}
                     {chat.map(msg => (
-                        <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`}>
+                        <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`} style={{ opacity: msg._sending ? 0.7 : 1 }}>
                             <div className={`inline-block max-w-[90%] px-3.5 py-2.5 text-[13.5px] leading-relaxed ${msg.author === currentUser ? "text-white rounded-[16px_16px_4px_16px]" : "text-slate-700 rounded-[16px_16px_16px_4px]"}`} style={{background: msg.author === currentUser ? "#3B82F6" : "#F1F5F9"}}>
                                 {msg.author !== currentUser && <div className="text-[11px] font-bold mb-0.5">{MEMBERS[msg.author]?.emoji || "👤"} {msg.author}</div>}
                                 {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mb-1 cursor-pointer" onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                 {msg.text && <div className="whitespace-pre-wrap">{msg.text}</div>}
-                                <div className={`text-[10px] mt-0.5 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>{msg.date}</div>
+                                <div className={`text-[10px] mt-0.5 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>
+                                    {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-300">⚠️ 전송 실패 <button onClick={(e) => { e.stopPropagation(); onRetryChat(msg.id); }} className="underline hover:text-red-200 ml-0.5">재전송</button></span> : msg.date}
+                                </div>
                             </div>
-                            {msg.author === currentUser && (
+                            {msg.author === currentUser && !msg._sending && !msg._failed && (
                                 <button onClick={() => onDeleteChat(msg.id)} className="text-[10px] text-slate-300 hover:text-red-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">삭제</button>
                             )}
                         </div>
@@ -4442,8 +4521,8 @@ function MeetingView({ meetings, onSave, onDelete, currentUser, teamNames }: {
 
 // ─── Lab Chat View ───────────────────────────────────────────────────────────
 
-function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAddFile, onDeleteFile, board, onSaveBoard, onDeleteBoard }: {
-    chat: TeamChatMsg[]; currentUser: string; onAdd: (msg: TeamChatMsg) => void; onDelete: (id: number) => void; onClear: () => void;
+function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, onRetry, files, onAddFile, onDeleteFile, board, onSaveBoard, onDeleteBoard }: {
+    chat: TeamChatMsg[]; currentUser: string; onAdd: (msg: TeamChatMsg) => void; onDelete: (id: number) => void; onClear: () => void; onRetry: (id: number) => void;
     files: LabFile[]; onAddFile: (f: LabFile) => void; onDeleteFile: (id: number) => void;
     board: TeamMemoCard[]; onSaveBoard: (c: TeamMemoCard) => void; onDeleteBoard: (id: number) => void;
 }) {
@@ -4497,7 +4576,7 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
     useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [chat.length]);
 
     return (
-        <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{gridTemplateColumns:"1fr 0.8fr 1.2fr"}}>
+        <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{gridTemplateColumns:"1fr 1fr 2fr"}}>
             {/* Mobile tab bar */}
             <div className="md:hidden flex border-b border-slate-200 bg-white flex-shrink-0 -mt-1">
                 {([["chat","💬","채팅"],["board","📌","보드"],["files","📎","파일"]] as const).map(([id,icon,label]) => (
@@ -4573,14 +4652,16 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, files, onAdd
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                     {chat.length === 0 && <div className="text-center py-16 text-slate-400 text-[14px]">메시지가 없습니다. 자유롭게 대화해 보세요!</div>}
                     {chat.map(msg => (
-                        <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`}>
+                        <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`} style={{ opacity: msg._sending ? 0.7 : 1 }}>
                             <div className={`inline-block max-w-[75%] px-3.5 py-2.5 text-[13.5px] leading-relaxed ${msg.author === currentUser ? "text-white rounded-[16px_16px_4px_16px]" : "text-slate-700 rounded-[16px_16px_16px_4px]"}`} style={{background: msg.author === currentUser ? "#3B82F6" : "#F1F5F9"}}>
                                 {msg.author !== currentUser && <div className="text-[12px] font-bold mb-0.5">{MEMBERS[msg.author]?.emoji || "👤"} {msg.author}</div>}
                                 {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[300px] rounded-md mb-1.5 cursor-pointer" onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                 {msg.text && <div className="whitespace-pre-wrap">{msg.text}</div>}
-                                <div className={`text-[11px] mt-1 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>{msg.date}</div>
+                                <div className={`text-[11px] mt-1 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>
+                                    {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-300">⚠️ 전송 실패 <button onClick={(e) => { e.stopPropagation(); onRetry(msg.id); }} className="underline hover:text-red-200 ml-0.5">재전송</button></span> : msg.date}
+                                </div>
                             </div>
-                            {msg.author === currentUser && (
+                            {msg.author === currentUser && !msg._sending && !msg._failed && (
                                 <button onClick={() => onDelete(msg.id)} className="text-[11px] text-slate-300 hover:text-red-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">삭제</button>
                             )}
                         </div>
@@ -4820,10 +4901,10 @@ const TEAM_MEMO_COLORS = MEMO_COLORS;
 const MEMO_COL_MIGRATE = (s: string) => (s === "done" || s === "right") ? "right" : "left";
 const MEMO_COLUMNS = [{ key: "left", label: "진행", color: "#3b82f6" }, { key: "right", label: "완료", color: "#8b5cf6" }];
 
-function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, onDeleteCard, onReorderCards, onAddChat, onDeleteChat, onClearChat, onAddFile, onDeleteFile }: {
+function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, onDeleteCard, onReorderCards, onAddChat, onUpdateChat, onDeleteChat, onClearChat, onRetryChat, onAddFile, onDeleteFile }: {
     teamName: string; kanban: TeamMemoCard[]; chat: TeamChatMsg[]; files: LabFile[]; currentUser: string;
     onSaveCard: (card: TeamMemoCard) => void; onDeleteCard: (id: number) => void; onReorderCards: (cards: TeamMemoCard[]) => void;
-    onAddChat: (msg: TeamChatMsg) => void; onDeleteChat: (id: number) => void; onClearChat: () => void;
+    onAddChat: (msg: TeamChatMsg) => void; onUpdateChat: (msg: TeamChatMsg) => void; onDeleteChat: (id: number) => void; onClearChat: () => void; onRetryChat: (id: number) => void;
     onAddFile: (f: LabFile) => void; onDeleteFile: (id: number) => void;
 }) {
     const MEMBERS = useContext(MembersContext);
@@ -4833,6 +4914,8 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     const [isEditing, setIsEditing] = useState(false);
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
+    const [cardDraftLoaded, setCardDraftLoaded] = useState(false);
+    const cardDraftKey = `team_${teamName}_card`;
     const [col, setCol] = useState("left");
     const [color, setColor] = useState(TEAM_MEMO_COLORS[0]);
     const [borderClr, setBorderClr] = useState("");
@@ -4847,8 +4930,25 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
     const [mobileTab, setMobileTab] = useState<"chat"|"board"|"files">("chat");
+    const [replyTo, setReplyTo] = useState<TeamChatMsg | null>(null);
+    const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
 
-    const openNew = (c = "left") => { setEditing(null); setTitle(""); setContent(""); setCol(c); setColor(TEAM_MEMO_COLORS[0]); setBorderClr(""); setShowForm(true); };
+    // Draft: auto-save card form
+    useEffect(() => {
+        if (showForm && !editing) {
+            const val = JSON.stringify({ title, content });
+            if (title.trim() || content.trim()) saveDraft(cardDraftKey, val);
+            else clearDraft(cardDraftKey);
+        }
+    }, [title, content, showForm, editing, cardDraftKey]);
+
+    const openNew = (c = "left") => {
+        setEditing(null); setCol(c); setColor(TEAM_MEMO_COLORS[0]); setBorderClr("");
+        const d = loadDraft(cardDraftKey);
+        if (d) { try { const p = JSON.parse(d); setTitle(p.title || ""); setContent(p.content || ""); setCardDraftLoaded(true); } catch { setTitle(""); setContent(""); } }
+        else { setTitle(""); setContent(""); setCardDraftLoaded(false); }
+        setShowForm(true);
+    };
     const openDetail = (c: TeamMemoCard) => { setSelected(c); setIsEditing(false); setNewComment(""); };
     const startEdit = () => {
         if (!selected) return;
@@ -4863,7 +4963,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     const saveNew = () => {
         const now = new Date().toISOString().split("T")[0];
         onSaveCard({ id: Date.now(), title: title.trim() || "제목 없음", content, status: col, color, borderColor: borderClr, author: currentUser, updatedAt: now, comments: [] });
-        setShowForm(false);
+        setShowForm(false); clearDraft(cardDraftKey); setCardDraftLoaded(false);
     };
     const addComment = () => {
         if (!newComment.trim() || !selected) return;
@@ -4877,8 +4977,21 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     };
     const sendChat = () => {
         if (!chatText.trim() && !chatImg) return;
-        onAddChat({ id: Date.now(), author: currentUser, text: chatText.trim(), date: new Date().toLocaleString("ko-KR"), imageUrl: chatImg || undefined });
-        setChatText(""); setChatImg("");
+        onAddChat({ id: Date.now(), author: currentUser, text: chatText.trim(), date: new Date().toLocaleString("ko-KR"), imageUrl: chatImg || undefined, replyTo: replyTo ? { id: replyTo.id, author: replyTo.author, text: replyTo.text } : undefined });
+        setChatText(""); setChatImg(""); setReplyTo(null);
+    };
+    const toggleReaction = (msgId: number, emoji: string) => {
+        const msg = chat.find(m => m.id === msgId);
+        if (!msg) return;
+        const reactions = { ...(msg.reactions || {}) };
+        const users = reactions[emoji] || [];
+        if (users.includes(currentUser)) {
+            reactions[emoji] = users.filter(u => u !== currentUser);
+            if (reactions[emoji].length === 0) delete reactions[emoji];
+        } else {
+            reactions[emoji] = [...users, currentUser];
+        }
+        onUpdateChat({ ...msg, reactions });
     };
     const handleChatImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file) return;
@@ -4903,7 +5016,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [chat.length]);
 
     return (
-        <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{gridTemplateColumns:"1fr 0.8fr 1.2fr"}}>
+        <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{gridTemplateColumns:"1fr 1fr 2fr"}}>
             {/* Mobile tab bar */}
             <div className="md:hidden flex border-b border-slate-200 bg-white flex-shrink-0 -mt-1">
                 {([["chat","💬","채팅"],["board","📌","보드"],["files","📎","파일"]] as const).map(([id,icon,label]) => (
@@ -4921,6 +5034,12 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                 </div>
                 {showForm && (
                     <div className="bg-white border border-blue-200 rounded-lg p-2.5 mb-2 space-y-1.5 flex-shrink-0">
+                        {cardDraftLoaded && (title.trim() || content.trim()) && (
+                            <div className="flex items-center justify-between px-1 text-[11px]">
+                                <span className="text-amber-600">임시저장된 글이 있습니다</span>
+                                <button onClick={() => { setTitle(""); setContent(""); clearDraft(cardDraftKey); setCardDraftLoaded(false); }} className="text-amber-500 hover:text-amber-700 font-medium">삭제</button>
+                            </div>
+                        )}
                         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-[13px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                         <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용..." rows={2} className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
                         <ColorPicker color={color} onColor={setColor} />
@@ -4996,31 +5115,110 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                 <FileBox files={files} currentUser={currentUser} onAddFile={onAddFile} onDeleteFile={onDeleteFile} compact />
             </div>
             {/* Chat */}
-            <div className={`flex-col min-w-0 md:bg-white md:border md:border-slate-200 md:rounded-xl min-h-0 ${mobileTab === "chat" ? "flex flex-1" : "hidden"} md:flex`}>
+            <div className={`flex-col min-w-0 md:border md:border-slate-200 md:rounded-xl min-h-0 ${mobileTab === "chat" ? "flex flex-1" : "hidden"} md:flex`} style={{ background: "#FFFFFF" }}>
                 <div className="hidden md:flex px-3 py-2.5 border-b border-slate-100 items-center justify-between">
                     <h4 className="text-[14px] font-bold text-slate-700">💬 채팅</h4>
                     {currentUser === "박일웅" && (
                         <button onClick={() => { if (confirm("채팅을 모두 삭제하시겠습니까?")) onClearChat(); }} className="text-[11px] text-slate-400 hover:text-red-500 transition-colors">초기화</button>
                     )}
                 </div>
-                <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                <div className="flex-1 overflow-y-auto px-3 py-2">
                     {chat.length === 0 && <div className="text-center py-6 text-slate-400 text-[12px]">메시지가 없습니다</div>}
-                    {chat.map(msg => (
-                        <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`}>
-                            <div className={`inline-block max-w-[85%] px-3.5 py-2.5 text-[13.5px] leading-relaxed ${msg.author === currentUser ? "text-white rounded-[16px_16px_4px_16px]" : "text-slate-700 rounded-[16px_16px_16px_4px]"}`} style={{background: msg.author === currentUser ? "#3B82F6" : "#F1F5F9"}}>
-                                {msg.author !== currentUser && <div className="text-[11px] font-bold mb-0.5">{MEMBERS[msg.author]?.emoji || "👤"}{msg.author}</div>}
-                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[250px] rounded-md mb-1 cursor-pointer" onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
-                                {msg.text && <div className="whitespace-pre-wrap">{msg.text}</div>}
-                                <div className={`text-[10px] mt-1 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>{msg.date}</div>
+                    {chat.map((msg, idx) => {
+                        const prev = idx > 0 ? chat[idx - 1] : null;
+                        const isMe = msg.author === currentUser;
+                        const sameAuthor = prev && prev.author === msg.author;
+                        const prevDate = prev ? prev.date.split(/오[전후]/)[0].trim() : "";
+                        const currDate = msg.date.split(/오[전후]/)[0].trim();
+                        const showDateSep = !prev || prevDate !== currDate;
+                        const showAvatar = !isMe && (!sameAuthor || showDateSep);
+                        const tm = msg.date.match(/(오[전후])\s*(\d+:\d+)/);
+                        const timeStr = tm ? `${tm[1]} ${tm[2]}` : "";
+                        const reactions = msg.reactions || {};
+                        return (
+                            <div key={msg.id}>
+                                {showDateSep && (
+                                    <div className="flex items-center gap-3 my-4">
+                                        <div className="flex-1 h-px bg-slate-200" />
+                                        <span className="text-[12px] text-slate-400 whitespace-nowrap">{currDate}</span>
+                                        <div className="flex-1 h-px bg-slate-200" />
+                                    </div>
+                                )}
+                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} group/msg relative`} style={{ opacity: msg._sending ? 0.7 : 1 }}>
+                                    {!isMe && (
+                                        <div className="w-9 flex-shrink-0 mr-2 self-start">
+                                            {showAvatar ? (
+                                                <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-[14px] font-semibold text-slate-600">
+                                                    {MEMBERS[msg.author]?.emoji || msg.author[0]}
+                                                </div>
+                                            ) : <div className="w-9" />}
+                                        </div>
+                                    )}
+                                    <div className={`max-w-[75%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                                        {!isMe && showAvatar && (
+                                            <div className="flex items-baseline gap-2 mb-0.5 px-1">
+                                                <span className="text-[13px] font-bold text-slate-800">{msg.author}</span>
+                                                <span className="text-[11px] text-slate-400">{timeStr}</span>
+                                            </div>
+                                        )}
+                                        {msg.replyTo && (
+                                            <div className="text-[11px] text-slate-400 mb-0.5 px-3 py-1.5 bg-slate-100 rounded-lg border-l-2 border-slate-300 max-w-full truncate">
+                                                <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
+                                            </div>
+                                        )}
+                                        <div className="px-4 py-3 text-[13.5px] leading-relaxed text-slate-700" style={{ background: isMe ? "#DCF0FF" : "#F8F9FA", borderRadius: isMe ? "12px 4px 12px 12px" : "4px 12px 12px 12px" }}>
+                                            {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[250px] rounded-md mb-1.5 cursor-pointer" onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
+                                            {msg.text && <div className="whitespace-pre-wrap break-words">{msg.text}</div>}
+                                        </div>
+                                        {isMe && (
+                                            <div className="text-[11px] text-slate-400 mt-0.5 px-1">
+                                                {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-500">⚠️ 전송 실패 <button onClick={() => onRetryChat(msg.id)} className="underline hover:text-red-600 ml-0.5">재전송</button></span> : timeStr}
+                                            </div>
+                                        )}
+                                        {!msg._sending && !msg._failed && Object.keys(reactions).length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
+                                                    <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
+                                                        className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[12px] border transition-colors ${users.includes(currentUser) ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"}`}>
+                                                        {emoji} {users.length}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {!msg._sending && !msg._failed && (
+                                            <div className="opacity-0 group-hover/msg:opacity-100 transition-opacity flex gap-0.5 mt-0.5">
+                                                <button onClick={() => setReplyTo(msg)} className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 text-[14px]" title="답장">↩</button>
+                                                <div className="relative">
+                                                    <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)} className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 text-[14px]" title="리액션">😊</button>
+                                                    {emojiPickerMsgId === msg.id && (
+                                                        <div className="absolute bottom-full left-0 mb-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5 flex gap-1 z-10">
+                                                            {["👍", "❤️", "😂", "😮", "😢", "🔥"].map(em => (
+                                                                <button key={em} onClick={() => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-[18px] transition-colors">{em}</button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                {msg.author === currentUser && (
+                                                    <button onClick={() => onDeleteChat(msg.id)} className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 text-[12px]" title="삭제">삭제</button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                            {msg.author === currentUser && (
-                                <button onClick={() => onDeleteChat(msg.id)} className="text-[11px] text-slate-300 hover:text-red-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">삭제</button>
-                            )}
-                        </div>
-                    ))}
+                        );
+                    })}
                     <div ref={chatEndRef} />
                 </div>
-                <div className="p-2.5 border-t border-slate-100 flex-shrink-0 bg-white">
+                {replyTo && (
+                    <div className="px-3 pt-2 pb-1 border-t border-slate-100 bg-slate-50 flex items-center gap-2">
+                        <div className="flex-1 min-w-0 text-[12px] text-slate-500 truncate">
+                            <span className="font-semibold text-slate-600">{replyTo.author}</span>에게 답장: {replyTo.text || "📷 이미지"}
+                        </div>
+                        <button onClick={() => setReplyTo(null)} className="text-slate-400 hover:text-slate-600 text-[14px] flex-shrink-0">✕</button>
+                    </div>
+                )}
+                <div className={`p-2.5 ${replyTo ? "" : "border-t border-slate-100"} flex-shrink-0 bg-white`}>
                     {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[80px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">✕</button></div>}
                     <div className="flex gap-1.5 items-center">
                         <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
@@ -5258,31 +5456,24 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
             )}
             {/* Personal mode header */}
             {isPersonal && (
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 text-white">
-                    <div className="flex items-center gap-3 mb-3">
-                        <span className="text-3xl">{members[currentUser]?.emoji || "👤"}</span>
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl px-6 py-4 text-white flex items-center gap-6 flex-wrap">
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                        <span className="text-2xl">{members[currentUser]?.emoji || "👤"}</span>
                         <div>
-                            <h2 className="text-[20px] font-bold text-white">{currentUser}</h2>
-                            <div className="text-[13px] text-blue-100">{members[currentUser]?.team} {members[currentUser]?.role && `· ${members[currentUser]?.role}`}</div>
+                            <h2 className="text-[18px] font-bold text-white leading-tight">{currentUser}</h2>
+                            <div className="text-[12px] text-blue-200">{members[currentUser]?.team} {members[currentUser]?.role && `· ${members[currentUser]?.role}`}</div>
                         </div>
                     </div>
-                    {myTarget ? (
-                        <div className="mt-3 p-3.5 rounded-xl" style={{background:"rgba(255,255,255,0.15)"}}>
-                            <div className="text-[12px] text-blue-100 mb-1">오늘의 목표</div>
-                            <div className="text-[14px] leading-relaxed text-white">{myTarget.text}</div>
-                        </div>
-                    ) : (
-                        <div className="mt-3 p-3.5 rounded-xl text-center" style={{background:"rgba(255,255,255,0.15)"}}>
-                            <div className="text-[13px] text-blue-100">오늘 목표를 아직 작성하지 않았습니다</div>
-                            <button onClick={() => onNavigate("daily")} className="mt-1 text-[13px] font-medium underline underline-offset-2 text-white">작성하러 가기</button>
-                        </div>
-                    )}
-                    {!statusMessages[currentUser] && (
-                        <div className="mt-2 p-3 rounded-xl text-center" style={{background:"rgba(255,255,255,0.1)"}}>
-                            <div className="text-[13px] text-blue-100">오늘의 한마디를 작성하지 않았습니다</div>
-                            <button onClick={() => onNavigate("settings")} className="mt-1 text-[13px] font-medium underline underline-offset-2 text-white">작성하러 가기</button>
-                        </div>
-                    )}
+                    <div className="flex items-center gap-4 flex-wrap">
+                        {myTarget ? (
+                            <div className="text-[13px] text-blue-100 max-w-[320px] truncate">📌 {myTarget.text}</div>
+                        ) : (
+                            <span className="text-[13px] text-blue-200">오늘 목표 미작성 · <button onClick={() => onNavigate("daily")} className="underline underline-offset-2 text-white font-medium">작성하기</button></span>
+                        )}
+                        {!statusMessages[currentUser] && (
+                            <span className="text-[13px] text-blue-200">한마디 미작성 · <button onClick={() => onNavigate("settings")} className="underline underline-offset-2 text-white font-medium">작성하기</button></span>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -5292,31 +5483,31 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
                     <button onClick={() => onNavigate("papers")} className="text-left hover:bg-slate-50 rounded-lg p-3 -m-3 transition-colors">
                         <div className="text-[13px] font-semibold text-slate-500 mb-3 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full" style={{background:"#3B82F6"}} />논문 <span className="font-bold" style={{color:"#334155"}}>({fp.length})</span>
+                            <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.paper}} />논문 <span className="font-bold" style={{color:"#334155"}}>({fp.length})</span>
                         </div>
                         <MiniBar items={papersByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...papersByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("reports")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
                         <div className="text-[13px] font-semibold text-slate-500 mb-3 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full" style={{background:"#F59E0B"}} />계획서/보고서 <span className="font-bold" style={{color:"#334155"}}>({fr.length})</span>
+                            <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.report}} />계획서/보고서 <span className="font-bold" style={{color:"#334155"}}>({fr.length})</span>
                         </div>
                         <MiniBar items={reportsByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...reportsByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("experiments")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
                         <div className="text-[13px] font-semibold text-slate-500 mb-3 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full" style={{background:"#EF4444"}} />실험 <span className="font-bold" style={{color:"#334155"}}>({fe.length})</span>
+                            <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.experiment}} />실험 <span className="font-bold" style={{color:"#334155"}}>({fe.length})</span>
                         </div>
                         <MiniBar items={expByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...expByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("analysis")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
                         <div className="text-[13px] font-semibold text-slate-500 mb-3 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full" style={{background:"#8B5CF6"}} />해석 <span className="font-bold" style={{color:"#334155"}}>({fa.length})</span>
+                            <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.analysis}} />해석 <span className="font-bold" style={{color:"#334155"}}>({fa.length})</span>
                         </div>
                         <MiniBar items={analysisByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...analysisByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("ip")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
                         <div className="text-[13px] font-semibold text-slate-500 mb-3 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full" style={{background:"#10B981"}} />지식재산권 <span className="font-bold" style={{color:"#334155"}}>({fip.length})</span>
+                            <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.ip}} />지식재산권 <span className="font-bold" style={{color:"#334155"}}>({fip.length})</span>
                         </div>
                         <MiniBar items={patentsByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...patentsByStatus.map(s => s.count))} />
                     </button>
@@ -5508,7 +5699,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                         <table className="w-full text-[13px]">
                             <thead>
                                 <tr style={{borderBottom:"1px solid #F1F5F9"}}>
-                                    <th className="text-left py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>멤버</th>
+                                    <th className="text-left py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", width:300, minWidth:300}}>멤버</th>
                                     <th className="text-center py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>논문</th>
                                     <th className="text-center py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>계획/보고</th>
                                     <th className="text-center py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>실험</th>
@@ -5535,7 +5726,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                                                 <div className="flex items-center gap-1">
                                                     <span className="whitespace-nowrap">{members[name]?.emoji} {name}</span>
                                                     {isTeamLead && <span className="text-[10px] px-1.5 py-0.5 rounded" style={{fontWeight:700, color:"#3B82F6", background:"#EFF6FF"}}>팀장</span>}
-                                                    {statusMessages[name] && <span className="text-[11px] text-blue-500/80 italic truncate max-w-[140px] ml-1.5 border-l border-slate-200 pl-1.5">&ldquo;{statusMessages[name]}&rdquo;</span>}
+                                                    {statusMessages[name] && <span className="text-[11px] text-blue-500/80 italic truncate max-w-[200px] ml-1.5 border-l border-slate-200 pl-1.5">&ldquo;{statusMessages[name]}&rdquo;</span>}
                                                 </div>
                                             </td>
                                             <td className="text-center py-2.5 px-2"><span style={{fontWeight: memberPapers > 0 ? 650 : 400, color: memberPapers > 0 ? "#334155" : "#CBD5E1"}}>{memberPapers || "-"}</span></td>
@@ -5569,7 +5760,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-[16px] font-bold text-slate-900">팀별 연구 현황</h3>
                             <div className="flex items-center gap-3">
-                                {[{label:"논문",color:"#3B82F6"},{label:"계획/보고",color:"#F59E0B"},{label:"실험",color:"#EF4444"},{label:"해석",color:"#8B5CF6"},{label:"지식재산권",color:"#10B981"}].map(c => (
+                                {[{label:"논문",color:CATEGORY_COLORS.paper},{label:"계획/보고",color:CATEGORY_COLORS.report},{label:"실험",color:CATEGORY_COLORS.experiment},{label:"해석",color:CATEGORY_COLORS.analysis},{label:"지식재산권",color:CATEGORY_COLORS.ip}].map(c => (
                                     <span key={c.label} className="flex items-center gap-1 text-[11px]" style={{color:"#94A3B8"}}><span className="w-2 h-2 rounded-sm" style={{background:c.color}} />{c.label}</span>
                                 ))}
                             </div>
@@ -5594,18 +5785,18 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                                                 <span className="text-[11px]" style={{color:"#94A3B8"}}>{team.total}건</span>
                                             </div>
                                             <div className="flex gap-[2px] h-[8px] rounded-sm overflow-hidden" style={{background:"#F1F5F9"}}>
-                                                {team.tPapers > 0 && <div className="rounded-sm" style={{ width: `${(team.tPapers / maxTotal) * 100}%`, background: "#3B82F6" }} />}
-                                                {team.tReports > 0 && <div className="rounded-sm" style={{ width: `${(team.tReports / maxTotal) * 100}%`, background: "#F59E0B" }} />}
-                                                {team.tExp > 0 && <div className="rounded-sm" style={{ width: `${(team.tExp / maxTotal) * 100}%`, background: "#EF4444" }} />}
-                                                {team.tAnalysis > 0 && <div className="rounded-sm" style={{ width: `${(team.tAnalysis / maxTotal) * 100}%`, background: "#8B5CF6" }} />}
-                                                {team.tPatents > 0 && <div className="rounded-sm" style={{ width: `${(team.tPatents / maxTotal) * 100}%`, background: "#10B981" }} />}
+                                                {team.tPapers > 0 && <div className="rounded-sm" style={{ width: `${(team.tPapers / maxTotal) * 100}%`, background: CATEGORY_COLORS.paper }} />}
+                                                {team.tReports > 0 && <div className="rounded-sm" style={{ width: `${(team.tReports / maxTotal) * 100}%`, background: CATEGORY_COLORS.report }} />}
+                                                {team.tExp > 0 && <div className="rounded-sm" style={{ width: `${(team.tExp / maxTotal) * 100}%`, background: CATEGORY_COLORS.experiment }} />}
+                                                {team.tAnalysis > 0 && <div className="rounded-sm" style={{ width: `${(team.tAnalysis / maxTotal) * 100}%`, background: CATEGORY_COLORS.analysis }} />}
+                                                {team.tPatents > 0 && <div className="rounded-sm" style={{ width: `${(team.tPatents / maxTotal) * 100}%`, background: CATEGORY_COLORS.ip }} />}
                                             </div>
                                             <div className="flex gap-2.5 mt-1 flex-wrap">
-                                                {team.tPapers > 0 && <span className="text-[11px]" style={{color:"#3B82F6"}}>논문 {team.tPapers}</span>}
-                                                {team.tReports > 0 && <span className="text-[11px]" style={{color:"#F59E0B"}}>계획/보고 {team.tReports}</span>}
-                                                {team.tExp > 0 && <span className="text-[11px]" style={{color:"#EF4444"}}>실험 {team.tExp}</span>}
-                                                {team.tAnalysis > 0 && <span className="text-[11px]" style={{color:"#8B5CF6"}}>해석 {team.tAnalysis}</span>}
-                                                {team.tPatents > 0 && <span className="text-[11px]" style={{color:"#10B981"}}>지식재산권 {team.tPatents}</span>}
+                                                {team.tPapers > 0 && <span className="text-[11px]" style={{color:CATEGORY_COLORS.paper}}>논문 {team.tPapers}</span>}
+                                                {team.tReports > 0 && <span className="text-[11px]" style={{color:CATEGORY_COLORS.report}}>계획/보고 {team.tReports}</span>}
+                                                {team.tExp > 0 && <span className="text-[11px]" style={{color:CATEGORY_COLORS.experiment}}>실험 {team.tExp}</span>}
+                                                {team.tAnalysis > 0 && <span className="text-[11px]" style={{color:CATEGORY_COLORS.analysis}}>해석 {team.tAnalysis}</span>}
+                                                {team.tPatents > 0 && <span className="text-[11px]" style={{color:CATEGORY_COLORS.ip}}>지식재산권 {team.tPatents}</span>}
                                             </div>
                                         </div>
                                     ))}
@@ -5718,9 +5909,21 @@ export default function DashboardPage() {
 
     const allPeople = useMemo(() => ["전체", ...memberNames], [memberNames]);
 
-    const saveSection = useCallback(async (section: string, data: unknown) => {
-        try { await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section, data, userName }) }); } catch { /* ignore */ }
+    const [savingIds, setSavingIds] = useState<Set<number>>(new Set());
+    const [toast, setToast] = useState("");
+    useEffect(() => { if (toast) { const t = setTimeout(() => setToast(""), 3000); return () => clearTimeout(t); } }, [toast]);
+
+    const saveSection = useCallback(async (section: string, data: unknown): Promise<boolean> => {
+        try { const r = await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section, data, userName }) }); return r.ok; } catch { return false; }
     }, [userName]);
+
+    const trackSave = useCallback((itemId: number, section: string, data: unknown, rollback: () => void) => {
+        setSavingIds(prev => new Set(prev).add(itemId));
+        saveSection(section, data).then(ok => {
+            setSavingIds(prev => { const s = new Set(prev); s.delete(itemId); return s; });
+            if (!ok) { rollback(); setToast("저장에 실패했습니다. 다시 시도해주세요."); }
+        });
+    }, [saveSection]);
 
     const fetchData = useCallback(async () => {
         try {
@@ -5850,46 +6053,55 @@ export default function DashboardPage() {
         } catch {}
     }, [userName]);
 
-    // chatReadTs: mark current tab as read
+    // chatReadTs: mark current tab as read (on tab switch + when new msgs arrive while viewing)
+    const activeChatLen = activeTab === "labChat" ? labChat.length
+        : activeTab.startsWith("teamMemo_") ? (teamMemos[activeTab.replace("teamMemo_", "")]?.chat || []).length
+        : activeTab.startsWith("memo_") ? (piChat[activeTab.replace("memo_", "")] || []).length : -1;
     useEffect(() => {
-        if (!userName) return;
+        if (!userName || activeChatLen < 0) return;
         setChatReadTs(prev => {
             const next = { ...prev, [activeTab]: Date.now() };
             try { localStorage.setItem(`mftel_chatReadTs_${userName}`, JSON.stringify(next)); } catch {}
             return next;
         });
-    }, [activeTab, userName]);
+    }, [activeTab, userName, activeChatLen]);
 
     // Handlers
     const handleToggleTodo = (id: number) => { const u = todos.map(t => t.id === id ? { ...t, done: !t.done } : t); setTodos(u); saveSection("todos", u); };
-    const handleAddTodo = (t: Todo) => { const u = [...todos, t]; setTodos(u); saveSection("todos", u); };
+    const handleAddTodo = (t: Todo) => { const u = [...todos, t]; setTodos(u); trackSave(t.id, "todos", u, () => setTodos(todos)); };
     const handleDeleteTodo = (id: number) => { const u = todos.filter(t => t.id !== id); setTodos(u); saveSection("todos", u); };
     const handleUpdateTodo = (t: Todo) => { const u = todos.map(x => x.id === t.id ? t : x); setTodos(u); saveSection("todos", u); };
-    const handleAddAnn = (text: string) => { const u = [{ id: Date.now(), text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned: false }, ...announcements]; setAnnouncements(u); saveSection("announcements", u); };
+    const handleAddAnn = (text: string, pinned = false) => { const nid = Date.now(); const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned }, ...announcements]; setAnnouncements(u); trackSave(nid, "announcements", u, () => setAnnouncements(announcements)); };
     const handleDelAnn = (id: number) => { const u = announcements.filter(a => a.id !== id); setAnnouncements(u); saveSection("announcements", u); };
     const handleUpdateAnn = (ann: Announcement) => { const u = announcements.map(a => a.id === ann.id ? ann : a); setAnnouncements(u); saveSection("announcements", u); };
-    const handleAddPhil = (text: string) => { const u = [{ id: Date.now(), text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned: false }, ...philosophy]; setPhilosophy(u); saveSection("philosophy", u); };
+    const handleAddPhil = (text: string) => { const nid = Date.now(); const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned: false }, ...philosophy]; setPhilosophy(u); trackSave(nid, "philosophy", u, () => setPhilosophy(philosophy)); };
     const handleDelPhil = (id: number) => { const u = philosophy.filter(p => p.id !== id); setPhilosophy(u); saveSection("philosophy", u); };
     const handleUpdatePhil = (p: Announcement) => { const u = philosophy.map(x => x.id === p.id ? p : x); setPhilosophy(u); saveSection("philosophy", u); };
 
     const handleSavePaper = (p: Paper) => {
         const exists = papers.find(x => x.id === p.id);
         const u = exists ? papers.map(x => x.id === p.id ? p : x) : [...papers, p];
-        setPapers(u); saveSection("papers", u); setPaperModal(null);
+        setPapers(u); setPaperModal(null);
+        if (exists) saveSection("papers", u);
+        else trackSave(p.id, "papers", u, () => setPapers(papers));
     };
     const handleDeletePaper = (id: number) => { const u = papers.filter(p => p.id !== id); setPapers(u); saveSection("papers", u); };
 
     const handleSaveExperiment = (e: Experiment) => {
         const exists = experiments.find(x => x.id === e.id);
         const u = exists ? experiments.map(x => x.id === e.id ? e : x) : [...experiments, e];
-        setExperiments(u); saveSection("experiments", u);
+        setExperiments(u);
+        if (exists) saveSection("experiments", u);
+        else trackSave(e.id, "experiments", u, () => setExperiments(experiments));
     };
     const handleDeleteExperiment = (id: number) => { const u = experiments.filter(e => e.id !== id); setExperiments(u); saveSection("experiments", u); };
 
     const handleSaveReport = (r: Report) => {
         const exists = reports.find(x => x.id === r.id);
         const u = exists ? reports.map(x => x.id === r.id ? r : x) : [...reports, r];
-        setReports(u); saveSection("reports", u);
+        setReports(u);
+        if (exists) saveSection("reports", u);
+        else trackSave(r.id, "reports", u, () => setReports(reports));
     };
     const handleDeleteReport = (id: number) => { const u = reports.filter(r => r.id !== id); setReports(u); saveSection("reports", u); };
 
@@ -5923,44 +6135,58 @@ export default function DashboardPage() {
     const handleSavePatent = (p: Patent) => {
         const exists = ipPatents.find(x => x.id === p.id);
         const u = exists ? ipPatents.map(x => x.id === p.id ? p : x) : [...ipPatents, p];
-        setIpPatents(u); saveSection("patents", u);
+        setIpPatents(u);
+        if (exists) saveSection("patents", u);
+        else trackSave(p.id, "patents", u, () => setIpPatents(ipPatents));
     };
     const handleDeletePatent = (id: number) => { const u = ipPatents.filter(p => p.id !== id); setIpPatents(u); saveSection("patents", u); };
     const handleSaveResource = (r: Resource) => {
         const exists = resources.find(x => x.id === r.id);
         const u = exists ? resources.map(x => x.id === r.id ? r : x) : [...resources, r];
-        setResources(u); saveSection("resources", u);
+        setResources(u);
+        if (exists) saveSection("resources", u);
+        else trackSave(r.id, "resources", u, () => setResources(resources));
     };
     const handleDeleteResource = (id: number) => { const u = resources.filter(r => r.id !== id); setResources(u); saveSection("resources", u); };
     const handleSaveConference = (c: ConferenceTrip) => {
         const exists = conferenceTrips.find(x => x.id === c.id);
         const u = exists ? conferenceTrips.map(x => x.id === c.id ? c : x) : [...conferenceTrips, c];
-        setConferenceTrips(u); saveSection("conferences", u);
+        setConferenceTrips(u);
+        if (exists) saveSection("conferences", u);
+        else trackSave(c.id, "conferences", u, () => setConferenceTrips(conferenceTrips));
     };
     const handleDeleteConference = (id: number) => { const u = conferenceTrips.filter(c => c.id !== id); setConferenceTrips(u); saveSection("conferences", u); };
     const handleSaveMeeting = (m: Meeting) => {
         const exists = meetings.find(x => x.id === m.id);
         const u = exists ? meetings.map(x => x.id === m.id ? m : x) : [...meetings, m];
-        setMeetings(u); saveSection("meetings", u);
+        setMeetings(u);
+        if (exists) saveSection("meetings", u);
+        else trackSave(m.id, "meetings", u, () => setMeetings(meetings));
     };
     const handleDeleteMeeting = (id: number) => { const u = meetings.filter(m => m.id !== id); setMeetings(u); saveSection("meetings", u); };
     const handleSaveDailyTargets = (t: DailyTarget[]) => { setDailyTargets(t); saveSection("dailyTargets", t); };
     const handleSaveIdea = (idea: IdeaPost) => {
         const exists = ideas.find(x => x.id === idea.id);
         const u = exists ? ideas.map(x => x.id === idea.id ? idea : x) : [idea, ...ideas];
-        setIdeas(u); saveSection("ideas", u);
+        setIdeas(u);
+        if (exists) saveSection("ideas", u);
+        else trackSave(idea.id, "ideas", u, () => setIdeas(ideas));
     };
     const handleDeleteIdea = (id: number) => { const u = ideas.filter(i => i.id !== id); setIdeas(u); saveSection("ideas", u); };
     const handleSaveAnalysis = (a: Analysis) => {
         const exists = analyses.find(x => x.id === a.id);
         const u = exists ? analyses.map(x => x.id === a.id ? a : x) : [...analyses, a];
-        setAnalyses(u); saveSection("analyses", u);
+        setAnalyses(u);
+        if (exists) saveSection("analyses", u);
+        else trackSave(a.id, "analyses", u, () => setAnalyses(analyses));
     };
     const handleDeleteAnalysis = (id: number) => { const u = analyses.filter(a => a.id !== id); setAnalyses(u); saveSection("analyses", u); };
     const handleSaveChat = (post: IdeaPost) => {
         const exists = chatPosts.find(x => x.id === post.id);
         const u = exists ? chatPosts.map(x => x.id === post.id ? post : x) : [post, ...chatPosts];
-        setChatPosts(u); saveSection("chatPosts", u);
+        setChatPosts(u);
+        if (exists) saveSection("chatPosts", u);
+        else trackSave(post.id, "chatPosts", u, () => setChatPosts(chatPosts));
     };
     const handleDeleteChat = (id: number) => { const u = chatPosts.filter(p => p.id !== id); setChatPosts(u); saveSection("chatPosts", u); };
     const handleSaveEmoji = (name: string, emoji: string) => {
@@ -5979,7 +6205,9 @@ export default function DashboardPage() {
         const found = existing.find(m => m.id === memo.id);
         const updated = found ? existing.map(m => m.id === memo.id ? memo : m) : [...existing, memo];
         const u = { ...personalMemos, [memberName]: updated };
-        setPersonalMemos(u); saveSection("personalMemos", u);
+        setPersonalMemos(u);
+        if (found) saveSection("personalMemos", u);
+        else trackSave(memo.id, "personalMemos", u, () => setPersonalMemos(personalMemos));
     };
     const handleDeleteMemo = (memberName: string, id: number) => {
         const updated = (personalMemos[memberName] || []).filter(m => m.id !== id);
@@ -5988,15 +6216,28 @@ export default function DashboardPage() {
     };
     const handleAddPersonalFile = (name: string, f: LabFile) => {
         const u = { ...personalFiles, [name]: [...(personalFiles[name] || []), f] };
-        setPersonalFiles(u); saveSection("personalFiles", u);
+        setPersonalFiles(u); trackSave(f.id, "personalFiles", u, () => setPersonalFiles(personalFiles));
     };
     const handleDeletePersonalFile = (name: string, id: number) => {
         const u = { ...personalFiles, [name]: (personalFiles[name] || []).filter(f => f.id !== id) };
         setPersonalFiles(u); saveSection("personalFiles", u);
     };
     const handleAddPiChat = (name: string, msg: TeamChatMsg) => {
-        const u = { ...piChat, [name]: [...(piChat[name] || []), msg] };
-        setPiChat(u); saveSection("piChat", u);
+        const newMsgs = [...(piChat[name] || []), { ...msg, _sending: true }];
+        const u = { ...piChat, [name]: newMsgs };
+        setPiChat(u);
+        saveSection("piChat", { ...u, [name]: stripMsgFlags(newMsgs) }).then(ok => {
+            setPiChat(prev => ({ ...prev, [name]: (prev[name] || []).map(m => m.id === msg.id ? (ok ? { ...m, _sending: undefined } : { ...m, _sending: undefined, _failed: true }) : m) }));
+        });
+    };
+    const handleRetryPiChat = (name: string, msgId: number) => {
+        setPiChat(prev => {
+            const updated = { ...prev, [name]: (prev[name] || []).map(m => m.id === msgId ? { ...m, _sending: true, _failed: undefined } : m) };
+            saveSection("piChat", { ...updated, [name]: stripMsgFlags(updated[name]) }).then(ok => {
+                setPiChat(p => ({ ...p, [name]: (p[name] || []).map(m => m.id === msgId ? (ok ? { ...m, _sending: undefined } : { ...m, _sending: undefined, _failed: true }) : m) }));
+            });
+            return updated;
+        });
     };
     const handleDeletePiChat = (name: string, id: number) => {
         const u = { ...piChat, [name]: (piChat[name] || []).filter(m => m.id !== id) };
@@ -6012,7 +6253,9 @@ export default function DashboardPage() {
         const found = data.kanban.find(c => c.id === card.id);
         const updated = found ? data.kanban.map(c => c.id === card.id ? card : c) : [...data.kanban, card];
         const u = { ...teamMemos, [teamName]: { ...data, kanban: updated } };
-        setTeamMemos(u); saveSection("teamMemos", u);
+        setTeamMemos(u);
+        if (found) saveSection("teamMemos", u);
+        else trackSave(card.id, "teamMemos", u, () => setTeamMemos(teamMemos));
     };
     const handleDeleteTeamMemo = (teamName: string, id: number) => {
         const data = teamMemos[teamName] || { kanban: [], chat: [] };
@@ -6026,7 +6269,33 @@ export default function DashboardPage() {
     };
     const handleAddTeamChat = (teamName: string, msg: TeamChatMsg) => {
         const data = teamMemos[teamName] || { kanban: [], chat: [] };
-        const u = { ...teamMemos, [teamName]: { ...data, chat: [...data.chat, msg] } };
+        const newChat = [...data.chat, { ...msg, _sending: true }];
+        const u = { ...teamMemos, [teamName]: { ...data, chat: newChat } };
+        setTeamMemos(u);
+        const cleanU = { ...u, [teamName]: { ...u[teamName], chat: stripMsgFlags(newChat) } };
+        saveSection("teamMemos", cleanU).then(ok => {
+            setTeamMemos(prev => {
+                const td = prev[teamName] || { kanban: [], chat: [] };
+                return { ...prev, [teamName]: { ...td, chat: td.chat.map(m => m.id === msg.id ? (ok ? { ...m, _sending: undefined } : { ...m, _sending: undefined, _failed: true }) : m) } };
+            });
+        });
+    };
+    const handleRetryTeamChat = (teamName: string, msgId: number) => {
+        setTeamMemos(prev => {
+            const td = prev[teamName] || { kanban: [], chat: [] };
+            const updated = { ...prev, [teamName]: { ...td, chat: td.chat.map(m => m.id === msgId ? { ...m, _sending: true, _failed: undefined } : m) } };
+            saveSection("teamMemos", { ...updated, [teamName]: { ...updated[teamName], chat: stripMsgFlags(updated[teamName].chat) } }).then(ok => {
+                setTeamMemos(p => {
+                    const d = p[teamName] || { kanban: [], chat: [] };
+                    return { ...p, [teamName]: { ...d, chat: d.chat.map(m => m.id === msgId ? (ok ? { ...m, _sending: undefined } : { ...m, _sending: undefined, _failed: true }) : m) } };
+                });
+            });
+            return updated;
+        });
+    };
+    const handleUpdateTeamChat = (teamName: string, msg: TeamChatMsg) => {
+        const data = teamMemos[teamName] || { kanban: [], chat: [] };
+        const u = { ...teamMemos, [teamName]: { ...data, chat: data.chat.map(c => c.id === msg.id ? msg : c) } };
         setTeamMemos(u); saveSection("teamMemos", u);
     };
     const handleDeleteTeamChat = (teamName: string, id: number) => {
@@ -6042,7 +6311,7 @@ export default function DashboardPage() {
     const handleAddTeamFile = (teamName: string, file: LabFile) => {
         const data = teamMemos[teamName] || { kanban: [], chat: [] };
         const u = { ...teamMemos, [teamName]: { ...data, files: [...(data.files || []), file] } };
-        setTeamMemos(u); saveSection("teamMemos", u);
+        setTeamMemos(u); trackSave(file.id, "teamMemos", u, () => setTeamMemos(teamMemos));
     };
     const handleDeleteTeamFile = async (teamName: string, id: number) => {
         const data = teamMemos[teamName] || { kanban: [], chat: [] };
@@ -6053,26 +6322,43 @@ export default function DashboardPage() {
     };
 
     const handleAddLabChat = (msg: TeamChatMsg) => {
-        const u = [...labChat, msg];
-        setLabChat(u); saveSection("labChat", u);
+        const u = [...labChat, { ...msg, _sending: true }];
+        setLabChat(u);
+        saveSection("labChat", stripMsgFlags(u)).then(ok => {
+            if (ok) setLabChat(prev => prev.map(m => m.id === msg.id ? { ...m, _sending: undefined } : m));
+            else setLabChat(prev => prev.map(m => m.id === msg.id ? { ...m, _sending: undefined, _failed: true } : m));
+        });
+    };
+    const handleRetryLabChat = (msgId: number) => {
+        setLabChat(prev => {
+            const updated = prev.map(m => m.id === msgId ? { ...m, _sending: true, _failed: undefined } : m);
+            saveSection("labChat", stripMsgFlags(updated)).then(ok => {
+                if (ok) setLabChat(p => p.map(m => m.id === msgId ? { ...m, _sending: undefined } : m));
+                else setLabChat(p => p.map(m => m.id === msgId ? { ...m, _sending: undefined, _failed: true } : m));
+            });
+            return updated;
+        });
     };
     const handleDeleteLabChat = (id: number) => {
         const u = labChat.filter(c => c.id !== id);
-        setLabChat(u); saveSection("labChat", u);
+        setLabChat(u); saveSection("labChat", stripMsgFlags(u));
     };
     const handleClearLabChat = () => {
         setLabChat([]); saveSection("labChat", []);
     };
     const handleSaveLabBoard = (card: TeamMemoCard) => {
-        const u = labBoard.some(c => c.id === card.id) ? labBoard.map(c => c.id === card.id ? card : c) : [...labBoard, card];
-        setLabBoard(u); saveSection("labBoard", u);
+        const exists = labBoard.some(c => c.id === card.id);
+        const u = exists ? labBoard.map(c => c.id === card.id ? card : c) : [...labBoard, card];
+        setLabBoard(u);
+        if (exists) saveSection("labBoard", u);
+        else trackSave(card.id, "labBoard", u, () => setLabBoard(labBoard));
     };
     const handleDeleteLabBoard = (id: number) => {
         const u = labBoard.filter(c => c.id !== id);
         setLabBoard(u); saveSection("labBoard", u);
     };
     const handleAddLabFile = (file: LabFile) => {
-        const u = [...labFiles, file]; setLabFiles(u); saveSection("labFiles", u);
+        const u = [...labFiles, file]; setLabFiles(u); trackSave(file.id, "labFiles", u, () => setLabFiles(labFiles));
     };
     const handleDeleteLabFile = async (id: number) => {
         const file = labFiles.find(f => f.id === id);
@@ -6106,13 +6392,14 @@ export default function DashboardPage() {
     };
 
     const unreadCounts: Record<string, number> = {
-        labChat: labChat.filter(m => m.id > (chatReadTs.labChat || 0)).length,
-        ...Object.fromEntries(teamNames.map(t => [`teamMemo_${t}`, (teamMemos[t]?.chat || []).filter(m => m.id > (chatReadTs[`teamMemo_${t}`] || 0)).length])),
-        ...Object.fromEntries(memberNames.map(name => [`memo_${name}`, (piChat[name] || []).filter(m => m.id > (chatReadTs[`memo_${name}`] || 0)).length])),
+        labChat: labChat.filter(m => m.author !== userName && m.id > (chatReadTs.labChat || 0)).length,
+        ...Object.fromEntries(teamNames.map(t => [`teamMemo_${t}`, (teamMemos[t]?.chat || []).filter(m => m.author !== userName && m.id > (chatReadTs[`teamMemo_${t}`] || 0)).length])),
+        ...Object.fromEntries(memberNames.map(name => [`memo_${name}`, (piChat[name] || []).filter(m => m.author !== userName && m.id > (chatReadTs[`memo_${name}`] || 0)).length])),
     };
 
     return (
         <MembersContext.Provider value={displayMembers}>
+        <SavingContext.Provider value={savingIds}>
         <div className="min-h-screen bg-[#F8FAFC] text-slate-800 leading-normal" style={{ fontFamily: "'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif" }}>
 
             {/* Mobile top header */}
@@ -6175,13 +6462,10 @@ export default function DashboardPage() {
                 {/* Desktop Sidebar */}
                 <div className="hidden md:flex md:w-[240px] md:h-screen flex-shrink-0 flex-col" style={{background:"#0F172A", borderRight:"1px solid #1E293B", boxShadow:"2px 0 8px rgba(0,0,0,0.1)"}}>
                     {/* Sidebar top: MFTEL logo */}
-                    <div className="flex items-center gap-3 px-5 pt-5 pb-4 relative z-10 flex-shrink-0" style={{borderBottom:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
+                    <a href="/" className="flex items-center gap-3 px-5 pt-5 pb-4 relative z-10 flex-shrink-0 cursor-pointer no-underline" style={{borderBottom:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
                         <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-[17px] font-extrabold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", boxShadow: "0 2px 8px rgba(59,130,246,0.3)" }}>M</div>
-                        <div className="min-w-0">
-                            <div className="text-[15px] tracking-tight text-white" style={{fontWeight:750}}>MFTEL</div>
-                            <div className="text-[10.5px] truncate" style={{color:"#64748B"}}>Multiphase Flow & Thermal Energy</div>
-                        </div>
-                    </div>
+                        <div className="text-[15px] tracking-tight text-white" style={{fontWeight:750}}>MFTEL</div>
+                    </a>
                     {/* Sidebar nav */}
                     <div className="flex-1 min-h-0 flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto p-3 md:p-0 md:pt-2 md:pb-2 gap-px dark-scrollbar">
                         {tabs.map((tab, i) => {
@@ -6307,22 +6591,30 @@ export default function DashboardPage() {
                     {activeTab === "ideas" && <IdeasView ideas={ideas} onSave={handleSaveIdea} onDelete={handleDeleteIdea} onReorder={list => { setIdeas(list); saveSection("ideas", list); }} currentUser={userName} />}
                     {activeTab === "chat" && <IdeasView ideas={chatPosts} onSave={handleSaveChat} onDelete={handleDeleteChat} onReorder={list => { setChatPosts(list); saveSection("chatPosts", list); }} currentUser={userName} />}
                     {activeTab === "settings" && <SettingsView currentUser={userName} customEmojis={customEmojis} onSaveEmoji={handleSaveEmoji} statusMessages={statusMessages} onSaveStatusMsg={handleSaveStatusMsg} />}
-                    {activeTab === "labChat" && <LabChatView chat={labChat} currentUser={userName} onAdd={handleAddLabChat} onDelete={handleDeleteLabChat} onClear={handleClearLabChat} files={labFiles} onAddFile={handleAddLabFile} onDeleteFile={handleDeleteLabFile} board={labBoard} onSaveBoard={handleSaveLabBoard} onDeleteBoard={handleDeleteLabBoard} />}
+                    {activeTab === "labChat" && <LabChatView chat={labChat} currentUser={userName} onAdd={handleAddLabChat} onDelete={handleDeleteLabChat} onClear={handleClearLabChat} onRetry={handleRetryLabChat} files={labFiles} onAddFile={handleAddLabFile} onDeleteFile={handleDeleteLabFile} board={labBoard} onSaveBoard={handleSaveLabBoard} onDeleteBoard={handleDeleteLabBoard} />}
                     {activeTab.startsWith("teamMemo_") && (() => {
                         const tName = activeTab.replace("teamMemo_", "");
                         const data = teamMemos[tName] || { kanban: [], chat: [] };
-                        return <TeamMemoView teamName={tName} kanban={data.kanban} chat={data.chat} files={data.files || []} currentUser={userName} onSaveCard={c => handleSaveTeamMemo(tName, c)} onDeleteCard={id => handleDeleteTeamMemo(tName, id)} onReorderCards={cards => handleReorderTeamMemo(tName, cards)} onAddChat={msg => handleAddTeamChat(tName, msg)} onDeleteChat={id => handleDeleteTeamChat(tName, id)} onClearChat={() => handleClearTeamChat(tName)} onAddFile={f => handleAddTeamFile(tName, f)} onDeleteFile={id => handleDeleteTeamFile(tName, id)} />;
+                        return <TeamMemoView teamName={tName} kanban={data.kanban} chat={data.chat} files={data.files || []} currentUser={userName} onSaveCard={c => handleSaveTeamMemo(tName, c)} onDeleteCard={id => handleDeleteTeamMemo(tName, id)} onReorderCards={cards => handleReorderTeamMemo(tName, cards)} onAddChat={msg => handleAddTeamChat(tName, msg)} onUpdateChat={msg => handleUpdateTeamChat(tName, msg)} onDeleteChat={id => handleDeleteTeamChat(tName, id)} onClearChat={() => handleClearTeamChat(tName)} onRetryChat={id => handleRetryTeamChat(tName, id)} onAddFile={f => handleAddTeamFile(tName, f)} onDeleteFile={id => handleDeleteTeamFile(tName, id)} />;
                     })()}
                     {activeTab.startsWith("memo_") && (() => {
                         const name = activeTab.replace("memo_", "");
-                        return <PersonalMemoView memos={personalMemos[name] || []} onSave={m => handleSaveMemo(name, m)} onDelete={id => handleDeleteMemo(name, id)} files={personalFiles[name] || []} onAddFile={f => handleAddPersonalFile(name, f)} onDeleteFile={id => handleDeletePersonalFile(name, id)} chat={piChat[name] || []} onAddChat={msg => handleAddPiChat(name, msg)} onDeleteChat={id => handleDeletePiChat(name, id)} onClearChat={() => handleClearPiChat(name)} currentUser={userName} />;
+                        return <PersonalMemoView memos={personalMemos[name] || []} onSave={m => handleSaveMemo(name, m)} onDelete={id => handleDeleteMemo(name, id)} files={personalFiles[name] || []} onAddFile={f => handleAddPersonalFile(name, f)} onDeleteFile={id => handleDeletePersonalFile(name, id)} chat={piChat[name] || []} onAddChat={msg => handleAddPiChat(name, msg)} onDeleteChat={id => handleDeletePiChat(name, id)} onClearChat={() => handleClearPiChat(name)} onRetryChat={id => handleRetryPiChat(name, id)} currentUser={userName} />;
                     })()}
                 </div>
             </div>
 
             {/* Paper Modal */}
             {paperModal && <PaperFormModal paper={paperModal.paper} onSave={handleSavePaper} onDelete={handleDeletePaper} onClose={() => setPaperModal(null)} currentUser={userName} tagList={paperTagList} teamNames={teamNames} />}
+
+            {/* Toast */}
+            {toast && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] px-5 py-3 rounded-xl text-[14px] font-medium text-white shadow-lg animate-[fadeInUp_0.3s_ease]" style={{ background: "#EF4444" }}>
+                    {toast}
+                </div>
+            )}
         </div>
+        </SavingContext.Provider>
         </MembersContext.Provider>
     );
 }

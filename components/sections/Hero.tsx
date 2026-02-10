@@ -126,12 +126,30 @@ function AnimatedText({ text, delay, onComplete }: { text: string; delay: number
     );
 }
 
+function useIsMobile() {
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const mql = window.matchMedia("(max-width: 768px), (prefers-reduced-motion: reduce)");
+        setIsMobile(mql.matches);
+        const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+        mql.addEventListener("change", handler);
+        return () => mql.removeEventListener("change", handler);
+    }, []);
+    return isMobile;
+}
+
 export default function Hero() {
     const [showContent, setShowContent] = useState(false);
     const [showGradient, setShowGradient] = useState(false);
     const { t, language } = useLanguage();
+    const isMobile = useIsMobile();
 
     useEffect(() => {
+        if (isMobile) {
+            setShowContent(true);
+            setShowGradient(true);
+            return;
+        }
         const timer = setTimeout(() => {
             setShowContent(true);
         }, 800);
@@ -139,13 +157,46 @@ export default function Hero() {
         return () => {
             clearTimeout(timer);
         };
-    }, []);
+    }, [isMobile]);
 
     const line1 = t("hero.line1");
     const line2a = t("hero.line2a");
     const line2b = t("hero.line2b");
     const line3 = t("hero.line3");
 
+    /* ── Mobile: static background, no animations ── */
+    if (isMobile) {
+        return (
+            <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-900">
+                <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 z-[10]">
+                    <div className="max-w-4xl mx-auto text-center">
+                        <h1 className="text-5xl font-bold tracking-tight text-white mb-2 leading-[1.1]">
+                            {line1}
+                        </h1>
+                        <h1 className="text-5xl font-bold tracking-tight mb-2 leading-[1.1] text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-rose-300">
+                            {line2a} {line2b}
+                        </h1>
+                        <h1 className="text-5xl font-bold tracking-tight text-white mb-8 leading-[1.1]">
+                            {line3}
+                        </h1>
+                        <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed">
+                            {t("hero.description")}
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                            <Button size="lg" variant="outline" className="rounded-full text-base border-white/20 text-white hover:bg-white/10 backdrop-blur-sm w-[200px] justify-center" asChild>
+                                <a href="#publications">{t("hero.publications")}</a>
+                            </Button>
+                            <Button size="lg" variant="outline" className="rounded-full text-base border-white/20 text-white hover:bg-white/10 backdrop-blur-sm w-[200px] justify-center" asChild>
+                                <a href="#projects">{t("hero.projects")}</a>
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        );
+    }
+
+    /* ── Desktop: full animations ── */
     return (
         <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-white">
             {/* Expanding circle */}
