@@ -216,6 +216,75 @@ function useConfirmDelete() {
     return { confirm, dialog };
 }
 
+// ─── Shared: @Mention ────────────────────────────────────────────────────────
+
+const ALL_MEMBER_NAMES = Object.keys(DEFAULT_MEMBERS);
+
+function renderWithMentions(text: string) {
+    if (!text) return null;
+    const regex = new RegExp(`(@(?:${ALL_MEMBER_NAMES.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")}))(?=\\s|$|[.,!?])`, "g");
+    const parts = text.split(regex);
+    if (parts.length === 1) return text;
+    return parts.map((part, i) => {
+        if (part.startsWith("@") && ALL_MEMBER_NAMES.includes(part.slice(1))) {
+            return <span key={i} className="px-0.5 rounded text-blue-600 font-semibold" style={{ background: "rgba(59,130,246,0.1)" }}>{part}</span>;
+        }
+        return part;
+    });
+}
+
+function useMention() {
+    const [open, setOpen] = useState(false);
+    const [filter, setFilter] = useState("");
+    const [idx, setIdx] = useState(0);
+    const filtered = useMemo(() => {
+        const q = filter.toLowerCase();
+        const list = q ? ALL_MEMBER_NAMES.filter(n => n.includes(q) || (DEFAULT_MEMBERS[n]?.team || "").toLowerCase().includes(q)) : ALL_MEMBER_NAMES;
+        return list.slice(0, 8);
+    }, [filter]);
+    const check = useCallback((text: string, pos: number) => {
+        const before = text.slice(0, pos);
+        const match = before.match(/@([^\s@]*)$/);
+        if (match) { setOpen(true); setFilter(match[1]); setIdx(0); }
+        else setOpen(false);
+    }, []);
+    // Returns: string(name) = selected, true = consumed, false = not handled
+    const handleKey = useCallback((e: React.KeyboardEvent): string | boolean => {
+        if (!open || filtered.length === 0) return false;
+        if (e.key === "ArrowDown") { e.preventDefault(); setIdx(i => Math.min(i + 1, filtered.length - 1)); return true; }
+        if (e.key === "ArrowUp") { e.preventDefault(); setIdx(i => Math.max(i - 1, 0)); return true; }
+        if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); e.stopPropagation(); return filtered[idx] || false; }
+        if (e.key === "Escape") { e.preventDefault(); setOpen(false); return true; }
+        return false;
+    }, [open, filtered, idx]);
+    const apply = useCallback((text: string, pos: number, name: string) => {
+        const before = text.slice(0, pos);
+        const match = before.match(/@([^\s@]*)$/);
+        if (!match) return null;
+        const atIdx = pos - match[0].length;
+        return { newText: text.slice(0, atIdx) + `@${name} ` + text.slice(pos), cursorPos: atIdx + name.length + 2 };
+    }, []);
+    return { open, filtered, idx, setIdx, check, handleKey, apply, close: () => setOpen(false) };
+}
+
+function MentionPopup({ m, onSelect }: { m: ReturnType<typeof useMention>; onSelect: (name: string) => void }) {
+    if (!m.open || m.filtered.length === 0) return null;
+    return (
+        <div className="absolute bottom-full left-0 right-0 z-50 bg-white rounded-lg shadow-lg border border-slate-200 py-1 mb-1 max-h-[200px] overflow-y-auto">
+            {m.filtered.map((name, i) => (
+                <button key={name} type="button" onMouseDown={e => e.preventDefault()} onClick={() => onSelect(name)}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors"
+                    style={{ background: i === m.idx ? "#F1F5F9" : "transparent" }}
+                    onMouseEnter={() => m.setIdx(i)}>
+                    <span className="text-[14px]">{DEFAULT_MEMBERS[name]?.emoji || "👤"}</span>
+                    <span className="text-[13px] text-slate-700 font-medium">{name}</span>
+                    <span className="text-[11px] text-slate-400">{DEFAULT_MEMBERS[name]?.team}</span>
+                </button>
+            ))}
+        </div>
+    );
+}
+
 // ─── Shared: Emoji Picker ────────────────────────────────────────────────────
 
 const EMOJI_CATEGORIES = [
@@ -444,7 +513,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
                                 <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
                                     <button onClick={() => setComments(comments.filter(x => x.id !== c.id))}
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                    <div className="text-[13px] text-slate-700 pr-4">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                    <div className="text-[13px] text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                     <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                 </div>
                             ))}
@@ -699,7 +768,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                                                     <span className="text-[12px] font-semibold text-slate-700">{MEMBERS[c.author]?.emoji} {c.author}</span>
                                                     <span className="text-[10px] text-slate-400">{c.date}</span>
                                                 </div>
-                                                <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                                <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             </div>
                                             {(c.author === currentUser || currentUser === "박일웅") && (
                                                 <button onClick={() => delDetailComment(c.id)} className="text-[11px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 self-start mt-2">삭제</button>
@@ -854,7 +923,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                                 <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
                                     <button onClick={() => setComments(comments.filter(x => x.id !== c.id))}
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                    <div className="text-[13px] text-slate-700 pr-4">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                    <div className="text-[13px] text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                     <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                 </div>
                             ))}
@@ -1101,7 +1170,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                                                     <span className="text-[12px] font-semibold text-slate-700">{MEMBERS[c.author]?.emoji} {c.author}</span>
                                                     <span className="text-[10px] text-slate-400">{c.date}</span>
                                                 </div>
-                                                <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                                <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             </div>
                                             {(c.author === currentUser || currentUser === "박일웅") && (
                                                 <button onClick={() => delDetailComment(c.id)} className="text-[11px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 self-start mt-2">삭제</button>
@@ -2072,7 +2141,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                                                     <span className="text-[12px] font-semibold text-slate-700">{MEMBERS[c.author]?.emoji} {c.author}</span>
                                                     <span className="text-[10px] text-slate-400">{c.date}</span>
                                                 </div>
-                                                <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                                <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             </div>
                                             {(c.author === currentUser || currentUser === "박일웅") && (
                                                 <button onClick={() => delDetailComment(c.id)} className="text-[11px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 self-start mt-2">삭제</button>
@@ -2462,7 +2531,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                                                     <span className="text-[12px] font-semibold text-slate-700">{MEMBERS[c.author]?.emoji} {c.author}</span>
                                                     <span className="text-[10px] text-slate-400">{c.date}</span>
                                                 </div>
-                                                <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                                <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             </div>
                                             {(c.author === currentUser || currentUser === "박일웅") && (
                                                 <button onClick={() => delDetailComment(c.id)} className="text-[11px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 self-start mt-2">삭제</button>
@@ -2839,7 +2908,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                                         <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
                                             <button onClick={() => setEditComments(editComments.filter(x => x.id !== c.id))}
                                                 className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
@@ -3743,7 +3812,7 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
                                         <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
                                             <button onClick={() => setComments(comments.filter(x => x.id !== c.id))}
                                                 className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
@@ -3853,7 +3922,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
                                 {cmt.length > 0 ? (
                                     cmt.slice(-1).map(c => (
                                         <div key={c.id} className="text-[12px] text-slate-500 truncate">
-                                            <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}{c.imageUrl && " 📷"}
+                                            <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
                                         </div>
                                     ))
                                 ) : (
@@ -3900,7 +3969,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
                                         <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
                                             <button onClick={() => setComments(comments.filter(x => x.id !== c.id))}
                                                 className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
@@ -4026,7 +4095,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                                 <div className="text-[11px] font-semibold text-slate-400 mb-1">💬 댓글 {idea.comments.length}개</div>
                                 {idea.comments.slice(-2).map(c => (
                                     <div key={c.id} className="text-[12px] text-slate-500 truncate">
-                                        <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}{c.imageUrl && " 📷"}
+                                        <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
                                     </div>
                                 ))}
                             </div>
@@ -4097,7 +4166,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group relative">
                                             <button onClick={() => deleteComment(c.id)}
                                                 className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
@@ -4556,6 +4625,14 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
     const [chatReplyTo, setChatReplyTo] = useState<TeamChatMsg | null>(null);
     const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
     const [piMoreMenuMsgId, setPiMoreMenuMsgId] = useState<number | null>(null);
+    const mention = useMention();
+    const chatInputRef = useRef<HTMLTextAreaElement>(null);
+    const selectMention = (name: string) => {
+        const el = chatInputRef.current;
+        const pos = el?.selectionStart ?? chatText.length;
+        const result = mention.apply(chatText, pos, name);
+        if (result) { setChatText(result.newText); mention.close(); setTimeout(() => { el?.focus(); el?.setSelectionRange(result.cursorPos, result.cursorPos); }, 10); }
+    };
 
     const toggleReaction = (msgId: number, emoji: string) => {
         const msg = chat.find(m => m.id === msgId);
@@ -4658,7 +4735,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                             <div className="text-[10px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
                                             {cmts.slice(-2).map(c => (
                                                 <div key={c.id} className="text-[10px] text-slate-500 truncate">
-                                                    <span className="font-medium text-slate-600">{c.author}</span> {c.text}{c.imageUrl && " 📷"}
+                                                    <span className="font-medium text-slate-600">{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
                                                 </div>
                                             ))}
                                         </div>
@@ -4786,7 +4863,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                             <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "10px 16px" }}
                                                 className="text-[13.5px] leading-relaxed text-slate-800">
                                                 {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollPiChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
-                                                {msg.text && <div className="whitespace-pre-wrap break-words">{msg.text}</div>}
+                                                {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
                                             </div>
                                             {Object.keys(reactions).length > 0 && (
                                                 <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
@@ -4824,11 +4901,14 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                     <div className="flex gap-1.5 items-center">
                         <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
                         <button onClick={() => chatFileRef.current?.click()} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-500 transition-colors flex-shrink-0 text-[18px]" title="파일 첨부">{imgUploading ? "⏳" : "+"}</button>
-                        <textarea value={chatText} onChange={e => setChatText(e.target.value)} onPaste={handlePaste}
-                            onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
-                            onKeyDown={e => chatKeyDown(e, sendChat, composingRef)}
-                            placeholder="메시지 입력..." rows={1}
-                            className="flex-1 border border-slate-200 rounded-2xl px-4 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                        <div className="flex-1 relative">
+                            <textarea ref={chatInputRef} value={chatText} onChange={e => { setChatText(e.target.value); mention.check(e.target.value, e.target.selectionStart ?? e.target.value.length); }} onPaste={handlePaste}
+                                onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
+                                onKeyDown={e => { const mr = mention.handleKey(e); if (typeof mr === "string") { selectMention(mr); return; } if (mr === true) return; chatKeyDown(e, sendChat, composingRef); }}
+                                placeholder="메시지 입력..." rows={1}
+                                className="w-full border border-slate-200 rounded-2xl px-4 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                            <MentionPopup m={mention} onSelect={selectMention} />
+                        </div>
                         <button onClick={sendChat} className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors flex-shrink-0 text-[16px]" title="전송">›</button>
                     </div>
                 </div>
@@ -4877,7 +4957,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                     {(selected.comments || []).map(c => (
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group/c relative">
                                             <button onClick={() => deleteComment(c.id)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{c.date}</div>
                                         </div>
                                     ))}
@@ -5009,7 +5089,7 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
                                 <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2 group relative text-[13px]">
                                     <button onClick={() => setComments(comments.filter(x => x.id !== c.id))}
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100">✕</button>
-                                    <div className="text-slate-700 pr-4">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                    <div className="text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                     <div className="text-[11px] text-slate-400 mt-0.5">{c.author} · {c.date}</div>
                                 </div>
                             ))}
@@ -5080,7 +5160,7 @@ function MeetingView({ meetings, onSave, onDelete, currentUser, teamNames }: {
                                 <div className="text-[11px] font-semibold text-slate-400 mb-1">💬 댓글 {m.comments.length}개</div>
                                 {m.comments.slice(-2).map(c => (
                                     <div key={c.id} className="text-[12px] text-slate-500 truncate">
-                                        <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}{c.imageUrl && " 📷"}
+                                        <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
                                     </div>
                                 ))}
                             </div>
@@ -5134,6 +5214,14 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
     const [replyTo, setReplyTo] = useState<TeamChatMsg | null>(null);
     const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
     const [moreMenuMsgId, setMoreMenuMsgId] = useState<number | null>(null);
+    const mention = useMention();
+    const chatInputRef = useRef<HTMLTextAreaElement>(null);
+    const selectMention = (name: string) => {
+        const el = chatInputRef.current;
+        const pos = el?.selectionStart ?? text.length;
+        const result = mention.apply(text, pos, name);
+        if (result) { setText(result.newText); mention.close(); setTimeout(() => { el?.focus(); el?.setSelectionRange(result.cursorPos, result.cursorPos); }, 10); }
+    };
 
     const toggleReaction = (msgId: number, emoji: string) => {
         const msg = chat.find(m => m.id === msgId);
@@ -5223,7 +5311,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                         <div className="text-[10px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
                                         {cmts.slice(-2).map(c => (
                                             <div key={c.id} className="text-[10px] text-slate-500 truncate">
-                                                <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}{c.imageUrl && " 📷"}
+                                                <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
                                             </div>
                                         ))}
                                     </div>
@@ -5353,7 +5441,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                             <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "10px 16px" }}
                                                 className="text-[13.5px] leading-relaxed text-slate-800">
                                                 {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1.5 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollLabChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
-                                                {msg.text && <div className="whitespace-pre-wrap break-words">{msg.text}</div>}
+                                                {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
                                             </div>
                                             {Object.keys(reactions).length > 0 && (
                                                 <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
@@ -5391,11 +5479,14 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                     <div className="flex gap-1.5 items-center">
                         <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
                         <button onClick={() => chatFileRef.current?.click()} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-500 transition-colors flex-shrink-0 text-[18px]" title="파일 첨부">{imgUploading ? "⏳" : "+"}</button>
-                        <textarea value={text} onChange={e => setText(e.target.value)} onPaste={handlePaste}
-                            onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
-                            onKeyDown={e => chatKeyDown(e, send, composingRef)}
-                            placeholder="메시지 입력..." rows={1}
-                            className="flex-1 border border-slate-200 rounded-2xl px-4 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                        <div className="flex-1 relative">
+                            <textarea ref={chatInputRef} value={text} onChange={e => { setText(e.target.value); mention.check(e.target.value, e.target.selectionStart ?? e.target.value.length); }} onPaste={handlePaste}
+                                onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
+                                onKeyDown={e => { const mr = mention.handleKey(e); if (typeof mr === "string") { selectMention(mr); return; } if (mr === true) return; chatKeyDown(e, send, composingRef); }}
+                                placeholder="메시지 입력..." rows={1}
+                                className="w-full border border-slate-200 rounded-2xl px-4 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                            <MentionPopup m={mention} onSelect={selectMention} />
+                        </div>
                         <button onClick={send} className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors flex-shrink-0 text-[16px]" title="전송">›</button>
                     </div>
                 </div>
@@ -5442,7 +5533,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group/c relative">
                                             <button onClick={() => { const updated = { ...selectedCard, comments: (selectedCard.comments || []).filter(x => x.id !== c.id) }; onSaveBoard(updated); setSelectedCard(updated); }}
                                                 className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
@@ -5665,6 +5756,14 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     const [replyTo, setReplyTo] = useState<TeamChatMsg | null>(null);
     const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
     const [moreMenuMsgId, setMoreMenuMsgId] = useState<number | null>(null);
+    const mention = useMention();
+    const chatInputRef = useRef<HTMLTextAreaElement>(null);
+    const selectMention = (name: string) => {
+        const el = chatInputRef.current;
+        const pos = el?.selectionStart ?? chatText.length;
+        const result = mention.apply(chatText, pos, name);
+        if (result) { setChatText(result.newText); mention.close(); setTimeout(() => { el?.focus(); el?.setSelectionRange(result.cursorPos, result.cursorPos); }, 10); }
+    };
 
     // Draft: auto-save card form
     useEffect(() => {
@@ -5834,7 +5933,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                             <div className="text-[10px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
                                             {cmts.slice(-2).map(c => (
                                                 <div key={c.id} className="text-[10px] text-slate-500 truncate">
-                                                    <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {c.text}{c.imageUrl && " 📷"}
+                                                    <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
                                                 </div>
                                             ))}
                                         </div>
@@ -5967,7 +6066,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                             <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "10px 16px" }}
                                                 className="text-[13.5px] leading-relaxed text-slate-800">
                                                 {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1.5 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollTeamChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
-                                                {msg.text && <div className="whitespace-pre-wrap break-words">{msg.text}</div>}
+                                                {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
                                             </div>
                                             {!msg._sending && !msg._failed && Object.keys(reactions).length > 0 && (
                                                 <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
@@ -6005,11 +6104,14 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                     <div className="flex gap-1.5 items-center">
                         <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
                         <button onClick={() => chatFileRef.current?.click()} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-500 transition-colors flex-shrink-0 text-[18px]" title="파일 첨부">{imgUploading ? "⏳" : "+"}</button>
-                        <textarea value={chatText} onChange={e => setChatText(e.target.value)} onPaste={handlePaste}
-                            onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
-                            onKeyDown={e => chatKeyDown(e, sendChat, composingRef)}
-                            placeholder="메시지 입력..." rows={1}
-                            className="flex-1 border border-slate-200 rounded-2xl px-4 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                        <div className="flex-1 relative">
+                            <textarea ref={chatInputRef} value={chatText} onChange={e => { setChatText(e.target.value); mention.check(e.target.value, e.target.selectionStart ?? e.target.value.length); }} onPaste={handlePaste}
+                                onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
+                                onKeyDown={e => { const mr = mention.handleKey(e); if (typeof mr === "string") { selectMention(mr); return; } if (mr === true) return; chatKeyDown(e, sendChat, composingRef); }}
+                                placeholder="메시지 입력..." rows={1}
+                                className="w-full border border-slate-200 rounded-2xl px-4 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                            <MentionPopup m={mention} onSelect={selectMention} />
+                        </div>
                         <button onClick={sendChat} className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors flex-shrink-0 text-[16px]" title="전송">›</button>
                     </div>
                 </div>
@@ -6035,7 +6137,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                     {(selected.comments || []).map(c => (
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group/c relative">
                                             <button onClick={() => deleteComment(c.id)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{c.text}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
