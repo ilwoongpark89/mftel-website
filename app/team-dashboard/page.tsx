@@ -5327,41 +5327,46 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                                 <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                             </div>
                                         )}
-                                        <div className="px-4 py-3 text-[13.5px] leading-relaxed text-slate-700" style={{ background: isMe ? "#DCF0FF" : "#F8F9FA", borderRadius: isMe ? "12px 4px 12px 12px" : "4px 12px 12px 12px" }}>
-                                            {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[250px] rounded-md mb-1.5 cursor-pointer" onLoad={scrollTeamChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
-                                            {msg.text && <div className="whitespace-pre-wrap break-words">{msg.text}</div>}
+                                        <div className={`flex items-start gap-0.5 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                                            {/* Message bubble + overlapping reactions */}
+                                            <div className="relative" style={{ marginBottom: (!msg._sending && !msg._failed && Object.keys(reactions).length > 0) ? 14 : 0 }}>
+                                                <div className="px-4 py-3 text-[13.5px] leading-relaxed text-slate-700" style={{ background: isMe ? "#DCF0FF" : "#F8F9FA", borderRadius: isMe ? "12px 4px 12px 12px" : "4px 12px 12px 12px" }}>
+                                                    {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[250px] rounded-md mb-1.5 cursor-pointer" onLoad={scrollTeamChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
+                                                    {msg.text && <div className="whitespace-pre-wrap break-words">{msg.text}</div>}
+                                                </div>
+                                                {/* Reaction badges overlapping bubble bottom */}
+                                                {!msg._sending && !msg._failed && Object.keys(reactions).length > 0 && (
+                                                    <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
+                                                        {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
+                                                            <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
+                                                                className={`inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[11px] border shadow-sm transition-colors ${users.includes(currentUser) ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                                                                {emoji}{users.length}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {/* Action buttons beside bubble — hover only */}
+                                            {!msg._sending && !msg._failed && (
+                                                <div className="opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-px flex-shrink-0 self-start mt-1">
+                                                    <button onClick={() => setReplyTo(msg)} className="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-300 hover:text-slate-500 text-[13px] flex items-center justify-center" title="답장">↩</button>
+                                                    <div className="relative">
+                                                        <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)} className="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-300 hover:text-slate-500 text-[13px] flex items-center justify-center" title="리액션">😊</button>
+                                                        {emojiPickerMsgId === msg.id && (
+                                                            <div className={`absolute bottom-full ${isMe ? "right-0" : "left-0"} mb-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5 flex gap-1 z-10`}>
+                                                                {["👍", "❤️", "😂", "😮", "😢", "🔥"].map(em => (
+                                                                    <button key={em} onClick={() => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-[16px] transition-colors">{em}</button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {isMe && <button onClick={() => onDeleteChat(msg.id)} className="w-6 h-6 rounded-md hover:bg-red-50 text-slate-300 hover:text-red-400 text-[10px] flex items-center justify-center" title="삭제">삭제</button>}
+                                                </div>
+                                            )}
                                         </div>
                                         {isMe && (
                                             <div className="text-[11px] text-slate-400 mt-0.5 px-1">
                                                 {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-500">⚠️ 전송 실패 <button onClick={() => onRetryChat(msg.id)} className="underline hover:text-red-600 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={() => onDeleteChat(msg.id)} className="underline hover:text-red-600">삭제</button></span> : timeStr}
-                                            </div>
-                                        )}
-                                        {!msg._sending && !msg._failed && Object.keys(reactions).length > 0 && (
-                                            <div className="flex flex-wrap gap-1 mt-1">
-                                                {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
-                                                    <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
-                                                        className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[12px] border transition-colors ${users.includes(currentUser) ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"}`}>
-                                                        {emoji} {users.length}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                        {!msg._sending && !msg._failed && (
-                                            <div className="opacity-0 group-hover/msg:opacity-100 transition-opacity flex gap-0.5 mt-0.5">
-                                                <button onClick={() => setReplyTo(msg)} className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 text-[14px]" title="답장">↩</button>
-                                                <div className="relative">
-                                                    <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)} className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 text-[14px]" title="리액션">😊</button>
-                                                    {emojiPickerMsgId === msg.id && (
-                                                        <div className="absolute bottom-full left-0 mb-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5 flex gap-1 z-10">
-                                                            {["👍", "❤️", "😂", "😮", "😢", "🔥"].map(em => (
-                                                                <button key={em} onClick={() => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-[18px] transition-colors">{em}</button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                {msg.author === currentUser && (
-                                                    <button onClick={() => onDeleteChat(msg.id)} className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 text-[12px]" title="삭제">삭제</button>
-                                                )}
                                             </div>
                                         )}
                                     </div>
