@@ -136,7 +136,7 @@ type Resource = { id: number; title: string; link: string; nasPath: string; auth
 type IdeaPost = { id: number; title: string; body: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean; color?: string; borderColor?: string };
 type Memo = { id: number; title: string; content: string; color: string; borderColor?: string; updatedAt: string; needsDiscussion?: boolean; comments?: Comment[] };
 type TeamMemoCard = { id: number; title: string; content: string; status: string; color: string; borderColor?: string; author: string; updatedAt: string; comments?: Comment[]; needsDiscussion?: boolean };
-type TeamChatMsg = { id: number; author: string; text: string; date: string; imageUrl?: string; replyTo?: { id: number; author: string; text: string }; reactions?: Record<string, string[]>; _sending?: boolean; _failed?: boolean };
+type TeamChatMsg = { id: number; author: string; text: string; date: string; imageUrl?: string; replyTo?: { id: number; author: string; text: string }; reactions?: Record<string, string[]>; deleted?: boolean; _sending?: boolean; _failed?: boolean };
 type LabFile = { id: number; name: string; size: number; url: string; type: string; uploader: string; date: string };
 type ConferenceTrip = { id: number; title: string; startDate: string; endDate: string; homepage: string; fee: string; participants: string[]; creator: string; createdAt: string; status?: string; comments?: Comment[]; needsDiscussion?: boolean };
 type Meeting = { id: number; title: string; goal: string; summary: string; date: string; assignees: string[]; status: string; creator: string; createdAt: string; comments: Comment[]; team?: string; needsDiscussion?: boolean };
@@ -1417,7 +1417,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
             {editCell && (
                 <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={() => setEditCell(null)}>
                     <div className="bg-white rounded-xl p-4 w-full max-w-xs shadow-xl" onClick={e => e.stopPropagation()}>
-                        <h4 className="text-[16px] font-bold text-slate-900 mb-4">
+                        <h4 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">
                             {editCell.existing ? `${editCell.date} 수정` : editCell.date.includes(",") ? `${editCell.date.split(",").length}일 추가` : `${editCell.date} 추가`}
                         </h4>
                         <div className="mb-3">
@@ -4124,7 +4124,7 @@ function AdminLogSection() {
 
     return (
         <div className="bg-white border border-slate-200 rounded-lg p-5">
-            <h3 className="text-[16px] font-bold text-slate-900 mb-4">수정 로그</h3>
+            <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">수정 로그</h3>
             {loading ? <p className="text-[13px] text-slate-400">로딩 중...</p> : (
                 <>
                     <div className="flex flex-wrap gap-1.5 mb-3">
@@ -4166,7 +4166,7 @@ function SettingsView({ currentUser, customEmojis, onSaveEmoji, statusMessages, 
             <PasswordChangeSection currentUser={currentUser} />
             {/* 한마디 */}
             <div className="bg-white border border-slate-200 rounded-lg p-5">
-                <h3 className="text-[16px] font-bold text-slate-900 mb-4">하고 싶은 말 한마디</h3>
+                <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">하고 싶은 말 한마디</h3>
                 <p className="text-[12px] text-slate-400 mb-3">팀 Overview에 표시됩니다</p>
                 {statusMessages[currentUser] && (
                     <div className="mb-3 px-3 py-2 bg-blue-50 rounded-lg text-[13px] text-blue-700 italic">&ldquo;{statusMessages[currentUser]}&rdquo;</div>
@@ -4179,7 +4179,7 @@ function SettingsView({ currentUser, customEmojis, onSaveEmoji, statusMessages, 
             </div>
             {/* 이모지 */}
             <div className="bg-white border border-slate-200 rounded-lg p-5">
-                <h3 className="text-[16px] font-bold text-slate-900 mb-4">내 이모지 설정</h3>
+                <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">내 이모지 설정</h3>
                 <div className="flex items-center gap-3 mb-3">
                     <div>
                         <span className="text-[13px] text-slate-500">현재: </span>
@@ -4226,10 +4226,10 @@ function ColorPicker({ color, onColor, compact }: { color: string; onColor: (c: 
     );
 }
 
-function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteFile, chat, onAddChat, onDeleteChat, onClearChat, onRetryChat, currentUser }: {
+function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteFile, chat, onAddChat, onUpdateChat, onDeleteChat, onClearChat, onRetryChat, currentUser }: {
     memos: Memo[]; onSave: (m: Memo) => void; onDelete: (id: number) => void;
     files: LabFile[]; onAddFile: (f: LabFile) => void; onDeleteFile: (id: number) => void;
-    chat: TeamChatMsg[]; onAddChat: (msg: TeamChatMsg) => void; onDeleteChat: (id: number) => void; onClearChat: () => void; onRetryChat: (id: number) => void;
+    chat: TeamChatMsg[]; onAddChat: (msg: TeamChatMsg) => void; onUpdateChat: (msg: TeamChatMsg) => void; onDeleteChat: (id: number) => void; onClearChat: () => void; onRetryChat: (id: number) => void;
     currentUser: string;
 }) {
     const MEMBERS = useContext(MembersContext);
@@ -4251,6 +4251,23 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
     const piChatContainerRef = useRef<HTMLDivElement>(null);
     const piChatDidInit = useRef(false);
     const scrollPiChat = useCallback(() => { const el = piChatContainerRef.current; if (el) el.scrollTop = el.scrollHeight; }, []);
+    const [chatReplyTo, setChatReplyTo] = useState<TeamChatMsg | null>(null);
+    const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
+    const [piContextMenu, setPiContextMenu] = useState<{ msgId: number; x: number; y: number } | null>(null);
+
+    const toggleReaction = (msgId: number, emoji: string) => {
+        const msg = chat.find(m => m.id === msgId);
+        if (!msg) return;
+        const reactions = { ...(msg.reactions || {}) };
+        const users = reactions[emoji] || [];
+        if (users.includes(currentUser)) {
+            reactions[emoji] = users.filter(u => u !== currentUser);
+            if (reactions[emoji].length === 0) delete reactions[emoji];
+        } else {
+            reactions[emoji] = [...users, currentUser];
+        }
+        onUpdateChat({ ...msg, reactions });
+    };
 
     const openDetail = (m: Memo) => { setSelected(m); setIsEditing(false); setNewComment(""); };
     const startEdit = () => { if (!selected) return; setTitle(selected.title); setContent(selected.content); setColor(selected.color); setBorderColor(selected.borderColor || ""); setIsEditing(true); };
@@ -4278,8 +4295,8 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
     };
     const sendChat = () => {
         if (!chatText.trim() && !chatImg) return;
-        onAddChat({ id: Date.now(), author: currentUser, text: chatText.trim(), date: new Date().toLocaleString("ko-KR"), imageUrl: chatImg || undefined });
-        setChatText(""); setChatImg("");
+        onAddChat({ id: Date.now(), author: currentUser, text: chatText.trim(), date: new Date().toLocaleString("ko-KR"), imageUrl: chatImg || undefined, replyTo: chatReplyTo ? { id: chatReplyTo.id, author: chatReplyTo.author, text: chatReplyTo.text } : undefined });
+        setChatText(""); setChatImg(""); setChatReplyTo(null);
     };
     const handleChatImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file) return;
@@ -4363,46 +4380,177 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                 <FileBox files={files} currentUser={currentUser} onAddFile={onAddFile} onDeleteFile={onDeleteFile} />
             </div>
             {/* PI Chat */}
-            <div className="flex flex-col min-w-0 bg-white border border-slate-200 rounded-xl min-h-0">
+            <div className="flex flex-col min-w-0 border border-slate-200 rounded-xl min-h-0" style={{ background: "#FFFFFF" }}>
                 <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
                     <h3 className="text-[14px] font-bold text-slate-700">💬 PI 채팅</h3>
                     {currentUser === "박일웅" && (
-                        <button onClick={() => { if (confirm("채팅을 모두 삭제하시겠습니까?")) onClearChat(); }} className="text-[12px] text-slate-400 hover:text-red-500">초기화</button>
+                        <button onClick={() => { if (confirm("채팅을 모두 삭제하시겠습니까?")) onClearChat(); }} className="text-[11px] text-slate-400 hover:text-red-500">초기화</button>
                     )}
                 </div>
-                <div ref={piChatContainerRef} className="flex-1 overflow-y-auto p-3 space-y-2">
+                <div ref={piChatContainerRef} className="flex-1 overflow-y-auto px-3 py-2">
                     {chat.length === 0 && <div className="text-center py-12 text-slate-400 text-[12px]">PI와 대화를 시작하세요</div>}
-                    {chat.map(msg => (
-                        <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`} style={{ opacity: msg._sending ? 0.7 : 1 }}>
-                            <div className={`inline-block max-w-[90%] px-3.5 py-2.5 text-[13.5px] leading-relaxed ${msg.author === currentUser ? "text-white rounded-[16px_16px_4px_16px]" : "text-slate-700 rounded-[16px_16px_16px_4px]"}`} style={{background: msg.author === currentUser ? "#3B82F6" : "#F1F5F9"}}>
-                                {msg.author !== currentUser && <div className="text-[11px] font-bold mb-0.5">{MEMBERS[msg.author]?.emoji || "👤"} {msg.author}</div>}
-                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mb-1 cursor-pointer" onLoad={scrollPiChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
-                                {msg.text && <div className="whitespace-pre-wrap">{msg.text}</div>}
-                                <div className={`text-[10px] mt-0.5 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>
-                                    {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-300">⚠️ 전송 실패 <button onClick={(e) => { e.stopPropagation(); onRetryChat(msg.id); }} className="underline hover:text-red-200 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={(e) => { e.stopPropagation(); onDeleteChat(msg.id); }} className="underline hover:text-red-200">삭제</button></span> : msg.date}
+                    {chat.map((msg, idx) => {
+                        const prev = idx > 0 ? chat[idx - 1] : null;
+                        const isMe = msg.author === currentUser;
+                        const sameAuthor = prev && prev.author === msg.author && !prev.deleted;
+                        const prevDate = prev ? prev.date.split(/오[전후]/)[0].trim() : "";
+                        const currDate = msg.date.split(/오[전후]/)[0].trim();
+                        const showDateSep = !prev || prevDate !== currDate;
+                        const showAvatar = !isMe && (!sameAuthor || showDateSep);
+                        const tm = msg.date.match(/(오[전후])\s*(\d+:\d+)/);
+                        const timeStr = tm ? `${tm[1]} ${tm[2]}` : "";
+                        const reactions = msg.reactions || {};
+                        if (msg.deleted) return (
+                            <div key={msg.id} className={`${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} text-center`}>
+                                <span className="text-[12px] text-slate-400 italic">{msg.author}님이 메시지를 삭제했습니다.</span>
+                            </div>
+                        );
+                        return (
+                            <div key={msg.id}>
+                                {showDateSep && (
+                                    <div className="flex items-center gap-3 my-4">
+                                        <div className="flex-1 h-px bg-slate-200" />
+                                        <span className="text-[12px] text-slate-400 whitespace-nowrap">{currDate}</span>
+                                        <div className="flex-1 h-px bg-slate-200" />
+                                    </div>
+                                )}
+                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} group/msg`}
+                                    style={{ opacity: msg._sending ? 0.7 : 1 }}
+                                    onContextMenu={e => { if (!msg._sending && !msg._failed) { e.preventDefault(); setPiContextMenu({ msgId: msg.id, x: e.clientX, y: e.clientY }); } }}>
+                                    {!isMe && (
+                                        <div className="w-9 flex-shrink-0 mr-2 self-start">
+                                            {showAvatar ? (
+                                                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-[16px]">
+                                                    {MEMBERS[msg.author]?.emoji || msg.author[0]}
+                                                </div>
+                                            ) : <div className="w-9" />}
+                                        </div>
+                                    )}
+                                    <div className={`max-w-[85%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                                        {!isMe && showAvatar && (
+                                            <div className="flex items-baseline gap-2 mb-0.5 px-1">
+                                                <span className="text-[13px] font-semibold text-slate-500">{msg.author}</span>
+                                                <span className="text-[11px] text-slate-400">{timeStr}</span>
+                                            </div>
+                                        )}
+                                        {msg.replyTo && (
+                                            <div className="text-[11px] text-slate-400 mb-0.5 px-3 py-1.5 bg-slate-100 rounded-lg border-l-2 border-slate-300 max-w-full truncate">
+                                                <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
+                                            </div>
+                                        )}
+                                        <div className="relative" style={{ marginBottom: Object.keys(reactions).length > 0 ? 14 : 0 }}>
+                                            {/* Hover action bar */}
+                                            {!msg._sending && !msg._failed && (
+                                                <div className={`absolute -top-8 ${isMe ? "right-1" : "left-1"} opacity-0 group-hover/msg:opacity-100 transition-opacity z-10`}>
+                                                    <div className="flex items-center bg-white rounded-full px-1 py-0.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
+                                                        {["👍","✅","😂"].map(em => (
+                                                            <button key={em} onClick={() => toggleReaction(msg.id, em)}
+                                                                className={`w-7 h-7 flex items-center justify-center rounded-full text-[14px] transition-colors ${reactions[em]?.includes(currentUser) ? "bg-blue-50" : "hover:bg-slate-100"}`}>{em}</button>
+                                                        ))}
+                                                        <div className="w-px h-4 bg-slate-200 mx-0.5" />
+                                                        <div className="relative">
+                                                            <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
+                                                                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] transition-colors">😊</button>
+                                                            {emojiPickerMsgId === msg.id && (
+                                                                <div className={`absolute top-full ${isMe ? "right-0" : "left-0"} mt-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5 flex gap-1 z-20`}>
+                                                                    {["👍","❤️","😂","😮","😢","🔥","✅","🎉"].map(em => (
+                                                                        <button key={em} onClick={() => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }}
+                                                                            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-[16px] transition-colors">{em}</button>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <button onClick={() => setChatReplyTo(msg)}
+                                                            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-500 transition-colors" title="답장">↩</button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "10px 16px" }}
+                                                className="text-[13.5px] leading-relaxed text-slate-800">
+                                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mb-1 cursor-pointer" onLoad={scrollPiChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
+                                                {msg.text && <div className="whitespace-pre-wrap break-words">{msg.text}</div>}
+                                            </div>
+                                            {Object.keys(reactions).length > 0 && (
+                                                <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
+                                                    {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
+                                                        <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
+                                                            className={`inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[11px] border shadow-sm transition-colors ${users.includes(currentUser) ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                                                            {emoji}{users.length}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        {isMe && (
+                                            <div className="text-[11px] text-slate-400 mt-0.5 px-1">
+                                                {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-500">⚠️ 전송 실패 <button onClick={() => onRetryChat(msg.id)} className="underline hover:text-red-600 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={() => onDeleteChat(msg.id)} className="underline hover:text-red-600">삭제</button></span> : timeStr}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                            {msg.author === currentUser && !msg._sending && !msg._failed && (
-                                <button onClick={() => onDeleteChat(msg.id)} className="text-[10px] text-slate-300 hover:text-red-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">삭제</button>
-                            )}
-                        </div>
-                    ))}
+                        );
+                    })}
                     <div ref={chatEndRef} />
                 </div>
-                <div className="p-2.5 border-t border-slate-100">
+                {chatReplyTo && (
+                    <div className="px-3 pt-2 pb-1 border-t border-slate-100 bg-slate-50 flex items-center gap-2">
+                        <div className="flex-1 min-w-0 text-[12px] text-slate-500 truncate">
+                            <span className="font-semibold text-slate-600">{chatReplyTo.author}</span>에게 답장: {chatReplyTo.text || "📷 이미지"}
+                        </div>
+                        <button onClick={() => setChatReplyTo(null)} className="text-slate-400 hover:text-slate-600 text-[14px] flex-shrink-0">✕</button>
+                    </div>
+                )}
+                <div className={`p-2.5 ${chatReplyTo ? "" : "border-t border-slate-100"} flex-shrink-0 bg-white`}>
                     {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[80px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">✕</button></div>}
                     <div className="flex gap-1.5 items-center">
                         <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
-                        <button onClick={() => chatFileRef.current?.click()} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-500 transition-colors flex-shrink-0 text-[16px]" title="사진 첨부">{imgUploading ? "⏳" : "📷"}</button>
+                        <button onClick={() => chatFileRef.current?.click()} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-500 transition-colors flex-shrink-0 text-[18px]" title="파일 첨부">{imgUploading ? "⏳" : "+"}</button>
                         <textarea value={chatText} onChange={e => setChatText(e.target.value)} onPaste={handlePaste}
                             onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                             onKeyDown={e => chatKeyDown(e, sendChat, composingRef)}
                             placeholder="메시지 입력..." rows={1}
-                            className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
-                        <button onClick={sendChat} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">전송</button>
+                            className="flex-1 border border-slate-200 rounded-2xl px-4 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                        <button onClick={sendChat} className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors flex-shrink-0 text-[16px]" title="전송">›</button>
                     </div>
                 </div>
             </div>
+            {/* PI Context menu */}
+            {piContextMenu && (() => {
+                const ctxMsg = chat.find(m => m.id === piContextMenu.msgId);
+                if (!ctxMsg) return null;
+                const isCtxMe = ctxMsg.author === currentUser;
+                return (
+                    <div className="fixed inset-0 z-50" onClick={() => setPiContextMenu(null)}>
+                        <div className="fixed bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 min-w-[180px] z-50"
+                            style={{ left: Math.min(piContextMenu.x, typeof window !== "undefined" ? window.innerWidth - 200 : piContextMenu.x), top: Math.min(piContextMenu.y, typeof window !== "undefined" ? window.innerHeight - 250 : piContextMenu.y) }}
+                            onClick={e => e.stopPropagation()}>
+                            <button onClick={() => { setChatReplyTo(ctxMsg); setPiContextMenu(null); }}
+                                className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                <span className="text-[14px]">↩</span> 답장에서 인용
+                            </button>
+                            <button onClick={() => {
+                                onSave({ id: Date.now(), title: (ctxMsg.text || "📷 이미지").slice(0, 50), content: ctxMsg.text || "", color: "#FEF3C7", updatedAt: new Date().toISOString().split("T")[0], comments: [] });
+                                setPiContextMenu(null);
+                            }} className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                <span className="text-[14px]">📌</span> 노트에 저장
+                            </button>
+                            <div className="h-px bg-slate-100 my-1" />
+                            <button onClick={() => { navigator.clipboard.writeText(`${window.location.href}#msg-${ctxMsg.id}`); setPiContextMenu(null); }}
+                                className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                <span className="text-[14px]">🔗</span> 메시지 링크 복사
+                            </button>
+                            {isCtxMe && (<>
+                                <div className="h-px bg-slate-100 my-1" />
+                                <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onUpdateChat({ ...ctxMsg, deleted: true, text: "", imageUrl: undefined }); setPiContextMenu(null); } }}
+                                    className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2">
+                                    <span className="text-[14px]">🗑</span> 삭제
+                                </button>
+                            </>)}
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Add modal */}
             {adding && (
@@ -4665,8 +4813,8 @@ function MeetingView({ meetings, onSave, onDelete, currentUser, teamNames }: {
 
 // ─── Lab Chat View ───────────────────────────────────────────────────────────
 
-function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, onRetry, files, onAddFile, onDeleteFile, board, onSaveBoard, onDeleteBoard }: {
-    chat: TeamChatMsg[]; currentUser: string; onAdd: (msg: TeamChatMsg) => void; onDelete: (id: number) => void; onClear: () => void; onRetry: (id: number) => void;
+function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, onRetry, files, onAddFile, onDeleteFile, board, onSaveBoard, onDeleteBoard }: {
+    chat: TeamChatMsg[]; currentUser: string; onAdd: (msg: TeamChatMsg) => void; onUpdate: (msg: TeamChatMsg) => void; onDelete: (id: number) => void; onClear: () => void; onRetry: (id: number) => void;
     files: LabFile[]; onAddFile: (f: LabFile) => void; onDeleteFile: (id: number) => void;
     board: TeamMemoCard[]; onSaveBoard: (c: TeamMemoCard) => void; onDeleteBoard: (id: number) => void;
 }) {
@@ -4692,11 +4840,28 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, onRetry, fil
     const openBoardDetail = (card: TeamMemoCard) => { setSelectedCard(card); setBoardComment(loadDraft(`comment_labboard_${card.id}`)); };
     useEffect(() => { if (selectedCard) saveDraft(`comment_labboard_${selectedCard.id}`, boardComment); }, [boardComment, selectedCard?.id]);
     const [mobileTab, setMobileTab] = useState<"chat"|"board"|"files">("chat");
+    const [replyTo, setReplyTo] = useState<TeamChatMsg | null>(null);
+    const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
+    const [contextMenu, setContextMenu] = useState<{ msgId: number; x: number; y: number } | null>(null);
+
+    const toggleReaction = (msgId: number, emoji: string) => {
+        const msg = chat.find(m => m.id === msgId);
+        if (!msg) return;
+        const reactions = { ...(msg.reactions || {}) };
+        const users = reactions[emoji] || [];
+        if (users.includes(currentUser)) {
+            reactions[emoji] = users.filter(u => u !== currentUser);
+            if (reactions[emoji].length === 0) delete reactions[emoji];
+        } else {
+            reactions[emoji] = [...users, currentUser];
+        }
+        onUpdate({ ...msg, reactions });
+    };
 
     const send = () => {
         if (!text.trim() && !chatImg) return;
-        onAdd({ id: Date.now(), author: currentUser, text: text.trim(), date: new Date().toLocaleString("ko-KR"), imageUrl: chatImg || undefined });
-        setText(""); setChatImg("");
+        onAdd({ id: Date.now(), author: currentUser, text: text.trim(), date: new Date().toLocaleString("ko-KR"), imageUrl: chatImg || undefined, replyTo: replyTo ? { id: replyTo.id, author: replyTo.author, text: replyTo.text } : undefined });
+        setText(""); setChatImg(""); setReplyTo(null);
     };
     const handleChatImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file) return;
@@ -4793,46 +4958,177 @@ function LabChatView({ chat, currentUser, onAdd, onDelete, onClear, onRetry, fil
                 <FileBox files={files} currentUser={currentUser} onAddFile={onAddFile} onDeleteFile={onDeleteFile} />
             </div>
             {/* Chat */}
-            <div className={`flex-col min-w-0 md:bg-white md:border md:border-slate-200 md:rounded-xl ${mobileTab === "chat" ? "flex flex-1 min-h-0" : "hidden"} md:flex`}>
-                <div className="hidden md:flex px-4 py-3 border-b border-slate-100 items-center justify-between">
-                    <h3 className="text-[15px] font-bold text-slate-700">💬 연구실 채팅</h3>
+            <div className={`flex-col min-w-0 md:border md:border-slate-200 md:rounded-xl ${mobileTab === "chat" ? "flex flex-1 min-h-0" : "hidden"} md:flex`} style={{ background: "#FFFFFF" }}>
+                <div className="hidden md:flex px-3 py-2.5 border-b border-slate-100 items-center justify-between">
+                    <h3 className="text-[14px] font-bold text-slate-700">💬 연구실 채팅</h3>
                     {currentUser === "박일웅" && (
-                        <button onClick={() => { if (confirm("채팅을 모두 삭제하시겠습니까?")) onClear(); }} className="text-[12px] text-slate-400 hover:text-red-500 transition-colors">초기화</button>
+                        <button onClick={() => { if (confirm("채팅을 모두 삭제하시겠습니까?")) onClear(); }} className="text-[11px] text-slate-400 hover:text-red-500 transition-colors">초기화</button>
                     )}
                 </div>
-                <div ref={labChatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
-                    {chat.length === 0 && <div className="text-center py-16 text-slate-400 text-[14px]">메시지가 없습니다. 자유롭게 대화해 보세요!</div>}
-                    {chat.map(msg => (
-                        <div key={msg.id} className={`group ${msg.author === currentUser ? "text-right" : ""}`} style={{ opacity: msg._sending ? 0.7 : 1 }}>
-                            <div className={`inline-block max-w-[75%] px-3.5 py-2.5 text-[13.5px] leading-relaxed ${msg.author === currentUser ? "text-white rounded-[16px_16px_4px_16px]" : "text-slate-700 rounded-[16px_16px_16px_4px]"}`} style={{background: msg.author === currentUser ? "#3B82F6" : "#F1F5F9"}}>
-                                {msg.author !== currentUser && <div className="text-[12px] font-bold mb-0.5">{MEMBERS[msg.author]?.emoji || "👤"} {msg.author}</div>}
-                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[300px] rounded-md mb-1.5 cursor-pointer" onLoad={scrollLabChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
-                                {msg.text && <div className="whitespace-pre-wrap">{msg.text}</div>}
-                                <div className={`text-[11px] mt-1 ${msg.author === currentUser ? "text-blue-200" : "text-slate-400"}`}>
-                                    {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-300">⚠️ 전송 실패 <button onClick={(e) => { e.stopPropagation(); onRetry(msg.id); }} className="underline hover:text-red-200 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={(e) => { e.stopPropagation(); onDelete(msg.id); }} className="underline hover:text-red-200">삭제</button></span> : msg.date}
+                <div ref={labChatContainerRef} className="flex-1 overflow-y-auto px-3 py-2">
+                    {chat.length === 0 && <div className="text-center py-16 text-slate-400 text-[13px]">메시지가 없습니다. 자유롭게 대화해 보세요!</div>}
+                    {chat.map((msg, idx) => {
+                        const prev = idx > 0 ? chat[idx - 1] : null;
+                        const isMe = msg.author === currentUser;
+                        const sameAuthor = prev && prev.author === msg.author && !prev.deleted;
+                        const prevDate = prev ? prev.date.split(/오[전후]/)[0].trim() : "";
+                        const currDate = msg.date.split(/오[전후]/)[0].trim();
+                        const showDateSep = !prev || prevDate !== currDate;
+                        const showAvatar = !isMe && (!sameAuthor || showDateSep);
+                        const tm = msg.date.match(/(오[전후])\s*(\d+:\d+)/);
+                        const timeStr = tm ? `${tm[1]} ${tm[2]}` : "";
+                        const reactions = msg.reactions || {};
+                        if (msg.deleted) return (
+                            <div key={msg.id} className={`${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} text-center`}>
+                                <span className="text-[12px] text-slate-400 italic">{msg.author}님이 메시지를 삭제했습니다.</span>
+                            </div>
+                        );
+                        return (
+                            <div key={msg.id}>
+                                {showDateSep && (
+                                    <div className="flex items-center gap-3 my-4">
+                                        <div className="flex-1 h-px bg-slate-200" />
+                                        <span className="text-[12px] text-slate-400 whitespace-nowrap">{currDate}</span>
+                                        <div className="flex-1 h-px bg-slate-200" />
+                                    </div>
+                                )}
+                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} group/msg`}
+                                    style={{ opacity: msg._sending ? 0.7 : 1 }}
+                                    onContextMenu={e => { if (!msg._sending && !msg._failed) { e.preventDefault(); setContextMenu({ msgId: msg.id, x: e.clientX, y: e.clientY }); } }}>
+                                    {!isMe && (
+                                        <div className="w-9 flex-shrink-0 mr-2 self-start">
+                                            {showAvatar ? (
+                                                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-[16px]">
+                                                    {MEMBERS[msg.author]?.emoji || msg.author[0]}
+                                                </div>
+                                            ) : <div className="w-9" />}
+                                        </div>
+                                    )}
+                                    <div className={`max-w-[75%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                                        {!isMe && showAvatar && (
+                                            <div className="flex items-baseline gap-2 mb-0.5 px-1">
+                                                <span className="text-[13px] font-semibold text-slate-500">{msg.author}</span>
+                                                <span className="text-[11px] text-slate-400">{timeStr}</span>
+                                            </div>
+                                        )}
+                                        {msg.replyTo && (
+                                            <div className="text-[11px] text-slate-400 mb-0.5 px-3 py-1.5 bg-slate-100 rounded-lg border-l-2 border-slate-300 max-w-full truncate">
+                                                <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
+                                            </div>
+                                        )}
+                                        <div className="relative" style={{ marginBottom: Object.keys(reactions).length > 0 ? 14 : 0 }}>
+                                            {/* Hover action bar */}
+                                            {!msg._sending && !msg._failed && (
+                                                <div className={`absolute -top-8 ${isMe ? "right-1" : "left-1"} opacity-0 group-hover/msg:opacity-100 transition-opacity z-10`}>
+                                                    <div className="flex items-center bg-white rounded-full px-1 py-0.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
+                                                        {["👍","✅","😂"].map(em => (
+                                                            <button key={em} onClick={() => toggleReaction(msg.id, em)}
+                                                                className={`w-7 h-7 flex items-center justify-center rounded-full text-[14px] transition-colors ${reactions[em]?.includes(currentUser) ? "bg-blue-50" : "hover:bg-slate-100"}`}>{em}</button>
+                                                        ))}
+                                                        <div className="w-px h-4 bg-slate-200 mx-0.5" />
+                                                        <div className="relative">
+                                                            <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
+                                                                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] transition-colors">😊</button>
+                                                            {emojiPickerMsgId === msg.id && (
+                                                                <div className={`absolute top-full ${isMe ? "right-0" : "left-0"} mt-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5 flex gap-1 z-20`}>
+                                                                    {["👍","❤️","😂","😮","😢","🔥","✅","🎉"].map(em => (
+                                                                        <button key={em} onClick={() => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }}
+                                                                            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-[16px] transition-colors">{em}</button>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <button onClick={() => setReplyTo(msg)}
+                                                            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-500 transition-colors" title="답장">↩</button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "10px 16px" }}
+                                                className="text-[13.5px] leading-relaxed text-slate-800">
+                                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[300px] rounded-md mb-1.5 cursor-pointer" onLoad={scrollLabChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
+                                                {msg.text && <div className="whitespace-pre-wrap break-words">{msg.text}</div>}
+                                            </div>
+                                            {Object.keys(reactions).length > 0 && (
+                                                <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
+                                                    {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
+                                                        <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
+                                                            className={`inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[11px] border shadow-sm transition-colors ${users.includes(currentUser) ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                                                            {emoji}{users.length}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        {isMe && (
+                                            <div className="text-[11px] text-slate-400 mt-0.5 px-1">
+                                                {msg._sending ? <span className="animate-pulse">전송 중...</span> : msg._failed ? <span className="text-red-500">⚠️ 전송 실패 <button onClick={() => onRetry(msg.id)} className="underline hover:text-red-600 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={() => onDelete(msg.id)} className="underline hover:text-red-600">삭제</button></span> : timeStr}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                            {msg.author === currentUser && !msg._sending && !msg._failed && (
-                                <button onClick={() => onDelete(msg.id)} className="text-[11px] text-slate-300 hover:text-red-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">삭제</button>
-                            )}
-                        </div>
-                    ))}
+                        );
+                    })}
                     <div ref={endRef} />
                 </div>
-                <div className="p-3 border-t border-slate-100 flex-shrink-0 bg-white">
-                    {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[100px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center">✕</button></div>}
-                    <div className="flex gap-2 items-center">
+                {replyTo && (
+                    <div className="px-3 pt-2 pb-1 border-t border-slate-100 bg-slate-50 flex items-center gap-2">
+                        <div className="flex-1 min-w-0 text-[12px] text-slate-500 truncate">
+                            <span className="font-semibold text-slate-600">{replyTo.author}</span>에게 답장: {replyTo.text || "📷 이미지"}
+                        </div>
+                        <button onClick={() => setReplyTo(null)} className="text-slate-400 hover:text-slate-600 text-[14px] flex-shrink-0">✕</button>
+                    </div>
+                )}
+                <div className={`p-2.5 ${replyTo ? "" : "border-t border-slate-100"} flex-shrink-0 bg-white`}>
+                    {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[80px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">✕</button></div>}
+                    <div className="flex gap-1.5 items-center">
                         <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
-                        <button onClick={() => chatFileRef.current?.click()} className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-500 transition-colors flex-shrink-0 text-[18px]" title="사진 첨부">{imgUploading ? "⏳" : "📷"}</button>
+                        <button onClick={() => chatFileRef.current?.click()} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-500 transition-colors flex-shrink-0 text-[18px]" title="파일 첨부">{imgUploading ? "⏳" : "+"}</button>
                         <textarea value={text} onChange={e => setText(e.target.value)} onPaste={handlePaste}
                             onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                             onKeyDown={e => chatKeyDown(e, send, composingRef)}
                             placeholder="메시지 입력..." rows={1}
-                            className="flex-1 border border-slate-200 rounded-lg px-3 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
-                        <button onClick={send} className="px-4 py-2.5 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600 flex-shrink-0">전송</button>
+                            className="flex-1 border border-slate-200 rounded-2xl px-4 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                        <button onClick={send} className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors flex-shrink-0 text-[16px]" title="전송">›</button>
                     </div>
                 </div>
             </div>
+            {/* Context menu */}
+            {contextMenu && (() => {
+                const ctxMsg = chat.find(m => m.id === contextMenu.msgId);
+                if (!ctxMsg) return null;
+                const isCtxMe = ctxMsg.author === currentUser;
+                return (
+                    <div className="fixed inset-0 z-50" onClick={() => setContextMenu(null)}>
+                        <div className="fixed bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 min-w-[180px] z-50"
+                            style={{ left: Math.min(contextMenu.x, typeof window !== "undefined" ? window.innerWidth - 200 : contextMenu.x), top: Math.min(contextMenu.y, typeof window !== "undefined" ? window.innerHeight - 250 : contextMenu.y) }}
+                            onClick={e => e.stopPropagation()}>
+                            <button onClick={() => { setReplyTo(ctxMsg); setContextMenu(null); }}
+                                className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                <span className="text-[14px]">↩</span> 답장에서 인용
+                            </button>
+                            <button onClick={() => {
+                                onSaveBoard({ id: Date.now(), title: (ctxMsg.text || "📷 이미지").slice(0, 50), content: ctxMsg.text || "", status: "left", color: "#FEF3C7", author: ctxMsg.author, updatedAt: new Date().toISOString().split("T")[0] });
+                                setContextMenu(null);
+                            }} className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                <span className="text-[14px]">📌</span> 보드에 고정
+                            </button>
+                            <div className="h-px bg-slate-100 my-1" />
+                            <button onClick={() => { navigator.clipboard.writeText(`${window.location.href}#msg-${ctxMsg.id}`); setContextMenu(null); }}
+                                className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                <span className="text-[14px]">🔗</span> 메시지 링크 복사
+                            </button>
+                            {isCtxMe && (<>
+                                <div className="h-px bg-slate-100 my-1" />
+                                <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onUpdate({ ...ctxMsg, deleted: true, text: "", imageUrl: undefined }); setContextMenu(null); } }}
+                                    className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2">
+                                    <span className="text-[14px]">🗑</span> 삭제
+                                </button>
+                            </>)}
+                        </div>
+                    </div>
+                );
+            })()}
             {/* Board add modal */}
             {boardAdding && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setBoardAdding(false)}>
@@ -5087,6 +5383,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     const [mobileTab, setMobileTab] = useState<"chat"|"board"|"files">("chat");
     const [replyTo, setReplyTo] = useState<TeamChatMsg | null>(null);
     const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
+    const [contextMenu, setContextMenu] = useState<{ msgId: number; x: number; y: number } | null>(null);
 
     // Draft: auto-save card form
     useEffect(() => {
@@ -5288,7 +5585,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                     {chat.map((msg, idx) => {
                         const prev = idx > 0 ? chat[idx - 1] : null;
                         const isMe = msg.author === currentUser;
-                        const sameAuthor = prev && prev.author === msg.author;
+                        const sameAuthor = prev && prev.author === msg.author && !prev.deleted;
                         const prevDate = prev ? prev.date.split(/오[전후]/)[0].trim() : "";
                         const currDate = msg.date.split(/오[전후]/)[0].trim();
                         const showDateSep = !prev || prevDate !== currDate;
@@ -5296,6 +5593,11 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                         const tm = msg.date.match(/(오[전후])\s*(\d+:\d+)/);
                         const timeStr = tm ? `${tm[1]} ${tm[2]}` : "";
                         const reactions = msg.reactions || {};
+                        if (msg.deleted) return (
+                            <div key={msg.id} className={`${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} text-center`}>
+                                <span className="text-[12px] text-slate-400 italic">{msg.author}님이 메시지를 삭제했습니다.</span>
+                            </div>
+                        );
                         return (
                             <div key={msg.id}>
                                 {showDateSep && (
@@ -5305,11 +5607,13 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                         <div className="flex-1 h-px bg-slate-200" />
                                     </div>
                                 )}
-                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} group/msg relative`} style={{ opacity: msg._sending ? 0.7 : 1 }}>
+                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-1" : "mt-3"} group/msg`}
+                                    style={{ opacity: msg._sending ? 0.7 : 1 }}
+                                    onContextMenu={e => { if (!msg._sending && !msg._failed) { e.preventDefault(); setContextMenu({ msgId: msg.id, x: e.clientX, y: e.clientY }); } }}>
                                     {!isMe && (
                                         <div className="w-9 flex-shrink-0 mr-2 self-start">
                                             {showAvatar ? (
-                                                <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-[14px] font-semibold text-slate-600">
+                                                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-[16px]">
                                                     {MEMBERS[msg.author]?.emoji || msg.author[0]}
                                                 </div>
                                             ) : <div className="w-9" />}
@@ -5318,7 +5622,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                     <div className={`max-w-[75%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
                                         {!isMe && showAvatar && (
                                             <div className="flex items-baseline gap-2 mb-0.5 px-1">
-                                                <span className="text-[13px] font-bold text-slate-800">{msg.author}</span>
+                                                <span className="text-[13px] font-semibold text-slate-500">{msg.author}</span>
                                                 <span className="text-[11px] text-slate-400">{timeStr}</span>
                                             </div>
                                         )}
@@ -5327,40 +5631,46 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                                 <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                             </div>
                                         )}
-                                        <div className={`flex items-start gap-0.5 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                                            {/* Message bubble + overlapping reactions */}
-                                            <div className="relative" style={{ marginBottom: (!msg._sending && !msg._failed && Object.keys(reactions).length > 0) ? 14 : 0 }}>
-                                                <div className="px-4 py-3 text-[13.5px] leading-relaxed text-slate-700" style={{ background: isMe ? "#DCF0FF" : "#F8F9FA", borderRadius: isMe ? "12px 4px 12px 12px" : "4px 12px 12px 12px" }}>
-                                                    {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[250px] rounded-md mb-1.5 cursor-pointer" onLoad={scrollTeamChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
-                                                    {msg.text && <div className="whitespace-pre-wrap break-words">{msg.text}</div>}
-                                                </div>
-                                                {/* Reaction badges overlapping bubble bottom */}
-                                                {!msg._sending && !msg._failed && Object.keys(reactions).length > 0 && (
-                                                    <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
-                                                        {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
-                                                            <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
-                                                                className={`inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[11px] border shadow-sm transition-colors ${users.includes(currentUser) ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
-                                                                {emoji}{users.length}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            {/* Action buttons beside bubble — hover only */}
+                                        <div className="relative" style={{ marginBottom: (!msg._sending && !msg._failed && Object.keys(reactions).length > 0) ? 14 : 0 }}>
+                                            {/* Hover action bar */}
                                             {!msg._sending && !msg._failed && (
-                                                <div className="opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-px flex-shrink-0 self-start mt-1">
-                                                    <button onClick={() => setReplyTo(msg)} className="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-300 hover:text-slate-500 text-[13px] flex items-center justify-center" title="답장">↩</button>
-                                                    <div className="relative">
-                                                        <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)} className="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-300 hover:text-slate-500 text-[13px] flex items-center justify-center" title="리액션">😊</button>
-                                                        {emojiPickerMsgId === msg.id && (
-                                                            <div className={`absolute bottom-full ${isMe ? "right-0" : "left-0"} mb-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5 flex gap-1 z-10`}>
-                                                                {["👍", "❤️", "😂", "😮", "😢", "🔥"].map(em => (
-                                                                    <button key={em} onClick={() => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-[16px] transition-colors">{em}</button>
-                                                                ))}
-                                                            </div>
-                                                        )}
+                                                <div className={`absolute -top-8 ${isMe ? "right-1" : "left-1"} opacity-0 group-hover/msg:opacity-100 transition-opacity z-10`}>
+                                                    <div className="flex items-center bg-white rounded-full px-1 py-0.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
+                                                        {["👍","✅","😂"].map(em => (
+                                                            <button key={em} onClick={() => toggleReaction(msg.id, em)}
+                                                                className={`w-7 h-7 flex items-center justify-center rounded-full text-[14px] transition-colors ${reactions[em]?.includes(currentUser) ? "bg-blue-50" : "hover:bg-slate-100"}`}>{em}</button>
+                                                        ))}
+                                                        <div className="w-px h-4 bg-slate-200 mx-0.5" />
+                                                        <div className="relative">
+                                                            <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
+                                                                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] transition-colors">😊</button>
+                                                            {emojiPickerMsgId === msg.id && (
+                                                                <div className={`absolute top-full ${isMe ? "right-0" : "left-0"} mt-1 bg-white rounded-xl shadow-lg border border-slate-200 px-2 py-1.5 flex gap-1 z-20`}>
+                                                                    {["👍","❤️","😂","😮","😢","🔥","✅","🎉"].map(em => (
+                                                                        <button key={em} onClick={() => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }}
+                                                                            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-[16px] transition-colors">{em}</button>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <button onClick={() => setReplyTo(msg)}
+                                                            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-500 transition-colors" title="답장">↩</button>
                                                     </div>
-                                                    {isMe && <button onClick={() => onDeleteChat(msg.id)} className="w-6 h-6 rounded-md hover:bg-red-50 text-slate-300 hover:text-red-400 text-[10px] flex items-center justify-center" title="삭제">삭제</button>}
+                                                </div>
+                                            )}
+                                            <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "10px 16px" }}
+                                                className="text-[13.5px] leading-relaxed text-slate-800">
+                                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full max-h-[250px] rounded-md mb-1.5 cursor-pointer" onLoad={scrollTeamChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
+                                                {msg.text && <div className="whitespace-pre-wrap break-words">{msg.text}</div>}
+                                            </div>
+                                            {!msg._sending && !msg._failed && Object.keys(reactions).length > 0 && (
+                                                <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
+                                                    {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
+                                                        <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
+                                                            className={`inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[11px] border shadow-sm transition-colors ${users.includes(currentUser) ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                                                            {emoji}{users.length}
+                                                        </button>
+                                                    ))}
                                                 </div>
                                             )}
                                         </div>
@@ -5388,16 +5698,52 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                     {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[80px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">✕</button></div>}
                     <div className="flex gap-1.5 items-center">
                         <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
-                        <button onClick={() => chatFileRef.current?.click()} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-500 transition-colors flex-shrink-0 text-[16px]" title="사진 첨부">{imgUploading ? "⏳" : "📷"}</button>
+                        <button onClick={() => chatFileRef.current?.click()} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-500 transition-colors flex-shrink-0 text-[18px]" title="파일 첨부">{imgUploading ? "⏳" : "+"}</button>
                         <textarea value={chatText} onChange={e => setChatText(e.target.value)} onPaste={handlePaste}
                             onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                             onKeyDown={e => chatKeyDown(e, sendChat, composingRef)}
                             placeholder="메시지 입력..." rows={1}
-                            className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
-                        <button onClick={sendChat} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 flex-shrink-0">전송</button>
+                            className="flex-1 border border-slate-200 rounded-2xl px-4 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                        <button onClick={sendChat} className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors flex-shrink-0 text-[16px]" title="전송">›</button>
                     </div>
                 </div>
             </div>
+            {/* Context menu */}
+            {contextMenu && (() => {
+                const ctxMsg = chat.find(m => m.id === contextMenu.msgId);
+                if (!ctxMsg) return null;
+                const isCtxMe = ctxMsg.author === currentUser;
+                return (
+                    <div className="fixed inset-0 z-50" onClick={() => setContextMenu(null)}>
+                        <div className="fixed bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 min-w-[180px] z-50"
+                            style={{ left: Math.min(contextMenu.x, typeof window !== "undefined" ? window.innerWidth - 200 : contextMenu.x), top: Math.min(contextMenu.y, typeof window !== "undefined" ? window.innerHeight - 250 : contextMenu.y) }}
+                            onClick={e => e.stopPropagation()}>
+                            <button onClick={() => { setReplyTo(ctxMsg); setContextMenu(null); }}
+                                className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                <span className="text-[14px]">↩</span> 답장에서 인용
+                            </button>
+                            <button onClick={() => {
+                                onSaveCard({ id: Date.now(), title: (ctxMsg.text || "📷 이미지").slice(0, 50), content: ctxMsg.text || "", status: "left", color: "#FEF3C7", author: ctxMsg.author, updatedAt: new Date().toISOString().split("T")[0] });
+                                setContextMenu(null);
+                            }} className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                <span className="text-[14px]">📌</span> 보드에 고정
+                            </button>
+                            <div className="h-px bg-slate-100 my-1" />
+                            <button onClick={() => { navigator.clipboard.writeText(`${window.location.href}#msg-${ctxMsg.id}`); setContextMenu(null); }}
+                                className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                <span className="text-[14px]">🔗</span> 메시지 링크 복사
+                            </button>
+                            {isCtxMe && (<>
+                                <div className="h-px bg-slate-100 my-1" />
+                                <button onClick={() => { if (confirm("정말 삭제하시겠습니까?")) { onUpdateChat({ ...ctxMsg, deleted: true, text: "", imageUrl: undefined }); setContextMenu(null); } }}
+                                    className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2">
+                                    <span className="text-[14px]">🗑</span> 삭제
+                                </button>
+                            </>)}
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Detail modal */}
             {selected && !isEditing && (
@@ -5603,8 +5949,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
             {/* Team mode: page title + date + online users */}
             {!isPersonal && (
                 <div>
-                    <div className="text-[12px] mb-1" style={{color:"#94A3B8", fontWeight:500}}>대시보드</div>
-                    <h2 className="text-[26px] font-extrabold tracking-tight" style={{color:"#0F172A", letterSpacing:"-0.03em"}}>연구실 현황</h2>
+                    <h2 className="text-[24px] font-bold tracking-tight" style={{color:"#0F172A", letterSpacing:"-0.02em", lineHeight:"1.3"}}>🏠 연구실 현황</h2>
                     <div className="flex items-center gap-3 mt-1.5">
                         <span className="text-[13.5px]" style={{color:"#94A3B8"}}>{dateLabel}</span>
                         <span className="text-[13px] flex items-center gap-1.5" style={{color:"#94A3B8"}}>
@@ -5612,9 +5957,9 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                             <span style={{color:"#10B981", fontWeight:600}}>{onlineUsers.length}명</span>
                         </span>
                         {onlineUsers.length > 0 && (
-                            <div className="flex items-center gap-1.5 ml-1">
+                            <div className="flex items-center gap-1.5 ml-1 flex-wrap">
                                 {onlineUsers.map(u => (
-                                    <span key={u.name} className="text-[12px] font-medium" style={{color:"#64748B"}} title={u.name}>{MEMBERS[u.name]?.emoji || "👤"} {u.name}</span>
+                                    <span key={u.name} className="inline-flex items-center gap-1 text-[12px] font-medium px-2.5 py-0.5 rounded-full" style={{background:"#F0FDF4", color:"#16A34A", border:"1px solid #DCFCE7"}} title={u.name}>{MEMBERS[u.name]?.emoji || "👤"} {u.name}</span>
                                 ))}
                             </div>
                         )}
@@ -5623,58 +5968,65 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
             )}
             {/* Personal mode header */}
             {isPersonal && (
-                <div className="bg-white border border-slate-200 rounded-2xl px-6 py-4 flex items-center justify-between flex-wrap gap-4">
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                        <div className="w-[42px] h-[42px] rounded-full flex items-center justify-center text-[20px]" style={{background:"#F1F5F9", border:"2px solid #E2E8F0"}}>{members[currentUser]?.emoji || "👤"}</div>
-                        <div>
-                            <h2 className="text-[18px] font-bold text-slate-800 leading-tight">{currentUser}</h2>
-                            <div className="text-[12px] text-slate-400">{members[currentUser]?.team} {members[currentUser]?.role && `· ${members[currentUser]?.role}`}</div>
+                <div>
+                    <h2 className="text-[24px] font-bold tracking-tight mb-4" style={{color:"#0F172A", letterSpacing:"-0.02em", lineHeight:"1.3"}}>👤 개별 현황 ({currentUser})</h2>
+                    <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 flex items-center justify-between flex-wrap gap-4">
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                            <div className="w-[38px] h-[38px] rounded-full flex items-center justify-center text-[18px]" style={{background:"#F1F5F9", border:"2px solid #E2E8F0"}}>{members[currentUser]?.emoji || "👤"}</div>
+                            <div>
+                                <div className="text-[15px] font-semibold text-slate-800 leading-tight">{currentUser}</div>
+                                <div className="text-[12px] text-slate-400">{members[currentUser]?.team} {members[currentUser]?.role && `· ${members[currentUser]?.role}`}</div>
+                            </div>
+                            {myTarget && (
+                                <div className="text-[13px] text-slate-500 max-w-[320px] truncate ml-3 px-3 py-1 rounded-lg" style={{background:"#F8FAFC"}}>📌 {myTarget.text}</div>
+                            )}
                         </div>
-                        {myTarget && (
-                            <div className="text-[13px] text-slate-500 max-w-[320px] truncate ml-3 px-3 py-1 rounded-lg" style={{background:"#F8FAFC"}}>📌 {myTarget.text}</div>
-                        )}
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                        {!myTarget && (
-                            <button onClick={() => onNavigate("daily")} className="px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors" style={{background:"#EFF6FF", color:"#3B82F6", border:"1px solid #DBEAFE"}} onMouseEnter={e => (e.currentTarget.style.background = "#DBEAFE")} onMouseLeave={e => (e.currentTarget.style.background = "#EFF6FF")}>🎯 오늘 목표 작성하기</button>
-                        )}
-                        {!statusMessages[currentUser] && (
-                            <button onClick={() => onNavigate("settings")} className="px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors" style={{background:"#F0FDF4", color:"#16A34A", border:"1px solid #DCFCE7"}} onMouseEnter={e => (e.currentTarget.style.background = "#DCFCE7")} onMouseLeave={e => (e.currentTarget.style.background = "#F0FDF4")}>💬 한마디 작성하기</button>
-                        )}
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {myTarget ? (
+                                <span className="px-3 py-1.5 rounded-lg text-[13px] font-medium" style={{background:"#F1F5F9", color:"#94A3B8"}}>✅ 오늘 목표 완료</span>
+                            ) : (
+                                <button onClick={() => onNavigate("daily")} className="relative px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors" style={{background:"#EFF6FF", color:"#3B82F6", border:"1px solid #DBEAFE", animation:"subtle-pulse 3s ease-in-out infinite"}} onMouseEnter={e => (e.currentTarget.style.background = "#DBEAFE")} onMouseLeave={e => (e.currentTarget.style.background = "#EFF6FF")}><span className="absolute -top-1 -left-1 w-[6px] h-[6px] rounded-full bg-red-500" />🎯 오늘 목표 작성하기</button>
+                            )}
+                            {statusMessages[currentUser] ? (
+                                <span className="px-3 py-1.5 rounded-lg text-[13px] font-medium" style={{background:"#F1F5F9", color:"#94A3B8"}}>✅ 한마디 완료</span>
+                            ) : (
+                                <button onClick={() => onNavigate("settings")} className="relative px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors" style={{background:"#F0FDF4", color:"#16A34A", border:"1px solid #DCFCE7", animation:"subtle-pulse 3s ease-in-out infinite"}} onMouseEnter={e => (e.currentTarget.style.background = "#DCFCE7")} onMouseLeave={e => (e.currentTarget.style.background = "#F0FDF4")}><span className="absolute -top-1 -left-1 w-[6px] h-[6px] rounded-full bg-red-500" />💬 한마디 작성하기</button>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
 
             {/* Row 1: 연구 파이프라인 5개 한 줄 */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
-                <h3 className="text-[16px] font-bold text-slate-900 mb-4">{isPersonal ? "내 연구 파이프라인" : "연구 파이프라인"}</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
-                    <button onClick={() => onNavigate("papers")} className="text-left hover:bg-slate-50 rounded-lg p-3 -m-3 transition-colors">
-                        <div className="text-[13px] font-semibold text-slate-500 mb-3 flex items-center gap-1.5">
+            <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200" style={{borderTop:"2px solid #3B82F6"}}>
+                <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">{isPersonal ? "내 연구 파이프라인" : "연구 파이프라인"}</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
+                    <button onClick={() => onNavigate("papers")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
+                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.paper}} />논문 <span className="font-bold" style={{color:"#334155"}}>({fp.length})</span>
                         </div>
                         <MiniBar items={papersByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...papersByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("reports")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
-                        <div className="text-[13px] font-semibold text-slate-500 mb-3 flex items-center gap-1.5">
+                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.report}} />계획서/보고서 <span className="font-bold" style={{color:"#334155"}}>({fr.length})</span>
                         </div>
                         <MiniBar items={reportsByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...reportsByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("experiments")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
-                        <div className="text-[13px] font-semibold text-slate-500 mb-3 flex items-center gap-1.5">
+                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.experiment}} />실험 <span className="font-bold" style={{color:"#334155"}}>({fe.length})</span>
                         </div>
                         <MiniBar items={expByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...expByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("analysis")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
-                        <div className="text-[13px] font-semibold text-slate-500 mb-3 flex items-center gap-1.5">
+                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.analysis}} />해석 <span className="font-bold" style={{color:"#334155"}}>({fa.length})</span>
                         </div>
                         <MiniBar items={analysisByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...analysisByStatus.map(s => s.count))} />
                     </button>
                     <button onClick={() => onNavigate("ip")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
-                        <div className="text-[13px] font-semibold text-slate-500 mb-3 flex items-center gap-1.5">
+                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.ip}} />지식재산권 <span className="font-bold" style={{color:"#334155"}}>({fip.length})</span>
                         </div>
                         <MiniBar items={patentsByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...patentsByStatus.map(s => s.count))} />
@@ -5684,9 +6036,9 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
 
             {/* Row 2: 오늘 목표 현황 (full width) / 내 To-do (personal) */}
             {isPersonal ? (
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
+                <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
                     <button onClick={() => onNavigate("todos")} className="w-full text-left">
-                        <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500 flex items-center gap-2">
                             내 To-do
                             {myTodos.length > 0 && <span className="min-w-[20px] h-[20px] flex items-center justify-center rounded-full bg-red-500 text-white text-[12px] font-bold">{myTodos.length}</span>}
                         </h3>
@@ -5705,20 +6057,20 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                     )}
                 </div>
             ) : (
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
+                <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
                     <button onClick={() => onNavigate("daily")} className="w-full text-left">
-                        <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">
                             오늘 목표 현황
-                            <span className="text-[12px] font-medium text-slate-400">{targetsWritten}/{MEMBER_NAMES.length}</span>
                         </h3>
                     </button>
-                    <div className="mb-4">
-                        <div className="w-full rounded-[3px] h-[6px]" style={{background:"#F1F5F9"}}>
-                            <div className="h-[6px] rounded-[3px]" style={{ width: `${MEMBER_NAMES.length > 0 ? (targetsWritten / MEMBER_NAMES.length) * 100 : 0}%`, background: "linear-gradient(90deg, #3B82F6, #22C55E)", transition: "width 1s cubic-bezier(0.4, 0, 0.2, 1)" }} />
+                    <div className="mb-3 flex items-center gap-3">
+                        <div className="flex-1 rounded-[4px] h-[8px]" style={{background:"#F1F5F9"}}>
+                            <div className="h-[8px] rounded-[4px]" style={{ width: `${MEMBER_NAMES.length > 0 ? (targetsWritten / MEMBER_NAMES.length) * 100 : 0}%`, background: "linear-gradient(90deg, #22C55E, #3B82F6)", transition: "width 1s cubic-bezier(0.4, 0, 0.2, 1)" }} />
                         </div>
+                        <span className="text-[13px] font-bold text-slate-700 shrink-0">{targetsWritten}/{MEMBER_NAMES.length}</span>
                     </div>
                     {targetsMissing.length > 0 && (
-                        <div className="mb-4">
+                        <div className="mb-3">
                             <div className="text-[12px] text-slate-400 mb-1.5">미작성:</div>
                             <div className="flex flex-wrap gap-1.5">
                                 {targetsMissing.map(name => (
@@ -5728,16 +6080,16 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                         </div>
                     )}
                     {targetsMissing.length === 0 && (
-                        <div className="text-[13px] text-emerald-500 font-medium mb-4">전원 작성 완료</div>
+                        <div className="text-[13px] text-emerald-500 font-medium mb-3">전원 작성 완료</div>
                     )}
                     {todayTargets.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {todayTargets.map(t => (
-                                <div key={t.name} className="flex items-start gap-2.5 p-3 rounded-xl" style={{background:"#F8FAFC"}}>
-                                    <span className="text-[15px] shrink-0">{MEMBERS[t.name]?.emoji}</span>
-                                    <div className="min-w-0">
-                                        <div className="text-[12px] font-semibold text-slate-700">{t.name}</div>
-                                        <div className="text-[12px] text-slate-500 leading-relaxed mt-0.5">{t.text}</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0">
+                            {todayTargets.map((t, i) => (
+                                <div key={t.name} className="flex items-center gap-2" style={{padding:"8px 12px", background:"#FAFBFC", borderBottom: i < todayTargets.length - 1 || (i + 1) % 3 !== 0 ? "1px solid #F1F5F9" : "none"}}>
+                                    <span className="text-[14px] shrink-0">{MEMBERS[t.name]?.emoji}</span>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="text-[14px] font-bold text-slate-700">{t.name}</div>
+                                        <div className="text-[13px] text-slate-500 truncate">{t.text}</div>
                                     </div>
                                 </div>
                             ))}
@@ -5749,9 +6101,9 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
             {/* Row 3: 긴급 공지 | 일반 공지 | 논의 필요 */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
                 {/* 긴급 공지 */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
+                <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
                     <button onClick={() => onNavigate("announcements")} className="w-full text-left">
-                        <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500 flex items-center gap-2">
                             🚨 긴급 공지
                             {urgentAnn.length > 0 && <span className="px-1.5 py-0.5 rounded-md bg-red-50 text-red-500 text-[11px] font-semibold">{urgentAnn.length}</span>}
                         </h3>
@@ -5771,9 +6123,9 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                 </div>
 
                 {/* 일반 공지 */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
+                <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
                     <button onClick={() => onNavigate("announcements")} className="w-full text-left">
-                        <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500 flex items-center gap-2">
                             📌 일반 공지
                             {generalAnn.length > 0 && <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-500 text-[11px] font-semibold">{generalAnn.length}</span>}
                         </h3>
@@ -5793,8 +6145,8 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                 </div>
 
                 {/* 논의 필요 */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
-                    <h3 className="text-[16px] font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
+                    <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500 flex items-center gap-2">
                         {isPersonal ? "내 논의 필요" : "논의 필요"}
                         {discussionItems.length > 0 && <span className="px-1.5 py-0.5 rounded-md bg-orange-50 text-orange-500 text-[11px] font-semibold">{discussionItems.length}</span>}
                     </h3>
@@ -5819,8 +6171,8 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
 
             {/* Row 3: 멤버별 현황 (team) / 내 현황 (personal) */}
             {isPersonal ? (
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
-                    <h3 className="text-[16px] font-bold text-slate-900 mb-4">내 전체 현황</h3>
+                <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
+                    <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">내 전체 현황</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                         <div>
                             <div className="text-[12px] font-semibold text-slate-400 mb-2">내 논문 ({myPapers.length})</div>
@@ -5890,8 +6242,8 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                     </div>
                 </div>
             ) : (
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
-                    <h3 className="text-[16px] font-bold text-slate-900 mb-4">멤버별 현황</h3>
+                <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
+                    <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">멤버별 현황</h3>
                     <div className="overflow-x-auto">
                         <table className="w-full text-[13px]">
                             <thead>
@@ -5953,9 +6305,9 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                         color: "#94a3b8",
                     }));
                 return (
-                    <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-[16px] font-bold text-slate-900">팀별 연구 현황</h3>
+                    <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-[16px] font-bold text-slate-900 pl-2 border-l-[3px] border-blue-500">팀별 연구 현황</h3>
                             <div className="flex items-center gap-3">
                                 {[{label:"논문",color:CATEGORY_COLORS.paper},{label:"계획/보고",color:CATEGORY_COLORS.report},{label:"실험",color:CATEGORY_COLORS.experiment},{label:"해석",color:CATEGORY_COLORS.analysis},{label:"지식재산권",color:CATEGORY_COLORS.ip}].map(c => (
                                     <span key={c.label} className="flex items-center gap-1 text-[11px]" style={{color:"#94A3B8"}}><span className="w-2 h-2 rounded-sm" style={{background:c.color}} />{c.label}</span>
@@ -6426,29 +6778,41 @@ export default function DashboardPage() {
         setPersonalFiles(u); saveSection("personalFiles", u);
     };
     const handleAddPiChat = (name: string, msg: TeamChatMsg) => {
-        const newMsgs = [...(piChat[name] || []), { ...msg, _sending: true }];
-        const u = { ...piChat, [name]: newMsgs };
-        setPiChat(u);
-        saveSection("piChat", { ...u, [name]: stripMsgFlags(newMsgs) }).then(ok => {
-            setPiChat(prev => ({ ...prev, [name]: (prev[name] || []).map(m => m.id === msg.id ? (ok ? { ...m, _sending: undefined } : { ...m, _sending: undefined, _failed: true }) : m) }));
+        pendingSavesRef.current++;
+        setPiChat(prev => {
+            const newMsgs = [...(prev[name] || []), { ...msg, _sending: true }];
+            const next = { ...prev, [name]: newMsgs };
+            saveSection("piChat", { ...next, [name]: stripMsgFlags(newMsgs) }).then(ok => {
+                pendingSavesRef.current--;
+                setPiChat(p => ({ ...p, [name]: (p[name] || []).map(m => m.id === msg.id ? { ...m, _sending: undefined, ...(ok ? {} : { _failed: true }) } : m) }));
+            });
+            return next;
         });
     };
     const handleRetryPiChat = (name: string, msgId: number) => {
+        pendingSavesRef.current++;
         setPiChat(prev => {
             const updated = { ...prev, [name]: (prev[name] || []).map(m => m.id === msgId ? { ...m, _sending: true, _failed: undefined } : m) };
             saveSection("piChat", { ...updated, [name]: stripMsgFlags(updated[name]) }).then(ok => {
-                setPiChat(p => ({ ...p, [name]: (p[name] || []).map(m => m.id === msgId ? (ok ? { ...m, _sending: undefined } : { ...m, _sending: undefined, _failed: true }) : m) }));
+                pendingSavesRef.current--;
+                setPiChat(p => ({ ...p, [name]: (p[name] || []).map(m => m.id === msgId ? { ...m, _sending: undefined, ...(ok ? {} : { _failed: true }) } : m) }));
             });
             return updated;
         });
     };
     const handleDeletePiChat = (name: string, id: number) => {
-        const u = { ...piChat, [name]: (piChat[name] || []).filter(m => m.id !== id) };
-        setPiChat(u); saveSection("piChat", u);
+        setPiChat(prev => { const u = { ...prev, [name]: (prev[name] || []).filter(m => m.id !== id) }; saveSection("piChat", u); return u; });
     };
     const handleClearPiChat = (name: string) => {
-        const u = { ...piChat, [name]: [] };
-        setPiChat(u); saveSection("piChat", u);
+        setPiChat(prev => { const u = { ...prev, [name]: [] }; saveSection("piChat", u); return u; });
+    };
+    const handleUpdatePiChat = (name: string, msg: TeamChatMsg) => {
+        pendingSavesRef.current++;
+        setPiChat(prev => {
+            const u = { ...prev, [name]: (prev[name] || []).map(m => m.id === msg.id ? msg : m) };
+            saveSection("piChat", u).then(() => { pendingSavesRef.current--; });
+            return u;
+        });
     };
 
     // All teamMemos handlers use functional updaters to avoid stale closure bugs.
@@ -6486,26 +6850,29 @@ export default function DashboardPage() {
         saveSection("teamMemos", toSave!);
     };
     const handleAddTeamChat = (teamName: string, msg: TeamChatMsg) => {
-        let cleanToSave: typeof teamMemos;
         setTeamMemos(prev => {
             const data = prev[teamName] || { kanban: [], chat: [], files: [] };
             const newChat = [...data.chat, { ...msg, _sending: true }];
             const next = { ...prev, [teamName]: { ...data, chat: newChat } };
-            cleanToSave = { ...next, [teamName]: { ...next[teamName], chat: stripMsgFlags(newChat) } };
-            return next;
-        });
-        saveSection("teamMemos", cleanToSave!).then(ok => {
-            setTeamMemos(prev => {
-                const td = prev[teamName] || { kanban: [], chat: [] };
-                return { ...prev, [teamName]: { ...td, chat: td.chat.map(m => m.id === msg.id ? (ok ? { ...m, _sending: undefined } : { ...m, _sending: undefined, _failed: true }) : m) } };
+            const cleanToSave = { ...next, [teamName]: { ...next[teamName], chat: stripMsgFlags(newChat) } };
+            pendingSavesRef.current++;
+            saveSection("teamMemos", cleanToSave).then(ok => {
+                pendingSavesRef.current--;
+                setTeamMemos(p => {
+                    const td = p[teamName] || { kanban: [], chat: [] };
+                    return { ...p, [teamName]: { ...td, chat: td.chat.map(m => m.id === msg.id ? (ok ? { ...m, _sending: undefined } : { ...m, _sending: undefined, _failed: true }) : m) } };
+                });
             });
+            return next;
         });
     };
     const handleRetryTeamChat = (teamName: string, msgId: number) => {
         setTeamMemos(prev => {
             const td = prev[teamName] || { kanban: [], chat: [] };
             const updated = { ...prev, [teamName]: { ...td, chat: td.chat.map(m => m.id === msgId ? { ...m, _sending: true, _failed: undefined } : m) } };
+            pendingSavesRef.current++;
             saveSection("teamMemos", { ...updated, [teamName]: { ...updated[teamName], chat: stripMsgFlags(updated[teamName].chat) } }).then(ok => {
+                pendingSavesRef.current--;
                 setTeamMemos(p => {
                     const d = p[teamName] || { kanban: [], chat: [] };
                     return { ...p, [teamName]: { ...d, chat: d.chat.map(m => m.id === msgId ? (ok ? { ...m, _sending: undefined } : { ...m, _sending: undefined, _failed: true }) : m) } };
@@ -6515,31 +6882,31 @@ export default function DashboardPage() {
         });
     };
     const handleUpdateTeamChat = (teamName: string, msg: TeamChatMsg) => {
-        let toSave: typeof teamMemos;
         setTeamMemos(prev => {
             const data = prev[teamName] || { kanban: [], chat: [], files: [] };
-            toSave = { ...prev, [teamName]: { ...data, chat: data.chat.map(c => c.id === msg.id ? msg : c) } };
+            const toSave = { ...prev, [teamName]: { ...data, chat: data.chat.map(c => c.id === msg.id ? msg : c) } };
+            pendingSavesRef.current++;
+            saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; });
             return toSave;
         });
-        saveSection("teamMemos", toSave!);
     };
     const handleDeleteTeamChat = (teamName: string, id: number) => {
-        let toSave: typeof teamMemos;
         setTeamMemos(prev => {
             const data = prev[teamName] || { kanban: [], chat: [], files: [] };
-            toSave = { ...prev, [teamName]: { ...data, chat: data.chat.filter(c => c.id !== id) } };
+            const toSave = { ...prev, [teamName]: { ...data, chat: data.chat.filter(c => c.id !== id) } };
+            pendingSavesRef.current++;
+            saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; });
             return toSave;
         });
-        saveSection("teamMemos", toSave!);
     };
     const handleClearTeamChat = (teamName: string) => {
-        let toSave: typeof teamMemos;
         setTeamMemos(prev => {
             const data = prev[teamName] || { kanban: [], chat: [], files: [] };
-            toSave = { ...prev, [teamName]: { ...data, chat: [] } };
+            const toSave = { ...prev, [teamName]: { ...data, chat: [] } };
+            pendingSavesRef.current++;
+            saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; });
             return toSave;
         });
-        saveSection("teamMemos", toSave!);
     };
     const handleAddTeamFile = (teamName: string, file: LabFile) => {
         let toSave: typeof teamMemos;
@@ -6564,29 +6931,40 @@ export default function DashboardPage() {
     };
 
     const handleAddLabChat = (msg: TeamChatMsg) => {
-        const u = [...labChat, { ...msg, _sending: true }];
-        setLabChat(u);
-        saveSection("labChat", stripMsgFlags(u)).then(ok => {
-            if (ok) setLabChat(prev => prev.map(m => m.id === msg.id ? { ...m, _sending: undefined } : m));
-            else setLabChat(prev => prev.map(m => m.id === msg.id ? { ...m, _sending: undefined, _failed: true } : m));
+        setLabChat(prev => [...prev, { ...msg, _sending: true }]);
+        pendingSavesRef.current++;
+        setLabChat(cur => {
+            saveSection("labChat", stripMsgFlags(cur)).then(ok => {
+                pendingSavesRef.current--;
+                setLabChat(p => p.map(m => m.id === msg.id ? { ...m, _sending: undefined, ...(ok ? {} : { _failed: true }) } : m));
+            });
+            return cur;
         });
     };
     const handleRetryLabChat = (msgId: number) => {
+        pendingSavesRef.current++;
         setLabChat(prev => {
             const updated = prev.map(m => m.id === msgId ? { ...m, _sending: true, _failed: undefined } : m);
             saveSection("labChat", stripMsgFlags(updated)).then(ok => {
-                if (ok) setLabChat(p => p.map(m => m.id === msgId ? { ...m, _sending: undefined } : m));
-                else setLabChat(p => p.map(m => m.id === msgId ? { ...m, _sending: undefined, _failed: true } : m));
+                pendingSavesRef.current--;
+                setLabChat(p => p.map(m => m.id === msgId ? { ...m, _sending: undefined, ...(ok ? {} : { _failed: true }) } : m));
             });
             return updated;
         });
     };
     const handleDeleteLabChat = (id: number) => {
-        const u = labChat.filter(c => c.id !== id);
-        setLabChat(u); saveSection("labChat", stripMsgFlags(u));
+        setLabChat(prev => { const u = prev.filter(c => c.id !== id); saveSection("labChat", stripMsgFlags(u)); return u; });
     };
     const handleClearLabChat = () => {
         setLabChat([]); saveSection("labChat", []);
+    };
+    const handleUpdateLabChat = (msg: TeamChatMsg) => {
+        pendingSavesRef.current++;
+        setLabChat(prev => {
+            const u = prev.map(m => m.id === msg.id ? msg : m);
+            saveSection("labChat", stripMsgFlags(u)).then(() => { pendingSavesRef.current--; });
+            return u;
+        });
     };
     const handleSaveLabBoard = (card: TeamMemoCard) => {
         const exists = labBoard.some(c => c.id === card.id);
@@ -6607,6 +6985,64 @@ export default function DashboardPage() {
         if (file?.url?.startsWith("https://")) { try { await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: file.url }), headers: { "Content-Type": "application/json" } }); } catch {} }
         const u = labFiles.filter(f => f.id !== id); setLabFiles(u); saveSection("labFiles", u);
     };
+
+    // Tab notification: flash title + favicon badge when hidden & unread
+    const totalUnread = useMemo(() => {
+        const labNew = labChat.filter(m => m.author !== userName && m.id > (chatReadTs.labChat || 0)).length;
+        const annNew = announcements.filter(a => a.author !== userName && new Date(a.date).getTime() > (chatReadTs.announcements || 0)).length;
+        const teamNew = teamNames.reduce((sum, t) => {
+            const ts = chatReadTs[`teamMemo_${t}`] || 0;
+            return sum + (teamMemos[t]?.chat || []).filter(m => m.author !== userName && m.id > ts).length;
+        }, 0);
+        const piNew = memberNames.reduce((sum, n) => sum + (piChat[n] || []).filter(m => m.author !== userName && m.id > (chatReadTs[`memo_${n}`] || 0)).length, 0);
+        return labNew + annNew + teamNew + piNew;
+    }, [labChat, announcements, teamMemos, piChat, chatReadTs, userName, teamNames, memberNames]);
+
+    useEffect(() => {
+        const ORIGINAL_TITLE = "MFTEL Dashboard";
+        let intervalId: ReturnType<typeof setInterval> | null = null;
+        let isOriginal = true;
+        // Favicon badge helper
+        const setFaviconBadge = (count: number) => {
+            const canvas = document.createElement("canvas");
+            canvas.width = 32; canvas.height = 32;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return;
+            // Base icon
+            ctx.fillStyle = "#3B82F6"; ctx.beginPath(); ctx.roundRect(2, 2, 28, 28, 6); ctx.fill();
+            ctx.fillStyle = "#fff"; ctx.font = "bold 18px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillText("M", 16, 17);
+            if (count > 0) {
+                const label = count > 99 ? "99+" : String(count);
+                ctx.fillStyle = "#EF4444"; ctx.beginPath(); ctx.arc(26, 6, 8, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "#fff"; ctx.font = `bold ${count > 99 ? 7 : 9}px sans-serif`; ctx.fillText(label, 26, 7);
+            }
+            let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+            if (!link) { link = document.createElement("link"); link.rel = "icon"; document.head.appendChild(link); }
+            link.href = canvas.toDataURL("image/png");
+        };
+
+        const startFlash = () => {
+            if (intervalId) return;
+            intervalId = setInterval(() => {
+                document.title = isOriginal ? `(${totalUnread}) 새 알림 — MFTEL` : ORIGINAL_TITLE;
+                isOriginal = !isOriginal;
+            }, 1500);
+        };
+        const stopFlash = () => {
+            if (intervalId) { clearInterval(intervalId); intervalId = null; }
+            document.title = ORIGINAL_TITLE;
+            isOriginal = true;
+        };
+        const onVisChange = () => {
+            if (document.hidden && totalUnread > 0) startFlash();
+            else stopFlash();
+        };
+        setFaviconBadge(totalUnread);
+        if (document.hidden && totalUnread > 0) startFlash();
+        document.addEventListener("visibilitychange", onVisChange);
+        return () => { stopFlash(); document.removeEventListener("visibilitychange", onVisChange); };
+    }, [totalUnread]);
 
     if (!authChecked) return (
         <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -6679,7 +7115,7 @@ export default function DashboardPage() {
                                         {showBreak && <div className="mt-5 mb-1.5 px-4"><div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>{sectionBreaks[tab.id]}</div></div>}
                                         {showTeamMemoBreak && <div className="mt-5 mb-1.5 px-4"><div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>팀 워크</div></div>}
                                         <button onClick={() => { setActiveTab(tab.id); setMobileMenuOpen(false); }}
-                                            className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13.5px] whitespace-nowrap transition-all"
+                                            className="relative w-full flex items-center gap-2 px-3 py-2 rounded-[10px] text-[13px] whitespace-nowrap transition-all"
                                             style={{ fontWeight: isActive ? 600 : 450, color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}>
                                             {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-blue-400" />}
                                             <span className="text-[15px]">{tab.icon}</span><span>{tab.label}</span>
@@ -6708,14 +7144,14 @@ export default function DashboardPage() {
             )}
             <div className="flex flex-col h-[100dvh] overflow-hidden md:flex-row md:h-screen pt-[56px] md:pt-0">
                 {/* Desktop Sidebar */}
-                <div className="hidden md:flex md:w-[240px] md:h-screen flex-shrink-0 flex-col" style={{background:"#0F172A", borderRight:"1px solid #1E293B", boxShadow:"2px 0 8px rgba(0,0,0,0.1)"}}>
+                <div className="hidden md:flex md:w-[220px] md:h-screen flex-shrink-0 flex-col" style={{background:"#0F172A", borderRight:"1px solid #1E293B", boxShadow:"2px 0 8px rgba(0,0,0,0.05)"}}>
                     {/* Sidebar top: MFTEL logo */}
-                    <button onClick={() => setActiveTab("overview")} className="flex items-center gap-3 px-5 pt-5 pb-4 relative z-10 flex-shrink-0 cursor-pointer w-full text-left" style={{borderBottom:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
-                        <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-[17px] font-extrabold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", boxShadow: "0 2px 8px rgba(59,130,246,0.3)" }}>M</div>
-                        <div className="text-[15px] tracking-tight text-white" style={{fontWeight:750}}>MFTEL</div>
+                    <button onClick={() => setActiveTab("overview")} className="flex items-center gap-3 px-4 pt-5 pb-4 relative z-10 flex-shrink-0 cursor-pointer w-full text-left" style={{borderBottom:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
+                        <div className="w-[34px] h-[34px] rounded-xl flex items-center justify-center text-[15px] font-extrabold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", boxShadow: "0 2px 8px rgba(59,130,246,0.3)" }}>M</div>
+                        <div className="text-[14px] tracking-tight text-white" style={{fontWeight:750}}>MFTEL</div>
                     </button>
                     {/* Sidebar nav */}
-                    <div className="flex-1 min-h-0 flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto p-3 md:p-0 md:pt-2 md:pb-2 gap-px dark-scrollbar">
+                    <div className="flex-1 min-h-0 flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto p-3 md:p-0 md:pt-2 md:pb-2 md:px-1.5 gap-px dark-scrollbar">
                         {tabs.map((tab, i) => {
                             const sectionBreaks: Record<string, string> = { announcements: "운영", todos: "내 노트", papers: "연구", conferenceTrips: "커뮤니케이션" };
                             const showBreak = !tab.id.startsWith("memo_") && !tab.id.startsWith("teamMemo_") && sectionBreaks[tab.id];
@@ -6725,22 +7161,22 @@ export default function DashboardPage() {
                             return (
                                 <div key={tab.id}>
                                     {showBreak && (
-                                        <div className="hidden md:block mt-5 mb-1.5 px-4">
+                                        <div className="hidden md:block mt-5 mb-1.5 px-3">
                                             <div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>{sectionBreaks[tab.id]}</div>
                                         </div>
                                     )}
                                     {showTeamMemoBreak && (
-                                        <div className="hidden md:block mt-5 mb-1.5 px-4">
+                                        <div className="hidden md:block mt-5 mb-1.5 px-3">
                                             <div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>팀 워크</div>
                                         </div>
                                     )}
                                     {showMemoBreak && (
-                                        <div className="hidden md:block mt-5 mb-1.5 px-4">
+                                        <div className="hidden md:block mt-5 mb-1.5 px-3">
                                             <div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>내 노트</div>
                                         </div>
                                     )}
                                     <button onClick={() => setActiveTab(tab.id)}
-                                        className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13.5px] whitespace-nowrap transition-all"
+                                        className="relative w-full flex items-center gap-2 px-3 py-2 rounded-[10px] text-[13px] whitespace-nowrap transition-all"
                                         style={{ fontWeight: isActive ? 600 : 450, letterSpacing: "-0.01em", color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}
                                         onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#E2E8F0"; } }}
                                         onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94A3B8"; } }}>
@@ -6759,7 +7195,7 @@ export default function DashboardPage() {
                         })}
                         {/* Admin: 팀 관리 + 설정 */}
                         {userName === "박일웅" && (
-                            <div className="hidden md:block mt-5 mb-1.5 px-4">
+                            <div className="hidden md:block mt-5 mb-1.5 px-3">
                                 <div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>관리</div>
                             </div>
                         )}
@@ -6767,7 +7203,7 @@ export default function DashboardPage() {
                             const isActive = activeTab === "teams";
                             return (
                                 <button onClick={() => setActiveTab("teams")}
-                                    className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13.5px] whitespace-nowrap transition-all"
+                                    className="relative w-full flex items-center gap-2 px-3 py-2 rounded-[10px] text-[13px] whitespace-nowrap transition-all"
                                     style={{ fontWeight: isActive ? 600 : 450, letterSpacing: "-0.01em", color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}
                                     onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#E2E8F0"; } }}
                                     onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94A3B8"; } }}>
@@ -6781,7 +7217,7 @@ export default function DashboardPage() {
                             const isActive = activeTab === "settings";
                             return (
                                 <button onClick={() => setActiveTab("settings")}
-                                    className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13.5px] whitespace-nowrap transition-all"
+                                    className="relative w-full flex items-center gap-2 px-3 py-2 rounded-[10px] text-[13px] whitespace-nowrap transition-all"
                                     style={{ fontWeight: isActive ? 600 : 450, letterSpacing: "-0.01em", color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}
                                     onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#E2E8F0"; } }}
                                     onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94A3B8"; } }}>
@@ -6793,7 +7229,7 @@ export default function DashboardPage() {
                         })()}
                     </div>
                     {/* Sidebar bottom: user profile */}
-                    <div className="hidden md:flex items-center gap-2.5 px-4 py-3.5 relative z-10 flex-shrink-0" style={{borderTop:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
+                    <div className="hidden md:flex items-center gap-2 px-3 py-3 relative z-10 flex-shrink-0" style={{borderTop:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
                         <div className="w-8 h-8 rounded-full flex items-center justify-center text-[16px] flex-shrink-0" style={{background:"rgba(59,130,246,0.1)", border:"1.5px solid rgba(59,130,246,0.25)"}}>{displayMembers[userName]?.emoji || "👤"}</div>
                         <div className="flex-1 min-w-0">
                             <div className="text-[13px] truncate text-white" style={{fontWeight:650}}>{userName}</div>
@@ -6813,7 +7249,7 @@ export default function DashboardPage() {
                         const found = tabs.find(t => t.id === activeTab) || extraTabs[activeTab];
                         return found ? (
                             <div className="mb-6 flex-shrink-0 hidden md:block">
-                                <h2 className="text-[26px] font-extrabold tracking-tight" style={{color:"#0F172A", letterSpacing:"-0.03em"}}>
+                                <h2 className="text-[24px] font-bold tracking-tight" style={{color:"#0F172A", letterSpacing:"-0.02em", lineHeight:"1.3"}}>
                                     {found.icon} {found.label}
                                 </h2>
                             </div>
@@ -6839,7 +7275,7 @@ export default function DashboardPage() {
                     {activeTab === "ideas" && <IdeasView ideas={ideas} onSave={handleSaveIdea} onDelete={handleDeleteIdea} onReorder={list => { setIdeas(list); saveSection("ideas", list); }} currentUser={userName} />}
                     {activeTab === "chat" && <IdeasView ideas={chatPosts} onSave={handleSaveChat} onDelete={handleDeleteChat} onReorder={list => { setChatPosts(list); saveSection("chatPosts", list); }} currentUser={userName} />}
                     {activeTab === "settings" && <SettingsView currentUser={userName} customEmojis={customEmojis} onSaveEmoji={handleSaveEmoji} statusMessages={statusMessages} onSaveStatusMsg={handleSaveStatusMsg} />}
-                    {activeTab === "labChat" && <LabChatView chat={labChat} currentUser={userName} onAdd={handleAddLabChat} onDelete={handleDeleteLabChat} onClear={handleClearLabChat} onRetry={handleRetryLabChat} files={labFiles} onAddFile={handleAddLabFile} onDeleteFile={handleDeleteLabFile} board={labBoard} onSaveBoard={handleSaveLabBoard} onDeleteBoard={handleDeleteLabBoard} />}
+                    {activeTab === "labChat" && <LabChatView chat={labChat} currentUser={userName} onAdd={handleAddLabChat} onUpdate={handleUpdateLabChat} onDelete={handleDeleteLabChat} onClear={handleClearLabChat} onRetry={handleRetryLabChat} files={labFiles} onAddFile={handleAddLabFile} onDeleteFile={handleDeleteLabFile} board={labBoard} onSaveBoard={handleSaveLabBoard} onDeleteBoard={handleDeleteLabBoard} />}
                     {activeTab.startsWith("teamMemo_") && (() => {
                         const tName = activeTab.replace("teamMemo_", "");
                         const data = teamMemos[tName] || { kanban: [], chat: [] };
@@ -6847,7 +7283,7 @@ export default function DashboardPage() {
                     })()}
                     {activeTab.startsWith("memo_") && (() => {
                         const name = activeTab.replace("memo_", "");
-                        return <PersonalMemoView memos={personalMemos[name] || []} onSave={m => handleSaveMemo(name, m)} onDelete={id => handleDeleteMemo(name, id)} files={personalFiles[name] || []} onAddFile={f => handleAddPersonalFile(name, f)} onDeleteFile={id => handleDeletePersonalFile(name, id)} chat={piChat[name] || []} onAddChat={msg => handleAddPiChat(name, msg)} onDeleteChat={id => handleDeletePiChat(name, id)} onClearChat={() => handleClearPiChat(name)} onRetryChat={id => handleRetryPiChat(name, id)} currentUser={userName} />;
+                        return <PersonalMemoView memos={personalMemos[name] || []} onSave={m => handleSaveMemo(name, m)} onDelete={id => handleDeleteMemo(name, id)} files={personalFiles[name] || []} onAddFile={f => handleAddPersonalFile(name, f)} onDeleteFile={id => handleDeletePersonalFile(name, id)} chat={piChat[name] || []} onAddChat={msg => handleAddPiChat(name, msg)} onUpdateChat={msg => handleUpdatePiChat(name, msg)} onDeleteChat={id => handleDeletePiChat(name, id)} onClearChat={() => handleClearPiChat(name)} onRetryChat={id => handleRetryPiChat(name, id)} currentUser={userName} />;
                     })()}
                 </div>
             </div>
