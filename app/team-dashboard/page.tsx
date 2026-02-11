@@ -2,6 +2,10 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef, createContext, useContext } from "react";
 
+// ─── Unique ID generator (collision-safe, monotonic) ────────────────────────
+let _idSeq = 0;
+const genId = () => Date.now() * 100 + (_idSeq++ % 100);
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const DEFAULT_MEMBERS: Record<string, { team: string; role: string; emoji: string }> = {
@@ -470,7 +474,7 @@ function ItemFiles({ files, onChange, currentUser }: { files: LabFile[]; onChang
         setUploading(true);
         try {
             const url = await uploadFile(file);
-            onChange([...files, { id: Date.now(), name: file.name, size: file.size, url, type: file.type, uploader: currentUser, date: new Date().toLocaleString("ko-KR") }]);
+            onChange([...files, { id: genId(), name: file.name, size: file.size, url, type: file.type, uploader: currentUser, date: new Date().toLocaleString("ko-KR") }]);
         } catch { alert("파일 업로드에 실패했습니다."); }
         setUploading(false);
         e.target.value = "";
@@ -542,7 +546,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
     };
     const addComment = () => {
         if (!newComment.trim() && !cImg.img) return;
-        setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]);
+        setComments([...comments, { id: genId(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]);
         setNewComment(""); cImg.clear();
     };
 
@@ -653,7 +657,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
     // Comment draft
     useEffect(() => { if (selected) { const d = loadDraft(`comment_paper_${selected.id}`); if (d) setDetailComment(d); else setDetailComment(""); } }, [selected?.id]);
     useEffect(() => { if (selected) saveDraft(`comment_paper_${selected.id}`, detailComment); }, [detailComment, selected?.id]);
-    const addDetailComment = () => { if (!detailComment.trim() && !cImg.img || !selected) return; clearDraft(`comment_paper_${selected.id}`); const u = { ...selected, comments: [...selected.comments, { id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] }; onSavePaper(u); setSelected(u); setDetailComment(""); cImg.clear(); };
+    const addDetailComment = () => { if (!detailComment.trim() && !cImg.img || !selected) return; clearDraft(`comment_paper_${selected.id}`); const u = { ...selected, comments: [...selected.comments, { id: genId(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] }; onSavePaper(u); setSelected(u); setDetailComment(""); cImg.clear(); };
     const delDetailComment = (cid: number) => { if (!selected) return; const u = { ...selected, comments: selected.comments.filter(c => c.id !== cid) }; onSavePaper(u); setSelected(u); };
     const completedPapers = filtered.filter(p => PAPER_STATUS_MIGRATE(p.status) === "completed");
     const kanbanFiltered = filtered.filter(p => PAPER_STATUS_MIGRATE(p.status) !== "completed");
@@ -976,7 +980,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
     };
     const addChecklistItem = () => {
         if (!newItem.trim()) return;
-        setChecklist([...checklist, { id: Date.now(), text: newItem.trim(), done: false }]);
+        setChecklist([...checklist, { id: genId(), text: newItem.trim(), done: false }]);
         setNewItem("");
     };
     const toggleChecklistItem = (id: number) => {
@@ -987,7 +991,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
     };
     const addComment = () => {
         if (!newComment.trim() && !cImg.img) return;
-        setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]);
+        setComments([...comments, { id: genId(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]);
         setNewComment(""); cImg.clear();
     };
     return (
@@ -1115,7 +1119,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
     // Comment draft
     useEffect(() => { if (selected) { const d = loadDraft(`comment_report_${selected.id}`); if (d) setDetailComment(d); else setDetailComment(""); } }, [selected?.id]);
     useEffect(() => { if (selected) saveDraft(`comment_report_${selected.id}`, detailComment); }, [detailComment, selected?.id]);
-    const addDetailComment = () => { if (!detailComment.trim() && !cImg.img || !selected) return; clearDraft(`comment_report_${selected.id}`); const u = { ...selected, comments: [...selected.comments, { id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] }; onSave(u); setSelected(u); setDetailComment(""); cImg.clear(); };
+    const addDetailComment = () => { if (!detailComment.trim() && !cImg.img || !selected) return; clearDraft(`comment_report_${selected.id}`); const u = { ...selected, comments: [...selected.comments, { id: genId(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] }; onSave(u); setSelected(u); setDetailComment(""); cImg.clear(); };
     const delDetailComment = (cid: number) => { if (!selected) return; const u = { ...selected, comments: selected.comments.filter(c => c.id !== cid) }; onSave(u); setSelected(u); };
     const completedReports = filteredReports.filter(r => r.status === "done");
     const kanbanFilteredReports = filteredReports.filter(r => r.status !== "done");
@@ -1959,7 +1963,7 @@ function TimetableView({ blocks, onSave, onDelete }: {
         if (!formName.trim()) return;
         const color = TIMETABLE_COLORS[blocks.length % TIMETABLE_COLORS.length];
         if (showForm) {
-            onSave({ id: Date.now(), day: showForm.day, startSlot: showForm.start, endSlot: showForm.end, name: formName, students: formStudents, color });
+            onSave({ id: genId(), day: showForm.day, startSlot: showForm.start, endSlot: showForm.end, name: formName, students: formStudents, color });
             setShowForm(null);
         } else if (editBlock) {
             onSave({ ...editBlock, name: formName, students: formStudents });
@@ -2074,7 +2078,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
     };
     const addLog = () => {
         if (!newLog.trim()) return;
-        setLogs([{ id: Date.now(), date: new Date().toLocaleDateString("ko-KR"), author: currentUser, text: newLog.trim() }, ...logs]);
+        setLogs([{ id: genId(), date: new Date().toLocaleDateString("ko-KR"), author: currentUser, text: newLog.trim() }, ...logs]);
         setNewLog("");
     };
 
@@ -2197,7 +2201,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
     // Comment draft
     useEffect(() => { if (selected) { const d = loadDraft(`comment_exp_${selected.id}`); if (d) setDetailComment(d); else setDetailComment(""); } }, [selected?.id]);
     useEffect(() => { if (selected) saveDraft(`comment_exp_${selected.id}`, detailComment); }, [detailComment, selected?.id]);
-    const addDetailComment = () => { if (!detailComment.trim() && !cImg.img || !selected) return; clearDraft(`comment_exp_${selected.id}`); const u = { ...selected, logs: [{ id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }, ...selected.logs] }; onSave(u); setSelected(u); setDetailComment(""); cImg.clear(); };
+    const addDetailComment = () => { if (!detailComment.trim() && !cImg.img || !selected) return; clearDraft(`comment_exp_${selected.id}`); const u = { ...selected, logs: [{ id: genId(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }, ...selected.logs] }; onSave(u); setSelected(u); setDetailComment(""); cImg.clear(); };
     const delDetailComment = (cid: number) => { if (!selected) return; const u = { ...selected, logs: selected.logs.filter(c => c.id !== cid) }; onSave(u); setSelected(u); };
     const completedExperiments = filteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) === "completed");
     const kanbanFilteredExperiments = filteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) !== "completed");
@@ -2516,7 +2520,7 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
     };
     const addLog = () => {
         if (!newLog.trim()) return;
-        setLogs([{ id: Date.now(), date: new Date().toLocaleDateString("ko-KR"), author: currentUser, text: newLog.trim() }, ...logs]);
+        setLogs([{ id: genId(), date: new Date().toLocaleDateString("ko-KR"), author: currentUser, text: newLog.trim() }, ...logs]);
         setNewLog("");
     };
 
@@ -2638,7 +2642,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
     // Comment draft
     useEffect(() => { if (selected) { const d = loadDraft(`comment_analysis_${selected.id}`); if (d) setDetailComment(d); else setDetailComment(""); } }, [selected?.id]);
     useEffect(() => { if (selected) saveDraft(`comment_analysis_${selected.id}`, detailComment); }, [detailComment, selected?.id]);
-    const addDetailComment = () => { if (!detailComment.trim() && !cImg.img || !selected) return; clearDraft(`comment_analysis_${selected.id}`); const u = { ...selected, logs: [{ id: Date.now(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }, ...selected.logs] }; onSave(u); setSelected(u); setDetailComment(""); cImg.clear(); };
+    const addDetailComment = () => { if (!detailComment.trim() && !cImg.img || !selected) return; clearDraft(`comment_analysis_${selected.id}`); const u = { ...selected, logs: [{ id: genId(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }, ...selected.logs] }; onSave(u); setSelected(u); setDetailComment(""); cImg.clear(); };
     const delDetailComment = (cid: number) => { if (!selected) return; const u = { ...selected, logs: selected.logs.filter(c => c.id !== cid) }; onSave(u); setSelected(u); };
     const completedAnalyses = filteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) === "completed");
     const kanbanFilteredAnalyses = filteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) !== "completed");
@@ -2963,7 +2967,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
     const handleAdd = () => {
         if (!newText.trim()) return;
         const assignees = newAssignees.length > 0 ? newAssignees : [currentUser];
-        onAdd({ id: Date.now(), text: newText.trim(), assignees, done: false, priority: newPriority, deadline: newDeadline, progress: newProgress, comments: [] });
+        onAdd({ id: genId(), text: newText.trim(), assignees, done: false, priority: newPriority, deadline: newDeadline, progress: newProgress, comments: [] });
         setNewText(""); setNewAssignees([]); setNewPriority("mid"); setNewDeadline(""); setNewProgress(0); setShowForm(false);
     };
 
@@ -3280,8 +3284,8 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                                 <div className="flex gap-2">
                                     <input value={editNewComment} onChange={e => setEditNewComment(e.target.value)} placeholder="댓글 작성..."
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                        onKeyDown={e => { if (e.key === "Enter" && editNewComment.trim()) { setEditComments([...editComments, { id: Date.now(), author: currentUser, text: editNewComment.trim(), date: new Date().toLocaleDateString("ko-KR") }]); setEditNewComment(""); } }} />
-                                    <button onClick={() => { if (editNewComment.trim()) { setEditComments([...editComments, { id: Date.now(), author: currentUser, text: editNewComment.trim(), date: new Date().toLocaleDateString("ko-KR") }]); setEditNewComment(""); } }}
+                                        onKeyDown={e => { if (e.key === "Enter" && editNewComment.trim()) { setEditComments([...editComments, { id: genId(), author: currentUser, text: editNewComment.trim(), date: new Date().toLocaleDateString("ko-KR") }]); setEditNewComment(""); } }} />
+                                    <button onClick={() => { if (editNewComment.trim()) { setEditComments([...editComments, { id: genId(), author: currentUser, text: editNewComment.trim(), date: new Date().toLocaleDateString("ko-KR") }]); setEditNewComment(""); } }}
                                         className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">전송</button>
                                 </div>
                             </div>
@@ -4236,8 +4240,8 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
                                 <div className="flex gap-2">
                                     <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글 작성... (Ctrl+V 이미지)"
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                        onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && (newComment.trim() || cImg.img)) { setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]); setNewComment(""); cImg.clear(); } }} />
-                                    <button onClick={() => { if (newComment.trim() || cImg.img) { setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]); setNewComment(""); cImg.clear(); } }}
+                                        onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && (newComment.trim() || cImg.img)) { setComments([...comments, { id: genId(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]); setNewComment(""); cImg.clear(); } }} />
+                                    <button onClick={() => { if (newComment.trim() || cImg.img) { setComments([...comments, { id: genId(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]); setNewComment(""); cImg.clear(); } }}
                                         className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">{cImg.uploading ? "⏳" : "전송"}</button>
                                 </div>
                             </div>
@@ -4298,7 +4302,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
     };
     const addComment = () => {
         if (!newComment.trim() && !cImg.img) return;
-        setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]);
+        setComments([...comments, { id: genId(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]);
         setNewComment(""); cImg.clear();
     };
 
@@ -4440,7 +4444,7 @@ function SimpleChatPanel({ chat, currentUser, onAdd, onUpdate, onDelete, onClear
         const now = new Date();
         const h = now.getHours(); const ampm = h < 12 ? "오전" : "오후"; const h12 = h % 12 || 12;
         const dateStr = `${now.getFullYear()}. ${now.getMonth() + 1}. ${now.getDate()}. ${ampm} ${h12}:${String(now.getMinutes()).padStart(2, "0")}`;
-        onAdd({ id: Date.now(), author: currentUser, text: text.trim(), date: dateStr, reactions: {}, ...(replyTo ? { replyTo: { id: replyTo.id, author: replyTo.author, text: replyTo.text?.slice(0, 50) } } : {}) });
+        onAdd({ id: genId(), author: currentUser, text: text.trim(), date: dateStr, reactions: {}, ...(replyTo ? { replyTo: { id: replyTo.id, author: replyTo.author, text: replyTo.text?.slice(0, 50) } } : {}) });
         setText(""); setReplyTo(null);
     };
     const toggleReaction = (msgId: number, emoji: string) => {
@@ -4631,7 +4635,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
     const handleCreate = () => {
         if (!title.trim()) return;
         clearDraft("ideas_add");
-        onSave({ id: Date.now(), title: title.trim(), body: body.trim(), author: currentUser, date: new Date().toLocaleDateString("ko-KR"), comments: [], color: ideaColor, borderColor: ideaBorder, imageUrl: boardImg.img || undefined });
+        onSave({ id: genId(), title: title.trim(), body: body.trim(), author: currentUser, date: new Date().toLocaleDateString("ko-KR"), comments: [], color: ideaColor, borderColor: ideaBorder, imageUrl: boardImg.img || undefined });
         setDraftLoaded(false); setAdding(false); boardImg.clear();
     };
 
@@ -4641,7 +4645,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
     const addComment = () => {
         if (!newComment.trim() && !cImg.img || !selected) return;
         clearDraft(`comment_ideas_${selected.id}`);
-        const updated = { ...selected, comments: [...selected.comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] };
+        const updated = { ...selected, comments: [...selected.comments, { id: genId(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] };
         onSave(updated);
         setSelected(updated);
         setNewComment(""); cImg.clear();
@@ -5333,12 +5337,12 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
     const openAdd = () => { setAdding(true); setTitle(""); setContent(""); setColor(MEMO_COLORS[0]); setBorderColor(""); };
     const saveNew = () => {
         const now = new Date().toISOString().split("T")[0];
-        onSave({ id: Date.now(), title: title.trim() || "제목 없음", content, color, borderColor, updatedAt: now, comments: [] });
+        onSave({ id: genId(), title: title.trim() || "제목 없음", content, color, borderColor, updatedAt: now, comments: [] });
         setAdding(false);
     };
     const addComment = () => {
         if (!newComment.trim() && !cImg.img || !selected) return;
-        const updated = { ...selected, comments: [...(selected.comments || []), { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] };
+        const updated = { ...selected, comments: [...(selected.comments || []), { id: genId(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] };
         onSave(updated); setSelected(updated); setNewComment(""); cImg.clear();
     };
     const deleteComment = (cid: number) => {
@@ -5348,7 +5352,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
     };
     const sendChat = () => {
         if (!chatText.trim() && !chatImg) return;
-        onAddChat({ id: Date.now(), author: currentUser, text: chatText.trim(), date: new Date().toLocaleString("ko-KR"), imageUrl: chatImg || undefined, replyTo: chatReplyTo ? { id: chatReplyTo.id, author: chatReplyTo.author, text: chatReplyTo.text } : undefined });
+        onAddChat({ id: genId(), author: currentUser, text: chatText.trim(), date: new Date().toLocaleString("ko-KR"), imageUrl: chatImg || undefined, replyTo: chatReplyTo ? { id: chatReplyTo.id, author: chatReplyTo.author, text: chatReplyTo.text } : undefined });
         setChatText(""); setChatImg(""); setChatReplyTo(null);
     };
     const handleChatImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -5523,7 +5527,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                                                     className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-400 transition-colors" title="더보기">⋮</button>
                                                                 {piMoreMenuMsgId === msg.id && (
                                                                     <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 min-w-[160px] z-30">
-                                                                        <button onClick={() => { onSave({ id: Date.now(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", color: "#DBEAFE", updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setPiMoreMenuMsgId(null); }}
+                                                                        <button onClick={() => { onSave({ id: genId(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", color: "#DBEAFE", updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setPiMoreMenuMsgId(null); }}
                                                                             className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 노트에 저장</button>
                                                                         {msg.author === currentUser && (<>
                                                                             <div className="h-px bg-slate-100 my-1" />
@@ -5717,7 +5721,7 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
     };
     const addComment = () => {
         if (!newComment.trim() && !cImg.img) return;
-        setComments([...comments, { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]);
+        setComments([...comments, { id: genId(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]);
         setNewComment(""); cImg.clear();
     };
 
@@ -5918,7 +5922,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
 
     const send = () => {
         if (!text.trim() && !chatImg) return;
-        onAdd({ id: Date.now(), author: currentUser, text: text.trim(), date: new Date().toLocaleString("ko-KR"), imageUrl: chatImg || undefined, replyTo: replyTo ? { id: replyTo.id, author: replyTo.author, text: replyTo.text } : undefined });
+        onAdd({ id: genId(), author: currentUser, text: text.trim(), date: new Date().toLocaleString("ko-KR"), imageUrl: chatImg || undefined, replyTo: replyTo ? { id: replyTo.id, author: replyTo.author, text: replyTo.text } : undefined });
         setText(""); setChatImg(""); setReplyTo(null);
     };
     const handleChatImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -5942,7 +5946,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
     };
     const openBoardAdd = () => { setBoardAdding(true); setBoardTitle(""); setBoardContent(""); setBoardColor(MEMO_COLORS[0]); boardImg.clear(); };
     const saveBoard = () => {
-        onSaveBoard({ id: Date.now(), title: boardTitle.trim() || "제목 없음", content: boardContent, status: "left", color: boardColor, author: currentUser, updatedAt: new Date().toISOString().split("T")[0], imageUrl: boardImg.img || undefined });
+        onSaveBoard({ id: genId(), title: boardTitle.trim() || "제목 없음", content: boardContent, status: "left", color: boardColor, author: currentUser, updatedAt: new Date().toISOString().split("T")[0], imageUrl: boardImg.img || undefined });
         setBoardAdding(false); boardImg.clear();
     };
 
@@ -6106,7 +6110,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                                                     className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-400 transition-colors" title="더보기">⋮</button>
                                                                 {moreMenuMsgId === msg.id && (
                                                                     <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 min-w-[160px] z-30">
-                                                                        <button onClick={() => { onSaveBoard({ id: Date.now(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", status: "left", color: "#DBEAFE", author: msg.author, updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setMoreMenuMsgId(null); }}
+                                                                        <button onClick={() => { onSaveBoard({ id: genId(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", status: "left", color: "#DBEAFE", author: msg.author, updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setMoreMenuMsgId(null); }}
                                                                             className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 보드에 고정</button>
                                                                         {msg.author === currentUser && (<>
                                                                             <div className="h-px bg-slate-100 my-1" />
@@ -6227,8 +6231,8 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                     <input value={boardComment} onChange={e => setBoardComment(e.target.value)} placeholder="댓글 작성... (Ctrl+V 이미지)"
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                         onPaste={boardCmtImg.onPaste}
-                                        onKeyDown={e => chatKeyDown(e, () => { if (!boardComment.trim() && !boardCmtImg.img) return; clearDraft(`comment_labboard_${selectedCard.id}`); const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: Date.now(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: boardCmtImg.img || undefined }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); boardCmtImg.clear(); })} />
-                                    <button onClick={() => { if (!boardComment.trim() && !boardCmtImg.img) return; clearDraft(`comment_labboard_${selectedCard.id}`); const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: Date.now(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: boardCmtImg.img || undefined }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); boardCmtImg.clear(); }}
+                                        onKeyDown={e => chatKeyDown(e, () => { if (!boardComment.trim() && !boardCmtImg.img) return; clearDraft(`comment_labboard_${selectedCard.id}`); const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: genId(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: boardCmtImg.img || undefined }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); boardCmtImg.clear(); })} />
+                                    <button onClick={() => { if (!boardComment.trim() && !boardCmtImg.img) return; clearDraft(`comment_labboard_${selectedCard.id}`); const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: genId(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: boardCmtImg.img || undefined }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); boardCmtImg.clear(); }}
                                         className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium">{boardCmtImg.uploading ? "⏳" : "전송"}</button>
                                 </div>
                                 {boardComment && hasDraft(`comment_labboard_${selectedCard.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
@@ -6352,7 +6356,7 @@ function FileBox({ files, currentUser, onAddFile, onDeleteFile, compact }: {
         setUploading(true);
         try {
             const url = await uploadFile(file);
-            onAddFile({ id: Date.now(), name: file.name, size: file.size, url, type: file.type, uploader: currentUser, date: new Date().toLocaleString("ko-KR") });
+            onAddFile({ id: genId(), name: file.name, size: file.size, url, type: file.type, uploader: currentUser, date: new Date().toLocaleString("ko-KR") });
         } catch { alert("파일 업로드에 실패했습니다."); }
         setUploading(false);
         e.target.value = "";
@@ -6479,7 +6483,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     };
     const saveNew = () => {
         const now = new Date().toISOString().split("T")[0];
-        onSaveCard({ id: Date.now(), title: title.trim() || "제목 없음", content, status: col, color, borderColor: borderClr, author: currentUser, updatedAt: now, comments: [], imageUrl: boardImg.img || undefined });
+        onSaveCard({ id: genId(), title: title.trim() || "제목 없음", content, status: col, color, borderColor: borderClr, author: currentUser, updatedAt: now, comments: [], imageUrl: boardImg.img || undefined });
         setShowForm(false); clearDraft(cardDraftKey); setCardDraftLoaded(false); boardImg.clear();
     };
     // Team memo comment draft
@@ -6488,7 +6492,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     const addComment = () => {
         if (!newComment.trim() && !cImg.img || !selected) return;
         clearDraft(teamMemoDraftKey(selected.id));
-        const updated = { ...selected, comments: [...(selected.comments || []), { id: Date.now(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] };
+        const updated = { ...selected, comments: [...(selected.comments || []), { id: genId(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] };
         onSaveCard(updated); setSelected(updated); setNewComment(""); cImg.clear();
     };
     const deleteComment = (cid: number) => {
@@ -6498,7 +6502,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     };
     const sendChat = () => {
         if (!chatText.trim() && !chatImg) return;
-        onAddChat({ id: Date.now(), author: currentUser, text: chatText.trim(), date: new Date().toLocaleString("ko-KR"), imageUrl: chatImg || undefined, replyTo: replyTo ? { id: replyTo.id, author: replyTo.author, text: replyTo.text } : undefined });
+        onAddChat({ id: genId(), author: currentUser, text: chatText.trim(), date: new Date().toLocaleString("ko-KR"), imageUrl: chatImg || undefined, replyTo: replyTo ? { id: replyTo.id, author: replyTo.author, text: replyTo.text } : undefined });
         setChatText(""); setChatImg(""); setReplyTo(null);
     };
     const toggleReaction = (msgId: number, emoji: string) => {
@@ -6736,7 +6740,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                                                     className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-400 transition-colors" title="더보기">⋮</button>
                                                                 {moreMenuMsgId === msg.id && (
                                                                     <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 min-w-[160px] z-30">
-                                                                        <button onClick={() => { onSaveCard({ id: Date.now(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", status: "left", color: "#DBEAFE", author: msg.author, updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setMoreMenuMsgId(null); }}
+                                                                        <button onClick={() => { onSaveCard({ id: genId(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", status: "left", color: "#DBEAFE", author: msg.author, updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setMoreMenuMsgId(null); }}
                                                                             className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 보드에 고정</button>
                                                                         {msg.author === currentUser && (<>
                                                                             <div className="h-px bg-slate-100 my-1" />
@@ -6987,7 +6991,7 @@ function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser, cat
         if (!title.trim()) return;
         const entry: AnalysisLogEntry = editEntry
             ? { ...editEntry, title: title.trim(), date, tool, meshInfo, boundaryConditions, results, notes, imageUrl: imgUrl || undefined, createdAt: editEntry.createdAt, category: category || undefined }
-            : { id: Date.now(), title: title.trim(), date, author: currentUser, tool, meshInfo, boundaryConditions, results, notes, imageUrl: imgUrl || undefined, createdAt: todayStr, category: category || undefined };
+            : { id: genId(), title: title.trim(), date, author: currentUser, tool, meshInfo, boundaryConditions, results, notes, imageUrl: imgUrl || undefined, createdAt: todayStr, category: category || undefined };
         setLocalPending(prev => [...prev.filter(e => e.id !== entry.id), entry]);
         onSave(entry);
         setFormOpen(false);
@@ -7237,7 +7241,7 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
         const now = todayStr;
         const entry: ExpLogEntry = editEntry
             ? { ...editEntry, title: title.trim(), date, conditions, specimen, data: dataField, notes, imageUrl: imgUrl || undefined, createdAt: editEntry.createdAt, category: category || undefined }
-            : { id: Date.now(), title: title.trim(), date, author: currentUser, conditions, specimen, data: dataField, notes, imageUrl: imgUrl || undefined, createdAt: now, category: category || undefined };
+            : { id: genId(), title: title.trim(), date, author: currentUser, conditions, specimen, data: dataField, notes, imageUrl: imgUrl || undefined, createdAt: now, category: category || undefined };
         setLocalPending(prev => [...prev.filter(e => e.id !== entry.id), entry]);
         onSave(entry);
         setFormOpen(false);
