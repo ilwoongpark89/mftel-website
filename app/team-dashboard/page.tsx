@@ -181,16 +181,16 @@ type AnalysisLogEntry = { id: number; title: string; date: string; author: strin
 
 // ─── Read Receipt Popup ──────────────────────────────────────────────────────
 
-function ReadReceiptBadge({ msgId, currentUser, readReceipts }: { msgId: number; currentUser: string; readReceipts?: Record<string, number> }) {
+function ReadReceiptBadge({ msgId, currentUser, readReceipts, showZero }: { msgId: number; currentUser: string; readReceipts?: Record<string, number>; showZero?: boolean }) {
     const MEMBERS = useContext(MembersContext);
     const [show, setShow] = useState(false);
     if (!readReceipts) return null;
     const readers = Object.entries(readReceipts).filter(([user, ts]) => user !== currentUser && ts >= msgId);
-    if (readers.length === 0) return null;
+    if (readers.length === 0 && !showZero) return null;
     return (
-        <div className="relative inline-block">
-            <button onClick={(e) => { e.stopPropagation(); setShow(!show); }} className="text-[10px] text-blue-400 mt-0.5 px-1 hover:text-blue-600 cursor-pointer">
-                읽음 {readers.length}
+        <div className="relative inline-block flex-shrink-0 self-end">
+            <button onClick={(e) => { e.stopPropagation(); setShow(!show); }} className="text-[10px] text-blue-400 px-0.5 hover:text-blue-600 cursor-pointer whitespace-nowrap leading-none">
+                {readers.length}
             </button>
             {show && (
                 <div className="absolute bottom-full right-0 mb-1 bg-white rounded-lg shadow-lg border border-slate-200 py-1.5 px-1 min-w-[120px] z-50" onClick={e => e.stopPropagation()}>
@@ -4412,6 +4412,182 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
     );
 }
 
+// ─── Simple Chat Panel (used by 잡담 tab) ─────────────────────────────────────
+function SimpleChatPanel({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, onRetry, readReceipts }: {
+    chat: TeamChatMsg[]; currentUser: string; onAdd: (msg: TeamChatMsg) => void; onUpdate: (msg: TeamChatMsg) => void; onDelete: (id: number) => void; onClear: () => void; onRetry: (id: number) => void;
+    readReceipts?: Record<string, number>;
+}) {
+    const MEMBERS = useContext(MembersContext);
+    const confirmDel = useContext(ConfirmDeleteContext);
+    const [text, setText] = useState("");
+    const containerRef = useRef<HTMLDivElement>(null);
+    const didInit = useRef(false);
+    const composingRef = useRef(false);
+    const [replyTo, setReplyTo] = useState<TeamChatMsg | null>(null);
+    const [moreMenuMsgId, setMoreMenuMsgId] = useState<number | null>(null);
+    const mention = useMention();
+    const inputRef = useRef<HTMLTextAreaElement>(null);
+    const selectMention = (name: string) => {
+        const el = inputRef.current;
+        const pos = el?.selectionStart ?? text.length;
+        const result = mention.apply(text, pos, name);
+        if (result) { setText(result.newText); mention.close(); setTimeout(() => { el?.focus(); el?.setSelectionRange(result.cursorPos, result.cursorPos); }, 10); }
+    };
+    const scrollBottom = useCallback(() => { const el = containerRef.current; if (el) el.scrollTop = el.scrollHeight; }, []);
+    useEffect(() => { if (!didInit.current && chat.length > 0) { didInit.current = true; setTimeout(scrollBottom, 150); } else { requestAnimationFrame(scrollBottom); } }, [chat.length, scrollBottom]);
+    const sendMsg = () => {
+        if (!text.trim()) return;
+        const now = new Date();
+        const h = now.getHours(); const ampm = h < 12 ? "오전" : "오후"; const h12 = h % 12 || 12;
+        const dateStr = `${now.getFullYear()}. ${now.getMonth() + 1}. ${now.getDate()}. ${ampm} ${h12}:${String(now.getMinutes()).padStart(2, "0")}`;
+        onAdd({ id: Date.now(), author: currentUser, text: text.trim(), date: dateStr, reactions: {}, ...(replyTo ? { replyTo: { id: replyTo.id, author: replyTo.author, text: replyTo.text?.slice(0, 50) } } : {}) });
+        setText(""); setReplyTo(null);
+    };
+    const toggleReaction = (msgId: number, emoji: string) => {
+        const msg = chat.find(m => m.id === msgId); if (!msg) return;
+        const reactions = { ...(msg.reactions || {}) };
+        const users = reactions[emoji] || [];
+        reactions[emoji] = users.includes(currentUser) ? users.filter(u => u !== currentUser) : [...users, currentUser];
+        if (reactions[emoji].length === 0) delete reactions[emoji];
+        onUpdate({ ...msg, reactions });
+    };
+
+    return (
+        <div className="flex flex-col h-full border border-slate-200 rounded-xl bg-white">
+            <div className="flex px-3 py-2.5 border-b border-slate-100 items-center justify-between">
+                <h3 className="text-[14px] font-bold text-slate-700">🗣️ 잡담 채팅</h3>
+                {currentUser === "박일웅" && (
+                    <button onClick={() => confirmDel(() => onClear())} className="text-[11px] text-slate-400 hover:text-red-500 transition-colors">초기화</button>
+                )}
+            </div>
+            <div ref={containerRef} className="flex-1 overflow-y-auto px-3 py-2">
+                {chat.length === 0 && <div className="text-center py-16 text-slate-400 text-[13px]">자유롭게 대화해 보세요!</div>}
+                {chat.map((msg, idx) => {
+                    const prev = idx > 0 ? chat[idx - 1] : null;
+                    const isMe = msg.author === currentUser;
+                    const sameAuthor = prev && prev.author === msg.author && !prev.deleted;
+                    const prevDate = prev ? prev.date.split(/오[전후]/)[0].trim() : "";
+                    const currDate = msg.date.split(/오[전후]/)[0].trim();
+                    const showDateSep = !prev || prevDate !== currDate;
+                    const showAvatar = !isMe && (!sameAuthor || showDateSep);
+                    const tm = msg.date.match(/(오[전후])\s*(\d+:\d+)/);
+                    const timeStr = tm ? `${tm[1] === "오전" ? "AM" : "PM"} ${tm[2]}` : "";
+                    const showMyTime = isMe && (!sameAuthor || showDateSep);
+                    const reactions = msg.reactions || {};
+                    if (msg.deleted) return (
+                        <div key={msg.id} className={`${sameAuthor && !showDateSep ? "mt-[5px]" : "mt-3"} text-center`}>
+                            <span className="text-[12px] text-slate-400 italic">{msg.author}님이 메시지를 삭제했습니다.</span>
+                        </div>
+                    );
+                    return (
+                        <div key={msg.id} data-chat-id={msg.id}>
+                            {showDateSep && (
+                                <div className="flex items-center gap-3 my-4">
+                                    <div className="flex-1 h-px bg-slate-200" />
+                                    <span className="text-[12px] text-slate-400 whitespace-nowrap">{currDate}</span>
+                                    <div className="flex-1 h-px bg-slate-200" />
+                                </div>
+                            )}
+                            <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-[5px]" : "mt-[18px]"} group/msg`}
+                                style={{ opacity: msg._sending ? 0.7 : 1 }}>
+                                {!isMe && (
+                                    <div className="w-8 flex-shrink-0 mr-1.5 self-start">
+                                        {showAvatar ? (
+                                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[14px]">
+                                                {MEMBERS[msg.author]?.emoji || msg.author[0]}
+                                            </div>
+                                        ) : <div className="w-8" />}
+                                    </div>
+                                )}
+                                <div className={`max-w-[80%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                                    {!isMe && showAvatar && (
+                                        <div className="flex items-baseline gap-1.5 mb-0.5 px-1">
+                                            <span className="text-[12px] font-semibold" style={{color:"#64748B"}}>{msg.author}</span>
+                                            <span className="text-[10px]" style={{color:"#94A3B8"}}>{timeStr}</span>
+                                        </div>
+                                    )}
+                                    {isMe && showMyTime && !msg._sending && !msg._failed && (
+                                        <div className="flex justify-end mb-0.5 px-1"><span className="text-[10px]" style={{color:"#94A3B8"}}>{timeStr}</span></div>
+                                    )}
+                                    {msg.replyTo && (
+                                        <div className="text-[10px] text-slate-400 mb-1 px-2 py-1 rounded-lg border-l-[3px] max-w-full truncate cursor-pointer hover:bg-slate-100 transition-colors" style={{background:"#F8F9FA", borderLeftColor:"#CBD5E1"}}
+                                            onClick={() => { const el = document.querySelector(`[data-chat-id="${msg.replyTo!.id}"]`); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("bg-blue-50"); setTimeout(() => el.classList.remove("bg-blue-50"), 1500); } }}>
+                                            <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
+                                        </div>
+                                    )}
+                                    <div className={`flex items-end gap-1 ${isMe ? "flex-row-reverse" : ""}`}>
+                                        <div className="relative" style={{ marginBottom: Object.keys(reactions).length > 0 ? 12 : 0 }}>
+                                            {!msg._sending && !msg._failed && (
+                                                <div className="absolute -top-3 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
+                                                    <div className="flex items-center bg-white rounded-full px-1.5 py-1 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
+                                                        {["👍","✅","😂"].map(em => (
+                                                            <button key={em} onClick={() => toggleReaction(msg.id, em)}
+                                                                className={`w-6 h-6 flex items-center justify-center rounded-full text-[12px] transition-colors ${reactions[em]?.includes(currentUser) ? "bg-blue-50" : "hover:bg-slate-100"}`}>{em}</button>
+                                                        ))}
+                                                        <button onClick={() => setReplyTo(msg)} className="w-6 h-6 flex items-center justify-center rounded-full text-[12px] hover:bg-slate-100">↩</button>
+                                                        {(isMe || currentUser === "박일웅") && (
+                                                            <div className="relative">
+                                                                <button onClick={() => setMoreMenuMsgId(moreMenuMsgId === msg.id ? null : msg.id)}
+                                                                    className="w-6 h-6 flex items-center justify-center rounded-full text-[12px] hover:bg-slate-100 text-slate-400">⋯</button>
+                                                                {moreMenuMsgId === msg.id && (
+                                                                    <>
+                                                                        <div className="fixed inset-0 z-20" onClick={() => setMoreMenuMsgId(null)} />
+                                                                        <div className="absolute right-0 top-8 bg-white rounded-lg shadow-lg border py-1 z-30 min-w-[80px]">
+                                                                            <button onClick={() => { onDelete(msg.id); setMoreMenuMsgId(null); }} className="w-full px-3 py-1.5 text-[12px] text-red-500 hover:bg-red-50 text-left">삭제</button>
+                                                                        </div>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div className={`px-3 py-2 rounded-2xl text-[13px] leading-relaxed break-words whitespace-pre-wrap ${isMe ? "rounded-tr-md" : "rounded-tl-md"}`}
+                                                style={{ background: isMe ? "#3B82F6" : "#F1F5F9", color: isMe ? "#FFFFFF" : "#1E293B" }}>
+                                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full rounded-lg mb-1 max-h-[200px] object-contain cursor-pointer" />}
+                                                {msg.text && renderWithMentions(msg.text)}
+                                            </div>
+                                            {Object.keys(reactions).length > 0 && (
+                                                <div className="flex flex-wrap gap-0.5 mt-0.5 absolute -bottom-3 left-0">
+                                                    {Object.entries(reactions).filter(([, u]) => u.length > 0).map(([em, users]) => (
+                                                        <button key={em} onClick={() => toggleReaction(msg.id, em)}
+                                                            className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] border ${users.includes(currentUser) ? "bg-blue-50 border-blue-200" : "bg-white border-slate-200"}`}>
+                                                            {em} {users.length}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        {!msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} showZero={!isMe} />}
+                                    </div>
+                                    {msg._failed && <button onClick={() => onRetry(msg.id)} className="text-[11px] text-red-500 mt-1 px-1 hover:underline">전송 실패 · 다시 시도</button>}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+            {replyTo && (
+                <div className="px-3 py-1.5 bg-slate-50 border-t border-slate-100 flex items-center gap-2 text-[12px]">
+                    <span className="text-slate-500 truncate flex-1">↩ <span className="font-medium">{replyTo.author}</span>: {replyTo.text?.slice(0, 40)}</span>
+                    <button onClick={() => setReplyTo(null)} className="text-slate-400 hover:text-red-500">✕</button>
+                </div>
+            )}
+            {mention.open && <MentionPopup m={mention} onSelect={selectMention} />}
+            <div className="px-2 py-2 border-t border-slate-100 flex items-end gap-1.5">
+                <textarea ref={inputRef} value={text}
+                    onChange={e => { setText(e.target.value); mention.check(e.target.value, e.target.selectionStart || 0); }}
+                    onKeyDown={e => chatKeyDown(e, sendMsg, composingRef)}
+                    onCompositionStart={() => { composingRef.current = true; }}
+                    onCompositionEnd={() => { composingRef.current = false; }}
+                    placeholder="메시지 입력..."
+                    className="flex-1 resize-none border border-slate-200 rounded-xl px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-blue-400 max-h-[80px]" rows={1} />
+                <button onClick={sendMsg} disabled={!text.trim()} className="px-3 py-2 bg-blue-500 text-white rounded-xl text-[13px] font-medium disabled:opacity-30 hover:bg-blue-600 transition-colors">전송</button>
+            </div>
+        </div>
+    );
+}
+
 // ─── Ideas / Chat View ──────────────────────────────────────────────────────
 
 function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas: IdeaPost[]; onSave: (i: IdeaPost) => void; onDelete: (id: number) => void; onReorder: (list: IdeaPost[]) => void; currentUser: string }) {
@@ -5284,7 +5460,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                             </div>
                         );
                         return (
-                            <div key={msg.id}>
+                            <div key={msg.id} data-chat-id={msg.id}>
                                 {showDateSep && (
                                     <div className="flex items-center gap-3 my-4">
                                         <div className="flex-1 h-px bg-slate-200" />
@@ -5317,69 +5493,72 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                             </div>
                                         )}
                                         {msg.replyTo && (
-                                            <div className="text-[11px] text-slate-400 mb-1 px-3 py-1.5 rounded-lg border-l-[3px] max-w-full truncate" style={{background:"#F8F9FA", borderLeftColor:"#CBD5E1"}}>
+                                            <div className="text-[11px] text-slate-400 mb-1 px-3 py-1.5 rounded-lg border-l-[3px] max-w-full truncate cursor-pointer hover:bg-slate-100 transition-colors" style={{background:"#F8F9FA", borderLeftColor:"#CBD5E1"}}
+                                                onClick={() => { const el = document.querySelector(`[data-chat-id="${msg.replyTo!.id}"]`); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("bg-blue-50"); setTimeout(() => el.classList.remove("bg-blue-50"), 1500); } }}>
                                                 <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                             </div>
                                         )}
-                                        <div className="relative" style={{ marginBottom: Object.keys(reactions).length > 0 ? 14 : 0 }}>
-                                            {/* Hover action bar — fixed to top-right of bubble */}
-                                            {!msg._sending && !msg._failed && (
-                                                <div className="absolute -top-3 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
-                                                    <div className="flex items-center bg-white rounded-full px-2 py-1.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
-                                                        {["👍","✅","😂"].map(em => (
-                                                            <button key={em} onClick={() => toggleReaction(msg.id, em)}
-                                                                className={`w-7 h-7 flex items-center justify-center rounded-full text-[14px] transition-colors ${reactions[em]?.includes(currentUser) ? "bg-blue-50" : "hover:bg-slate-100"}`}>{em}</button>
-                                                        ))}
-                                                        <div className="relative">
-                                                            <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
-                                                                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] transition-colors">😊</button>
-                                                            {emojiPickerMsgId === msg.id && (
-                                                                <EmojiPickerPopup onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
-                                                            )}
-                                                        </div>
-                                                        <button onClick={() => setChatReplyTo(msg)}
-                                                            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-500 transition-colors" title="답장">↩</button>
-                                                        <div className="w-px h-4 bg-slate-200 mx-0.5" />
-                                                        <div className="relative">
-                                                            <button onClick={() => setPiMoreMenuMsgId(piMoreMenuMsgId === msg.id ? null : msg.id)}
-                                                                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-400 transition-colors" title="더보기">⋮</button>
-                                                            {piMoreMenuMsgId === msg.id && (
-                                                                <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 min-w-[160px] z-30">
-                                                                    <button onClick={() => { onSave({ id: Date.now(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", color: "#DBEAFE", updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setPiMoreMenuMsgId(null); }}
-                                                                        className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 노트에 저장</button>
-                                                                    {msg.author === currentUser && (<>
-                                                                        <div className="h-px bg-slate-100 my-1" />
-                                                                        <button onClick={() => confirmDel(() => { onUpdateChat({ ...msg, deleted: true, text: "", imageUrl: undefined }); setPiMoreMenuMsgId(null); })}
-                                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-600 hover:bg-slate-50 flex items-center gap-2"><span className="text-red-400">🗑</span> 삭제</button>
-                                                                    </>)}
-                                                                </div>
-                                                            )}
+                                        <div className={`flex items-end gap-1 ${isMe ? "flex-row-reverse" : ""}`}>
+                                            <div className="relative" style={{ marginBottom: Object.keys(reactions).length > 0 ? 14 : 0 }}>
+                                                {/* Hover action bar — fixed to top-right of bubble */}
+                                                {!msg._sending && !msg._failed && (
+                                                    <div className="absolute -top-3 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
+                                                        <div className="flex items-center bg-white rounded-full px-2 py-1.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
+                                                            {["👍","✅","😂"].map(em => (
+                                                                <button key={em} onClick={() => toggleReaction(msg.id, em)}
+                                                                    className={`w-7 h-7 flex items-center justify-center rounded-full text-[14px] transition-colors ${reactions[em]?.includes(currentUser) ? "bg-blue-50" : "hover:bg-slate-100"}`}>{em}</button>
+                                                            ))}
+                                                            <div className="relative">
+                                                                <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
+                                                                    className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] transition-colors">😊</button>
+                                                                {emojiPickerMsgId === msg.id && (
+                                                                    <EmojiPickerPopup onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
+                                                                )}
+                                                            </div>
+                                                            <button onClick={() => setChatReplyTo(msg)}
+                                                                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-500 transition-colors" title="답장">↩</button>
+                                                            <div className="w-px h-4 bg-slate-200 mx-0.5" />
+                                                            <div className="relative">
+                                                                <button onClick={() => setPiMoreMenuMsgId(piMoreMenuMsgId === msg.id ? null : msg.id)}
+                                                                    className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-400 transition-colors" title="더보기">⋮</button>
+                                                                {piMoreMenuMsgId === msg.id && (
+                                                                    <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 min-w-[160px] z-30">
+                                                                        <button onClick={() => { onSave({ id: Date.now(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", color: "#DBEAFE", updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setPiMoreMenuMsgId(null); }}
+                                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 노트에 저장</button>
+                                                                        {msg.author === currentUser && (<>
+                                                                            <div className="h-px bg-slate-100 my-1" />
+                                                                            <button onClick={() => confirmDel(() => { onUpdateChat({ ...msg, deleted: true, text: "", imageUrl: undefined }); setPiMoreMenuMsgId(null); })}
+                                                                                className="w-full text-left px-3 py-2 text-[13px] text-slate-600 hover:bg-slate-50 flex items-center gap-2"><span className="text-red-400">🗑</span> 삭제</button>
+                                                                        </>)}
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                )}
+                                                <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "12px 16px", lineHeight: "1.65" }}
+                                                    className="text-[13.5px] text-slate-800">
+                                                    {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollPiChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
+                                                    {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
                                                 </div>
-                                            )}
-                                            <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "12px 16px", lineHeight: "1.65" }}
-                                                className="text-[13.5px] text-slate-800">
-                                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollPiChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
-                                                {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
+                                                {Object.keys(reactions).length > 0 && (
+                                                    <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
+                                                        {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
+                                                            <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
+                                                                className={`inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[11px] border shadow-sm transition-colors ${users.includes(currentUser) ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                                                                {emoji}{users.length}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
-                                            {Object.keys(reactions).length > 0 && (
-                                                <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
-                                                    {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
-                                                        <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
-                                                            className={`inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[11px] border shadow-sm transition-colors ${users.includes(currentUser) ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
-                                                            {emoji}{users.length}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
+                                            {!msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} showZero={!isMe} />}
                                         </div>
                                         {isMe && (msg._sending || msg._failed) && (
                                             <div className="text-[11px] text-slate-400 mt-0.5 px-1">
                                                 {msg._sending ? <span className="animate-pulse">전송 중...</span> : <span className="text-red-500">⚠️ 전송 실패 <button onClick={() => onRetryChat(msg.id)} className="underline hover:text-red-600 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={() => onDeleteChat(msg.id)} className="underline hover:text-red-600">삭제</button></span>}
                                             </div>
                                         )}
-                                        {isMe && !msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} />}
                                     </div>
                                 </div>
                             </div>
@@ -5864,7 +6043,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                             </div>
                         );
                         return (
-                            <div key={msg.id}>
+                            <div key={msg.id} data-chat-id={msg.id}>
                                 {showDateSep && (
                                     <div className="flex items-center gap-3 my-4">
                                         <div className="flex-1 h-px bg-slate-200" />
@@ -5897,69 +6076,72 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                             </div>
                                         )}
                                         {msg.replyTo && (
-                                            <div className="text-[11px] text-slate-400 mb-1 px-3 py-1.5 rounded-lg border-l-[3px] max-w-full truncate" style={{background:"#F8F9FA", borderLeftColor:"#CBD5E1"}}>
+                                            <div className="text-[11px] text-slate-400 mb-1 px-3 py-1.5 rounded-lg border-l-[3px] max-w-full truncate cursor-pointer hover:bg-slate-100 transition-colors" style={{background:"#F8F9FA", borderLeftColor:"#CBD5E1"}}
+                                                onClick={() => { const el = document.querySelector(`[data-chat-id="${msg.replyTo!.id}"]`); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("bg-blue-50"); setTimeout(() => el.classList.remove("bg-blue-50"), 1500); } }}>
                                                 <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                             </div>
                                         )}
-                                        <div className="relative" style={{ marginBottom: Object.keys(reactions).length > 0 ? 14 : 0 }}>
-                                            {/* Hover action bar — fixed to top-right of bubble */}
-                                            {!msg._sending && !msg._failed && (
-                                                <div className="absolute -top-3 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
-                                                    <div className="flex items-center bg-white rounded-full px-2 py-1.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
-                                                        {["👍","✅","😂"].map(em => (
-                                                            <button key={em} onClick={() => toggleReaction(msg.id, em)}
-                                                                className={`w-7 h-7 flex items-center justify-center rounded-full text-[14px] transition-colors ${reactions[em]?.includes(currentUser) ? "bg-blue-50" : "hover:bg-slate-100"}`}>{em}</button>
-                                                        ))}
-                                                        <div className="relative">
-                                                            <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
-                                                                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] transition-colors">😊</button>
-                                                            {emojiPickerMsgId === msg.id && (
-                                                                <EmojiPickerPopup onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
-                                                            )}
-                                                        </div>
-                                                        <button onClick={() => setReplyTo(msg)}
-                                                            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-500 transition-colors" title="답장">↩</button>
-                                                        <div className="w-px h-4 bg-slate-200 mx-0.5" />
-                                                        <div className="relative">
-                                                            <button onClick={() => setMoreMenuMsgId(moreMenuMsgId === msg.id ? null : msg.id)}
-                                                                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-400 transition-colors" title="더보기">⋮</button>
-                                                            {moreMenuMsgId === msg.id && (
-                                                                <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 min-w-[160px] z-30">
-                                                                    <button onClick={() => { onSaveBoard({ id: Date.now(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", status: "left", color: "#DBEAFE", author: msg.author, updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setMoreMenuMsgId(null); }}
-                                                                        className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 보드에 고정</button>
-                                                                    {msg.author === currentUser && (<>
-                                                                        <div className="h-px bg-slate-100 my-1" />
-                                                                        <button onClick={() => confirmDel(() => { onUpdate({ ...msg, deleted: true, text: "", imageUrl: undefined }); setMoreMenuMsgId(null); })}
-                                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-600 hover:bg-slate-50 flex items-center gap-2"><span className="text-red-400">🗑</span> 삭제</button>
-                                                                    </>)}
-                                                                </div>
-                                                            )}
+                                        <div className={`flex items-end gap-1 ${isMe ? "flex-row-reverse" : ""}`}>
+                                            <div className="relative" style={{ marginBottom: Object.keys(reactions).length > 0 ? 14 : 0 }}>
+                                                {/* Hover action bar — fixed to top-right of bubble */}
+                                                {!msg._sending && !msg._failed && (
+                                                    <div className="absolute -top-3 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
+                                                        <div className="flex items-center bg-white rounded-full px-2 py-1.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
+                                                            {["👍","✅","😂"].map(em => (
+                                                                <button key={em} onClick={() => toggleReaction(msg.id, em)}
+                                                                    className={`w-7 h-7 flex items-center justify-center rounded-full text-[14px] transition-colors ${reactions[em]?.includes(currentUser) ? "bg-blue-50" : "hover:bg-slate-100"}`}>{em}</button>
+                                                            ))}
+                                                            <div className="relative">
+                                                                <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
+                                                                    className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] transition-colors">😊</button>
+                                                                {emojiPickerMsgId === msg.id && (
+                                                                    <EmojiPickerPopup onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
+                                                                )}
+                                                            </div>
+                                                            <button onClick={() => setReplyTo(msg)}
+                                                                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-500 transition-colors" title="답장">↩</button>
+                                                            <div className="w-px h-4 bg-slate-200 mx-0.5" />
+                                                            <div className="relative">
+                                                                <button onClick={() => setMoreMenuMsgId(moreMenuMsgId === msg.id ? null : msg.id)}
+                                                                    className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-400 transition-colors" title="더보기">⋮</button>
+                                                                {moreMenuMsgId === msg.id && (
+                                                                    <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 min-w-[160px] z-30">
+                                                                        <button onClick={() => { onSaveBoard({ id: Date.now(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", status: "left", color: "#DBEAFE", author: msg.author, updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setMoreMenuMsgId(null); }}
+                                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 보드에 고정</button>
+                                                                        {msg.author === currentUser && (<>
+                                                                            <div className="h-px bg-slate-100 my-1" />
+                                                                            <button onClick={() => confirmDel(() => { onUpdate({ ...msg, deleted: true, text: "", imageUrl: undefined }); setMoreMenuMsgId(null); })}
+                                                                                className="w-full text-left px-3 py-2 text-[13px] text-slate-600 hover:bg-slate-50 flex items-center gap-2"><span className="text-red-400">🗑</span> 삭제</button>
+                                                                        </>)}
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                )}
+                                                <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "12px 16px", lineHeight: "1.65" }}
+                                                    className="text-[13.5px] text-slate-800">
+                                                    {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1.5 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollLabChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
+                                                    {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
                                                 </div>
-                                            )}
-                                            <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "12px 16px", lineHeight: "1.65" }}
-                                                className="text-[13.5px] text-slate-800">
-                                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1.5 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollLabChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
-                                                {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
+                                                {Object.keys(reactions).length > 0 && (
+                                                    <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
+                                                        {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
+                                                            <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
+                                                                className={`inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[11px] border shadow-sm transition-colors ${users.includes(currentUser) ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                                                                {emoji}{users.length}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
-                                            {Object.keys(reactions).length > 0 && (
-                                                <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
-                                                    {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
-                                                        <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
-                                                            className={`inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[11px] border shadow-sm transition-colors ${users.includes(currentUser) ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
-                                                            {emoji}{users.length}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
+                                            {!msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} showZero={!isMe} />}
                                         </div>
                                         {isMe && (msg._sending || msg._failed) && (
                                             <div className="text-[11px] text-slate-400 mt-0.5 px-1">
                                                 {msg._sending ? <span className="animate-pulse">전송 중...</span> : <span className="text-red-500">⚠️ 전송 실패 <button onClick={() => onRetry(msg.id)} className="underline hover:text-red-600 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={() => onDelete(msg.id)} className="underline hover:text-red-600">삭제</button></span>}
                                             </div>
                                         )}
-                                        {isMe && !msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} />}
                                     </div>
                                 </div>
                             </div>
@@ -6491,7 +6673,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                             </div>
                         );
                         return (
-                            <div key={msg.id}>
+                            <div key={msg.id} data-chat-id={msg.id}>
                                 {showDateSep && (
                                     <div className="flex items-center gap-3 my-4">
                                         <div className="flex-1 h-px bg-slate-200" />
@@ -6524,69 +6706,72 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                             </div>
                                         )}
                                         {msg.replyTo && (
-                                            <div className="text-[11px] text-slate-400 mb-1 px-3 py-1.5 rounded-lg border-l-[3px] max-w-full truncate" style={{background:"#F8F9FA", borderLeftColor:"#CBD5E1"}}>
+                                            <div className="text-[11px] text-slate-400 mb-1 px-3 py-1.5 rounded-lg border-l-[3px] max-w-full truncate cursor-pointer hover:bg-slate-100 transition-colors" style={{background:"#F8F9FA", borderLeftColor:"#CBD5E1"}}
+                                                onClick={() => { const el = document.querySelector(`[data-chat-id="${msg.replyTo!.id}"]`); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("bg-blue-50"); setTimeout(() => el.classList.remove("bg-blue-50"), 1500); } }}>
                                                 <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                             </div>
                                         )}
-                                        <div className="relative" style={{ marginBottom: (!msg._sending && !msg._failed && Object.keys(reactions).length > 0) ? 14 : 0 }}>
-                                            {/* Hover action bar — fixed to top-right of bubble */}
-                                            {!msg._sending && !msg._failed && (
-                                                <div className="absolute -top-3 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
-                                                    <div className="flex items-center bg-white rounded-full px-2 py-1.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
-                                                        {["👍","✅","😂"].map(em => (
-                                                            <button key={em} onClick={() => toggleReaction(msg.id, em)}
-                                                                className={`w-7 h-7 flex items-center justify-center rounded-full text-[14px] transition-colors ${reactions[em]?.includes(currentUser) ? "bg-blue-50" : "hover:bg-slate-100"}`}>{em}</button>
-                                                        ))}
-                                                        <div className="relative">
-                                                            <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
-                                                                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] transition-colors">😊</button>
-                                                            {emojiPickerMsgId === msg.id && (
-                                                                <EmojiPickerPopup onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
-                                                            )}
-                                                        </div>
-                                                        <button onClick={() => setReplyTo(msg)}
-                                                            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-500 transition-colors" title="답장">↩</button>
-                                                        <div className="w-px h-4 bg-slate-200 mx-0.5" />
-                                                        <div className="relative">
-                                                            <button onClick={() => setMoreMenuMsgId(moreMenuMsgId === msg.id ? null : msg.id)}
-                                                                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-400 transition-colors" title="더보기">⋮</button>
-                                                            {moreMenuMsgId === msg.id && (
-                                                                <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 min-w-[160px] z-30">
-                                                                    <button onClick={() => { onSaveCard({ id: Date.now(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", status: "left", color: "#DBEAFE", author: msg.author, updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setMoreMenuMsgId(null); }}
-                                                                        className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 보드에 고정</button>
-                                                                    {msg.author === currentUser && (<>
-                                                                        <div className="h-px bg-slate-100 my-1" />
-                                                                        <button onClick={() => confirmDel(() => { onUpdateChat({ ...msg, deleted: true, text: "", imageUrl: undefined }); setMoreMenuMsgId(null); })}
-                                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-600 hover:bg-slate-50 flex items-center gap-2"><span className="text-red-400">🗑</span> 삭제</button>
-                                                                    </>)}
-                                                                </div>
-                                                            )}
+                                        <div className={`flex items-end gap-1 ${isMe ? "flex-row-reverse" : ""}`}>
+                                            <div className="relative" style={{ marginBottom: (!msg._sending && !msg._failed && Object.keys(reactions).length > 0) ? 14 : 0 }}>
+                                                {/* Hover action bar — fixed to top-right of bubble */}
+                                                {!msg._sending && !msg._failed && (
+                                                    <div className="absolute -top-3 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
+                                                        <div className="flex items-center bg-white rounded-full px-2 py-1.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
+                                                            {["👍","✅","😂"].map(em => (
+                                                                <button key={em} onClick={() => toggleReaction(msg.id, em)}
+                                                                    className={`w-7 h-7 flex items-center justify-center rounded-full text-[14px] transition-colors ${reactions[em]?.includes(currentUser) ? "bg-blue-50" : "hover:bg-slate-100"}`}>{em}</button>
+                                                            ))}
+                                                            <div className="relative">
+                                                                <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
+                                                                    className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] transition-colors">😊</button>
+                                                                {emojiPickerMsgId === msg.id && (
+                                                                    <EmojiPickerPopup onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
+                                                                )}
+                                                            </div>
+                                                            <button onClick={() => setReplyTo(msg)}
+                                                                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-500 transition-colors" title="답장">↩</button>
+                                                            <div className="w-px h-4 bg-slate-200 mx-0.5" />
+                                                            <div className="relative">
+                                                                <button onClick={() => setMoreMenuMsgId(moreMenuMsgId === msg.id ? null : msg.id)}
+                                                                    className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] text-slate-400 transition-colors" title="더보기">⋮</button>
+                                                                {moreMenuMsgId === msg.id && (
+                                                                    <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 min-w-[160px] z-30">
+                                                                        <button onClick={() => { onSaveCard({ id: Date.now(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", status: "left", color: "#DBEAFE", author: msg.author, updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setMoreMenuMsgId(null); }}
+                                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 보드에 고정</button>
+                                                                        {msg.author === currentUser && (<>
+                                                                            <div className="h-px bg-slate-100 my-1" />
+                                                                            <button onClick={() => confirmDel(() => { onUpdateChat({ ...msg, deleted: true, text: "", imageUrl: undefined }); setMoreMenuMsgId(null); })}
+                                                                                className="w-full text-left px-3 py-2 text-[13px] text-slate-600 hover:bg-slate-50 flex items-center gap-2"><span className="text-red-400">🗑</span> 삭제</button>
+                                                                        </>)}
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                )}
+                                                <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "12px 16px", lineHeight: "1.65" }}
+                                                    className="text-[13.5px] text-slate-800">
+                                                    {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1.5 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollTeamChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
+                                                    {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
                                                 </div>
-                                            )}
-                                            <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "12px 16px", lineHeight: "1.65" }}
-                                                className="text-[13.5px] text-slate-800">
-                                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1.5 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollTeamChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
-                                                {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
+                                                {!msg._sending && !msg._failed && Object.keys(reactions).length > 0 && (
+                                                    <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
+                                                        {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
+                                                            <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
+                                                                className={`inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[11px] border shadow-sm transition-colors ${users.includes(currentUser) ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                                                                {emoji}{users.length}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
-                                            {!msg._sending && !msg._failed && Object.keys(reactions).length > 0 && (
-                                                <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
-                                                    {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
-                                                        <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
-                                                            className={`inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[11px] border shadow-sm transition-colors ${users.includes(currentUser) ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
-                                                            {emoji}{users.length}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
+                                            {!msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} showZero={!isMe} />}
                                         </div>
                                         {isMe && (msg._sending || msg._failed) && (
                                             <div className="text-[11px] text-slate-400 mt-0.5 px-1">
                                                 {msg._sending ? <span className="animate-pulse">전송 중...</span> : <span className="text-red-500">⚠️ 전송 실패 <button onClick={() => onRetryChat(msg.id)} className="underline hover:text-red-600 ml-0.5">재전송</button> <span className="mx-0.5">|</span> <button onClick={() => onDeleteChat(msg.id)} className="underline hover:text-red-600">삭제</button></span>}
                                             </div>
                                         )}
-                                        {isMe && !msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} />}
                                     </div>
                                 </div>
                             </div>
@@ -7383,9 +7568,9 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
         <div className="space-y-5">
             {/* Team mode: page title + date + online users */}
             {!isPersonal && (
-                <div className="mb-1">
-                    <h2 className="text-[24px] font-bold tracking-tight mb-2" style={{color:"#0F172A", letterSpacing:"-0.02em", lineHeight:"1.3"}}>🏠 연구실 현황</h2>
-                    <div className="flex items-center gap-3">
+                <div className="mb-2">
+                    <h2 className="text-[24px] font-bold tracking-tight mb-3" style={{color:"#0F172A", letterSpacing:"-0.02em", lineHeight:"1.3"}}>🏠 연구실 현황</h2>
+                    <div className="flex items-center gap-3 py-1">
                         <span className="text-[13.5px]" style={{color:"#94A3B8"}}>{dateLabel}</span>
                         <span className="text-[13px] flex items-center gap-1.5" style={{color:"#94A3B8"}}>
                             · 접속 중 <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" /></span>
@@ -7439,7 +7624,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                         {isPersonal ? "내 마감 일정" : "다가오는 마감"}
                         <span className="px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600 text-[11px] font-semibold">{upcomingDeadlines.length}</span>
                     </h3>
-                    <div className="flex gap-2.5 overflow-x-auto pb-1" style={{scrollbarWidth:"thin", scrollbarColor:"rgba(0,0,0,0.08) transparent"}}>
+                    <div className="flex gap-2.5 overflow-hidden pb-1">
                         {upcomingDeadlines.slice(0, 20).map((dl, i) => (
                             <button key={`${dl.tab}-${dl.title}-${i}`} onClick={() => onNavigate(dl.tab)} className="flex-shrink-0 rounded-xl p-3 text-left transition-all hover:shadow-md hover:-translate-y-0.5 group" style={{background:`${dl.color}08`, border:`1px solid ${dl.color}30`, minWidth:"160px", maxWidth:"200px"}}>
                                 <div className="flex items-center justify-between mb-1.5">
@@ -7961,6 +8146,7 @@ export default function DashboardPage() {
     const [piChat, setPiChat] = useState<Record<string, TeamChatMsg[]>>({});
     const [teamMemos, setTeamMemos] = useState<Record<string, { kanban: TeamMemoCard[]; chat: TeamChatMsg[]; files?: LabFile[] }>>({});
     const [labChat, setLabChat] = useState<TeamChatMsg[]>([]);
+    const [casualChat, setCasualChat] = useState<TeamChatMsg[]>([]);
     const [labFiles, setLabFiles] = useState<LabFile[]>([]);
     const [labBoard, setLabBoard] = useState<TeamMemoCard[]>([]);
     const [chatReadTs, setChatReadTs] = useState<Record<string, number>>({});
@@ -7982,6 +8168,7 @@ export default function DashboardPage() {
         { id: "overview", label: "연구실 현황", icon: "🏠" },
         { id: "overview_me", label: `개별 현황 (${userName})`, icon: "👤" },
         { id: "labChat", label: "연구실 채팅", icon: "💬" },
+        { id: "chat", label: "잡담", icon: "🗣️" },
         // 운영
         { id: "announcements", label: "공지사항", icon: "📢" },
         { id: "calendar", label: "일정/휴가", icon: "📅" },
@@ -8004,7 +8191,6 @@ export default function DashboardPage() {
         { id: "meetings", label: "회의록", icon: "📝" },
         { id: "resources", label: "자료", icon: "📁" },
         { id: "ideas", label: "아이디어", icon: "💡" },
-        { id: "chat", label: "잡담", icon: "💬" },
         { id: "lectures", label: "수업", icon: "📚" },
     ];
 
@@ -8127,6 +8313,7 @@ export default function DashboardPage() {
             if (d.piChat) setPiChat(d.piChat);
             if (d.teamMemos) setTeamMemos(d.teamMemos);
             if (d.labChat) setLabChat(d.labChat);
+            if (d.casualChat) setCasualChat(d.casualChat);
             if (d.labFiles) setLabFiles(d.labFiles);
             if (d.labBoard) setLabBoard(d.labBoard);
             if (d.readReceipts) setReadReceipts(d.readReceipts);
@@ -8345,6 +8532,7 @@ export default function DashboardPage() {
 
     // chatReadTs: mark current tab as read (on tab switch + when new msgs arrive while viewing)
     const activeChatLen = activeTab === "labChat" ? (labChat.length + labBoard.length)
+        : activeTab === "chat" ? (casualChat.length + chatPosts.length)
         : activeTab.startsWith("teamMemo_") ? ((teamMemos[activeTab.replace("teamMemo_", "")]?.chat || []).length + (teamMemos[activeTab.replace("teamMemo_", "")]?.kanban || []).length)
         : activeTab.startsWith("memo_") ? (piChat[activeTab.replace("memo_", "")] || []).length
         : activeTab === "announcements" ? announcements.length : -1;
@@ -8810,6 +8998,50 @@ export default function DashboardPage() {
             return u;
         });
     };
+    // ─── Casual Chat (잡담) handlers ─────────────────────────────────
+    const handleAddCasualChat = (msg: TeamChatMsg) => {
+        setCasualChat(prev => [...prev, { ...msg, _sending: true }]);
+        pendingSavesRef.current++;
+        setCasualChat(cur => {
+            saveSection("casualChat", stripMsgFlags(cur)).then(ok => {
+                pendingSavesRef.current--;
+                setCasualChat(p => p.map(m => m.id === msg.id ? { ...m, _sending: undefined, ...(ok ? {} : { _failed: true }) } : m));
+            });
+            return cur;
+        });
+    };
+    const handleRetryCasualChat = (msgId: number) => {
+        pendingSavesRef.current++;
+        setCasualChat(prev => {
+            const updated = prev.map(m => m.id === msgId ? { ...m, _sending: true, _failed: undefined } : m);
+            saveSection("casualChat", stripMsgFlags(updated)).then(ok => {
+                pendingSavesRef.current--;
+                setCasualChat(p => p.map(m => m.id === msgId ? { ...m, _sending: undefined, ...(ok ? {} : { _failed: true }) } : m));
+            });
+            return updated;
+        });
+    };
+    const handleDeleteCasualChat = (id: number) => {
+        pendingSavesRef.current++;
+        setCasualChat(prev => {
+            const u = prev.filter(c => c.id !== id);
+            saveSection("casualChat", stripMsgFlags(u)).then(() => { pendingSavesRef.current--; });
+            return u;
+        });
+    };
+    const handleClearCasualChat = () => {
+        pendingSavesRef.current++;
+        setCasualChat([]);
+        saveSection("casualChat", []).then(() => { pendingSavesRef.current--; });
+    };
+    const handleUpdateCasualChat = (msg: TeamChatMsg) => {
+        pendingSavesRef.current++;
+        setCasualChat(prev => {
+            const u = prev.map(m => m.id === msg.id ? msg : m);
+            saveSection("casualChat", stripMsgFlags(u)).then(() => { pendingSavesRef.current--; });
+            return u;
+        });
+    };
     const handleSaveLabBoard = (card: TeamMemoCard) => {
         pendingSavesRef.current++;
         setLabBoard(prev => {
@@ -8859,7 +9091,8 @@ export default function DashboardPage() {
         meetings: { label: "회의", icon: "📝", tabId: "meetings" },
         resources: { label: "자료", icon: "📁", tabId: "resources" },
         ideas: { label: "아이디어", icon: "💡", tabId: "ideas" },
-        chatPosts: { label: "잡담", icon: "💬", tabId: "chat" },
+        chatPosts: { label: "잡담", icon: "🗣️", tabId: "chat" },
+        casualChat: { label: "잡담 채팅", icon: "🗣️", tabId: "chat" },
         teams: { label: "팀", icon: "👥", tabId: "teams" },
         dailyTargets: { label: "오늘 목표", icon: "🎯", tabId: "daily" },
         schedule: { label: "일정", icon: "📅", tabId: "calendar" },
@@ -8891,6 +9124,10 @@ export default function DashboardPage() {
                 .forEach(m => { seen.add(`pi_${name}_${m.id}`); items.push({ author: m.author, text: m.text, section: `${name} 채팅`, tabId: `memo_${name}`, timestamp: m.id, type: "mention" }); });
         });
 
+        // 1b) Mentions in casualChat
+        casualChat.filter(m => m.author !== userName && !m.deleted && m.text?.includes(mentionTag))
+            .forEach(m => { seen.add(`casual_${m.id}`); items.push({ author: m.author, text: m.text, section: "잡담", tabId: "chat", timestamp: m.id, type: "mention" }); });
+
         // 2) Announcements — everyone sees these
         announcements.filter(a => a.author !== userName)
             .forEach(a => items.push({ author: a.author, text: a.text, section: "공지사항", tabId: "announcements", timestamp: new Date(a.date).getTime(), type: "announcement" }));
@@ -8899,15 +9136,26 @@ export default function DashboardPage() {
         labChat.filter(m => m.author !== userName && !m.deleted && !seen.has(`lab_${m.id}`))
             .forEach(m => items.push({ author: m.author, text: m.text, section: "연구실 채팅", tabId: "labChat", timestamp: m.id, type: "chat" }));
 
+        // 3b) Casual chat messages
+        casualChat.filter(m => m.author !== userName && !m.deleted && !seen.has(`casual_${m.id}`))
+            .forEach(m => items.push({ author: m.author, text: m.text, section: "잡담", tabId: "chat", timestamp: m.id, type: "chat" }));
+
         // 4) Team chat messages (user's teams only, not already added as mentions)
         myTeams.forEach(tName => {
             (teamMemos[tName]?.chat || []).filter(m => m.author !== userName && !m.deleted && !seen.has(`tm_${tName}_${m.id}`))
                 .forEach(m => items.push({ author: m.author, text: m.text, section: tName, tabId: `teamMemo_${tName}`, timestamp: m.id, type: "chat" }));
         });
 
-        // 5) PI chat messages directed to this user
-        (piChat[userName] || []).filter(m => m.author !== userName && !m.deleted && !seen.has(`pi_${userName}_${m.id}`))
-            .forEach(m => items.push({ author: m.author, text: m.text, section: "PI 채팅", tabId: `memo_${userName}`, timestamp: m.id, type: "chat" }));
+        // 5) PI chat messages — PI sees all channels, students see own channel only
+        if (userName === "박일웅") {
+            Object.entries(piChat).forEach(([name, msgs]) => {
+                msgs.filter(m => m.author !== userName && !m.deleted && !seen.has(`pi_${name}_${m.id}`))
+                    .forEach(m => items.push({ author: m.author, text: m.text, section: `${name} 채팅`, tabId: `memo_${name}`, timestamp: m.id, type: "chat" }));
+            });
+        } else {
+            (piChat[userName] || []).filter(m => m.author !== userName && !m.deleted && !seen.has(`pi_${userName}_${m.id}`))
+                .forEach(m => items.push({ author: m.author, text: m.text, section: "PI 채팅", tabId: `memo_${userName}`, timestamp: m.id, type: "chat" }));
+        }
 
         // 6) Lab board new posts
         labBoard.filter(b => b.author !== userName)
@@ -8928,7 +9176,7 @@ export default function DashboardPage() {
             });
 
         return items.sort((a, b) => b.timestamp - a.timestamp);
-    }, [labChat, teamMemos, piChat, userName, announcements, labBoard, teams, teamNames, notiLogs]);
+    }, [labChat, casualChat, teamMemos, piChat, userName, announcements, labBoard, teams, teamNames, notiLogs]);
 
     const notiUnreadCount = useMemo(() => alerts.filter(a => a.timestamp > notiLastSeen).length, [alerts, notiLastSeen]);
     const [notiFilter, setNotiFilter] = useState<"all" | "mention" | "chat" | "announcement" | "board" | "update">("all");
@@ -9053,6 +9301,7 @@ export default function DashboardPage() {
 
     const unreadCounts: Record<string, number> = {
         labChat: labChat.filter(m => m.author !== userName && m.id > (chatReadTs.labChat || 0)).length + labBoard.filter(c => c.author !== userName && c.id > (chatReadTs.labChat || 0)).length,
+        chat: casualChat.filter(m => m.author !== userName && m.id > (chatReadTs.chat || 0)).length,
         announcements: announcements.filter(a => a.author !== userName && new Date(a.date).getTime() > (chatReadTs.announcements || 0)).length,
         ...Object.fromEntries(teamNames.map(t => {
             const ts = chatReadTs[`teamMemo_${t}`] || 0;
@@ -9492,7 +9741,16 @@ export default function DashboardPage() {
                     {activeTab === "meetings" && <MeetingView meetings={meetings} onSave={handleSaveMeeting} onDelete={handleDeleteMeeting} currentUser={userName} teamNames={teamNames} />}
                     {activeTab === "resources" && <ResourceView resources={resources} onSave={handleSaveResource} onDelete={handleDeleteResource} onReorder={list => { setResources(list); pendingSavesRef.current++; saveSection("resources", list).then(() => { pendingSavesRef.current--; }); }} currentUser={userName} />}
                     {activeTab === "ideas" && <IdeasView ideas={ideas} onSave={handleSaveIdea} onDelete={handleDeleteIdea} onReorder={list => { setIdeas(list); pendingSavesRef.current++; saveSection("ideas", list).then(() => { pendingSavesRef.current--; }); }} currentUser={userName} />}
-                    {activeTab === "chat" && <IdeasView ideas={chatPosts} onSave={handleSaveChat} onDelete={handleDeleteChat} onReorder={list => { setChatPosts(list); pendingSavesRef.current++; saveSection("chatPosts", list).then(() => { pendingSavesRef.current--; }); }} currentUser={userName} />}
+                    {activeTab === "chat" && (
+                        <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{gridTemplateColumns:"2fr 1fr"}}>
+                            <div className="flex-1 min-h-0 overflow-y-auto">
+                                <IdeasView ideas={chatPosts} onSave={handleSaveChat} onDelete={handleDeleteChat} onReorder={list => { setChatPosts(list); pendingSavesRef.current++; saveSection("chatPosts", list).then(() => { pendingSavesRef.current--; }); }} currentUser={userName} />
+                            </div>
+                            <div className="hidden md:flex flex-col min-h-0">
+                                <SimpleChatPanel chat={casualChat} currentUser={userName} onAdd={handleAddCasualChat} onUpdate={handleUpdateCasualChat} onDelete={handleDeleteCasualChat} onClear={handleClearCasualChat} onRetry={handleRetryCasualChat} readReceipts={readReceipts["chat"]} />
+                            </div>
+                        </div>
+                    )}
                     {activeTab === "settings" && <SettingsView currentUser={userName} customEmojis={customEmojis} onSaveEmoji={handleSaveEmoji} statusMessages={statusMessages} onSaveStatusMsg={handleSaveStatusMsg} />}
                     {activeTab === "labChat" && <LabChatView chat={labChat} currentUser={userName} onAdd={handleAddLabChat} onUpdate={handleUpdateLabChat} onDelete={handleDeleteLabChat} onClear={handleClearLabChat} onRetry={handleRetryLabChat} files={labFiles} onAddFile={handleAddLabFile} onDeleteFile={handleDeleteLabFile} board={labBoard} onSaveBoard={handleSaveLabBoard} onDeleteBoard={handleDeleteLabBoard} readReceipts={readReceipts["labChat"]} />}
                     {activeTab.startsWith("teamMemo_") && (() => {
