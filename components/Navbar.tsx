@@ -85,7 +85,8 @@ export default function Navbar() {
         <>
             <nav
                 className={cn(
-                    "fixed top-0 w-full z-50 transition-all duration-300",
+                    "fixed top-0 w-full transition-all duration-300",
+                    isOpen ? "z-[10000]" : "z-50",
                     isOpen
                         ? "bg-transparent py-4"
                         : onDarkSection
