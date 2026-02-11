@@ -9291,16 +9291,6 @@ export default function DashboardPage() {
         return () => { stopFlash(); document.removeEventListener("visibilitychange", onVisChange); };
     }, [totalUnread]);
 
-    if (!authChecked) return (
-        <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-            <div className="text-center">
-                <div className="w-14 h-14 rounded-xl mx-auto mb-3 flex items-center justify-center text-2xl font-bold text-white animate-pulse" style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6)" }}>M</div>
-                <p className="text-slate-400 text-[14px]">로그인 확인 중...</p>
-            </div>
-        </div>
-    );
-    if (!loggedIn) return <LoginScreen onLogin={handleLogin} members={displayMembers} />;
-
     const discussionCounts = useMemo<Record<string, number>>(() => ({
         todos: todos.filter(t => t.needsDiscussion).length,
         papers: papers.filter(p => p.needsDiscussion).length,
@@ -9328,6 +9318,16 @@ export default function DashboardPage() {
         })),
         ...Object.fromEntries(memberNames.map(name => [`memo_${name}`, (piChat[name] || []).filter(m => m.author !== userName && m.id > (chatReadTs[`memo_${name}`] || 0)).length])),
     }), [labChat, casualChat, labBoard, announcements, teamNames, teamMemos, memberNames, piChat, chatReadTs, userName]);
+
+    if (!authChecked) return (
+        <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+            <div className="text-center">
+                <div className="w-14 h-14 rounded-xl mx-auto mb-3 flex items-center justify-center text-2xl font-bold text-white animate-pulse" style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6)" }}>M</div>
+                <p className="text-slate-400 text-[14px]">로그인 확인 중...</p>
+            </div>
+        </div>
+    );
+    if (!loggedIn) return <LoginScreen onLogin={handleLogin} members={displayMembers} />;
 
     return (
         <MembersContext.Provider value={displayMembers}>
