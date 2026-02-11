@@ -60,7 +60,7 @@ export default function DashboardPage() {
     const scrollPositionsRef = useRef<Record<string, number>>({});
     const mainContentRef = useRef<HTMLDivElement>(null);
     const [notiOpen, setNotiOpen] = useState(false);
-    const [notiLogs, setNotiLogs] = useState<Array<{ userName: string; section: string; action: string; timestamp: number }>>([]);
+    const [notiLogs, setNotiLogs] = useState<Array<{ userName: string; section: string; action: string; timestamp: number; detail?: string }>>([]);
     const [notiLastSeen, setNotiLastSeen] = useState(0);
     const [selectedPerson, setSelectedPerson] = useState("전체");
     const [onlineUsers, setOnlineUsers] = useState<Array<{ name: string; timestamp: number }>>([]);
@@ -240,14 +240,14 @@ export default function DashboardPage() {
         return token ? { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } : { "Content-Type": "application/json" };
     }, []);
 
-    const saveSection = useCallback(async (section: string, data: unknown): Promise<boolean> => {
-        try { const r = await fetch("/api/dashboard", { method: "POST", headers: getAuthHeaders(), body: JSON.stringify({ section, data, userName }) }); return r.ok; } catch { return false; }
+    const saveSection = useCallback(async (section: string, data: unknown, detail?: string): Promise<boolean> => {
+        try { const r = await fetch("/api/dashboard", { method: "POST", headers: getAuthHeaders(), body: JSON.stringify({ section, data, userName, ...(detail ? { detail } : {}) }) }); return r.ok; } catch { return false; }
     }, [userName, getAuthHeaders]);
 
-    const trackSave = useCallback((itemId: number, section: string, data: unknown, rollback: () => void) => {
+    const trackSave = useCallback((itemId: number, section: string, data: unknown, rollback: () => void, detail?: string) => {
         setSavingIds(prev => new Set(prev).add(itemId));
         pendingSavesRef.current++;
-        saveSection(section, data).then(ok => {
+        saveSection(section, data, detail).then(ok => {
             pendingSavesRef.current--;
             setSavingIds(prev => { const s = new Set(prev); s.delete(itemId); return s; });
             if (!ok) { rollback(); setToast("저장에 실패했습니다. 다시 시도해주세요."); }
@@ -786,8 +786,8 @@ export default function DashboardPage() {
             const found = existing.find(m => m.id === memo.id);
             const updated = found ? existing.map(m => m.id === memo.id ? memo : m) : [...existing, memo];
             const u = { ...prev, [memberName]: updated };
-            if (found) { pendingSavesRef.current++; saveSection("personalMemos", u).then(() => { pendingSavesRef.current--; }); }
-            else trackSave(memo.id, "personalMemos", u, () => setPersonalMemos(pp => { const arr = pp[memberName] || []; return { ...pp, [memberName]: arr.filter(m => m.id !== memo.id) }; }));
+            if (found) { pendingSavesRef.current++; saveSection("personalMemos", u, memberName).then(() => { pendingSavesRef.current--; }); }
+            else trackSave(memo.id, "personalMemos", u, () => setPersonalMemos(pp => { const arr = pp[memberName] || []; return { ...pp, [memberName]: arr.filter(m => m.id !== memo.id) }; }), memberName);
             return u;
         });
     }, [saveSection, trackSave]);
@@ -796,7 +796,7 @@ export default function DashboardPage() {
         setPersonalMemos(prev => {
             const updated = (prev[memberName] || []).filter(m => m.id !== id);
             const u = { ...prev, [memberName]: updated };
-            saveSection("personalMemos", u).then(() => { pendingSavesRef.current--; });
+            saveSection("personalMemos", u, memberName).then(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
@@ -1225,6 +1225,19 @@ export default function DashboardPage() {
         piChat: { label: "PI 채팅", icon: "💬", tabId: "overview" },
         personalMemos: { label: "메모", icon: "📝", tabId: "overview" },
         timetable: { label: "시간표", icon: "📚", tabId: "lectures" },
+        vacations: { label: "휴가", icon: "🏖️", tabId: "calendar" },
+        lectures: { label: "수업", icon: "📚", tabId: "lectures" },
+        dispatches: { label: "출장", icon: "✈️", tabId: "calendar" },
+        equipmentList: { label: "장비", icon: "🔧", tabId: "experiments" },
+        analysisToolList: { label: "해석 도구", icon: "🛠️", tabId: "analysis" },
+        paperTagList: { label: "태그", icon: "🏷️", tabId: "papers" },
+        personalFiles: { label: "파일", icon: "📎", tabId: "overview" },
+        labFiles: { label: "파일", icon: "📎", tabId: "labChat" },
+        statusMessages: { label: "한마디", icon: "💬", tabId: "overview" },
+        customEmojis: { label: "이모지", icon: "😀", tabId: "settings" },
+        experimentLogs: { label: "실험 일지", icon: "🧪", tabId: "experiments" },
+        analysisLogs: { label: "해석 일지", icon: "🖥️", tabId: "analysis" },
+        members: { label: "멤버", icon: "👥", tabId: "overview" },
     };
     // Comprehensive alerts: @mentions, chats, board posts, announcements, updates
     type AlertItem = { author: string; text: string; section: string; tabId: string; timestamp: number; type: "mention" | "chat" | "announcement" | "board" | "update" };
@@ -1276,7 +1289,9 @@ export default function DashboardPage() {
         notiLogs.filter(l => l.userName !== userName && !chatSections.has(l.section)).slice(0, 100)
             .forEach(l => {
                 const sec = NOTI_SECTION_MAP[l.section] || { label: l.section, icon: "📋", tabId: "overview" };
-                items.push({ author: l.userName, text: `${sec.label}을(를) 업데이트했습니다`, section: sec.label, tabId: sec.tabId, timestamp: l.timestamp, type: "update" });
+                const tabId = l.section === "personalMemos" && l.detail ? `memo_${l.detail}` : sec.tabId;
+                const label = l.section === "personalMemos" && l.detail ? `${l.detail} 메모` : sec.label;
+                items.push({ author: l.userName, text: `${label}을(를) 업데이트했습니다`, section: label, tabId, timestamp: l.timestamp, type: "update" });
             });
 
         return items.sort((a, b) => b.timestamp - a.timestamp);
@@ -1305,7 +1320,7 @@ export default function DashboardPage() {
         const current = myPushPrefs[cat] !== false; // default true
         const next = { ...pushPrefs, [userName]: { ...myPushPrefs, [cat]: !current } };
         setPushPrefs(next);
-        const tk = localStorage.getItem("mftel-auth-token");
+        const tk = localStorage.getItem("dashToken");
         if (tk) fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tk}` }, body: JSON.stringify({ section: "pushPrefs", data: next, userName }) }).catch(e => console.warn("Background request failed:", e));
     };
     const notiTimeAgo = (ts: number) => {

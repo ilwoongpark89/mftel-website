@@ -22,6 +22,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
     const [endDate, setEndDate] = useState(experiment?.endDate || "");
     const [logs, setLogs] = useState<ExperimentLog[]>(experiment?.logs || []);
     const [newLog, setNewLog] = useState("");
+    const formComposingRef = useRef(false);
     const [progress, setProgress] = useState(experiment?.progress ?? 0);
     const [team, setTeam] = useState(experiment?.team || "");
     const [files, setFiles] = useState<LabFile[]>(experiment?.files || []);
@@ -111,7 +112,8 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
                         <div className="flex gap-2 mb-2">
                             <input value={newLog} onChange={e => setNewLog(e.target.value)} placeholder="오늘의 실험 내용을 기록하세요..."
                                 className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                                onKeyDown={e => e.key === "Enter" && addLog()} />
+                                onCompositionStart={() => { formComposingRef.current = true; }} onCompositionEnd={() => { formComposingRef.current = false; }}
+                                onKeyDown={e => { if (e.key === "Enter" && !formComposingRef.current) addLog(); }} />
                             <button onClick={addLog} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">기록</button>
                         </div>
                         <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
@@ -253,7 +255,7 @@ const ExperimentView = memo(function ExperimentView({ experiments, onSave, onDel
                 return (
             <div className="md:hidden space-y-2">
                 {colItems.map((exp, mi) => (
-                    <div key={exp.id} onClick={() => setSelected(exp)}
+                    <div key={exp.id} onClick={() => { if (window.getSelection()?.toString()) return; setSelected(exp); }}
                         className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300`}
                         style={{ borderLeft: exp.needsDiscussion ? "3px solid #EF4444" : `3px solid ${EXP_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
                         <div className="flex items-center gap-1">
@@ -303,7 +305,7 @@ const ExperimentView = memo(function ExperimentView({ experiments, onSave, onDel
                                     <div draggable onDragStart={() => { dragItem.current = exp; setDraggedId(exp.id); }}
                                         onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
                                         onDragOver={e => { e.preventDefault(); if (draggedId === exp.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
-                                        onClick={() => setSelected(exp)}
+                                        onClick={() => { if (window.getSelection()?.toString()) return; setSelected(exp); }}
                                         className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === exp.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
                                         style={{ borderLeft: exp.needsDiscussion ? "3px solid #EF4444" : `3px solid ${cfg.color}` }}>
                                         <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{exp.title}<SavingBadge id={exp.id} /></div>
@@ -335,7 +337,7 @@ const ExperimentView = memo(function ExperimentView({ experiments, onSave, onDel
             {showCompleted && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {completedExperiments.map(exp => (
-                        <div key={exp.id} onClick={() => setSelected(exp)}
+                        <div key={exp.id} onClick={() => { if (window.getSelection()?.toString()) return; setSelected(exp); }}
                             className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
                             style={{ borderLeft: "3px solid #059669" }}>
                             <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{exp.title}<SavingBadge id={exp.id} /></div>

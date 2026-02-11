@@ -250,7 +250,7 @@ const KanbanView = memo(function KanbanView({ papers, filter, onFilterPerson, al
                 return (
             <div className="md:hidden space-y-2">
                 {colItems.map((p, mi) => (
-                    <div key={p.id} onClick={() => setSelected(p)}
+                    <div key={p.id} onClick={() => { if (window.getSelection()?.toString()) return; setSelected(p); }}
                         className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300`}
                         style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
                         <div className="flex items-start justify-between gap-2">
@@ -303,7 +303,7 @@ const KanbanView = memo(function KanbanView({ papers, filter, onFilterPerson, al
                                     <div draggable onDragStart={() => { dragItem.current = p; setDraggedId(p.id); }}
                                         onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
                                         onDragOver={e => { e.preventDefault(); if (draggedId === p.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
-                                        onClick={() => setSelected(p)}
+                                        onClick={() => { if (window.getSelection()?.toString()) return; setSelected(p); }}
                                         className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === p.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
                                         style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${st.color}` }}>
                                         <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{p.title}<SavingBadge id={p.id} /></div>
@@ -311,7 +311,7 @@ const KanbanView = memo(function KanbanView({ papers, filter, onFilterPerson, al
                                             {p.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md flex-shrink-0" style={{background:"#EFF6FF", color:"#3B82F6", fontWeight:500}}>{p.team}</span>}
                                             {p.tags.slice(0, 2).map(t => <span key={t} className="text-[11px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">{t}</span>)}
                                             {p.tags.length > 2 && <span className="text-[11px] text-slate-400 flex-shrink-0">+{p.tags.length - 2}</span>}
-                                            {(p.files?.length ?? 0) > 0 && <span className="text-[11px] text-slate-400 flex-shrink-0 ml-auto">📎{p.files!.length}</span>}
+                                            {(p.files?.length ?? 0) > 0 && <span className="text-[11px] text-slate-400 flex-shrink-0 ml-auto">📎{p.files?.length}</span>}
                                         </div>
                                         <div className="flex items-center gap-2 mt-2">
                                             <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
@@ -337,7 +337,7 @@ const KanbanView = memo(function KanbanView({ papers, filter, onFilterPerson, al
             {showCompleted && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {completedPapers.map(p => (
-                        <div key={p.id} onClick={() => setSelected(p)}
+                        <div key={p.id} onClick={() => { if (window.getSelection()?.toString()) return; setSelected(p); }}
                             className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
                             style={{ borderLeft: "3px solid #059669" }}>
                             <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{p.title}<SavingBadge id={p.id} /></div>

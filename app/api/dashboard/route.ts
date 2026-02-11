@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
 
     try {
         const body = await request.json();
-        const { section, data, action, userName } = body;
+        const { section, data, action, userName, detail } = body;
 
         if (!section) {
             return NextResponse.json({ error: 'Section required' }, { status: 400 });
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
         await setKey(`${DASHBOARD_PREFIX}${section}`, JSON.stringify(data));
         // Log modification (skip frequent/noisy sections)
         if (userName && !['online', 'readReceipts'].includes(section)) {
-            await appendLog(`${LOG_PREFIX}modifications`, { userName, section, action: 'update' });
+            await appendLog(`${LOG_PREFIX}modifications`, { userName, section, action: 'update', ...(detail ? { detail } : {}) });
         }
 
         // Fire-and-forget push notifications for all meaningful sections

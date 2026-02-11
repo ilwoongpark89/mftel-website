@@ -22,6 +22,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
     const [comments, setComments] = useState<Comment[]>(report?.comments || []);
     const [newComment, setNewComment] = useState("");
     const cImg = useCommentImg();
+    const composingRef = useRef(false);
     const [category] = useState(report?.category || initialCategory || "계획서");
     const [team, setTeam] = useState(report?.team || "");
     const [files, setFiles] = useState<LabFile[]>(report?.files || []);
@@ -144,7 +145,8 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                         <div className="flex gap-2">
                             <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="코멘트 작성... (Ctrl+V 이미지)"
                                 className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                                onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment)} />
+                                onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
+                                onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
                             <button onClick={addComment} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">{cImg.uploading ? "⏳" : "전송"}</button>
                         </div>
                     </div>
@@ -256,7 +258,7 @@ const ReportView = memo(function ReportView({ reports, currentUser, onSave, onDe
                     const cl = r.checklist || [];
                     const done = cl.filter(c => c.done).length;
                     return (
-                        <div key={r.id} onClick={() => setSelected(r)}
+                        <div key={r.id} onClick={() => { if (window.getSelection()?.toString()) return; setSelected(r); }}
                             className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300`}
                             style={{ borderLeft: r.needsDiscussion ? "3px solid #EF4444" : `3px solid ${REPORT_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
                             <div className="flex items-start justify-between gap-2">
@@ -312,7 +314,7 @@ const ReportView = memo(function ReportView({ reports, currentUser, onSave, onDe
                                         <div draggable onDragStart={() => { dragItem.current = r; setDraggedId(r.id); }}
                                             onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
                                             onDragOver={e => { e.preventDefault(); if (draggedId === r.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
-                                            onClick={() => setSelected(r)}
+                                            onClick={() => { if (window.getSelection()?.toString()) return; setSelected(r); }}
                                             className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === r.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
                                             style={{ borderLeft: r.needsDiscussion ? "3px solid #EF4444" : `3px solid ${cfg.color}` }}>
                                             <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{r.title}<SavingBadge id={r.id} /></div>
@@ -345,7 +347,7 @@ const ReportView = memo(function ReportView({ reports, currentUser, onSave, onDe
             {showCompleted && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {completedReports.map(r => (
-                        <div key={r.id} onClick={() => setSelected(r)}
+                        <div key={r.id} onClick={() => { if (window.getSelection()?.toString()) return; setSelected(r); }}
                             className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
                             style={{ borderLeft: "3px solid #059669" }}>
                             <div className="flex items-center gap-1.5 mb-1">

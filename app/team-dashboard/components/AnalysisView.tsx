@@ -22,6 +22,7 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
     const [endDate, setEndDate] = useState(analysis?.endDate || "");
     const [logs, setLogs] = useState<AnalysisLog[]>(analysis?.logs || []);
     const [newLog, setNewLog] = useState("");
+    const formComposingRef = useRef(false);
     const [progress, setProgress] = useState(analysis?.progress ?? 0);
     const [team, setTeam] = useState(analysis?.team || "");
     const [files, setFiles] = useState<LabFile[]>(analysis?.files || []);
@@ -110,7 +111,8 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
                         <div className="flex gap-2 mb-2">
                             <input value={newLog} onChange={e => setNewLog(e.target.value)} placeholder="오늘의 해석 내용을 기록하세요..."
                                 className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                                onKeyDown={e => e.key === "Enter" && addLog()} />
+                                onCompositionStart={() => { formComposingRef.current = true; }} onCompositionEnd={() => { formComposingRef.current = false; }}
+                                onKeyDown={e => { if (e.key === "Enter" && !formComposingRef.current) addLog(); }} />
                             <button onClick={addLog} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">기록</button>
                         </div>
                         <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
@@ -252,7 +254,7 @@ const AnalysisView = memo(function AnalysisView({ analyses, onSave, onDelete, cu
                 return (
             <div className="md:hidden space-y-2">
                 {colItems.map((item, mi) => (
-                    <div key={item.id} onClick={() => setSelected(item)}
+                    <div key={item.id} onClick={() => { if (window.getSelection()?.toString()) return; setSelected(item); }}
                         className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300`}
                         style={{ borderLeft: item.needsDiscussion ? "3px solid #EF4444" : `3px solid ${ANALYSIS_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
                         <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{item.title}<SavingBadge id={item.id} /></div>
@@ -302,7 +304,7 @@ const AnalysisView = memo(function AnalysisView({ analyses, onSave, onDelete, cu
                                     <div draggable onDragStart={() => { dragItem.current = a; setDraggedId(a.id); }}
                                         onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
                                         onDragOver={e => { e.preventDefault(); if (draggedId === a.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
-                                        onClick={() => setSelected(a)}
+                                        onClick={() => { if (window.getSelection()?.toString()) return; setSelected(a); }}
                                         className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === a.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
                                         style={{ borderLeft: a.needsDiscussion ? "3px solid #EF4444" : `3px solid ${cfg.color}` }}>
                                         <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{a.title}<SavingBadge id={a.id} /></div>
@@ -334,7 +336,7 @@ const AnalysisView = memo(function AnalysisView({ analyses, onSave, onDelete, cu
             {showCompleted && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {completedAnalyses.map(a => (
-                        <div key={a.id} onClick={() => setSelected(a)}
+                        <div key={a.id} onClick={() => { if (window.getSelection()?.toString()) return; setSelected(a); }}
                             className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
                             style={{ borderLeft: "3px solid #059669" }}>
                             <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{a.title}<SavingBadge id={a.id} /></div>

@@ -151,7 +151,7 @@ const IPView = memo(function IPView({ patents, onSave, onDelete, currentUser, on
             {!showCompleted && (
             <div className="md:hidden space-y-2">
                 {(() => { const colItems = kanbanFilteredPatents.filter(p => p.status === mobileCol); return colItems.length === 0 ? <div className="text-center py-8 text-slate-300 text-[13px]">{IP_STATUS_CONFIG[mobileCol]?.label} 없음</div> : colItems.map((item, mi) => (
-                    <div key={item.id} onClick={() => setEditing(item)}
+                    <div key={item.id} onClick={() => { if (window.getSelection()?.toString()) return; setEditing(item); }}
                         className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300`}
                         style={{ borderLeft: item.needsDiscussion ? "3px solid #EF4444" : `3px solid ${IP_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
                         <div className="flex items-center justify-between gap-2">
@@ -199,7 +199,7 @@ const IPView = memo(function IPView({ patents, onSave, onDelete, currentUser, on
                                     <div draggable onDragStart={() => { dragItem.current = p; setDraggedId(p.id); }}
                                         onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
                                         onDragOver={e => { e.preventDefault(); if (draggedId === p.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
-                                        onClick={() => setEditing(p)}
+                                        onClick={() => { if (window.getSelection()?.toString()) return; setEditing(p); }}
                                         className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === p.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
                                         style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${cfg.color}` }}>
                                         <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{p.title}<SavingBadge id={p.id} /></div>
@@ -231,7 +231,7 @@ const IPView = memo(function IPView({ patents, onSave, onDelete, currentUser, on
             {showCompleted && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {completedPatents.map(p => (
-                        <div key={p.id} onClick={() => setEditing(p)}
+                        <div key={p.id} onClick={() => { if (window.getSelection()?.toString()) return; setEditing(p); }}
                             className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
                             style={{ borderLeft: "3px solid #22c55e" }}>
                             <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{p.title}<SavingBadge id={p.id} /></div>
