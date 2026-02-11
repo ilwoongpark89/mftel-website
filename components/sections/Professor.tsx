@@ -16,6 +16,7 @@ export default function Professor() {
                             src="/images/Professor_Il Woong Park.png"
                             alt="Prof. Il Woong Park"
                             fill
+                            sizes="(max-width: 768px) 100vw, 40vw"
                             className="object-cover"
                         />
                     </div>

@@ -185,6 +185,7 @@ function NewsCard({ item, index }: { item: NewsItem; index: number }) {
                                     src={item.images![0]}
                                     alt=""
                                     fill
+                                    sizes="40px"
                                     className="object-cover"
                                 />
                             </div>
@@ -224,6 +225,7 @@ function NewsCard({ item, index }: { item: NewsItem; index: number }) {
                                                 src={src}
                                                 alt={`${item.title[language]} - Image ${idx + 1}`}
                                                 fill
+                                                sizes="(max-width: 768px) 100vw, 400px"
                                                 className="object-cover"
                                             />
                                         </div>

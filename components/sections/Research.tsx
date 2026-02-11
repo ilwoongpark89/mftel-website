@@ -199,6 +199,7 @@ function CarnotDetail({ language }: { language: string }) {
                             src="/images/tes_summary_new.png"
                             alt={isKR ? "열에너지 저장 연구 요약" : "TES Research Summary"}
                             fill
+                            sizes="(max-width: 768px) 100vw, 800px"
                             className="object-cover object-center"
                         />
                     </div>
@@ -340,6 +341,7 @@ function ImmersionDetail({ language }: { language: string }) {
                             src="/images/immersion_summary.png"
                             alt={isKR ? "비등 열전달 및 이머전 쿨링 연구" : "Boiling Heat Transfer & Immersion Cooling Research"}
                             fill
+                            sizes="(max-width: 768px) 100vw, 800px"
                             className="object-cover object-center"
                         />
                     </div>
@@ -496,6 +498,7 @@ function SMRDetail({ language }: { language: string }) {
                             src="/images/smr_summary.png"
                             alt={isKR ? "SMR 및 유동 안정성 연구" : "SMR & Flow Stability Research"}
                             fill
+                            sizes="(max-width: 768px) 100vw, 800px"
                             className="object-cover object-center"
                         />
                     </div>

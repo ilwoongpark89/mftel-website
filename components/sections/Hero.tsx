@@ -15,6 +15,8 @@ function FloatingParticles() {
     }, []);
 
     useEffect(() => {
+        if (!visible) return; // Don't start animation until visible
+
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext("2d");
@@ -51,29 +53,11 @@ function FloatingParticles() {
             }
         }
 
-        const particles = Array.from({ length: 80 }, () => new Particle());
+        const particles = Array.from({ length: 40 }, () => new Particle());
         let animationId: number;
         const animate = () => {
             ctx!.clearRect(0, 0, canvas!.width, canvas!.height);
             particles.forEach((p) => { p.update(); p.draw(); });
-
-            // Draw subtle connecting lines between nearby particles
-            for (let i = 0; i < particles.length; i++) {
-                for (let j = i + 1; j < particles.length; j++) {
-                    const dx = particles[i].x - particles[j].x;
-                    const dy = particles[i].y - particles[j].y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < 150) {
-                        ctx!.beginPath();
-                        ctx!.moveTo(particles[i].x, particles[i].y);
-                        ctx!.lineTo(particles[j].x, particles[j].y);
-                        ctx!.strokeStyle = `rgba(255, 255, 255, ${0.06 * (1 - dist / 150)})`;
-                        ctx!.lineWidth = 0.5;
-                        ctx!.stroke();
-                    }
-                }
-            }
-
             animationId = requestAnimationFrame(animate);
         };
         animate();
@@ -82,7 +66,7 @@ function FloatingParticles() {
             window.removeEventListener("resize", resize);
             cancelAnimationFrame(animationId);
         };
-    }, []);
+    }, [visible]);
 
     return (
         <canvas
@@ -167,7 +151,7 @@ export default function Hero() {
     /* ── Mobile: static background, no animations ── */
     if (isMobile) {
         return (
-            <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-900 pt-20">
+            <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-900 pb-16">
                 <div className="container relative mx-auto px-6 z-[10]">
                     <div className="max-w-4xl mx-auto text-center">
                         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2 leading-[1.15]">

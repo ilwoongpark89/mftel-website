@@ -40,6 +40,7 @@ export default function Gallery() {
                                 src={`/images/${item.image}`}
                                 alt={item.title}
                                 fill
+                                sizes={isLarge ? "(max-width: 768px) 100vw, 50vw" : "(max-width: 768px) 50vw, 25vw"}
                                 className="object-cover transition-transform duration-500 group-hover:scale-105"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -79,6 +80,7 @@ export default function Gallery() {
                                 src={`/images/${galleryImages[selectedImage].image}`}
                                 alt={galleryImages[selectedImage].title}
                                 fill
+                                sizes="(max-width: 768px) 100vw, 896px"
                                 className="object-contain"
                             />
                         </motion.div>
