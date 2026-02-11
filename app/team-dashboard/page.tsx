@@ -657,7 +657,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
     // Comment draft
     useEffect(() => { if (selected) { const d = loadDraft(`comment_paper_${selected.id}`); if (d) setDetailComment(d); else setDetailComment(""); } }, [selected?.id]);
     useEffect(() => { if (selected) saveDraft(`comment_paper_${selected.id}`, detailComment); }, [detailComment, selected?.id]);
-    const addDetailComment = () => { if (!detailComment.trim() && !cImg.img || !selected) return; clearDraft(`comment_paper_${selected.id}`); const u = { ...selected, comments: [...selected.comments, { id: genId(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] }; onSavePaper(u); setSelected(u); setDetailComment(""); cImg.clear(); };
+    const addDetailComment = () => { if (!selected || (!detailComment.trim() && !cImg.img)) return; clearDraft(`comment_paper_${selected.id}`); const u = { ...selected, comments: [...selected.comments, { id: genId(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] }; onSavePaper(u); setSelected(u); setDetailComment(""); cImg.clear(); };
     const delDetailComment = (cid: number) => { if (!selected) return; const u = { ...selected, comments: selected.comments.filter(c => c.id !== cid) }; onSavePaper(u); setSelected(u); };
     const completedPapers = filtered.filter(p => PAPER_STATUS_MIGRATE(p.status) === "completed");
     const kanbanFiltered = filtered.filter(p => PAPER_STATUS_MIGRATE(p.status) !== "completed");
@@ -1119,7 +1119,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
     // Comment draft
     useEffect(() => { if (selected) { const d = loadDraft(`comment_report_${selected.id}`); if (d) setDetailComment(d); else setDetailComment(""); } }, [selected?.id]);
     useEffect(() => { if (selected) saveDraft(`comment_report_${selected.id}`, detailComment); }, [detailComment, selected?.id]);
-    const addDetailComment = () => { if (!detailComment.trim() && !cImg.img || !selected) return; clearDraft(`comment_report_${selected.id}`); const u = { ...selected, comments: [...selected.comments, { id: genId(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] }; onSave(u); setSelected(u); setDetailComment(""); cImg.clear(); };
+    const addDetailComment = () => { if (!selected || (!detailComment.trim() && !cImg.img)) return; clearDraft(`comment_report_${selected.id}`); const u = { ...selected, comments: [...selected.comments, { id: genId(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] }; onSave(u); setSelected(u); setDetailComment(""); cImg.clear(); };
     const delDetailComment = (cid: number) => { if (!selected) return; const u = { ...selected, comments: selected.comments.filter(c => c.id !== cid) }; onSave(u); setSelected(u); };
     const completedReports = filteredReports.filter(r => r.status === "done");
     const kanbanFilteredReports = filteredReports.filter(r => r.status !== "done");
@@ -2201,7 +2201,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
     // Comment draft
     useEffect(() => { if (selected) { const d = loadDraft(`comment_exp_${selected.id}`); if (d) setDetailComment(d); else setDetailComment(""); } }, [selected?.id]);
     useEffect(() => { if (selected) saveDraft(`comment_exp_${selected.id}`, detailComment); }, [detailComment, selected?.id]);
-    const addDetailComment = () => { if (!detailComment.trim() && !cImg.img || !selected) return; clearDraft(`comment_exp_${selected.id}`); const u = { ...selected, logs: [{ id: genId(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }, ...selected.logs] }; onSave(u); setSelected(u); setDetailComment(""); cImg.clear(); };
+    const addDetailComment = () => { if (!selected || (!detailComment.trim() && !cImg.img)) return; clearDraft(`comment_exp_${selected.id}`); const u = { ...selected, logs: [{ id: genId(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }, ...selected.logs] }; onSave(u); setSelected(u); setDetailComment(""); cImg.clear(); };
     const delDetailComment = (cid: number) => { if (!selected) return; const u = { ...selected, logs: selected.logs.filter(c => c.id !== cid) }; onSave(u); setSelected(u); };
     const completedExperiments = filteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) === "completed");
     const kanbanFilteredExperiments = filteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) !== "completed");
@@ -2642,7 +2642,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
     // Comment draft
     useEffect(() => { if (selected) { const d = loadDraft(`comment_analysis_${selected.id}`); if (d) setDetailComment(d); else setDetailComment(""); } }, [selected?.id]);
     useEffect(() => { if (selected) saveDraft(`comment_analysis_${selected.id}`, detailComment); }, [detailComment, selected?.id]);
-    const addDetailComment = () => { if (!detailComment.trim() && !cImg.img || !selected) return; clearDraft(`comment_analysis_${selected.id}`); const u = { ...selected, logs: [{ id: genId(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }, ...selected.logs] }; onSave(u); setSelected(u); setDetailComment(""); cImg.clear(); };
+    const addDetailComment = () => { if (!selected || (!detailComment.trim() && !cImg.img)) return; clearDraft(`comment_analysis_${selected.id}`); const u = { ...selected, logs: [{ id: genId(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }, ...selected.logs] }; onSave(u); setSelected(u); setDetailComment(""); cImg.clear(); };
     const delDetailComment = (cid: number) => { if (!selected) return; const u = { ...selected, logs: selected.logs.filter(c => c.id !== cid) }; onSave(u); setSelected(u); };
     const completedAnalyses = filteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) === "completed");
     const kanbanFilteredAnalyses = filteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) !== "completed");
@@ -4643,7 +4643,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
     useEffect(() => { if (selected) saveDraft(`comment_ideas_${selected.id}`, newComment); }, [newComment, selected?.id]);
 
     const addComment = () => {
-        if (!newComment.trim() && !cImg.img || !selected) return;
+        if (!selected || (!newComment.trim() && !cImg.img)) return;
         clearDraft(`comment_ideas_${selected.id}`);
         const updated = { ...selected, comments: [...selected.comments, { id: genId(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] };
         onSave(updated);
@@ -5341,7 +5341,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
         setAdding(false);
     };
     const addComment = () => {
-        if (!newComment.trim() && !cImg.img || !selected) return;
+        if (!selected || (!newComment.trim() && !cImg.img)) return;
         const updated = { ...selected, comments: [...(selected.comments || []), { id: genId(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] };
         onSave(updated); setSelected(updated); setNewComment(""); cImg.clear();
     };
@@ -6490,7 +6490,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     useEffect(() => { if (selected && !isEditing) saveDraft(teamMemoDraftKey(selected.id), newComment); }, [newComment, selected?.id, isEditing]);
 
     const addComment = () => {
-        if (!newComment.trim() && !cImg.img || !selected) return;
+        if (!selected || (!newComment.trim() && !cImg.img)) return;
         clearDraft(teamMemoDraftKey(selected.id));
         const updated = { ...selected, comments: [...(selected.comments || []), { id: genId(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] };
         onSaveCard(updated); setSelected(updated); setNewComment(""); cImg.clear();
@@ -9226,7 +9226,6 @@ export default function DashboardPage() {
         }, 0);
         const piNew = memberNames.reduce((sum, n) => sum + (piChat[n] || []).filter(m => m.author !== userName && m.id > (chatReadTs[`memo_${n}`] || 0)).length, 0);
         const total = labNew + annNew + teamNew + piNew;
-        console.log("[Tab알림] unread:", { labNew, annNew, teamNew, piNew, total });
         return total;
     }, [labChat, announcements, teamMemos, piChat, chatReadTs, userName, teamNames, memberNames]);
 
@@ -9267,12 +9266,10 @@ export default function DashboardPage() {
             isOriginal = true;
         };
         const onVisChange = () => {
-            console.log("[Tab알림] visibilitychange:", { hidden: document.hidden, totalUnread });
             if (document.hidden && totalUnread > 0) startFlash();
             else stopFlash();
         };
         setFaviconBadge(totalUnread);
-        console.log("[Tab알림] effect:", { totalUnread, hidden: document.hidden });
         if (document.hidden && totalUnread > 0) startFlash();
         document.addEventListener("visibilitychange", onVisChange);
         return () => { stopFlash(); document.removeEventListener("visibilitychange", onVisChange); };
