@@ -244,8 +244,8 @@ export async function POST(request: NextRequest) {
             if (auth.userName !== '박일웅') return NextResponse.json({ error: '관리자만 백업을 삭제할 수 있습니다' }, { status: 403 });
             const { date } = body as { date: string; action: string };
 
-            if (!date) {
-                return NextResponse.json({ error: 'Date is required' }, { status: 400 });
+            if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                return NextResponse.json({ error: 'Valid date (YYYY-MM-DD) is required' }, { status: 400 });
             }
 
             // Delete the backup data
@@ -264,8 +264,8 @@ export async function POST(request: NextRequest) {
         if (action === 'restore') {
             if (auth.userName !== '박일웅') return NextResponse.json({ error: '관리자만 백업을 복원할 수 있습니다' }, { status: 403 });
             const { date } = body as { date: string; action: string };
-            if (!date) {
-                return NextResponse.json({ error: 'Date parameter required for restore' }, { status: 400 });
+            if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                return NextResponse.json({ error: 'Valid date (YYYY-MM-DD) is required for restore' }, { status: 400 });
             }
 
             const backupRaw = await getKey(`${BACKUP_PREFIX}${date}`);

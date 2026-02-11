@@ -84,6 +84,7 @@ export async function GET(request: NextRequest) {
         }
 
         if (section) {
+            if (!ALLOWED_SECTIONS.has(section)) return NextResponse.json({ error: 'Invalid section' }, { status: 400 });
             const data = await getKey(`${DASHBOARD_PREFIX}${section}`);
             return NextResponse.json({ data: data ? JSON.parse(data) : null });
         }

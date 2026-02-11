@@ -129,7 +129,7 @@ export default function DashboardPage() {
     const [editingCatVal, setEditingCatVal] = useState("");
     const [dataLoaded, setDataLoaded] = useState(false);
 
-    const tabs = [
+    const tabs = useMemo(() => [
         { id: "overview", label: "연구실 현황", icon: "🏠" },
         { id: "overview_me", label: `개별 현황 (${userName})`, icon: "👤" },
         { id: "labChat", label: "연구실 채팅", icon: "💬" },
@@ -157,7 +157,7 @@ export default function DashboardPage() {
         { id: "resources", label: "자료", icon: "📁" },
         { id: "ideas", label: "아이디어", icon: "💡" },
         { id: "lectures", label: "수업", icon: "📚" },
-    ];
+    ], [userName, teamNames, teams, memberNames, customEmojis, members]);
 
     const allPeople = useMemo(() => ["전체", ...memberNames], [memberNames]);
 

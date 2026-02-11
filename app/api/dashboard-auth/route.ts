@@ -1,6 +1,6 @@
 import { Redis } from '@upstash/redis';
 import { NextRequest, NextResponse } from 'next/server';
-import { loginLimiter, getClientIp } from '../lib/auth';
+import { loginLimiter, getClientIp, validateToken } from '../lib/auth';
 
 const isRedisConfigured = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 const redis = isRedisConfigured ? new Redis({
@@ -198,6 +198,8 @@ export async function POST(request: NextRequest) {
 
         // --- initPasswords (bulk init for members without passwords) ---
         if (action === 'initPasswords') {
+            const auth = await validateToken(request);
+            if (!auth.valid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
             const membersRaw = await getKey(MEMBERS_KEY);
             const members: Record<string, unknown> = membersRaw ? JSON.parse(membersRaw) : {};
             const passwords = await getPasswords();
@@ -217,6 +219,8 @@ export async function POST(request: NextRequest) {
 
         // --- syncMember (called by admin when adding/removing members) ---
         if (action === 'syncMember') {
+            const auth = await validateToken(request);
+            if (!auth.valid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
             const { added, removed } = body as { added?: string[]; removed?: string[]; action: string };
             const passwords = await getPasswords();
             const sessions = await getSessions();
@@ -245,6 +249,8 @@ export async function POST(request: NextRequest) {
 
         // --- getPasswordStatus (admin: check which members have passwords) ---
         if (action === 'getPasswordStatus') {
+            const auth = await validateToken(request);
+            if (!auth.valid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
             const membersRaw = await getKey(MEMBERS_KEY);
             const members: Record<string, unknown> = membersRaw ? JSON.parse(membersRaw) : {};
             const passwords = await getPasswords();
