@@ -111,7 +111,7 @@ function AnimatedText({ text, delay, onComplete }: { text: string; delay: number
 }
 
 function useIsMobile() {
-    const [isMobile, setIsMobile] = useState(false);
+    const [isMobile, setIsMobile] = useState<boolean | null>(null);
     useEffect(() => {
         const mql = window.matchMedia("(max-width: 768px), (prefers-reduced-motion: reduce)");
         setIsMobile(mql.matches);
@@ -129,6 +129,7 @@ export default function Hero() {
     const isMobile = useIsMobile();
 
     useEffect(() => {
+        if (isMobile === null) return; // Wait for detection
         if (isMobile) {
             setShowContent(true);
             setShowGradient(true);
@@ -147,6 +148,11 @@ export default function Hero() {
     const line2a = t("hero.line2a");
     const line2b = t("hero.line2b");
     const line3 = t("hero.line3");
+
+    /* ── Not yet determined: dark placeholder (no flash) ── */
+    if (isMobile === null) {
+        return <section id="home" className="min-h-screen bg-slate-900" />;
+    }
 
     /* ── Mobile: static background, no animations ── */
     if (isMobile) {
