@@ -8,23 +8,34 @@ import { DEFAULT_MEMBERS, MEMBERS, MEMBER_NAMES, STATUS_CONFIG, STATUS_KEYS, PAP
 import { genId, stripMsgFlags } from "./lib/utils";
 import { MembersContext, ConfirmDeleteContext, SavingContext } from "./lib/contexts";
 import { useConfirmDelete } from "./lib/hooks";
-import { OverviewDashboard } from "./components/OverviewDashboard";
-import { PaperFormModal, KanbanView } from "./components/KanbanView";
-import { ReportView } from "./components/ReportView";
-import { ExperimentView } from "./components/ExperimentView";
-import { AnalysisView } from "./components/AnalysisView";
-import { IPView } from "./components/IPView";
-import { TodoList } from "./components/TodoList";
-import { CalendarGrid } from "./components/CalendarView";
-import { TimetableView } from "./components/TimetableView";
-import { SimpleChatPanel, LabChatView } from "./components/ChatViews";
-import { TeamOverview, TeamMemoView } from "./components/TeamViews";
-import { PersonalMemoView } from "./components/PersonalMemoView";
-import { MeetingView } from "./components/MeetingView";
-import { DailyTargetView, ConferenceTripView, ResourceView, IdeasView, AnnouncementView } from "./components/MiscViews";
-import { ExpLogView, AnalysisLogView } from "./components/LogViews";
-import { SettingsView } from "./components/SettingsView";
+import dynamic from "next/dynamic";
 import { LoginScreen } from "./components/LoginScreen";
+
+// ─── Lazy-loaded components (code splitting) ─────────────────────────────────
+const OverviewDashboard = dynamic(() => import("./components/OverviewDashboard").then(m => ({ default: m.OverviewDashboard })), { ssr: false });
+const PaperFormModal = dynamic(() => import("./components/KanbanView").then(m => ({ default: m.PaperFormModal })), { ssr: false });
+const KanbanView = dynamic(() => import("./components/KanbanView").then(m => ({ default: m.KanbanView })), { ssr: false });
+const ReportView = dynamic(() => import("./components/ReportView").then(m => ({ default: m.ReportView })), { ssr: false });
+const ExperimentView = dynamic(() => import("./components/ExperimentView").then(m => ({ default: m.ExperimentView })), { ssr: false });
+const AnalysisView = dynamic(() => import("./components/AnalysisView").then(m => ({ default: m.AnalysisView })), { ssr: false });
+const IPView = dynamic(() => import("./components/IPView").then(m => ({ default: m.IPView })), { ssr: false });
+const TodoList = dynamic(() => import("./components/TodoList").then(m => ({ default: m.TodoList })), { ssr: false });
+const CalendarGrid = dynamic(() => import("./components/CalendarView").then(m => ({ default: m.CalendarGrid })), { ssr: false });
+const TimetableView = dynamic(() => import("./components/TimetableView").then(m => ({ default: m.TimetableView })), { ssr: false });
+const SimpleChatPanel = dynamic(() => import("./components/ChatViews").then(m => ({ default: m.SimpleChatPanel })), { ssr: false });
+const LabChatView = dynamic(() => import("./components/ChatViews").then(m => ({ default: m.LabChatView })), { ssr: false });
+const TeamOverview = dynamic(() => import("./components/TeamViews").then(m => ({ default: m.TeamOverview })), { ssr: false });
+const TeamMemoView = dynamic(() => import("./components/TeamViews").then(m => ({ default: m.TeamMemoView })), { ssr: false });
+const PersonalMemoView = dynamic(() => import("./components/PersonalMemoView").then(m => ({ default: m.PersonalMemoView })), { ssr: false });
+const MeetingView = dynamic(() => import("./components/MeetingView").then(m => ({ default: m.MeetingView })), { ssr: false });
+const DailyTargetView = dynamic(() => import("./components/MiscViews").then(m => ({ default: m.DailyTargetView })), { ssr: false });
+const ConferenceTripView = dynamic(() => import("./components/MiscViews").then(m => ({ default: m.ConferenceTripView })), { ssr: false });
+const ResourceView = dynamic(() => import("./components/MiscViews").then(m => ({ default: m.ResourceView })), { ssr: false });
+const IdeasView = dynamic(() => import("./components/MiscViews").then(m => ({ default: m.IdeasView })), { ssr: false });
+const AnnouncementView = dynamic(() => import("./components/MiscViews").then(m => ({ default: m.AnnouncementView })), { ssr: false });
+const ExpLogView = dynamic(() => import("./components/LogViews").then(m => ({ default: m.ExpLogView })), { ssr: false });
+const AnalysisLogView = dynamic(() => import("./components/LogViews").then(m => ({ default: m.AnalysisLogView })), { ssr: false });
+const SettingsView = dynamic(() => import("./components/SettingsView").then(m => ({ default: m.SettingsView })), { ssr: false });
 
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 
