@@ -400,23 +400,25 @@ export default function DashboardPage() {
         setLoggedIn(false); setUserName("");
     };
 
-    // Pre-login: fetch members + customEmojis + auto-login (parallel)
+    // Pre-login: validate token fast, fetch heavy data AFTER login
     useEffect(() => {
         (async () => {
             const token = localStorage.getItem("mftel-auth-token");
 
-            // Run data fetch and token validation in parallel
-            const [dataResult, authResult] = await Promise.allSettled([
-                fetch("/api/dashboard?section=all").then(r => r.json()).catch(() => null),
+            // Fetch members + customEmojis (lightweight) + token validation in parallel
+            const [membersResult, emojisResult, authResult] = await Promise.allSettled([
+                fetch("/api/dashboard?section=members").then(r => r.json()).catch(() => null),
+                fetch("/api/dashboard?section=customEmojis").then(r => r.json()).catch(() => null),
                 token
                     ? fetch("/api/dashboard-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "validateSession", token }) }).then(r => r.json()).catch(() => null)
                     : Promise.resolve(null),
             ]);
 
-            // Apply data
-            const d = dataResult.status === "fulfilled" ? dataResult.value : null;
-            if (d?.members && Object.keys(d.members).length > 0) setMembers(d.members);
-            if (d?.customEmojis) setCustomEmojis(d.customEmojis);
+            // Apply members for login screen
+            const mData = membersResult.status === "fulfilled" ? membersResult.value?.data : null;
+            if (mData && Object.keys(mData).length > 0) setMembers(mData);
+            const eData = emojisResult.status === "fulfilled" ? emojisResult.value?.data : null;
+            if (eData) setCustomEmojis(eData);
 
             // Apply auth
             const auth = authResult.status === "fulfilled" ? authResult.value : null;
