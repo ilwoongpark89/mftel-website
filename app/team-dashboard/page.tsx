@@ -52,10 +52,10 @@ const chatKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputEleme
 
 // Draft auto-save helpers
 const DRAFT_PFX = "mftel_draft_";
-const saveDraft = (key: string, val: string) => { try { if (val.trim()) localStorage.setItem(DRAFT_PFX + key, val); else localStorage.removeItem(DRAFT_PFX + key); } catch {} };
-const loadDraft = (key: string) => { try { return localStorage.getItem(DRAFT_PFX + key) || ""; } catch { return ""; } };
-const clearDraft = (key: string) => { try { localStorage.removeItem(DRAFT_PFX + key); } catch {} };
-const hasDraft = (key: string) => { try { return !!localStorage.getItem(DRAFT_PFX + key); } catch { return false; } };
+const saveDraft = (key: string, val: string) => { try { if (val.trim()) localStorage.setItem(DRAFT_PFX + key, val); else localStorage.removeItem(DRAFT_PFX + key); } catch (e) { console.warn("Draft save failed:", e); } };
+const loadDraft = (key: string) => { try { return localStorage.getItem(DRAFT_PFX + key) || ""; } catch (e) { console.warn("Draft load failed:", e); return ""; } };
+const clearDraft = (key: string) => { try { localStorage.removeItem(DRAFT_PFX + key); } catch (e) { console.warn("Draft clear failed:", e); } };
+const hasDraft = (key: string) => { try { return !!localStorage.getItem(DRAFT_PFX + key); } catch (e) { console.warn("Draft check failed:", e); return false; } };
 
 // Strip optimistic flags before persisting chat to server
 const stripMsgFlags = (msgs: TeamChatMsg[]): TeamChatMsg[] => msgs.map(({ _sending, _failed, ...rest }) => rest as TeamChatMsg);
@@ -231,7 +231,7 @@ function useConfirmDelete() {
     const [pending, setPending] = useState<(() => void) | null>(null);
     const confirm = (action: () => void) => setPending(() => action);
     const dialog = pending ? (
-        <div className="fixed inset-0 z-[70] bg-black/40 flex items-center justify-center p-4" onClick={() => setPending(null)}>
+        <div className="fixed inset-0 z-[70] bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setPending(null)}>
             <div className="bg-white rounded-2xl w-full shadow-xl" style={{ maxWidth: 400, padding: 24, boxShadow: "0 8px 32px rgba(0,0,0,0.12)" }} onClick={e => e.stopPropagation()}>
                 <div className="flex flex-col items-center text-center">
                     <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4" style={{ background: "#FEE2E2" }}>
@@ -482,7 +482,7 @@ function ItemFiles({ files, onChange, currentUser }: { files: LabFile[]; onChang
 
     const handleDelete = async (id: number) => {
         const f = files.find(x => x.id === id);
-        if (f?.url?.startsWith("https://")) { try { await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: f.url }), headers: { "Content-Type": "application/json" } }); } catch {} }
+        if (f?.url?.startsWith("https://")) { try { await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: f.url }), headers: { "Content-Type": "application/json" } }); } catch (e) { console.warn("파일 삭제 실패:", e); } }
         onChange(files.filter(x => x.id !== id));
     };
 
@@ -551,7 +551,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={onClose}>
             <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "논문 수정" : "논문 등록"}</h3>
@@ -606,7 +606,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
                         <div className="space-y-1.5 max-h-[200px] overflow-y-auto mb-2">
                             {comments.map(c => (
                                 <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
-                                    <button onClick={() => setComments(comments.filter(x => x.id !== c.id))}
+                                    <button onClick={() => { if (!confirm("댓글을 삭제하시겠습니까?")) return; setComments(comments.filter(x => x.id !== c.id)); }}
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                     <div className="text-[13px] text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                     <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
@@ -862,7 +862,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                 <button onClick={onAddPaper} className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-blue-600 active:scale-95 transition-transform">+</button>
             )}
             {selected && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setSelected(null); setDetailComment(""); }}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setSelected(null); setDetailComment(""); }}>
                     <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="p-5 pb-3">
                             <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selected.title}</h2>
@@ -995,7 +995,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
         setNewComment(""); cImg.clear();
     };
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={onClose}>
             <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? `${report?.category || "계획서/보고서"} 수정` : `${category} 등록`}</h3>
@@ -1069,7 +1069,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                         <div className="space-y-1.5 max-h-[200px] overflow-y-auto mb-2">
                             {comments.map(c => (
                                 <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
-                                    <button onClick={() => setComments(comments.filter(x => x.id !== c.id))}
+                                    <button onClick={() => { if (!confirm("댓글을 삭제하시겠습니까?")) return; setComments(comments.filter(x => x.id !== c.id)); }}
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                     <div className="text-[13px] text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                     <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
@@ -1302,7 +1302,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                 <button onClick={() => setAddCategory("보고서")} className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-orange-500 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-orange-600 active:scale-95 transition-transform">+</button>
             )}
             {selected && !editing && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setSelected(null); setDetailComment(""); }}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setSelected(null); setDetailComment(""); }}>
                     <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="p-5 pb-3">
                             <div className="flex items-center gap-2 mb-1">
@@ -1888,7 +1888,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
             </div>
             {/* Inline event form for schedule mode */}
             {editCell && (
-                <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={() => setEditCell(null)}>
+                <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setEditCell(null)}>
                     <div className="bg-white rounded-xl p-4 w-full max-w-xs shadow-xl" onClick={e => e.stopPropagation()}>
                         <h4 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">
                             {editCell.existing ? `${editCell.date} 수정` : editCell.date.includes(",") ? `${editCell.date.split(",").length}일 추가` : `${editCell.date} 추가`}
@@ -2031,7 +2031,7 @@ function TimetableView({ blocks, onSave, onDelete }: {
             </div>
             {/* Form Modal */}
             {(showForm || editBlock) && (
-                <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={() => { setShowForm(null); setEditBlock(null); }}>
+                <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setShowForm(null); setEditBlock(null); }}>
                     <div className="bg-white rounded-xl p-4 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
                         <h4 className="text-[14px] mb-1" style={{fontWeight:650, color:"#334155"}}>{editBlock ? "수업 수정" : "수업 추가"}</h4>
                         <p className="text-[12px] text-slate-400 mb-3">
@@ -2088,7 +2088,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={onClose}>
             <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "실험 수정" : "실험 등록"}</h3>
@@ -2161,7 +2161,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
                         <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
                             {logs.map(l => (
                                 <div key={l.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
-                                    <button onClick={() => setLogs(logs.filter(x => x.id !== l.id))}
+                                    <button onClick={() => { if (!confirm("기록을 삭제하시겠습니까?")) return; setLogs(logs.filter(x => x.id !== l.id)); }}
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                     <div className="text-[13px] text-slate-700 pr-4">{l.text}</div>
                                     <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[l.author]?.emoji} {l.author} · {l.date}</div>
@@ -2402,7 +2402,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                 <button onClick={() => setAdding(true)} className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-red-500 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-red-600 active:scale-95 transition-transform">+</button>
             )}
             {selected && !editing && !adding && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setSelected(null); setDetailComment(""); }}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setSelected(null); setDetailComment(""); }}>
                     <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="p-5 pb-3">
                             <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selected.title}</h2>
@@ -2530,7 +2530,7 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={onClose}>
             <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "해석 수정" : "해석 등록"}</h3>
@@ -2602,7 +2602,7 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
                         <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
                             {logs.map(l => (
                                 <div key={l.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
-                                    <button onClick={() => setLogs(logs.filter(x => x.id !== l.id))}
+                                    <button onClick={() => { if (!confirm("기록을 삭제하시겠습니까?")) return; setLogs(logs.filter(x => x.id !== l.id)); }}
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                     <div className="text-[13px] text-slate-700 pr-4">{l.text}</div>
                                     <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[l.author]?.emoji} {l.author} · {l.date}</div>
@@ -2843,7 +2843,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                 <button onClick={() => setAdding(true)} className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-violet-500 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-violet-600 active:scale-95 transition-transform">+</button>
             )}
             {selected && !editing && !adding && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setSelected(null); setDetailComment(""); }}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setSelected(null); setDetailComment(""); }}>
                     <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="p-5 pb-3">
                             <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selected.title}</h2>
@@ -3234,7 +3234,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
             )}
             {/* Edit modal */}
             {editingTodo && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditingTodo(null)}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setEditingTodo(null)}>
                     <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">할 일 수정</h3>
@@ -3278,7 +3278,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                                 <div className="space-y-1.5 max-h-[200px] overflow-y-auto mb-2">
                                     {editComments.map(c => (
                                         <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
-                                            <button onClick={() => setEditComments(editComments.filter(x => x.id !== c.id))}
+                                            <button onClick={() => { if (!confirm("댓글을 삭제하시겠습니까?")) return; setEditComments(editComments.filter(x => x.id !== c.id)); }}
                                                 className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                             <div className="text-[13px] text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
@@ -3347,6 +3347,7 @@ function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams
         onSaveTeams(updated); setEditingTeam(null); setAddingTeam(false);
     };
     const handleDelete = (name: string) => {
+        if (!confirm(`"${name}" 팀을 삭제하시겠습니까?`)) return;
         const updated = { ...teams }; delete updated[name]; onSaveTeams(updated);
     };
     const handleDrop = (targetIdx: number) => {
@@ -3440,7 +3441,7 @@ function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams
             </div>
             {/* Team edit/add modal */}
             {modal && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setEditingTeam(null); setAddingTeam(false); }}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setEditingTeam(null); setAddingTeam(false); }}>
                     <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">{editingTeam ? "팀 수정" : "팀 추가"}</h3>
@@ -3514,7 +3515,7 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
     const [files, setFiles] = useState<LabFile[]>(patent?.files || []);
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={onClose}>
             <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "지식재산권 수정" : "지식재산권 등록"}</h3>
@@ -4025,7 +4026,7 @@ function DailyTargetView({ targets, onSave, currentUser }: { targets: DailyTarge
 
             {/* Edit modal */}
             {editCell && (
-                <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={() => setEditCell(null)}>
+                <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setEditCell(null)}>
                     <div className="bg-white rounded-xl p-4 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
                         <h4 className="text-[14px] mb-1" style={{fontWeight:650, color:"#334155"}}>{editCell.date === todayStr ? "오늘 목표" : `${editCell.date} 목표`}</h4>
                         <p className="text-[12px] text-slate-400 mb-3">{editCell.name}</p>
@@ -4157,7 +4158,7 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
                                 </label>
                                 <div className="text-[14px] font-semibold text-slate-800 mb-1">{c.title}<SavingBadge id={c.id} /></div>
                                 {(c.startDate || c.endDate) && <div className="text-[12px] text-slate-500 mb-0.5">📅 {formatPeriod(c.startDate, c.endDate)}</div>}
-                                {c.homepage && <div className="text-[11px] text-blue-500 mb-0.5 truncate" onClick={e => { e.stopPropagation(); try { const u = new URL(c.homepage); if (["http:", "https:"].includes(u.protocol)) window.open(c.homepage, "_blank", "noopener"); } catch {} }}>🔗 {c.homepage}</div>}
+                                {c.homepage && <div className="text-[11px] text-blue-500 mb-0.5 truncate" onClick={e => { e.stopPropagation(); try { const u = new URL(c.homepage); if (["http:", "https:"].includes(u.protocol)) window.open(c.homepage, "_blank", "noopener"); else alert("유효하지 않은 URL입니다."); } catch { alert("유효하지 않은 URL입니다."); } }}>🔗 {c.homepage}</div>}
                                 {c.fee && <div className="text-[12px] text-slate-500 mb-0.5">💰 {c.fee}</div>}
                                 {c.participants.length > 0 && (
                                     <div className="flex flex-wrap gap-0.5 mt-1.5">
@@ -4181,7 +4182,7 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
             ))}
 
             {modal && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={closeModal}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={closeModal}>
                     <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "학회/출장 수정" : "학회/출장 추가"}</h3>
@@ -4233,7 +4234,7 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
                                 <div className="space-y-1.5 max-h-[200px] overflow-y-auto mb-2">
                                     {comments.map(c => (
                                         <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
-                                            <button onClick={() => setComments(comments.filter(x => x.id !== c.id))}
+                                            <button onClick={() => { if (!confirm("댓글을 삭제하시겠습니까?")) return; setComments(comments.filter(x => x.id !== c.id)); }}
                                                 className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                             <div className="text-[13px] text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
@@ -4332,7 +4333,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
                             </label>
                             <div className="text-[14px] font-semibold text-slate-800 mb-2 break-words">{r.title}<SavingBadge id={r.id} /></div>
                             {r.link && (
-                                <div className="text-[12px] text-blue-500 mb-1 truncate" onClick={e => { e.stopPropagation(); try { const u = new URL(r.link); if (["http:", "https:"].includes(u.protocol)) window.open(r.link, "_blank", "noopener"); } catch {} }}>
+                                <div className="text-[12px] text-blue-500 mb-1 truncate" onClick={e => { e.stopPropagation(); try { const u = new URL(r.link); if (["http:", "https:"].includes(u.protocol)) window.open(r.link, "_blank", "noopener"); else alert("유효하지 않은 URL입니다."); } catch { alert("유효하지 않은 URL입니다."); } }}>
                                     🔗 {r.link}
                                 </div>
                             )}
@@ -4359,7 +4360,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
             </div>
 
             {modal && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={closeModal}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={closeModal}>
                     <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "자료 수정" : "자료 추가"}</h3>
@@ -4390,7 +4391,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
                                 <div className="space-y-1.5 max-h-[200px] overflow-y-auto mb-2">
                                     {comments.map(c => (
                                         <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
-                                            <button onClick={() => setComments(comments.filter(x => x.id !== c.id))}
+                                            <button onClick={() => { if (!confirm("댓글을 삭제하시겠습니까?")) return; setComments(comments.filter(x => x.id !== c.id)); }}
                                                 className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                             <div className="text-[13px] text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
@@ -4711,7 +4712,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
 
             {/* Add modal */}
             {adding && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={closeAdd}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={closeAdd}>
                     <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">새 글 작성</h3>
@@ -4746,7 +4747,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
 
             {/* Detail modal */}
             {selected && !isEditing && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={closeDetail}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={closeDetail}>
                     <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800 break-words flex-1 pr-2">{selected.title}</h3>
@@ -4800,7 +4801,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
 
             {/* Edit modal */}
             {selected && isEditing && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setIsEditing(false); boardImg.clear(); }}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setIsEditing(false); boardImg.clear(); }}>
                     <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">글 수정</h3>
@@ -4993,7 +4994,7 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
             </div>
             {/* Edit modal */}
             {editing && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditing(null)}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setEditing(null)}>
                     <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">{editing._col === "culture" ? "문화" : "공지사항"} 수정</h3>
@@ -5080,7 +5081,7 @@ function AdminLogSection() {
                 const res = await fetch("/api/dashboard?section=logs");
                 const data = await res.json();
                 setLogs(data.data || []);
-            } catch { /* ignore */ }
+            } catch (e) { console.warn("로그 조회 실패:", e); }
             setLoading(false);
         })();
     }, []);
@@ -5209,7 +5210,7 @@ function PushNotificationSettings({ currentUser }: { currentUser: string }) {
             const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidKey) });
             await fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userName: currentUser, subscription: sub.toJSON() }) });
             setSubscribed(true);
-        } catch {}
+        } catch (e) { console.warn("푸시 알림 구독 실패:", e); alert("알림 구독에 실패했습니다."); }
         setLoading(false);
     };
 
@@ -5220,7 +5221,7 @@ function PushNotificationSettings({ currentUser }: { currentUser: string }) {
             const sub = await reg.pushManager.getSubscription();
             if (sub) await sub.unsubscribe();
             setSubscribed(false);
-        } catch {}
+        } catch (e) { console.warn("푸시 알림 해제 실패:", e); alert("알림 해제에 실패했습니다."); }
         setLoading(false);
     };
 
@@ -5605,7 +5606,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
 
             {/* Add modal */}
             {adding && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setAdding(false)}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setAdding(false)}>
                     <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">새 노트</h3>
@@ -5626,7 +5627,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
 
             {/* Detail modal */}
             {selected && !isEditing && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setSelected(null)}>
                     <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800 break-words flex-1 pr-2">{selected.title}</h3>
@@ -5666,7 +5667,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
 
             {/* Edit modal */}
             {selected && isEditing && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setIsEditing(false)}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setIsEditing(false)}>
                     <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">노트 수정</h3>
@@ -5686,7 +5687,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
             )}
 
             {previewImg && (
-                <div className="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center p-4 cursor-pointer" onClick={() => setPreviewImg("")}>
+                <div className="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center p-4 cursor-pointer" role="dialog" aria-modal="true" onClick={() => setPreviewImg("")}>
                     <img src={previewImg} alt="" className="max-w-[90vw] max-h-[85vh] rounded-lg shadow-2xl object-contain" />
                 </div>
             )}
@@ -5701,9 +5702,9 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
 }) {
     const confirmDel = useContext(ConfirmDeleteContext);
     const isEdit = !!meeting;
-    const [title, setTitle] = useState(() => { if (meeting) return meeting.title; const d = loadDraft("meeting_add"); if (d) { try { return JSON.parse(d).title || ""; } catch {} } return ""; });
+    const [title, setTitle] = useState(() => { if (meeting) return meeting.title; const d = loadDraft("meeting_add"); if (d) { try { return JSON.parse(d).title || ""; } catch (e) { console.warn("Draft parse failed:", e); } } return ""; });
     const [goal, setGoal] = useState(meeting?.goal || "");
-    const [summary, setSummary] = useState(() => { if (meeting) return meeting.summary || ""; const d = loadDraft("meeting_add"); if (d) { try { return JSON.parse(d).content || ""; } catch {} } return ""; });
+    const [summary, setSummary] = useState(() => { if (meeting) return meeting.summary || ""; const d = loadDraft("meeting_add"); if (d) { try { return JSON.parse(d).content || ""; } catch (e) { console.warn("Draft parse failed:", e); } } return ""; });
     const [date, setDate] = useState(meeting?.date || new Date().toISOString().split("T")[0]);
     const [assignees, setAssignees] = useState<string[]>(meeting?.assignees || []);
     const [team, setTeam] = useState(meeting?.team || "");
@@ -5711,7 +5712,7 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
     const [newComment, setNewComment] = useState("");
     const cImg = useCommentImg();
     const composingRef = useRef(false);
-    const [meetingDraftLoaded] = useState(() => { if (meeting) return false; const d = loadDraft("meeting_add"); if (d) { try { const p = JSON.parse(d); return !!(p.title || p.content); } catch {} } return false; });
+    const [meetingDraftLoaded] = useState(() => { if (meeting) return false; const d = loadDraft("meeting_add"); if (d) { try { const p = JSON.parse(d); return !!(p.title || p.content); } catch (e) { console.warn("Draft parse failed:", e); } } return false; });
     const [meetingDraftVisible, setMeetingDraftVisible] = useState(meetingDraftLoaded);
 
     // Draft auto-save for add form
@@ -5733,7 +5734,7 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
     const handleClose = () => { if (!isEdit && (title.trim() || summary.trim())) saveDraft("meeting_add", JSON.stringify({ title, content: summary })); onClose(); };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={handleClose}>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={handleClose}>
             <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "회의록 수정" : "회의록 작성"}</h3>
@@ -5774,7 +5775,7 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
                         <div className="space-y-1.5 mb-2 max-h-[200px] overflow-y-auto">
                             {comments.map(c => (
                                 <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2 group relative text-[13px]">
-                                    <button onClick={() => setComments(comments.filter(x => x.id !== c.id))}
+                                    <button onClick={() => { if (!confirm("댓글을 삭제하시겠습니까?")) return; setComments(comments.filter(x => x.id !== c.id)); }}
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100">✕</button>
                                     <div className="text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                     <div className="text-[11px] text-slate-400 mt-0.5">{c.author} · {c.date}</div>
@@ -6187,7 +6188,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
             {moreMenuMsgId && <div className="fixed inset-0 z-[5]" onClick={() => setMoreMenuMsgId(null)} />}
             {/* Board add modal */}
             {boardAdding && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setBoardAdding(false); boardImg.clear(); }}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setBoardAdding(false); boardImg.clear(); }}>
                     <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">새 글 작성</h3>
@@ -6208,7 +6209,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
             )}
             {/* Board detail modal */}
             {selectedCard && !boardEditing && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setSelectedCard(null); setBoardComment(""); }}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setSelectedCard(null); setBoardComment(""); }}>
                     <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800 break-words flex-1 pr-2">{selectedCard.title}</h3>
@@ -6259,7 +6260,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
             )}
             {/* Board edit modal */}
             {selectedCard && boardEditing && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setBoardEditing(false); boardImg.clear(); }}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setBoardEditing(false); boardImg.clear(); }}>
                     <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">글 수정</h3>
@@ -6287,7 +6288,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
             )}
 
             {previewImg && (
-                <div className="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center p-4 cursor-pointer" onClick={() => setPreviewImg("")}>
+                <div className="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center p-4 cursor-pointer" role="dialog" aria-modal="true" onClick={() => setPreviewImg("")}>
                     <img src={previewImg} alt="" className="max-w-[90vw] max-h-[85vh] rounded-lg shadow-2xl object-contain" />
                 </div>
             )}
@@ -6320,7 +6321,7 @@ function FilePreviewModal({ file, onClose }: { file: LabFile; onClose: () => voi
     const img = isImageFile(file);
     const pdf = isPdfFile(file);
     return (
-        <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={onClose}>
             <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b">
                     <span className="text-[14px] truncate flex-1 pr-4" style={{fontWeight:650, color:"#334155"}}>{file.name}</span>
@@ -6566,7 +6567,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                     <button onClick={() => openNew()} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
                 </div>
                 {showForm && !editing && (
-                    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setShowForm(false); boardImg.clear(); }}>
+                    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setShowForm(false); boardImg.clear(); }}>
                         <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
                             <div className="flex items-center justify-between p-4 border-b border-slate-200">
                                 <h3 className="text-[15px] font-bold text-slate-800">새 글 작성</h3>
@@ -6818,7 +6819,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
 
             {/* Detail modal */}
             {selected && !isEditing && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setSelected(null)}>
                     <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800 break-words flex-1 pr-2">{selected.title}</h3>
@@ -6862,7 +6863,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                 </div>
             )}
             {selected && isEditing && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setIsEditing(false); boardImg.clear(); }}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setIsEditing(false); boardImg.clear(); }}>
                     <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">카드 수정</h3>
@@ -6883,7 +6884,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
             )}
 
             {previewImg && (
-                <div className="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center p-4 cursor-pointer" onClick={() => setPreviewImg("")}>
+                <div className="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center p-4 cursor-pointer" role="dialog" aria-modal="true" onClick={() => setPreviewImg("")}>
                     <img src={previewImg} alt="" className="max-w-[90vw] max-h-[85vh] rounded-lg shadow-2xl object-contain" />
                 </div>
             )}
@@ -7130,7 +7131,7 @@ function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser, cat
             )}
             <button onClick={openAdd} className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-blue-500 text-white shadow-lg flex items-center justify-center text-[24px] hover:bg-blue-600 active:scale-95 transition-all">+</button>
             {formOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:"rgba(0,0,0,0.4)"}} onClick={() => setFormOpen(false)}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:"rgba(0,0,0,0.4)"}} role="dialog" aria-modal="true" onClick={() => setFormOpen(false)}>
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <div className="p-5">
                             <h3 className="text-[18px] font-bold text-slate-900 mb-4">{editEntry ? "해석 기록 수정" : "해석 기록 추가"}</h3>
@@ -7379,7 +7380,7 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
 
             {/* Form modal */}
             {formOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:"rgba(0,0,0,0.4)"}} onClick={() => setFormOpen(false)}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:"rgba(0,0,0,0.4)"}} role="dialog" aria-modal="true" onClick={() => setFormOpen(false)}>
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <div className="p-5">
                             <h3 className="text-[18px] font-bold text-slate-900 mb-4">{editEntry ? "실험 기록 수정" : "실험 기록 추가"}</h3>
@@ -8419,7 +8420,7 @@ export default function DashboardPage() {
                 setMembers(d.members);
             } else {
                 // Auto-seed default members to server if none exist
-                fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "members", data: DEFAULT_MEMBERS }) }).catch(() => {});
+                fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "members", data: DEFAULT_MEMBERS }) }).catch(e => console.warn("Background request failed:", e));
             }
             }); // end startTransition
         } catch {
@@ -8451,7 +8452,7 @@ export default function DashboardPage() {
             if (!res.ok) return data.error || "로그인 실패";
             if (rememberMe && data.token) localStorage.setItem("mftel-auth-token", data.token);
             setUserName(name); setLoggedIn(true);
-            try { await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "online", action: "join", userName: name }) }); } catch {}
+            try { await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "online", action: "join", userName: name }) }); } catch (e) { console.warn("Online join failed:", e); }
             return null;
         } catch { return "서버 연결 실패"; }
     };
@@ -8459,10 +8460,10 @@ export default function DashboardPage() {
     const handleLogout = async () => {
         const token = localStorage.getItem("mftel-auth-token");
         if (token) {
-            try { await fetch("/api/dashboard-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "logout", token }) }); } catch {}
+            try { await fetch("/api/dashboard-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "logout", token }) }); } catch (e) { console.warn("Logout failed:", e); }
             localStorage.removeItem("mftel-auth-token");
         }
-        try { navigator.sendBeacon("/api/dashboard", new Blob([JSON.stringify({ section: "online", action: "leave", userName })], { type: "application/json" })); } catch {}
+        try { navigator.sendBeacon("/api/dashboard", new Blob([JSON.stringify({ section: "online", action: "leave", userName })], { type: "application/json" })); } catch (e) { console.warn("Online leave failed:", e); }
         setLoggedIn(false); setUserName("");
     };
 
@@ -8488,7 +8489,7 @@ export default function DashboardPage() {
             const auth = authResult.status === "fulfilled" ? authResult.value : null;
             if (auth?.valid && auth.userName) {
                 setUserName(auth.userName); setLoggedIn(true);
-                try { await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "online", action: "join", userName: auth.userName }) }); } catch {}
+                try { await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "online", action: "join", userName: auth.userName }) }); } catch (e) { console.warn("Online join failed:", e); }
             } else if (token) {
                 localStorage.removeItem("mftel-auth-token");
             }
@@ -8525,7 +8526,7 @@ export default function DashboardPage() {
         try {
             const saved = localStorage.getItem(`mftel_chatReadTs_${userName}`);
             if (saved) setChatReadTs(JSON.parse(saved));
-        } catch {}
+        } catch (e) { console.warn("chatReadTs load failed:", e); }
     }, [userName]);
 
     // notiLastSeen: init from localStorage
@@ -8534,7 +8535,7 @@ export default function DashboardPage() {
         try {
             const saved = localStorage.getItem(`mftel_notiLastSeen_${userName}`);
             if (saved) setNotiLastSeen(Number(saved));
-        } catch {}
+        } catch (e) { console.warn("notiLastSeen load failed:", e); }
     }, [userName]);
 
     // Register Service Worker for PWA + Push
@@ -8547,7 +8548,7 @@ export default function DashboardPage() {
                 const existing = await reg.pushManager.getSubscription();
                 if (existing) {
                     // Already subscribed, just re-register with server
-                    fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userName, subscription: existing.toJSON() }) }).catch(() => {});
+                    fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userName, subscription: existing.toJSON() }) }).catch(e => console.warn("Background request failed:", e));
                     return;
                 }
                 const urlBase64ToUint8Array = (base64String: string) => {
@@ -8560,9 +8561,9 @@ export default function DashboardPage() {
                     userVisibleOnly: true,
                     applicationServerKey: urlBase64ToUint8Array(vapidKey),
                 });
-                fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userName, subscription: sub.toJSON() }) }).catch(() => {});
-            } catch {} // push permission denied or not supported
-        }).catch(() => {});
+                fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userName, subscription: sub.toJSON() }) }).catch(e => console.warn("Background request failed:", e));
+            } catch (e) { console.warn("Push setup skipped:", e); } // push permission denied or not supported
+        }).catch(e => console.warn("Background request failed:", e));
     }, [userName]);
 
     // chatReadTs: mark current tab as read (on tab switch + when new msgs arrive while viewing)
@@ -8579,7 +8580,7 @@ export default function DashboardPage() {
             const next = { ...prev, [tabId]: { ...(prev[tabId] || {}), [userName]: ts } };
             if (readReceiptTimerRef.current) clearTimeout(readReceiptTimerRef.current);
             readReceiptTimerRef.current = setTimeout(() => {
-                fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "readReceipts", data: next, userName }) }).catch(() => {});
+                fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "readReceipts", data: next, userName }) }).catch(e => console.warn("Background request failed:", e));
             }, 1000);
             return next;
         });
@@ -8589,7 +8590,7 @@ export default function DashboardPage() {
         const now = Date.now();
         setChatReadTs(prev => {
             const next = { ...prev, [activeTab]: now };
-            try { localStorage.setItem(`mftel_chatReadTs_${userName}`, JSON.stringify(next)); } catch {}
+            try { localStorage.setItem(`mftel_chatReadTs_${userName}`, JSON.stringify(next)); } catch (e) { console.warn("chatReadTs save failed:", e); }
             return next;
         });
         saveReadReceipt(activeTab, now);
@@ -8980,7 +8981,7 @@ export default function DashboardPage() {
     const handleDeleteTeamFile = (teamName: string, id: number) => {
         // Delete blob first (fire-and-forget), then update state
         const fileToDelete = (teamMemos[teamName]?.files || []).find(f => f.id === id);
-        if (fileToDelete?.url?.startsWith("https://")) { fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: fileToDelete.url }), headers: { "Content-Type": "application/json" } }).catch(() => {}); }
+        if (fileToDelete?.url?.startsWith("https://")) { fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: fileToDelete.url }), headers: { "Content-Type": "application/json" } }).catch(e => console.warn("Background request failed:", e)); }
         pendingSavesRef.current++;
         setTeamMemos(prev => {
             const data = prev[teamName] || { kanban: [], chat: [], files: [] };
@@ -9104,7 +9105,7 @@ export default function DashboardPage() {
     };
     const handleDeleteLabFile = async (id: number) => {
         const file = labFiles.find(f => f.id === id);
-        if (file?.url?.startsWith("https://")) { try { await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: file.url }), headers: { "Content-Type": "application/json" } }); } catch {} }
+        if (file?.url?.startsWith("https://")) { try { await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: file.url }), headers: { "Content-Type": "application/json" } }); } catch (e) { console.warn("파일 삭제 실패:", e); } }
         pendingSavesRef.current++;
         setLabFiles(prev => {
             const u = prev.filter(f => f.id !== id);
@@ -9204,7 +9205,7 @@ export default function DashboardPage() {
     const markNotiRead = () => {
         const now = Date.now();
         setNotiLastSeen(now);
-        try { localStorage.setItem(`mftel_notiLastSeen_${userName}`, String(now)); } catch {}
+        try { localStorage.setItem(`mftel_notiLastSeen_${userName}`, String(now)); } catch (e) { console.warn("notiLastSeen save failed:", e); }
     };
     const PUSH_CATEGORIES = [
         { key: "chat", label: "채팅", desc: "연구실 채팅, 팀 메모, PI 채팅" },
@@ -9218,7 +9219,7 @@ export default function DashboardPage() {
         const current = myPushPrefs[cat] !== false; // default true
         const next = { ...pushPrefs, [userName]: { ...myPushPrefs, [cat]: !current } };
         setPushPrefs(next);
-        fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "pushPrefs", data: next, userName }) }).catch(() => {});
+        fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "pushPrefs", data: next, userName }) }).catch(e => console.warn("Background request failed:", e));
     };
     const notiTimeAgo = (ts: number) => {
         const diff = Math.floor((Date.now() - ts) / 1000);
@@ -9591,7 +9592,7 @@ export default function DashboardPage() {
                             handleSaveExpLogCategories(tName, updated);
                         };
                         return (
-                            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setShowExpMgr(false); setEditingCat(null); }}>
+                            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setShowExpMgr(false); setEditingCat(null); }}>
                                 <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:520}} onClick={e => e.stopPropagation()}>
                                     <div className="flex items-center justify-between mb-4">
                                         <h3 className="text-[15px] font-bold text-slate-800">실험일지 관리</h3>
@@ -9669,7 +9670,7 @@ export default function DashboardPage() {
                             handleSaveAnalysisLogCategories(tName, updated);
                         };
                         return (
-                            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setShowAnalysisMgr(false); setEditingCat(null); }}>
+                            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setShowAnalysisMgr(false); setEditingCat(null); }}>
                                 <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:520}} onClick={e => e.stopPropagation()}>
                                     <div className="flex items-center justify-between mb-4">
                                         <h3 className="text-[15px] font-bold text-slate-800">해석일지 관리</h3>
@@ -10019,7 +10020,7 @@ export default function DashboardPage() {
 
         {/* Cmd+K Search Palette */}
         {cmdKOpen && (
-            <div className="fixed inset-0 z-[80] flex items-start justify-center pt-[12vh]" style={{background:"rgba(0,0,0,0.5)"}} onClick={() => setCmdKOpen(false)}>
+            <div className="fixed inset-0 z-[80] flex items-start justify-center pt-[12vh]" style={{background:"rgba(0,0,0,0.5)"}} role="dialog" aria-modal="true" onClick={() => setCmdKOpen(false)}>
                 <div className="bg-white rounded-2xl w-full overflow-hidden" style={{ maxWidth: 560, boxShadow: "0 25px 60px rgba(0,0,0,0.25)" }} onClick={e => e.stopPropagation()}>
                     <div className="flex items-center gap-3 px-4 border-b border-slate-200" style={{height:52}}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
