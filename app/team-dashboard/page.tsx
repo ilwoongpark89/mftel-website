@@ -34,7 +34,7 @@ const SavingContext = createContext<Set<number>>(new Set());
 function SavingBadge({ id }: { id: number }) {
     const s = useContext(SavingContext);
     if (!s.has(id)) return null;
-    return <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded-full animate-pulse ml-1">저장 중</span>;
+    return <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded-full animate-pulse ml-1">저장 중</span>;
 }
 
 type TeamData = { lead: string; members: string[]; color: string; emoji?: string };
@@ -193,7 +193,7 @@ function ReadReceiptBadge({ msgId, currentUser, readReceipts, showZero }: { msgI
     if (readers.length === 0 && !showZero) return null;
     return (
         <div className="relative inline-block flex-shrink-0 self-end">
-            <button onClick={(e) => { e.stopPropagation(); setShow(!show); }} className="text-[10px] text-blue-400 px-0.5 hover:text-blue-600 cursor-pointer whitespace-nowrap leading-none">
+            <button onClick={(e) => { e.stopPropagation(); setShow(!show); }} className="text-[11px] text-blue-400 px-0.5 hover:text-blue-600 cursor-pointer whitespace-nowrap leading-none">
                 {readers.length}
             </button>
             {show && (
@@ -376,7 +376,7 @@ function useCommentImg() {
     const preview = img ? (
         <div className="mb-1.5 relative inline-block">
             <img src={img} alt="" className="max-h-[80px] rounded-md" />
-            <button onClick={clear} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">✕</button>
+            <button onClick={clear} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center">✕</button>
         </div>
     ) : null;
     return { img, clear, onPaste, uploading, preview };
@@ -498,7 +498,7 @@ function ItemFiles({ files, onChange, currentUser }: { files: LabFile[]; onChang
                             </span>
                             <button onClick={() => { if (isImageFile(f) || isPdfFile(f)) setPreview(f); else { const a = document.createElement("a"); a.href = f.url; a.download = f.name; a.click(); } }}
                                 className="text-[12px] font-medium text-blue-600 hover:text-blue-800 truncate flex-1 text-left">{f.name}</button>
-                            <span className="text-[10px] text-slate-400 shrink-0">{(f.size / 1024).toFixed(0)}KB · {MEMBERS[f.uploader]?.emoji || ""}{f.uploader}</span>
+                            <span className="text-[11px] text-slate-400 shrink-0">{(f.size / 1024).toFixed(0)}KB · {MEMBERS[f.uploader]?.emoji || ""}{f.uploader}</span>
                             {(f.uploader === currentUser || currentUser === "박일웅") && (
                                 <button onClick={() => handleDelete(f.id)} className="text-[11px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">✕</button>
                             )}
@@ -670,7 +670,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
             {/* Action buttons */}
             <div className="mb-3 flex items-center justify-end">
                 <div className="flex items-center gap-2">
-                    <button onClick={onAddPaper} className="hidden md:inline-flex px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 논문 등록</button>
+                    <button onClick={onAddPaper} className="hidden md:inline-flex px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 논문 등록</button>
                     <button onClick={() => setShowTagMgr(!showTagMgr)} className="hidden md:inline-flex px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200">🏷️ 태그 관리</button>
                     <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedPapers.length})</button>
                 </div>
@@ -763,19 +763,19 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                         style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
                         <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{p.title}<SavingBadge id={p.id} /></div>
                         <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
-                            {p.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md flex-shrink-0" style={{background:"#EFF6FF", color:"#3B82F6", fontWeight:500}}>{p.team}</span>}
-                            {p.tags.slice(0, 2).map(t => <span key={t} className="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">{t}</span>)}
-                            {p.tags.length > 2 && <span className="text-[10px] text-slate-400 flex-shrink-0">+{p.tags.length - 2}</span>}
+                            {p.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md flex-shrink-0" style={{background:"#EFF6FF", color:"#3B82F6", fontWeight:500}}>{p.team}</span>}
+                            {p.tags.slice(0, 2).map(t => <span key={t} className="text-[11px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">{t}</span>)}
+                            {p.tags.length > 2 && <span className="text-[11px] text-slate-400 flex-shrink-0">+{p.tags.length - 2}</span>}
                         </div>
                         <div className="flex items-center gap-2 mt-2">
                             <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
                                 <div className="h-1 rounded-full transition-all" style={{ width: `${p.progress}%`, background: "#3B82F6" }} />
                             </div>
-                            <span className="text-[10px] font-semibold" style={{color: p.progress >= 80 ? "#10B981" : "#3B82F6"}}>{p.progress}%</span>
+                            <span className="text-[11px] font-semibold" style={{color: p.progress >= 80 ? "#10B981" : "#3B82F6"}}>{p.progress}%</span>
                         </div>
                         <div className="flex -space-x-1 mt-1.5">
                             {p.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
-                            {p.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{p.assignees.length - 4}</span>}
+                            {p.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{p.assignees.length - 4}</span>}
                         </div>
                     </div>
                 ))}
@@ -810,20 +810,20 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                                         style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${st.color}` }}>
                                         <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{p.title}<SavingBadge id={p.id} /></div>
                                         <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
-                                            {p.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md flex-shrink-0" style={{background:"#EFF6FF", color:"#3B82F6", fontWeight:500}}>{p.team}</span>}
-                                            {p.tags.slice(0, 2).map(t => <span key={t} className="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">{t}</span>)}
-                                            {p.tags.length > 2 && <span className="text-[10px] text-slate-400 flex-shrink-0">+{p.tags.length - 2}</span>}
-                                            {(p.files?.length ?? 0) > 0 && <span className="text-[10px] text-slate-400 flex-shrink-0 ml-auto">📎{p.files!.length}</span>}
+                                            {p.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md flex-shrink-0" style={{background:"#EFF6FF", color:"#3B82F6", fontWeight:500}}>{p.team}</span>}
+                                            {p.tags.slice(0, 2).map(t => <span key={t} className="text-[11px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">{t}</span>)}
+                                            {p.tags.length > 2 && <span className="text-[11px] text-slate-400 flex-shrink-0">+{p.tags.length - 2}</span>}
+                                            {(p.files?.length ?? 0) > 0 && <span className="text-[11px] text-slate-400 flex-shrink-0 ml-auto">📎{p.files!.length}</span>}
                                         </div>
                                         <div className="flex items-center gap-2 mt-2">
                                             <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
                                                 <div className="h-1 rounded-full transition-all" style={{ width: `${p.progress}%`, background: "#3B82F6" }} />
                                             </div>
-                                            <span className="text-[10px] font-semibold" style={{color: p.progress >= 80 ? "#10B981" : "#3B82F6"}}>{p.progress}%</span>
+                                            <span className="text-[11px] font-semibold" style={{color: p.progress >= 80 ? "#10B981" : "#3B82F6"}}>{p.progress}%</span>
                                         </div>
                                         <div className="flex -space-x-1 mt-1.5">
                                             {p.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
-                                            {p.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{p.assignees.length - 4}</span>}
+                                            {p.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{p.assignees.length - 4}</span>}
                                         </div>
                                     </div>
                                     </div>
@@ -855,7 +855,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                                 </div>
                                 {p.deadline && <span className="text-[11px] text-red-500 font-semibold">~{p.deadline}</span>}
                             </div>
-                            {p.creator && <div className="text-[10px] text-slate-400 text-right mt-1">by {MEMBERS[p.creator]?.emoji || ""}{p.creator}{p.createdAt ? ` · ${p.createdAt}` : ""}</div>}
+                            {p.creator && <div className="text-[11px] text-slate-400 text-right mt-1">by {MEMBERS[p.creator]?.emoji || ""}{p.creator}{p.createdAt ? ` · ${p.createdAt}` : ""}</div>}
                         </div>
                     ))}
                     {completedPapers.length === 0 && <div className="col-span-3 text-center text-[13px] text-slate-400 py-8">완료된 논문이 없습니다</div>}
@@ -916,7 +916,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                                             <div className="flex-1 bg-slate-50 rounded-lg p-2.5">
                                                 <div className="flex items-center gap-1.5 mb-0.5">
                                                     <span className="text-[12px] font-semibold text-slate-700">{MEMBERS[c.author]?.emoji} {c.author}</span>
-                                                    <span className="text-[10px] text-slate-400">{c.date}</span>
+                                                    <span className="text-[11px] text-slate-400">{c.date}</span>
                                                 </div>
                                                 <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             </div>
@@ -932,7 +932,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                         onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
                                         placeholder="댓글 입력... (Ctrl+V 이미지)" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
-                                    <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
+                                    <button onClick={addDetailComment} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
                                 </div>
                                 {detailComment && hasDraft(`comment_paper_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
@@ -1135,7 +1135,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
         <div>
             <div className="mb-3 flex items-center justify-end">
                 <div className="flex items-center gap-2">
-                    <button onClick={() => setAddCategory("계획서")} className="hidden md:inline-flex px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 계획서 등록</button>
+                    <button onClick={() => setAddCategory("계획서")} className="hidden md:inline-flex px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 계획서 등록</button>
                     <button onClick={() => setAddCategory("보고서")} className="hidden md:inline-flex px-3.5 py-1.5 bg-violet-500 text-white rounded-lg text-[13px] font-medium hover:bg-violet-600 transition-colors">+ 보고서 등록</button>
                     <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedReports.length})</button>
                 </div>
@@ -1204,18 +1204,18 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                             style={{ borderLeft: r.needsDiscussion ? "3px solid #EF4444" : `3px solid ${REPORT_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
                             <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{r.title}<SavingBadge id={r.id} /></div>
                             <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
-                                {r.category && <span className={`text-[10.5px] px-1.5 py-0.5 rounded flex-shrink-0 ${r.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`} style={{fontWeight:500}}>{r.category}</span>}
-                                {r.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{r.team}</span>}
+                                {r.category && <span className={`text-[11px] px-1.5 py-0.5 rounded flex-shrink-0 ${r.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`} style={{fontWeight:500}}>{r.category}</span>}
+                                {r.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{r.team}</span>}
                             </div>
                             <div className="flex items-center gap-2 mt-2">
                                 <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
                                     <div className="h-1 rounded-full transition-all" style={{ width: `${r.progress}%`, background: "#3B82F6" }} />
                                 </div>
-                                <span className="text-[10px] font-semibold" style={{color: r.progress >= 80 ? "#10B981" : "#3B82F6"}}>{r.progress}%</span>
+                                <span className="text-[11px] font-semibold" style={{color: r.progress >= 80 ? "#10B981" : "#3B82F6"}}>{r.progress}%</span>
                             </div>
                             <div className="flex -space-x-1 mt-1.5">
                                 {r.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
-                                {r.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{r.assignees.length - 4}</span>}
+                                {r.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{r.assignees.length - 4}</span>}
                             </div>
                         </div>
                     );
@@ -1254,18 +1254,18 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                                             style={{ borderLeft: r.needsDiscussion ? "3px solid #EF4444" : `3px solid ${cfg.color}` }}>
                                             <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{r.title}<SavingBadge id={r.id} /></div>
                                             <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
-                                                {r.category && <span className={`text-[10.5px] px-1.5 py-0.5 rounded flex-shrink-0 ${r.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`} style={{fontWeight:500}}>{r.category}</span>}
-                                                {r.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{r.team}</span>}
+                                                {r.category && <span className={`text-[11px] px-1.5 py-0.5 rounded flex-shrink-0 ${r.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`} style={{fontWeight:500}}>{r.category}</span>}
+                                                {r.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{r.team}</span>}
                                             </div>
                                             <div className="flex items-center gap-2 mt-2">
                                                 <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
                                                     <div className="h-1 rounded-full transition-all" style={{ width: `${r.progress}%`, background: "#3B82F6" }} />
                                                 </div>
-                                                <span className="text-[10px] font-semibold" style={{color: r.progress >= 80 ? "#10B981" : "#3B82F6"}}>{r.progress}%</span>
+                                                <span className="text-[11px] font-semibold" style={{color: r.progress >= 80 ? "#10B981" : "#3B82F6"}}>{r.progress}%</span>
                                             </div>
                                             <div className="flex -space-x-1 mt-1.5">
                                                 {r.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
-                                                {r.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{r.assignees.length - 4}</span>}
+                                                {r.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{r.assignees.length - 4}</span>}
                                             </div>
                                         </div>
                                         </div>
@@ -1286,7 +1286,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                             className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
                             style={{ borderLeft: "3px solid #059669" }}>
                             <div className="flex items-center gap-1.5 mb-1">
-                                {r.category && <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${r.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`}>{r.category}</span>}
+                                {r.category && <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded ${r.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`}>{r.category}</span>}
                                 {r.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{r.team}</span>}
                             </div>
                             <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{r.title}<SavingBadge id={r.id} /></div>
@@ -1297,7 +1297,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                                 </div>
                                 {r.deadline && <span className="text-[11px] text-red-500 font-semibold">~{r.deadline}</span>}
                             </div>
-                            {r.creator && <div className="text-[10px] text-slate-400 text-right mt-1">by {MEMBERS[r.creator]?.emoji || ""}{r.creator}{r.createdAt ? ` · ${r.createdAt}` : ""}</div>}
+                            {r.creator && <div className="text-[11px] text-slate-400 text-right mt-1">by {MEMBERS[r.creator]?.emoji || ""}{r.creator}{r.createdAt ? ` · ${r.createdAt}` : ""}</div>}
                         </div>
                     ))}
                     {completedReports.length === 0 && <div className="col-span-3 text-center text-[13px] text-slate-400 py-8">완료된 계획서/보고서가 없습니다</div>}
@@ -1377,7 +1377,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                                             <div className="flex-1 bg-slate-50 rounded-lg p-2.5">
                                                 <div className="flex items-center gap-1.5 mb-0.5">
                                                     <span className="text-[12px] font-semibold text-slate-700">{MEMBERS[c.author]?.emoji} {c.author}</span>
-                                                    <span className="text-[10px] text-slate-400">{c.date}</span>
+                                                    <span className="text-[11px] text-slate-400">{c.date}</span>
                                                 </div>
                                                 <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             </div>
@@ -1393,7 +1393,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                         onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
                                         placeholder="댓글 입력... (Ctrl+V 이미지)" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
-                                    <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
+                                    <button onClick={addDetailComment} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
                                 </div>
                                 {detailComment && hasDraft(`comment_report_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
@@ -1702,11 +1702,11 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                                                     setEditCell({ name: label, date: dates.join(",") }); setEditDesc("");
                                                 }}>
                                                 {vt ? (
-                                                    <div className="mx-auto w-[24px] h-[22px] rounded flex items-center justify-center text-[10.5px] font-bold text-white hover:scale-110 transition-transform"
+                                                    <div className="mx-auto w-[24px] h-[22px] rounded flex items-center justify-center text-[11px] font-bold text-white hover:scale-110 transition-transform"
                                                         style={{ background: vt.color }} title={entry?.description || vt.label}>{vt.short}</div>
                                                 ) : canEdit ? (
                                                     <div className={`mx-auto w-[22px] h-[20px] rounded flex items-center justify-center ${inDrag ? "bg-amber-200" : "opacity-0 hover:opacity-100 bg-amber-100"} transition-opacity`}>
-                                                        <span className="text-[10px] text-amber-300">+</span>
+                                                        <span className="text-[11px] text-amber-300">+</span>
                                                     </div>
                                                 ) : null}
                                             </td>
@@ -1731,7 +1731,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                                                         {dls.slice(0, 3).map((dl, i) => (
                                                             <button key={i} onClick={() => onNavigate?.(dl.tab)} className="w-[8px] h-[8px] rounded-full hover:scale-150 transition-transform" style={{background:dl.color}} title={`${dl.icon} ${dl.title}`} />
                                                         ))}
-                                                        {dls.length > 3 && <span className="text-[8px] text-slate-400">+{dls.length - 3}</span>}
+                                                        {dls.length > 3 && <span className="text-[11px] text-slate-400">+{dls.length - 3}</span>}
                                                     </div>
                                                 ) : null}
                                             </td>
@@ -1783,11 +1783,11 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                                                     setEditCell({ name, date: dates.join(",") }); setEditDesc("");
                                                 }}>
                                                 {vt ? (
-                                                    <div className="mx-auto w-[24px] h-[22px] rounded flex items-center justify-center text-[10.5px] font-bold text-white hover:scale-110 transition-transform"
+                                                    <div className="mx-auto w-[24px] h-[22px] rounded flex items-center justify-center text-[11px] font-bold text-white hover:scale-110 transition-transform"
                                                         style={{ background: vt.color }} title={entry?.description || vt.label}>{vt.short}</div>
                                                 ) : canEdit ? (
                                                     <div className={`mx-auto w-[22px] h-[20px] rounded flex items-center justify-center ${inDrag ? "bg-blue-200" : "opacity-0 hover:opacity-100 bg-slate-100"} transition-opacity`}>
-                                                        <span className="text-[10px] text-slate-300">+</span>
+                                                        <span className="text-[11px] text-slate-300">+</span>
                                                     </div>
                                                 ) : null}
                                             </td>
@@ -1896,7 +1896,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
             </div>
             {/* Inline event form for schedule mode */}
             {editCell && (
-                <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setEditCell(null)}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setEditCell(null)}>
                     <div className="bg-white rounded-xl p-4 w-full max-w-xs shadow-xl" onClick={e => e.stopPropagation()}>
                         <h4 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">
                             {editCell.existing ? `${editCell.date} 수정` : editCell.date.includes(",") ? `${editCell.date.split(",").length}일 추가` : `${editCell.date} 추가`}
@@ -2027,8 +2027,8 @@ function TimetableView({ blocks, onSave, onDelete }: {
                                             style={{ top: b.startSlot * CELL_H + 1, height: (b.endSlot - b.startSlot) * CELL_H - 2, background: b.color }}
                                             onClick={() => { setEditBlock(b); setFormName(b.name); setFormStudents(b.students); }}>
                                             <div className="truncate font-semibold">{b.name}</div>
-                                            {(b.endSlot - b.startSlot) >= 2 && <div className="text-[10px] opacity-80">{slotToTime(b.startSlot)}-{slotToTime(b.endSlot)}</div>}
-                                            {(b.endSlot - b.startSlot) >= 4 && b.students.length > 0 && <div className="text-[10px] opacity-70 mt-0.5 truncate">{b.students.join(", ")}</div>}
+                                            {(b.endSlot - b.startSlot) >= 2 && <div className="text-[11px] opacity-80">{slotToTime(b.startSlot)}-{slotToTime(b.endSlot)}</div>}
+                                            {(b.endSlot - b.startSlot) >= 4 && b.students.length > 0 && <div className="text-[11px] opacity-70 mt-0.5 truncate">{b.students.join(", ")}</div>}
                                         </div>
                                     ))}
                                 </div>
@@ -2039,7 +2039,7 @@ function TimetableView({ blocks, onSave, onDelete }: {
             </div>
             {/* Form Modal */}
             {(showForm || editBlock) && (
-                <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setShowForm(null); setEditBlock(null); }}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setShowForm(null); setEditBlock(null); }}>
                     <div className="bg-white rounded-xl p-4 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
                         <h4 className="text-[14px] mb-1" style={{fontWeight:650, color:"#334155"}}>{editBlock ? "수업 수정" : "수업 추가"}</h4>
                         <p className="text-[12px] text-slate-400 mb-3">
@@ -2225,7 +2225,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
         <div>
             <div className="mb-3 flex items-center justify-end">
                 <div className="flex items-center gap-2">
-                    <button onClick={() => setAdding(true)} className="hidden md:inline-flex px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 실험 등록</button>
+                    <button onClick={() => setAdding(true)} className="hidden md:inline-flex px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 실험 등록</button>
                     <button onClick={() => setShowEqMgr(!showEqMgr)} className="hidden md:inline-flex px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200">🔧 실험 장치 관리</button>
                     <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedExperiments.length})</button>
                 </div>
@@ -2311,18 +2311,18 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                         style={{ borderLeft: exp.needsDiscussion ? "3px solid #EF4444" : `3px solid ${EXP_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
                         <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{exp.title}<SavingBadge id={exp.id} /></div>
                         <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
-                            <span className="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">🔧 {exp.equipment}</span>
-                            {exp.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{exp.team}</span>}
+                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">🔧 {exp.equipment}</span>
+                            {exp.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{exp.team}</span>}
                         </div>
                         <div className="flex items-center gap-2 mt-2">
                             <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
                                 <div className="h-1 rounded-full transition-all" style={{ width: `${exp.progress ?? 0}%`, background: "#3B82F6" }} />
                             </div>
-                            <span className="text-[10px] font-semibold" style={{color: (exp.progress ?? 0) >= 80 ? "#10B981" : "#3B82F6"}}>{exp.progress ?? 0}%</span>
+                            <span className="text-[11px] font-semibold" style={{color: (exp.progress ?? 0) >= 80 ? "#10B981" : "#3B82F6"}}>{exp.progress ?? 0}%</span>
                         </div>
                         <div className="flex -space-x-1 mt-1.5">
                             {exp.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
-                            {exp.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{exp.assignees.length - 4}</span>}
+                            {exp.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{exp.assignees.length - 4}</span>}
                         </div>
                     </div>
                 ))}
@@ -2357,18 +2357,18 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                                         style={{ borderLeft: exp.needsDiscussion ? "3px solid #EF4444" : `3px solid ${cfg.color}` }}>
                                         <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{exp.title}<SavingBadge id={exp.id} /></div>
                                         <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
-                                            <span className="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">🔧 {exp.equipment}</span>
-                                            {exp.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{exp.team}</span>}
+                                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">🔧 {exp.equipment}</span>
+                                            {exp.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{exp.team}</span>}
                                         </div>
                                         <div className="flex items-center gap-2 mt-2">
                                             <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
                                                 <div className="h-1 rounded-full transition-all" style={{ width: `${exp.progress ?? 0}%`, background: "#3B82F6" }} />
                                             </div>
-                                            <span className="text-[10px] font-semibold" style={{color: (exp.progress ?? 0) >= 80 ? "#10B981" : "#3B82F6"}}>{exp.progress ?? 0}%</span>
+                                            <span className="text-[11px] font-semibold" style={{color: (exp.progress ?? 0) >= 80 ? "#10B981" : "#3B82F6"}}>{exp.progress ?? 0}%</span>
                                         </div>
                                         <div className="flex -space-x-1 mt-1.5">
                                             {exp.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
-                                            {exp.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{exp.assignees.length - 4}</span>}
+                                            {exp.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{exp.assignees.length - 4}</span>}
                                         </div>
                                     </div>
                                     </div>
@@ -2400,7 +2400,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                                 </div>
                                 {exp.logs.length > 0 && <span className="text-[11px] text-slate-400">📝{exp.logs.length}</span>}
                             </div>
-                            {exp.creator && <div className="text-[10px] text-slate-400 text-right mt-1">by {MEMBERS[exp.creator]?.emoji || ""}{exp.creator}{exp.createdAt ? ` · ${exp.createdAt}` : ""}</div>}
+                            {exp.creator && <div className="text-[11px] text-slate-400 text-right mt-1">by {MEMBERS[exp.creator]?.emoji || ""}{exp.creator}{exp.createdAt ? ` · ${exp.createdAt}` : ""}</div>}
                         </div>
                     ))}
                     {completedExperiments.length === 0 && <div className="col-span-3 text-center text-[13px] text-slate-400 py-8">완료된 실험이 없습니다</div>}
@@ -2471,7 +2471,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                                             <div className="flex-1 bg-slate-50 rounded-lg p-2.5">
                                                 <div className="flex items-center gap-1.5 mb-0.5">
                                                     <span className="text-[12px] font-semibold text-slate-700">{MEMBERS[c.author]?.emoji} {c.author}</span>
-                                                    <span className="text-[10px] text-slate-400">{c.date}</span>
+                                                    <span className="text-[11px] text-slate-400">{c.date}</span>
                                                 </div>
                                                 <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             </div>
@@ -2487,7 +2487,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                         onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
                                         placeholder="실험 일지 작성... (Ctrl+V 이미지)" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
-                                    <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
+                                    <button onClick={addDetailComment} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
                                 </div>
                                 {detailComment && hasDraft(`comment_exp_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
@@ -2669,7 +2669,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
         <div>
             <div className="mb-3 flex items-center justify-end">
                 <div className="flex items-center gap-2">
-                    <button onClick={() => setAdding(true)} className="hidden md:inline-flex px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 해석 등록</button>
+                    <button onClick={() => setAdding(true)} className="hidden md:inline-flex px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 해석 등록</button>
                     <button onClick={() => setShowToolMgr(!showToolMgr)} className="hidden md:inline-flex px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200">🔧 해석 도구 관리</button>
                     <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedAnalyses.length})</button>
                 </div>
@@ -2755,18 +2755,18 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                         style={{ borderLeft: a.needsDiscussion ? "3px solid #EF4444" : `3px solid ${ANALYSIS_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
                         <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{a.title}<SavingBadge id={a.id} /></div>
                         <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
-                            <span className="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">🖥️ {a.tool}</span>
-                            {a.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{a.team}</span>}
+                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">🖥️ {a.tool}</span>
+                            {a.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{a.team}</span>}
                         </div>
                         <div className="flex items-center gap-2 mt-2">
                             <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
                                 <div className="h-1 rounded-full transition-all" style={{ width: `${a.progress ?? 0}%`, background: "#3B82F6" }} />
                             </div>
-                            <span className="text-[10px] font-semibold" style={{color: (a.progress ?? 0) >= 80 ? "#10B981" : "#3B82F6"}}>{a.progress ?? 0}%</span>
+                            <span className="text-[11px] font-semibold" style={{color: (a.progress ?? 0) >= 80 ? "#10B981" : "#3B82F6"}}>{a.progress ?? 0}%</span>
                         </div>
                         <div className="flex -space-x-1 mt-1.5">
                             {a.assignees.slice(0, 4).map(n => <span key={n} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={n}>{MEMBERS[n]?.emoji || "👤"}</span>)}
-                            {a.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{a.assignees.length - 4}</span>}
+                            {a.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{a.assignees.length - 4}</span>}
                         </div>
                     </div>
                 ))}
@@ -2801,18 +2801,18 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                                         style={{ borderLeft: a.needsDiscussion ? "3px solid #EF4444" : `3px solid ${cfg.color}` }}>
                                         <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{a.title}<SavingBadge id={a.id} /></div>
                                         <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
-                                            <span className="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">🖥️ {a.tool}</span>
-                                            {a.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{a.team}</span>}
+                                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">🖥️ {a.tool}</span>
+                                            {a.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{a.team}</span>}
                                         </div>
                                         <div className="flex items-center gap-2 mt-2">
                                             <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
                                                 <div className="h-1 rounded-full transition-all" style={{ width: `${a.progress ?? 0}%`, background: "#3B82F6" }} />
                                             </div>
-                                            <span className="text-[10px] font-semibold" style={{color: (a.progress ?? 0) >= 80 ? "#10B981" : "#3B82F6"}}>{a.progress ?? 0}%</span>
+                                            <span className="text-[11px] font-semibold" style={{color: (a.progress ?? 0) >= 80 ? "#10B981" : "#3B82F6"}}>{a.progress ?? 0}%</span>
                                         </div>
                                         <div className="flex -space-x-1 mt-1.5">
                                             {a.assignees.slice(0, 4).map(n => <span key={n} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={n}>{MEMBERS[n]?.emoji || "👤"}</span>)}
-                                            {a.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{a.assignees.length - 4}</span>}
+                                            {a.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{a.assignees.length - 4}</span>}
                                         </div>
                                     </div>
                                     </div>
@@ -2844,7 +2844,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                                 </div>
                                 {a.logs.length > 0 && <span className="text-[11px] text-slate-400">📝{a.logs.length}</span>}
                             </div>
-                            {a.creator && <div className="text-[10px] text-slate-400 text-right mt-1">by {MEMBERS[a.creator]?.emoji || ""}{a.creator}{a.createdAt ? ` · ${a.createdAt}` : ""}</div>}
+                            {a.creator && <div className="text-[11px] text-slate-400 text-right mt-1">by {MEMBERS[a.creator]?.emoji || ""}{a.creator}{a.createdAt ? ` · ${a.createdAt}` : ""}</div>}
                         </div>
                     ))}
                     {completedAnalyses.length === 0 && <div className="col-span-3 text-center text-[13px] text-slate-400 py-8">완료된 해석이 없습니다</div>}
@@ -2915,7 +2915,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                                             <div className="flex-1 bg-slate-50 rounded-lg p-2.5">
                                                 <div className="flex items-center gap-1.5 mb-0.5">
                                                     <span className="text-[12px] font-semibold text-slate-700">{MEMBERS[c.author]?.emoji} {c.author}</span>
-                                                    <span className="text-[10px] text-slate-400">{c.date}</span>
+                                                    <span className="text-[11px] text-slate-400">{c.date}</span>
                                                 </div>
                                                 <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             </div>
@@ -2931,7 +2931,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                         onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
                                         placeholder="해석 일지 작성... (Ctrl+V 이미지)" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
-                                    <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
+                                    <button onClick={addDetailComment} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
                                 </div>
                                 {detailComment && hasDraft(`comment_analysis_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
@@ -2998,7 +2998,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
             {/* Action buttons */}
             <div className="mb-3 flex items-center justify-end">
                 <div className="flex items-center gap-2">
-                    <button onClick={() => setShowForm(!showForm)} className="hidden md:inline-flex px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 할 일 추가</button>
+                    <button onClick={() => setShowForm(!showForm)} className="hidden md:inline-flex px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 할 일 추가</button>
                     <span className="text-[13px] text-slate-400">{doneCount}/{totalCount} 완료</span>
                 </div>
             </div>
@@ -3145,7 +3145,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                                     )}
                                     <div className={`text-[14px] leading-relaxed ${col.id === "completed" ? "text-slate-500" : "text-slate-700"}`}>
                                         {PRIORITY_ICON[todo.priority] || ""} {todo.text}
-                                        {col.id !== "completed" && todo.priority === "highest" && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-bold align-middle">매우높음</span>}
+                                        {col.id !== "completed" && todo.priority === "highest" && <span className="ml-1.5 text-[11px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-bold align-middle">매우높음</span>}
                                     </div>
                                     {col.id !== "completed" && (todo.progress ?? 0) > 0 && (
                                         <div className="flex items-center gap-2 mt-1">
@@ -3210,7 +3210,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                                             )}
                                             <div className={`text-[14px] leading-relaxed ${col.id === "completed" ? "text-slate-500" : "text-slate-700"}`}>
                                                 {PRIORITY_ICON[todo.priority] || ""} {todo.text}<SavingBadge id={todo.id} />
-                                                {col.id !== "completed" && todo.priority === "highest" && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-bold align-middle">매우높음</span>}
+                                                {col.id !== "completed" && todo.priority === "highest" && <span className="ml-1.5 text-[11px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-bold align-middle">매우높음</span>}
                                             </div>
                                             {col.id !== "completed" && (todo.progress ?? 0) > 0 && (
                                                 <div className="flex items-center gap-2 mt-1">
@@ -3383,7 +3383,7 @@ function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams
     return (
         <div>
             <div className="mb-3 flex items-center gap-2">
-                {isPI && <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">+ 팀 추가</button>}
+                {isPI && <button onClick={openAdd} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">+ 팀 추가</button>}
                 <span className="text-[13px] text-slate-400">{teamNames.length}개 팀</span>
             </div>
             <div className="space-y-0 border border-slate-200 rounded-xl overflow-hidden bg-white">
@@ -3434,7 +3434,7 @@ function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-[14px]">{MEMBERS[m]?.emoji || "👤"}</span>
                                                         <span className="text-[13px] font-medium text-slate-700">{m}</span>
-                                                        {m === team.lead && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-500 font-semibold">팀장</span>}
+                                                        {m === team.lead && <span className="text-[11px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-500 font-semibold">팀장</span>}
                                                     </div>
                                                     <div className="flex gap-2.5 text-[12px] text-slate-500">
                                                         <span title="논문">📄{mp}</span>
@@ -3600,7 +3600,7 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
         <div>
             <div className="mb-3 flex items-center justify-end">
                 <div className="flex items-center gap-2">
-                    <button onClick={() => setAdding(true)} className="hidden md:inline-flex px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 지식재산권 등록</button>
+                    <button onClick={() => setAdding(true)} className="hidden md:inline-flex px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 지식재산권 등록</button>
                     <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedPatents.length})</button>
                 </div>
             </div>
@@ -3665,18 +3665,18 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
                         style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${IP_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
                         <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{p.title}<SavingBadge id={p.id} /></div>
                         <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
-                            {p.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{p.team}</span>}
-                            {p.deadline && <span className="text-[10.5px] px-1.5 py-0.5 rounded bg-red-50 text-red-500 flex-shrink-0" style={{fontWeight:500}}>~{p.deadline}</span>}
+                            {p.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{p.team}</span>}
+                            {p.deadline && <span className="text-[11px] px-1.5 py-0.5 rounded bg-red-50 text-red-500 flex-shrink-0" style={{fontWeight:500}}>~{p.deadline}</span>}
                         </div>
                         <div className="flex items-center gap-2 mt-2">
                             <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
                                 <div className="h-1 rounded-full transition-all" style={{ width: `${p.progress || 0}%`, background: "#3B82F6" }} />
                             </div>
-                            <span className="text-[10px] font-semibold" style={{color: (p.progress || 0) >= 80 ? "#10B981" : "#3B82F6"}}>{p.progress || 0}%</span>
+                            <span className="text-[11px] font-semibold" style={{color: (p.progress || 0) >= 80 ? "#10B981" : "#3B82F6"}}>{p.progress || 0}%</span>
                         </div>
                         <div className="flex -space-x-1 mt-1.5">
                             {p.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
-                            {p.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{p.assignees.length - 4}</span>}
+                            {p.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{p.assignees.length - 4}</span>}
                         </div>
                     </div>
                 ))}
@@ -3711,18 +3711,18 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
                                         style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${cfg.color}` }}>
                                         <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{p.title}<SavingBadge id={p.id} /></div>
                                         <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
-                                            {p.team && <span className="text-[10.5px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{p.team}</span>}
-                                            {p.deadline && <span className="text-[10.5px] px-1.5 py-0.5 rounded bg-red-50 text-red-500 flex-shrink-0" style={{fontWeight:500}}>~{p.deadline}</span>}
+                                            {p.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{p.team}</span>}
+                                            {p.deadline && <span className="text-[11px] px-1.5 py-0.5 rounded bg-red-50 text-red-500 flex-shrink-0" style={{fontWeight:500}}>~{p.deadline}</span>}
                                         </div>
                                         <div className="flex items-center gap-2 mt-2">
                                             <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
                                                 <div className="h-1 rounded-full transition-all" style={{ width: `${p.progress || 0}%`, background: "#3B82F6" }} />
                                             </div>
-                                            <span className="text-[10px] font-semibold" style={{color: (p.progress || 0) >= 80 ? "#10B981" : "#3B82F6"}}>{p.progress || 0}%</span>
+                                            <span className="text-[11px] font-semibold" style={{color: (p.progress || 0) >= 80 ? "#10B981" : "#3B82F6"}}>{p.progress || 0}%</span>
                                         </div>
                                         <div className="flex -space-x-1 mt-1.5">
                                             {p.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
-                                            {p.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{p.assignees.length - 4}</span>}
+                                            {p.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{p.assignees.length - 4}</span>}
                                         </div>
                                     </div>
                                     </div>
@@ -3749,7 +3749,7 @@ function IPView({ patents, onSave, onDelete, currentUser, onToggleDiscussion, on
                                 </div>
                                 {p.deadline && <span className="text-[11px] text-red-500 font-semibold">~{p.deadline}</span>}
                             </div>
-                            {p.creator && <div className="text-[10px] text-slate-400 text-right mt-1">by {MEMBERS[p.creator]?.emoji || ""}{p.creator}{p.createdAt ? ` · ${p.createdAt}` : ""}</div>}
+                            {p.creator && <div className="text-[11px] text-slate-400 text-right mt-1">by {MEMBERS[p.creator]?.emoji || ""}{p.creator}{p.createdAt ? ` · ${p.createdAt}` : ""}</div>}
                         </div>
                     ))}
                     {completedPatents.length === 0 && <div className="col-span-3 text-center text-[13px] text-slate-400 py-8">완료된 지식재산권이 없습니다</div>}
@@ -3937,7 +3937,7 @@ function DailyTargetView({ targets, onSave, currentUser }: { targets: DailyTarge
                             {days.map(d => (
                                 <th key={d.str} className={`border-b border-l border-slate-200 px-2 py-2 text-center ${d.isToday ? "bg-blue-50" : "bg-white"}`}>
                                     <div className={`text-[13px] font-semibold ${d.isToday ? "text-blue-600" : "text-slate-700"}`}>{d.label}</div>
-                                    {d.isToday && <div className="text-[10px] text-blue-400 font-medium">TODAY</div>}
+                                    {d.isToday && <div className="text-[11px] text-blue-400 font-medium">TODAY</div>}
                                 </th>
                             ))}
                         </tr>
@@ -4043,7 +4043,7 @@ function DailyTargetView({ targets, onSave, currentUser }: { targets: DailyTarge
 
             {/* Edit modal */}
             {editCell && (
-                <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setEditCell(null)}>
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setEditCell(null)}>
                     <div className="bg-white rounded-xl p-4 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
                         <h4 className="text-[14px] mb-1" style={{fontWeight:650, color:"#334155"}}>{editCell.date === todayStr ? "오늘 목표" : `${editCell.date} 목표`}</h4>
                         <p className="text-[12px] text-slate-400 mb-3">{editCell.name}</p>
@@ -4160,7 +4160,7 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
 
     return (
         <div>
-            <button onClick={() => openAdd()} className="mb-4 px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">+ 학회/출장 추가</button>
+            <button onClick={() => openAdd()} className="mb-4 px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">+ 학회/출장 추가</button>
             {items.length === 0 && <div className="text-center py-12"><div className="text-3xl mb-2 opacity-40">✈️</div><div className="text-slate-400 text-[14px]">등록된 학회/출장이 없습니다</div></div>}
             {monthGroups.map(group => (
                 <div key={group.key} className="mb-6">
@@ -4181,7 +4181,7 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
                                 {c.fee && <div className="text-[12px] text-slate-500 mb-0.5">💰 {c.fee}</div>}
                                 {c.participants.length > 0 && (
                                     <div className="flex flex-wrap gap-0.5 mt-1.5">
-                                        {c.participants.map(p => <span key={p} className="text-[10px] px-1 py-0.5 rounded bg-blue-50 text-blue-600">{MEMBERS[p]?.emoji || "👤"}{p}</span>)}
+                                        {c.participants.map(p => <span key={p} className="text-[11px] px-1 py-0.5 rounded bg-blue-50 text-blue-600">{MEMBERS[p]?.emoji || "👤"}{p}</span>)}
                                     </div>
                                 )}
                                 <div className="border-t border-slate-100 pt-1.5 mt-2">
@@ -4334,7 +4334,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
 
     return (
         <div>
-            <button onClick={openAdd} className="mb-3 px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">+ 자료 추가</button>
+            <button onClick={openAdd} className="mb-3 px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">+ 자료 추가</button>
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-3"
                 onDragOver={e => e.preventDefault()}
                 onDrop={() => { if (dragRes.current !== null && dragOverRes !== null && dragRes.current !== dragOverRes) { const reordered = [...resources]; const [moved] = reordered.splice(dragRes.current, 1); reordered.splice(dragOverRes, 0, moved); onReorder(reordered); } dragRes.current = null; setDragOverRes(null); }}>
@@ -4533,14 +4533,14 @@ function SimpleChatPanel({ chat, currentUser, onAdd, onUpdate, onDelete, onClear
                                     {!isMe && showAvatar && (
                                         <div className="flex items-baseline gap-1.5 mb-0.5 px-1">
                                             <span className="text-[12px] font-semibold" style={{color:"#64748B"}}>{msg.author}</span>
-                                            <span className="text-[10px]" style={{color:"#94A3B8"}}>{timeStr}</span>
+                                            <span className="text-[11px]" style={{color:"#94A3B8"}}>{timeStr}</span>
                                         </div>
                                     )}
                                     {isMe && showMyTime && !msg._sending && !msg._failed && (
-                                        <div className="flex justify-end mb-0.5 px-1"><span className="text-[10px]" style={{color:"#94A3B8"}}>{timeStr}</span></div>
+                                        <div className="flex justify-end mb-0.5 px-1"><span className="text-[11px]" style={{color:"#94A3B8"}}>{timeStr}</span></div>
                                     )}
                                     {msg.replyTo && (
-                                        <div className="text-[10px] text-slate-400 mb-1 px-2 py-1 rounded-lg border-l-[3px] max-w-full truncate cursor-pointer hover:bg-slate-100 transition-colors" style={{background:"#F8F9FA", borderLeftColor:"#CBD5E1"}}
+                                        <div className="text-[11px] text-slate-400 mb-1 px-2 py-1 rounded-lg border-l-[3px] max-w-full truncate cursor-pointer hover:bg-slate-100 transition-colors" style={{background:"#F8F9FA", borderLeftColor:"#CBD5E1"}}
                                             onClick={() => { const el = document.querySelector(`[data-chat-id="${msg.replyTo?.id}"]`); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("bg-blue-50"); setTimeout(() => el.classList.remove("bg-blue-50"), 1500); } }}>
                                             <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                         </div>
@@ -4612,7 +4612,7 @@ function SimpleChatPanel({ chat, currentUser, onAdd, onUpdate, onDelete, onClear
                     onCompositionEnd={() => { composingRef.current = false; }}
                     placeholder="메시지 입력..."
                     className="flex-1 resize-none border border-slate-200 rounded-xl px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-blue-400 max-h-[80px]" rows={1} />
-                <button onClick={sendMsg} disabled={!text.trim()} className="px-3 py-2 bg-blue-500 text-white rounded-xl text-[13px] font-medium disabled:opacity-30 hover:bg-blue-600 transition-colors">전송</button>
+                <button onClick={sendMsg} disabled={!text.trim()} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium disabled:opacity-30 hover:bg-blue-600 transition-colors">전송</button>
             </div>
         </div>
     );
@@ -4686,7 +4686,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
 
     return (
         <div>
-            <button onClick={openAdd} className="mb-4 px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">+ 새 글 작성</button>
+            <button onClick={openAdd} className="mb-4 px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">+ 새 글 작성</button>
             <div className="grid gap-3 sm:grid-cols-3"
                 onDragOver={e => e.preventDefault()}
                 onDrop={() => { if (dragIdea.current !== null && dragOverIdea !== null && dragIdea.current !== dragOverIdea) { const reordered = [...ideas]; const [moved] = reordered.splice(dragIdea.current, 1); reordered.splice(dragOverIdea, 0, moved); onReorder(reordered); } dragIdea.current = null; setDragOverIdea(null); }}>
@@ -4799,7 +4799,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                                         onCompositionStart={() => { composingRef.current = true; }}
                                         onCompositionEnd={() => { composingRef.current = false; }}
                                         onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
-                                    <button onClick={addComment} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium">{cImg.uploading ? "⏳" : "전송"}</button>
+                                    <button onClick={addComment} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">{cImg.uploading ? "⏳" : "전송"}</button>
                                 </div>
                                 {newComment && hasDraft(`comment_ideas_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
@@ -5412,7 +5412,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
             <div className="flex flex-col min-w-0">
                 <div className="flex items-center justify-between mb-2">
                     <h3 className="text-[14px] font-bold text-slate-700">📝 노트</h3>
-                    <button onClick={openAdd} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
+                    <button onClick={openAdd} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
                 </div>
                 <div className="flex-1 min-h-0 overflow-y-auto">
                     {memos.length === 0 && !adding && <div className="text-center py-12"><div className="text-3xl mb-2 opacity-40">📒</div><div className="text-slate-400 text-[13px]">노트가 없습니다</div></div>}
@@ -5427,25 +5427,25 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                     <label className="flex items-center gap-1.5 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
                                         <input type="checkbox" checked={!!m.needsDiscussion} onChange={() => onSave({ ...m, needsDiscussion: !m.needsDiscussion })} className="w-3 h-3 accent-red-500" />
-                                        <span className={`text-[10px] font-medium ${m.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
+                                        <span className={`text-[11px] font-medium ${m.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                                     </label>
                                     <div className="flex items-start justify-between mb-1">
                                         <div className="text-[13px] font-semibold text-slate-800 break-words flex-1">{m.title}<SavingBadge id={m.id} /></div>
-                                        <span className="text-[10px] text-slate-400 ml-1 whitespace-nowrap">{m.updatedAt}</span>
+                                        <span className="text-[11px] text-slate-400 ml-1 whitespace-nowrap">{m.updatedAt}</span>
                                     </div>
                                     {m.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-3 break-words">{m.content}</div>}
                                     {cmts.length > 0 ? (
                                         <div className="border-t border-slate-100 pt-1.5 mt-auto space-y-0.5">
-                                            <div className="text-[10px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
+                                            <div className="text-[11px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
                                             {cmts.slice(-2).map(c => (
-                                                <div key={c.id} className="text-[10px] text-slate-500 truncate">
+                                                <div key={c.id} className="text-[11px] text-slate-500 truncate">
                                                     <span className="font-medium text-slate-600">{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
                                                 </div>
                                             ))}
                                         </div>
                                     ) : (
                                         <div className="border-t border-slate-100 pt-1.5 mt-auto">
-                                            <div className="text-[10px] text-slate-300">💬 댓글 없음</div>
+                                            <div className="text-[11px] text-slate-300">💬 댓글 없음</div>
                                         </div>
                                     )}
                                 </div>
@@ -5513,7 +5513,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                         {!isMe && showAvatar && (
                                             <div className="flex items-baseline gap-2 mb-1 px-1">
                                                 <span className="text-[13px] font-semibold" style={{color:"#64748B"}}>{msg.author}</span>
-                                                {MEMBERS[msg.author]?.team && <span className="text-[10.5px]" style={{color:"#94A3B8"}}>· {MEMBERS[msg.author]?.role ? `${MEMBERS[msg.author].role}/${MEMBERS[msg.author].team}` : MEMBERS[msg.author].team}</span>}
+                                                {MEMBERS[msg.author]?.team && <span className="text-[11px]" style={{color:"#94A3B8"}}>· {MEMBERS[msg.author]?.role ? `${MEMBERS[msg.author].role}/${MEMBERS[msg.author].team}` : MEMBERS[msg.author].team}</span>}
                                                 <span className="text-[11px] ml-auto" style={{color:"#94A3B8"}}>{timeStr}</span>
                                             </div>
                                         )}
@@ -5567,7 +5567,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                                     </div>
                                                 )}
                                                 <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "12px 16px", lineHeight: "1.65" }}
-                                                    className="text-[13.5px] text-slate-800">
+                                                    className="text-[13px] text-slate-800">
                                                     {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollPiChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                                     {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
                                                 </div>
@@ -5605,7 +5605,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                     </div>
                 )}
                 <div className={`p-2.5 ${chatReplyTo ? "" : "border-t border-slate-100"} flex-shrink-0 bg-white`}>
-                    {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[80px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">✕</button></div>}
+                    {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[80px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center">✕</button></div>}
                     <div className="flex gap-1.5 items-center">
                         <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
                         <button onClick={() => chatFileRef.current?.click()} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-500 transition-colors flex-shrink-0 text-[18px]" title="파일 첨부">{imgUploading ? "⏳" : "+"}</button>
@@ -5677,7 +5677,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                         onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
-                                    <button onClick={addComment} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium flex-shrink-0">{cImg.uploading ? "⏳" : "전송"}</button>
+                                    <button onClick={addComment} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium flex-shrink-0">{cImg.uploading ? "⏳" : "전송"}</button>
                                 </div>
                             </div>
                         </div>
@@ -5843,7 +5843,7 @@ function MeetingView({ meetings, onSave, onDelete, currentUser, teamNames }: {
     return (
         <div>
             <div className="flex items-center justify-between mb-4">
-                <button onClick={() => setAdding(true)} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">+ 회의록 작성</button>
+                <button onClick={() => setAdding(true)} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">+ 회의록 작성</button>
                 <span className="text-[13px] text-slate-400">총 {filtered.length}건</span>
             </div>
             {teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
@@ -5863,8 +5863,8 @@ function MeetingView({ meetings, onSave, onDelete, currentUser, teamNames }: {
                         {m.goal && <div className="text-[12px] text-blue-600 mb-1 line-clamp-1"><span className="font-semibold">목표:</span> {m.goal}</div>}
                         {m.summary && <div className="text-[13px] text-slate-600 mb-2 line-clamp-3 break-words">{m.summary}</div>}
                         <div className="flex flex-wrap gap-0.5 mb-2">
-                            {m.assignees.slice(0, 5).map(a => <span key={a} className="text-[10px] px-1 py-0.5 rounded bg-slate-50 text-slate-600">{MEMBERS[a]?.emoji}{a}</span>)}
-                            {m.assignees.length > 5 && <span className="text-[10px] text-slate-400">+{m.assignees.length - 5}</span>}
+                            {m.assignees.slice(0, 5).map(a => <span key={a} className="text-[11px] px-1 py-0.5 rounded bg-slate-50 text-slate-600">{MEMBERS[a]?.emoji}{a}</span>)}
+                            {m.assignees.length > 5 && <span className="text-[11px] text-slate-400">+{m.assignees.length - 5}</span>}
                         </div>
                         <div className="text-[11px] text-slate-400 mb-1">{MEMBERS[m.creator]?.emoji || ""} {m.creator}</div>
                         {m.comments.length > 0 ? (
@@ -6000,7 +6000,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
             <div className={`flex-col min-w-0 ${mobileTab === "board" ? "flex flex-1 min-h-0" : "hidden"} md:flex`}>
                 <div className="flex items-center justify-between mb-2">
                     <h3 className="text-[14px] font-bold text-slate-700">📌 보드</h3>
-                    <button onClick={openBoardAdd} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
+                    <button onClick={openBoardAdd} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
                 </div>
                 <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
                     {board.map(card => {
@@ -6011,26 +6011,26 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                 style={{ background: card.color || "#fff", border: "1px solid #E2E8F0", borderLeft: card.needsDiscussion ? "3px solid #EF4444" : undefined }}>
                                 <label className="flex items-center gap-1 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
                                     <input type="checkbox" checked={!!card.needsDiscussion} onChange={() => onSaveBoard({ ...card, needsDiscussion: !card.needsDiscussion })} className="w-3 h-3 accent-red-500" />
-                                    <span className={`text-[10px] font-medium ${card.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
+                                    <span className={`text-[11px] font-medium ${card.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                                 </label>
                                 <div className="flex items-start justify-between mb-1">
                                     <h4 className="text-[13px] font-semibold text-slate-800 break-words flex-1">{card.title}<SavingBadge id={card.id} /></h4>
-                                    <span className="text-[10px] text-slate-400 ml-1 whitespace-nowrap">{card.updatedAt}</span>
+                                    <span className="text-[11px] text-slate-400 ml-1 whitespace-nowrap">{card.updatedAt}</span>
                                 </div>
                                 {card.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-2 break-words">{card.content}</div>}
-                                <div className="text-[10px] text-slate-400 mb-1">{MEMBERS[card.author]?.emoji || "👤"} {card.author}</div>
+                                <div className="text-[11px] text-slate-400 mb-1">{MEMBERS[card.author]?.emoji || "👤"} {card.author}</div>
                                 {cmts.length > 0 ? (
                                     <div className="border-t border-slate-100 pt-1.5 mt-auto space-y-0.5">
-                                        <div className="text-[10px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
+                                        <div className="text-[11px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
                                         {cmts.slice(-2).map(c => (
-                                            <div key={c.id} className="text-[10px] text-slate-500 truncate">
+                                            <div key={c.id} className="text-[11px] text-slate-500 truncate">
                                                 <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
                                             </div>
                                         ))}
                                     </div>
                                 ) : (
                                     <div className="border-t border-slate-100 pt-1.5 mt-auto">
-                                        <div className="text-[10px] text-slate-300">💬 댓글 없음</div>
+                                        <div className="text-[11px] text-slate-300">💬 댓글 없음</div>
                                     </div>
                                 )}
                             </div>
@@ -6100,7 +6100,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                         {!isMe && showAvatar && (
                                             <div className="flex items-baseline gap-2 mb-1 px-1">
                                                 <span className="text-[13px] font-semibold" style={{color:"#64748B"}}>{msg.author}</span>
-                                                {MEMBERS[msg.author]?.team && <span className="text-[10.5px]" style={{color:"#94A3B8"}}>· {MEMBERS[msg.author]?.role ? `${MEMBERS[msg.author].role}/${MEMBERS[msg.author].team}` : MEMBERS[msg.author].team}</span>}
+                                                {MEMBERS[msg.author]?.team && <span className="text-[11px]" style={{color:"#94A3B8"}}>· {MEMBERS[msg.author]?.role ? `${MEMBERS[msg.author].role}/${MEMBERS[msg.author].team}` : MEMBERS[msg.author].team}</span>}
                                                 <span className="text-[11px] ml-auto" style={{color:"#94A3B8"}}>{timeStr}</span>
                                             </div>
                                         )}
@@ -6154,7 +6154,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                                     </div>
                                                 )}
                                                 <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "12px 16px", lineHeight: "1.65" }}
-                                                    className="text-[13.5px] text-slate-800">
+                                                    className="text-[13px] text-slate-800">
                                                     {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1.5 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollLabChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                                     {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
                                                 </div>
@@ -6192,7 +6192,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                     </div>
                 )}
                 <div className={`p-2.5 ${replyTo ? "" : "border-t border-slate-100"} flex-shrink-0 bg-white`}>
-                    {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[80px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">✕</button></div>}
+                    {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[80px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center">✕</button></div>}
                     <div className="flex gap-1.5 items-center">
                         <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
                         <button onClick={() => chatFileRef.current?.click()} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-500 transition-colors flex-shrink-0 text-[18px]" title="파일 첨부">{imgUploading ? "⏳" : "+"}</button>
@@ -6263,7 +6263,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                         onPaste={boardCmtImg.onPaste}
                                         onKeyDown={e => chatKeyDown(e, () => { if (!boardComment.trim() && !boardCmtImg.img) return; clearDraft(`comment_labboard_${selectedCard.id}`); const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: genId(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: boardCmtImg.img || undefined }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); boardCmtImg.clear(); })} />
                                     <button onClick={() => { if (!boardComment.trim() && !boardCmtImg.img) return; clearDraft(`comment_labboard_${selectedCard.id}`); const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: genId(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: boardCmtImg.img || undefined }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); boardCmtImg.clear(); }}
-                                        className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium">{boardCmtImg.uploading ? "⏳" : "전송"}</button>
+                                        className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">{boardCmtImg.uploading ? "⏳" : "전송"}</button>
                                 </div>
                                 {boardComment && hasDraft(`comment_labboard_${selectedCard.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
@@ -6407,7 +6407,7 @@ function FileBox({ files, currentUser, onAddFile, onDeleteFile, compact }: {
                             <div className="flex-1 min-w-0">
                                 <button onClick={() => { if (isImageFile(f) || isPdfFile(f)) setPreview(f); else { const a = document.createElement("a"); a.href = f.url; a.download = f.name; a.click(); } }}
                                     className="text-[12px] font-semibold text-blue-600 hover:text-blue-800 truncate block w-full text-left">{f.name}</button>
-                                <div className="text-[10px] text-slate-400 mt-0.5">{(f.size / 1024).toFixed(0)} KB · {MEMBERS[f.uploader]?.emoji || ""}{f.uploader}</div>
+                                <div className="text-[11px] text-slate-400 mt-0.5">{(f.size / 1024).toFixed(0)} KB · {MEMBERS[f.uploader]?.emoji || ""}{f.uploader}</div>
                             </div>
                             {(f.uploader === currentUser || currentUser === "박일웅") && (
                                 <button onClick={() => { if (confirm("삭제?")) onDeleteFile(f.id); }}
@@ -6588,7 +6588,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
             <div className={`flex-col min-w-0 ${mobileTab === "board" ? "flex flex-1 min-h-0" : "hidden"} md:flex`}>
                 <div className="flex items-center justify-between mb-2">
                     <h3 className="text-[14px] font-bold text-slate-700">📌 보드</h3>
-                    <button onClick={() => openNew()} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
+                    <button onClick={() => openNew()} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
                 </div>
                 {showForm && !editing && (
                     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setShowForm(false); boardImg.clear(); }}>
@@ -6638,26 +6638,26 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                     style={{ background: card.color || "#fff", border: card.borderColor ? `2px solid ${card.borderColor}` : "1px solid #E2E8F0", borderLeft: card.needsDiscussion && !card.borderColor ? "3px solid #EF4444" : undefined }}>
                                     <label className="flex items-center gap-1 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
                                         <input type="checkbox" checked={!!card.needsDiscussion} onChange={() => onSaveCard({ ...card, needsDiscussion: !card.needsDiscussion })} className="w-3 h-3 accent-red-500" />
-                                        <span className={`text-[10px] font-medium ${card.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
+                                        <span className={`text-[11px] font-medium ${card.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                                     </label>
                                     <div className="flex items-start justify-between mb-1">
                                         <h4 className="text-[13px] font-semibold text-slate-800 break-words flex-1">{card.title}<SavingBadge id={card.id} /></h4>
-                                        <span className="text-[10px] text-slate-400 ml-1 whitespace-nowrap">{card.updatedAt}</span>
+                                        <span className="text-[11px] text-slate-400 ml-1 whitespace-nowrap">{card.updatedAt}</span>
                                     </div>
                                     {card.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-2 break-words">{card.content}</div>}
-                                    <div className="text-[10px] text-slate-400 mb-1">{MEMBERS[card.author]?.emoji || "👤"} {card.author}</div>
+                                    <div className="text-[11px] text-slate-400 mb-1">{MEMBERS[card.author]?.emoji || "👤"} {card.author}</div>
                                     {cmts.length > 0 ? (
                                         <div className="border-t border-slate-100 pt-1.5 mt-auto space-y-0.5">
-                                            <div className="text-[10px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
+                                            <div className="text-[11px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
                                             {cmts.slice(-2).map(c => (
-                                                <div key={c.id} className="text-[10px] text-slate-500 truncate">
+                                                <div key={c.id} className="text-[11px] text-slate-500 truncate">
                                                     <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
                                                 </div>
                                             ))}
                                         </div>
                                     ) : (
                                         <div className="border-t border-slate-100 pt-1.5 mt-auto">
-                                            <div className="text-[10px] text-slate-300">💬 댓글 없음</div>
+                                            <div className="text-[11px] text-slate-300">💬 댓글 없음</div>
                                         </div>
                                     )}
                                 </div>
@@ -6730,7 +6730,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                         {!isMe && showAvatar && (
                                             <div className="flex items-baseline gap-2 mb-1 px-1">
                                                 <span className="text-[13px] font-semibold" style={{color:"#64748B"}}>{msg.author}</span>
-                                                {MEMBERS[msg.author]?.team && <span className="text-[10.5px]" style={{color:"#94A3B8"}}>· {MEMBERS[msg.author]?.role ? `${MEMBERS[msg.author].role}/${MEMBERS[msg.author].team}` : MEMBERS[msg.author].team}</span>}
+                                                {MEMBERS[msg.author]?.team && <span className="text-[11px]" style={{color:"#94A3B8"}}>· {MEMBERS[msg.author]?.role ? `${MEMBERS[msg.author].role}/${MEMBERS[msg.author].team}` : MEMBERS[msg.author].team}</span>}
                                                 <span className="text-[11px] ml-auto" style={{color:"#94A3B8"}}>{timeStr}</span>
                                             </div>
                                         )}
@@ -6784,7 +6784,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                                     </div>
                                                 )}
                                                 <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "12px 16px", lineHeight: "1.65" }}
-                                                    className="text-[13.5px] text-slate-800">
+                                                    className="text-[13px] text-slate-800">
                                                     {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1.5 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollTeamChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                                     {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
                                                 </div>
@@ -6822,7 +6822,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                     </div>
                 )}
                 <div className={`p-2.5 ${replyTo ? "" : "border-t border-slate-100"} flex-shrink-0 bg-white`}>
-                    {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[80px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">✕</button></div>}
+                    {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[80px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center">✕</button></div>}
                     <div className="flex gap-1.5 items-center">
                         <input ref={chatFileRef} type="file" accept="image/*" className="hidden" onChange={handleChatImg} />
                         <button onClick={() => chatFileRef.current?.click()} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-500 transition-colors flex-shrink-0 text-[18px]" title="파일 첨부">{imgUploading ? "⏳" : "+"}</button>
@@ -6871,7 +6871,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                         className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                         onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
-                                    <button onClick={addComment} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium flex-shrink-0">{cImg.uploading ? "⏳" : "전송"}</button>
+                                    <button onClick={addComment} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium flex-shrink-0">{cImg.uploading ? "⏳" : "전송"}</button>
                                 </div>
                                 {newComment && hasDraft(teamMemoDraftKey(selected.id)) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
                             </div>
@@ -7053,7 +7053,7 @@ function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser, cat
         <div>
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <h2 className="text-[20px] font-bold text-slate-900">💻 {bookName}</h2>
-                <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-xl text-[14px] font-medium hover:bg-blue-600 transition-colors shadow-sm">+ 기록 추가</button>
+                <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600 transition-colors shadow-sm">+ 기록 추가</button>
             </div>
             {mergedEntries.length > 3 && (
                 <div className="mb-4">
@@ -7070,7 +7070,7 @@ function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser, cat
                     <div className="text-3xl mb-2 opacity-40">🖥️</div>
                 <div className="text-[15px] text-slate-400 mb-1">아직 해석 기록이 없습니다</div>
                     <div className="text-[13px] text-slate-300 mb-4">해석을 진행하고 기록을 남겨보세요</div>
-                    <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-xl text-[14px] font-medium hover:bg-blue-600">+ 첫 기록 추가</button>
+                    <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">+ 첫 기록 추가</button>
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -7210,7 +7210,7 @@ function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser, cat
                                 ) : <div />}
                                 <div className="flex gap-2">
                                     <button onClick={() => setFormOpen(false)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                                    <button onClick={handleSubmit} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">{imgUploading ? "⏳" : editEntry ? "수정" : "추가"}</button>
+                                    <button onClick={handleSubmit} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">{imgUploading ? "⏳" : editEntry ? "수정" : "추가"}</button>
                                 </div>
                             </div>
                         </div>
@@ -7305,7 +7305,7 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
         <div>
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <h2 className="text-[20px] font-bold text-slate-900">✏️ {teamName}</h2>
-                <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-xl text-[14px] font-medium hover:bg-blue-600 transition-colors shadow-sm">+ 기록 추가</button>
+                <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600 transition-colors shadow-sm">+ 기록 추가</button>
             </div>
 
             {/* Search */}
@@ -7328,7 +7328,7 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
                     <div className="text-3xl mb-2 opacity-40">🧪</div>
                 <div className="text-[15px] text-slate-400 mb-1">아직 실험 기록이 없습니다</div>
                     <div className="text-[13px] text-slate-300 mb-4">실험을 진행하고 기록을 남겨보세요</div>
-                    <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-xl text-[14px] font-medium hover:bg-blue-600">+ 첫 기록 추가</button>
+                    <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">+ 첫 기록 추가</button>
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -7451,7 +7451,7 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
                                 ) : <div />}
                                 <div className="flex gap-2">
                                     <button onClick={() => setFormOpen(false)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                                    <button onClick={handleSubmit} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">{imgUploading ? "⏳" : editEntry ? "수정" : "추가"}</button>
+                                    <button onClick={handleSubmit} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">{imgUploading ? "⏳" : editEntry ? "수정" : "추가"}</button>
                                 </div>
                             </div>
                         </div>
@@ -7622,7 +7622,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                 <div className="mb-2">
                     <h2 className="text-[24px] font-bold tracking-tight mb-3" style={{color:"#0F172A", letterSpacing:"-0.02em", lineHeight:"1.3"}}>🏠 연구실 현황</h2>
                     <div className="flex items-center gap-3 py-1">
-                        <span className="text-[13.5px]" style={{color:"#94A3B8"}}>{dateLabel}</span>
+                        <span className="text-[13px]" style={{color:"#94A3B8"}}>{dateLabel}</span>
                         <span className="text-[13px] flex items-center gap-1.5" style={{color:"#94A3B8"}}>
                             · 접속 중 <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" /></span>
                             <span style={{color:"#10B981", fontWeight:600}}>{onlineUsers.length}명</span>
@@ -7851,7 +7851,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                                 <button key={i} onClick={() => onNavigate(item.tab)} className="w-full flex items-start gap-2.5 p-3 rounded-xl text-left transition-all group" style={{background:"#FEF2F2", borderLeft:"2px solid #EF4444"}}>
                                     <span className="text-[13px] mt-0.5">{item.icon}</span>
                                     <div className="flex-1 min-w-0">
-                                        <div className="text-[13.5px] text-slate-800 leading-snug truncate group-hover:text-red-600 transition-colors" style={{fontWeight:600}}>{item.title}</div>
+                                        <div className="text-[13px] text-slate-800 leading-snug truncate group-hover:text-red-600 transition-colors" style={{fontWeight:600}}>{item.title}</div>
                                         <div className="text-[11px] text-slate-400 mt-0.5">{item.section}</div>
                                     </div>
                                 </button>
@@ -7953,7 +7953,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                                         <div className="flex-1 min-w-0">
                                             <div className="text-[13px] text-slate-700 leading-snug"><span className="font-semibold">{MEMBERS[fb.author]?.emoji} {fb.author}</span> <span className="text-slate-400">→</span> <span className="text-slate-500">{fb.itemTitle}</span></div>
                                             <div className="text-[12px] text-slate-500 mt-0.5 truncate">{fb.text}</div>
-                                            <div className="text-[10px] text-slate-300 mt-0.5">{fb.date}</div>
+                                            <div className="text-[11px] text-slate-300 mt-0.5">{fb.date}</div>
                                         </div>
                                     </button>
                                 ))}
@@ -7997,7 +7997,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                             return (
                                 <div className="flex gap-1 mt-2">
                                     {cells.map(c => (
-                                        <div key={c.date} className="flex-1 h-[28px] rounded-md flex items-center justify-center text-[10px] font-medium transition-colors" title={c.date}
+                                        <div key={c.date} className="flex-1 h-[28px] rounded-md flex items-center justify-center text-[11px] font-medium transition-colors" title={c.date}
                                             style={{background: c.has ? "#22C55E" : "#F1F5F9", color: c.has ? "white" : "#94A3B8"}}>
                                             {c.label.split("/")[1]}
                                         </div>
@@ -9366,7 +9366,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2">
                     <button onClick={openNoti} className="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                        {notiUnreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center px-0.5">{notiUnreadCount > 99 ? "99+" : notiUnreadCount}</span>}
+                        {notiUnreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center px-0.5">{notiUnreadCount > 99 ? "99+" : notiUnreadCount}</span>}
                     </button>
                     <div className="w-8 h-8 rounded-full flex items-center justify-center text-[16px] flex-shrink-0" style={{background:"rgba(59,130,246,0.1)", border:"1.5px solid rgba(59,130,246,0.25)"}}>{displayMembers[userName]?.emoji || "👤"}</div>
                 </div>
@@ -9380,7 +9380,7 @@ export default function DashboardPage() {
                             <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-[17px] font-extrabold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", boxShadow: "0 2px 8px rgba(59,130,246,0.3)" }}>M</div>
                             <div className="min-w-0">
                                 <div className="text-[15px] tracking-tight text-white" style={{fontWeight:750}}>MFTEL</div>
-                                <div className="text-[10.5px] truncate" style={{color:"#64748B"}}>Multiphase Flow & Thermal Energy</div>
+                                <div className="text-[11px] truncate" style={{color:"#64748B"}}>Multiphase Flow & Thermal Energy</div>
                             </div>
                         </button>
                         <div className="flex-1 min-h-0 overflow-y-auto pt-2 pb-2 dark-scrollbar">
@@ -9391,8 +9391,8 @@ export default function DashboardPage() {
                                 const isActive = activeTab === tab.id;
                                 return (
                                     <div key={tab.id}>
-                                        {showBreak && <div className="mt-5 mb-1.5 px-4"><div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>{sectionBreaks[tab.id]}</div></div>}
-                                        {showTeamMemoBreak && <div className="mt-5 mb-1.5 px-4"><div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>팀 워크</div></div>}
+                                        {showBreak && <div className="mt-5 mb-1.5 px-4"><div className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>{sectionBreaks[tab.id]}</div></div>}
+                                        {showTeamMemoBreak && <div className="mt-5 mb-1.5 px-4"><div className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>팀 워크</div></div>}
                                         <button onClick={() => { setActiveTab(tab.id); setMobileMenuOpen(false); }}
                                             className="relative w-full flex items-center gap-2 px-3 py-2 rounded-[10px] text-[13px] whitespace-nowrap transition-all"
                                             style={{ fontWeight: isActive ? 600 : 450, color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}>
@@ -9402,11 +9402,11 @@ export default function DashboardPage() {
                                     </div>
                                 );
                             })}
-                            {userName === "박일웅" && <div className="mt-5 mb-1.5 px-4"><div className="text-[10.5px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>관리</div></div>}
-                            {userName === "박일웅" && <button onClick={() => { setActiveTab("teams"); setMobileMenuOpen(false); }} className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13.5px] whitespace-nowrap" style={{ fontWeight: activeTab === "teams" ? 600 : 450, color: activeTab === "teams" ? "#FFFFFF" : "#94A3B8", background: activeTab === "teams" ? "rgba(59,130,246,0.15)" : "transparent" }}>
+                            {userName === "박일웅" && <div className="mt-5 mb-1.5 px-4"><div className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>관리</div></div>}
+                            {userName === "박일웅" && <button onClick={() => { setActiveTab("teams"); setMobileMenuOpen(false); }} className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13px] whitespace-nowrap" style={{ fontWeight: activeTab === "teams" ? 600 : 450, color: activeTab === "teams" ? "#FFFFFF" : "#94A3B8", background: activeTab === "teams" ? "rgba(59,130,246,0.15)" : "transparent" }}>
                                 <span className="text-[15px]">👥</span><span>팀 관리</span>
                             </button>}
-                            <button onClick={() => { setActiveTab("settings"); setMobileMenuOpen(false); }} className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13.5px] whitespace-nowrap" style={{ fontWeight: activeTab === "settings" ? 600 : 450, color: activeTab === "settings" ? "#FFFFFF" : "#94A3B8", background: activeTab === "settings" ? "rgba(59,130,246,0.15)" : "transparent" }}>
+                            <button onClick={() => { setActiveTab("settings"); setMobileMenuOpen(false); }} className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13px] whitespace-nowrap" style={{ fontWeight: activeTab === "settings" ? 600 : 450, color: activeTab === "settings" ? "#FFFFFF" : "#94A3B8", background: activeTab === "settings" ? "rgba(59,130,246,0.15)" : "transparent" }}>
                                 <span className="text-[15px]">⚙️</span><span>설정</span>
                             </button>
                         </div>
@@ -9414,7 +9414,7 @@ export default function DashboardPage() {
                             <div className="w-8 h-8 rounded-full flex items-center justify-center text-[16px] flex-shrink-0" style={{background:"rgba(59,130,246,0.1)", border:"1.5px solid rgba(59,130,246,0.25)"}}>{displayMembers[userName]?.emoji || "👤"}</div>
                             <div className="flex-1 min-w-0">
                                 <div className="text-[13px] truncate text-white" style={{fontWeight:650}}>{userName}</div>
-                                <div className="text-[10.5px]" style={{color:"#64748B"}}>{displayMembers[userName]?.role || "학생"}</div>
+                                <div className="text-[11px]" style={{color:"#64748B"}}>{displayMembers[userName]?.role || "학생"}</div>
                             </div>
                             <button onClick={handleLogout} className="text-[16px]" style={{color:"#64748B"}} title="로그아웃">⏻</button>
                         </div>
@@ -9427,7 +9427,7 @@ export default function DashboardPage() {
                     {/* Sidebar top: MFTEL logo */}
                     <button onClick={() => setActiveTab("overview")} className="flex items-center gap-2.5 px-3 pt-4 pb-3 relative z-10 flex-shrink-0 cursor-pointer w-full text-left" style={{borderBottom:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
                         <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center text-[13px] font-extrabold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", boxShadow: "0 2px 8px rgba(59,130,246,0.3)" }}>M</div>
-                        <div className="text-[13.5px] tracking-tight text-white" style={{fontWeight:750}}>MFTEL</div>
+                        <div className="text-[13px] tracking-tight text-white" style={{fontWeight:750}}>MFTEL</div>
                     </button>
                     {/* Cmd+K Search Button */}
                     <button onClick={() => { setCmdKOpen(true); setCmdKQuery(""); setCmdKIdx(0); }}
@@ -9437,7 +9437,7 @@ export default function DashboardPage() {
                         onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#64748B"; }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                         <span className="flex-1 text-left">검색</span>
-                        <kbd className="px-1 py-0.5 text-[10px] rounded" style={{ background: "rgba(255,255,255,0.1)", color: "#475569" }}>⌘K</kbd>
+                        <kbd className="px-1 py-0.5 text-[11px] rounded" style={{ background: "rgba(255,255,255,0.1)", color: "#475569" }}>⌘K</kbd>
                     </button>
                     {/* Notification Bell */}
                     <button onClick={openNoti}
@@ -9447,7 +9447,7 @@ export default function DashboardPage() {
                         onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#64748B"; }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
                         <span className="flex-1 text-left">알림</span>
-                        {notiUnreadCount > 0 && <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold" style={{ background: "#EF4444", color: "#fff" }}>{notiUnreadCount > 99 ? "99+" : notiUnreadCount}</span>}
+                        {notiUnreadCount > 0 && <span className="px-1.5 py-0.5 rounded-md text-[11px] font-bold" style={{ background: "#EF4444", color: "#fff" }}>{notiUnreadCount > 99 ? "99+" : notiUnreadCount}</span>}
                     </button>
                     {/* Sidebar nav */}
                     <div className="flex-1 min-h-0 flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto p-3 md:p-0 md:pt-2 md:pb-2 md:px-1 gap-px dark-scrollbar">
@@ -9460,12 +9460,12 @@ export default function DashboardPage() {
                                 <div key={tab.id}>
                                     {showBreak && (
                                         <div className="hidden md:block mt-4 mb-1 px-3">
-                                            <div className="text-[10px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>{sectionBreaks[tab.id]}</div>
+                                            <div className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>{sectionBreaks[tab.id]}</div>
                                         </div>
                                     )}
                                     {showTeamMemoBreak && (
                                         <div className="hidden md:block mt-4 mb-1 px-3">
-                                            <div className="text-[10px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>팀 워크</div>
+                                            <div className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>팀 워크</div>
                                         </div>
                                     )}
                                     <button onClick={() => setActiveTab(tab.id)}
@@ -9530,14 +9530,14 @@ export default function DashboardPage() {
                         {/* Admin: 팀 관리 + 설정 */}
                         {userName === "박일웅" && (
                             <div className="hidden md:block mt-4 mb-1 px-3">
-                                <div className="text-[10px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>관리</div>
+                                <div className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>관리</div>
                             </div>
                         )}
                         {userName === "박일웅" && (() => {
                             const isActive = activeTab === "teams";
                             return (
                                 <button onClick={() => setActiveTab("teams")}
-                                    className="relative w-full flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[12.5px] whitespace-nowrap transition-all"
+                                    className="relative w-full flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] whitespace-nowrap transition-all"
                                     style={{ fontWeight: isActive ? 600 : 450, letterSpacing: "-0.01em", color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}
                                     onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#E2E8F0"; } }}
                                     onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94A3B8"; } }}>
@@ -9551,7 +9551,7 @@ export default function DashboardPage() {
                             const isActive = activeTab === "settings";
                             return (
                                 <button onClick={() => setActiveTab("settings")}
-                                    className="relative w-full flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[12.5px] whitespace-nowrap transition-all"
+                                    className="relative w-full flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] whitespace-nowrap transition-all"
                                     style={{ fontWeight: isActive ? 600 : 450, letterSpacing: "-0.01em", color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}
                                     onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#E2E8F0"; } }}
                                     onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94A3B8"; } }}>
@@ -9566,8 +9566,8 @@ export default function DashboardPage() {
                     <div className="hidden md:flex items-center gap-2 px-2.5 py-2.5 relative z-10 flex-shrink-0" style={{borderTop:"1px solid rgba(255,255,255,0.08)", background:"#0F172A"}}>
                         <div className="w-7 h-7 rounded-full flex items-center justify-center text-[14px] flex-shrink-0" style={{background:"rgba(59,130,246,0.1)", border:"1.5px solid rgba(59,130,246,0.25)"}}>{displayMembers[userName]?.emoji || "👤"}</div>
                         <div className="flex-1 min-w-0">
-                            <div className="text-[12.5px] truncate text-white" style={{fontWeight:650}}>{userName}</div>
-                            <div className="text-[10px]" style={{color:"#64748B"}}>{displayMembers[userName]?.role || "학생"}</div>
+                            <div className="text-[13px] truncate text-white" style={{fontWeight:650}}>{userName}</div>
+                            <div className="text-[11px]" style={{color:"#64748B"}}>{displayMembers[userName]?.role || "학생"}</div>
                         </div>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
                             <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" /></span>
@@ -9848,7 +9848,7 @@ export default function DashboardPage() {
                         <div className="flex items-center justify-between px-5 border-b border-slate-200" style={{ height: 48 }}>
                             <div className="flex items-center gap-1.5">
                                 <span className="text-[14px] font-semibold" style={{ color: "#1E293B" }}>알림</span>
-                                {notiUnreadCount > 0 && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: "#EF4444", color: "#fff" }}>{notiUnreadCount > 99 ? "99+" : notiUnreadCount}</span>}
+                                {notiUnreadCount > 0 && <span className="px-1.5 py-0.5 rounded text-[11px] font-bold" style={{ background: "#EF4444", color: "#fff" }}>{notiUnreadCount > 99 ? "99+" : notiUnreadCount}</span>}
                             </div>
                             <div className="flex items-center gap-2">
                                 <button onClick={() => markNotiRead()}
@@ -9873,10 +9873,10 @@ export default function DashboardPage() {
                                 if (f.key !== "all" && count === 0) return null;
                                 return (
                                     <button key={f.key} onClick={() => setNotiFilter(f.key)}
-                                        className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all whitespace-nowrap"
+                                        className="flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-medium transition-all whitespace-nowrap"
                                         style={{ background: active ? f.color : "#F1F5F9", color: active ? "#fff" : "#64748B" }}>
                                         {f.label}
-                                        {count > 0 && <span className="text-[9px] opacity-75">{count}</span>}
+                                        {count > 0 && <span className="text-[11px] opacity-75">{count}</span>}
                                     </button>
                                 );
                             })}
@@ -9893,11 +9893,11 @@ export default function DashboardPage() {
                                             <div className="text-[12px] text-slate-700"><span className="font-semibold">{alert.author}</span><span className="text-slate-400"> · {alert.section}</span></div>
                                             <div className="text-[11px] text-slate-500 mt-0.5 truncate">{alert.text.slice(0, 60)}</div>
                                             <div className="flex items-center gap-1.5 mt-0.5">
-                                                <span className="text-[9px] px-1 py-0.5 rounded-full font-medium" style={{
+                                                <span className="text-[11px] px-1 py-0.5 rounded-full font-medium" style={{
                                                     background: alert.type === "mention" ? "rgba(239,68,68,0.1)" : alert.type === "announcement" ? "rgba(245,158,11,0.1)" : alert.type === "board" ? "rgba(16,185,129,0.1)" : alert.type === "update" ? "rgba(139,92,246,0.1)" : "rgba(59,130,246,0.1)",
                                                     color: alert.type === "mention" ? "#EF4444" : alert.type === "announcement" ? "#F59E0B" : alert.type === "board" ? "#10B981" : alert.type === "update" ? "#8B5CF6" : "#3B82F6",
                                                 }}>{alert.type === "mention" ? "멘션" : alert.type === "announcement" ? "공지" : alert.type === "board" ? "게시글" : alert.type === "update" ? "업데이트" : "채팅"}</span>
-                                                <span className="text-[10px] text-slate-400">{notiTimeAgo(alert.timestamp)}</span>
+                                                <span className="text-[11px] text-slate-400">{notiTimeAgo(alert.timestamp)}</span>
                                             </div>
                                         </div>
                                         {isNew && <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-2" />}
@@ -9915,7 +9915,7 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between px-5 flex-shrink-0" style={{ height: 56, borderBottom: "1px solid #E2E8F0" }}>
                         <div className="flex items-center gap-2">
                             <span className="text-[15px] font-semibold" style={{ color: "#1E293B" }}>알림</span>
-                            {notiUnreadCount > 0 && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: "#EF4444", color: "#fff" }}>{notiUnreadCount > 99 ? "99+" : notiUnreadCount}</span>}
+                            {notiUnreadCount > 0 && <span className="px-1.5 py-0.5 rounded text-[11px] font-bold" style={{ background: "#EF4444", color: "#fff" }}>{notiUnreadCount > 99 ? "99+" : notiUnreadCount}</span>}
                         </div>
                         <div className="flex items-center gap-2">
                             {!notiSettingsOpen && <button onClick={() => markNotiRead()}
@@ -9948,7 +9948,7 @@ export default function DashboardPage() {
                                     className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all whitespace-nowrap"
                                     style={{ background: active ? f.color : "#F1F5F9", color: active ? "#fff" : "#64748B" }}>
                                     {f.label}
-                                    {count > 0 && <span className="text-[10px] opacity-75">{count}</span>}
+                                    {count > 0 && <span className="text-[11px] opacity-75">{count}</span>}
                                 </button>
                             );
                         })}
@@ -10020,7 +10020,7 @@ export default function DashboardPage() {
                                             </div>
                                             <div className="text-[12px] text-slate-500 mt-0.5 line-clamp-2">{alert.text.slice(0, 120)}</div>
                                             <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{
+                                                <span className="text-[11px] px-1.5 py-0.5 rounded-full font-medium" style={{
                                                     background: alert.type === "mention" ? "rgba(239,68,68,0.1)" : alert.type === "announcement" ? "rgba(245,158,11,0.1)" : alert.type === "board" ? "rgba(16,185,129,0.1)" : alert.type === "update" ? "rgba(139,92,246,0.1)" : "rgba(59,130,246,0.1)",
                                                     color: alert.type === "mention" ? "#EF4444" : alert.type === "announcement" ? "#F59E0B" : alert.type === "board" ? "#10B981" : alert.type === "update" ? "#8B5CF6" : "#3B82F6",
                                                 }}>{alert.type === "mention" ? "멘션" : alert.type === "announcement" ? "공지" : alert.type === "board" ? "게시글" : alert.type === "update" ? "업데이트" : "채팅"}</span>
@@ -10092,9 +10092,9 @@ export default function DashboardPage() {
                         })()}
                     </div>
                     <div className="flex items-center gap-4 px-4 py-2 border-t border-slate-100" style={{background:"#FAFBFC"}}>
-                        <span className="text-[11px] text-slate-400"><kbd className="px-1 py-0.5 bg-white border border-slate-200 rounded text-[10px] mr-1">↑↓</kbd> 이동</span>
-                        <span className="text-[11px] text-slate-400"><kbd className="px-1 py-0.5 bg-white border border-slate-200 rounded text-[10px] mr-1">↵</kbd> 선택</span>
-                        <span className="text-[11px] text-slate-400"><kbd className="px-1 py-0.5 bg-white border border-slate-200 rounded text-[10px] mr-1">ESC</kbd> 닫기</span>
+                        <span className="text-[11px] text-slate-400"><kbd className="px-1 py-0.5 bg-white border border-slate-200 rounded text-[11px] mr-1">↑↓</kbd> 이동</span>
+                        <span className="text-[11px] text-slate-400"><kbd className="px-1 py-0.5 bg-white border border-slate-200 rounded text-[11px] mr-1">↵</kbd> 선택</span>
+                        <span className="text-[11px] text-slate-400"><kbd className="px-1 py-0.5 bg-white border border-slate-200 rounded text-[11px] mr-1">ESC</kbd> 닫기</span>
                     </div>
                 </div>
             </div>
