@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef, createContext, useContext } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, createContext, useContext, memo, startTransition } from "react";
 
 // ─── Unique ID generator (collision-safe, monotonic) ────────────────────────
 let _idSeq = 0;
@@ -541,7 +541,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
 
     const handleSave = () => {
         if (!title.trim()) return false;
-        onSave({ id: paper?.id ?? Date.now(), title, journal, status, assignees, tags, deadline, progress, comments, creator: paper?.creator || currentUser, createdAt: paper?.createdAt || new Date().toLocaleString("ko-KR"), team, files });
+        onSave({ id: paper?.id ?? genId(), title, journal, status, assignees, tags, deadline, progress, comments, creator: paper?.creator || currentUser, createdAt: paper?.createdAt || new Date().toLocaleString("ko-KR"), team, files });
         return true;
     };
     const addComment = () => {
@@ -560,7 +560,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
                 <div className="p-4 space-y-3">
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">제목 *</label>
-                        <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -975,7 +975,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
 
     const handleSave = () => {
         if (!title.trim()) return false;
-        onSave({ id: report?.id ?? Date.now(), title, assignees, creator: report?.creator || currentUser, deadline, progress: autoProgress, comments, status, createdAt: report?.createdAt || new Date().toLocaleDateString("ko-KR"), checklist, category, team, files });
+        onSave({ id: report?.id ?? genId(), title, assignees, creator: report?.creator || currentUser, deadline, progress: autoProgress, comments, status, createdAt: report?.createdAt || new Date().toLocaleDateString("ko-KR"), checklist, category, team, files });
         return true;
     };
     const addChecklistItem = () => {
@@ -1004,7 +1004,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                 <div className="p-4 space-y-3">
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">제목 *</label>
-                        <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -1429,7 +1429,7 @@ function DispatchPanel({ dispatches, currentUser, onSave, onDelete }: {
     const reset = () => { setEditId(null); setName(currentUser); setStart(""); setEnd(""); setDesc(""); setShowForm(false); };
     const submit = () => {
         if (!name || !start || !end) return;
-        onSave?.({ id: editId || Date.now(), name, start, end, description: desc });
+        onSave?.({ id: editId || genId(), name, start, end, description: desc });
         reset();
     };
     return (
@@ -2073,7 +2073,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
 
     const handleSave = () => {
         if (!title.trim()) return false;
-        onSave({ id: experiment?.id ?? Date.now(), title, equipment, status, assignees, goal, startDate, endDate, logs, progress, creator: experiment?.creator || currentUser, createdAt: experiment?.createdAt || new Date().toLocaleString("ko-KR"), team, files });
+        onSave({ id: experiment?.id ?? genId(), title, equipment, status, assignees, goal, startDate, endDate, logs, progress, creator: experiment?.creator || currentUser, createdAt: experiment?.createdAt || new Date().toLocaleString("ko-KR"), team, files });
         return true;
     };
     const addLog = () => {
@@ -2092,7 +2092,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
                 <div className="p-4 space-y-3">
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">실험 제목 *</label>
-                        <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                     </div>
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">실험 장치</label>
@@ -2515,7 +2515,7 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
 
     const handleSave = () => {
         if (!title.trim()) return false;
-        onSave({ id: analysis?.id ?? Date.now(), title, tool, status, assignees, goal, startDate, endDate, logs, progress, creator: analysis?.creator || currentUser, createdAt: analysis?.createdAt || new Date().toLocaleString("ko-KR"), team, files });
+        onSave({ id: analysis?.id ?? genId(), title, tool, status, assignees, goal, startDate, endDate, logs, progress, creator: analysis?.creator || currentUser, createdAt: analysis?.createdAt || new Date().toLocaleString("ko-KR"), team, files });
         return true;
     };
     const addLog = () => {
@@ -2534,7 +2534,7 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
                 <div className="p-4 space-y-3">
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">해석 제목 *</label>
-                        <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                     </div>
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">해석 도구</label>
@@ -3518,7 +3518,7 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
                 <div className="p-4 space-y-3">
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">제목 *</label>
-                        <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                     </div>
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">기한</label>
@@ -3548,7 +3548,7 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
                 <div className="flex items-center justify-between p-4 border-t border-slate-200">
                     <div className="flex gap-2">
                         <button onClick={onClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                        <button onClick={() => { if (title.trim()) { onSave({ id: patent?.id ?? Date.now(), title, deadline, status, assignees, creator: patent?.creator || currentUser, createdAt: patent?.createdAt || new Date().toLocaleString("ko-KR"), team, files }); onClose(); } }}
+                        <button onClick={() => { if (title.trim()) { onSave({ id: patent?.id ?? genId(), title, deadline, status, assignees, creator: patent?.creator || currentUser, createdAt: patent?.createdAt || new Date().toLocaleString("ko-KR"), team, files }); onClose(); } }}
                             className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
                     {isEdit && onDelete && <button onClick={() => confirmDel(() => { onDelete(patent!.id); onClose(); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
@@ -4087,7 +4087,7 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
     const handleSave = () => {
         if (!title.trim()) return false;
         clearDraft("conf_add");
-        onSave({ id: editing?.id ?? Date.now(), title: title.trim(), startDate, endDate, homepage: homepage.trim(), fee: fee.trim(), participants, creator: editing?.creator || currentUser, createdAt: editing?.createdAt || new Date().toISOString(), status: formStatus, comments, needsDiscussion: editing?.needsDiscussion });
+        onSave({ id: editing?.id ?? genId(), title: title.trim(), startDate, endDate, homepage: homepage.trim(), fee: fee.trim(), participants, creator: editing?.creator || currentUser, createdAt: editing?.createdAt || new Date().toISOString(), status: formStatus, comments, needsDiscussion: editing?.needsDiscussion });
         setConfDraftLoaded(false);
         return true;
     };
@@ -4296,7 +4296,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
     const handleSave = () => {
         if (!title.trim()) return;
         clearDraft("resource_add");
-        onSave({ id: editing?.id ?? Date.now(), title, link, nasPath, author: editing?.author || currentUser, date: editing?.date || new Date().toLocaleDateString("ko-KR"), comments, needsDiscussion: editing?.needsDiscussion });
+        onSave({ id: editing?.id ?? genId(), title, link, nasPath, author: editing?.author || currentUser, date: editing?.date || new Date().toLocaleDateString("ko-KR"), comments, needsDiscussion: editing?.needsDiscussion });
         setResDraftLoaded(false);
         setAdding(false); setEditing(null); // close without re-saving draft
     };
@@ -5717,7 +5717,7 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
     const handleSave = () => {
         if (!title.trim()) return;
         if (!isEdit) { clearDraft("meeting_add"); setMeetingDraftVisible(false); }
-        onSave({ id: meeting?.id ?? Date.now(), title: title.trim(), goal: goal.trim(), summary: summary.trim(), date, assignees, status: "done", creator: meeting?.creator || currentUser, createdAt: meeting?.createdAt || new Date().toLocaleString("ko-KR"), comments, team, needsDiscussion: meeting?.needsDiscussion });
+        onSave({ id: meeting?.id ?? genId(), title: title.trim(), goal: goal.trim(), summary: summary.trim(), date, assignees, status: "done", creator: meeting?.creator || currentUser, createdAt: meeting?.createdAt || new Date().toLocaleString("ko-KR"), comments, team, needsDiscussion: meeting?.needsDiscussion });
     };
     const addComment = () => {
         if (!newComment.trim() && !cImg.img) return;
@@ -5743,7 +5743,7 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
                     )}
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">회의 이름 *</label>
-                        <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                     </div>
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">목표</label>
@@ -8282,14 +8282,20 @@ export default function DashboardPage() {
         });
     }, [saveSection]);
 
+    const pollBackoffRef = useRef(0);
     const fetchData = useCallback(async () => {
         // Skip polling if saves are in-flight to avoid overwriting optimistic state
         if (pendingSavesRef.current > 0) return;
         try {
-            const res = await fetch("/api/dashboard?section=all");
+            const ctrl = new AbortController();
+            const timeout = setTimeout(() => ctrl.abort(), 10000);
+            const res = await fetch("/api/dashboard?section=all", { signal: ctrl.signal });
+            clearTimeout(timeout);
             const d = await res.json();
+            pollBackoffRef.current = 0; // Reset backoff on success
             // Re-check after fetch — a save may have started during the network round-trip
             if (pendingSavesRef.current > 0) return;
+            startTransition(() => {
             if (d.announcements) setAnnouncements(d.announcements);
             if (d.papers) setPapers(d.papers);
             if (d.experiments) setExperiments(d.experiments);
@@ -8397,7 +8403,10 @@ export default function DashboardPage() {
                 // Auto-seed default members to server if none exist
                 fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "members", data: DEFAULT_MEMBERS }) }).catch(() => {});
             }
-        } catch { /* ignore */ }
+            }); // end startTransition
+        } catch {
+            pollBackoffRef.current = Math.min(pollBackoffRef.current + 1, 3);
+        }
     }, []);
 
     const fetchOnline = useCallback(async () => {
@@ -8474,9 +8483,13 @@ export default function DashboardPage() {
         if (!loggedIn) return;
         // Use intervals starting at 0 for initial fetch to avoid lint warning about setState in effect body
         const d = setTimeout(() => { fetchData(); fetchOnline(); fetchLogs(); }, 0);
-        const a = setInterval(fetchData, 5000);
-        const b = setInterval(fetchOnline, 5000);
-        const c = setInterval(sendHeartbeat, 10000);
+        const a = setInterval(() => {
+            const delay = pollBackoffRef.current * 5000; // 0, 5s, 10s, 15s backoff
+            if (delay > 0) { pollBackoffRef.current--; return; }
+            fetchData();
+        }, 15000);
+        const b = setInterval(fetchOnline, 15000);
+        const c = setInterval(sendHeartbeat, 15000);
         const l = setInterval(fetchLogs, 30000);
         return () => { clearTimeout(d); clearInterval(a); clearInterval(b); clearInterval(c); clearInterval(l); };
     }, [loggedIn, fetchData, fetchOnline, sendHeartbeat, fetchLogs]);
@@ -8569,10 +8582,10 @@ export default function DashboardPage() {
     const handleAddTodo = (t: Todo) => { const u = [...todos, t]; setTodos(u); trackSave(t.id, "todos", u, () => setTodos(prev => prev.filter(x => x.id !== t.id))); };
     const handleDeleteTodo = (id: number) => { const u = todos.filter(t => t.id !== id); setTodos(u); saveSection("todos", u); };
     const handleUpdateTodo = (t: Todo) => { const u = todos.map(x => x.id === t.id ? t : x); setTodos(u); saveSection("todos", u); };
-    const handleAddAnn = (text: string, pinned = false) => { const nid = Date.now(); const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned }, ...announcements]; setAnnouncements(u); trackSave(nid, "announcements", u, () => setAnnouncements(prev => prev.filter(a => a.id !== nid))); };
+    const handleAddAnn = (text: string, pinned = false) => { const nid = genId(); const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned }, ...announcements]; setAnnouncements(u); trackSave(nid, "announcements", u, () => setAnnouncements(prev => prev.filter(a => a.id !== nid))); };
     const handleDelAnn = (id: number) => { const u = announcements.filter(a => a.id !== id); setAnnouncements(u); saveSection("announcements", u); };
     const handleUpdateAnn = (ann: Announcement) => { const u = announcements.map(a => a.id === ann.id ? ann : a); setAnnouncements(u); saveSection("announcements", u); };
-    const handleAddPhil = (text: string) => { const nid = Date.now(); const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned: false }, ...philosophy]; setPhilosophy(u); trackSave(nid, "philosophy", u, () => setPhilosophy(prev => prev.filter(p => p.id !== nid))); };
+    const handleAddPhil = (text: string) => { const nid = genId(); const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned: false }, ...philosophy]; setPhilosophy(u); trackSave(nid, "philosophy", u, () => setPhilosophy(prev => prev.filter(p => p.id !== nid))); };
     const handleDelPhil = (id: number) => { pendingSavesRef.current++; setPhilosophy(prev => { const u = prev.filter(p => p.id !== id); saveSection("philosophy", u).then(() => { pendingSavesRef.current--; }); return u; }); };
     const handleUpdatePhil = (p: Announcement) => { pendingSavesRef.current++; setPhilosophy(prev => { const u = prev.map(x => x.id === p.id ? p : x); saveSection("philosophy", u).then(() => { pendingSavesRef.current--; }); return u; }); };
 
@@ -9116,50 +9129,32 @@ export default function DashboardPage() {
         const mentionTag = `@${userName}`;
         const myTeams = userName === "박일웅" ? teamNames : teamNames.filter(t => teams[t]?.lead === userName || teams[t]?.members?.includes(userName));
 
-        // 1) @mentions — highest priority, across all chats
-        labChat.filter(m => m.author !== userName && !m.deleted && m.text?.includes(mentionTag))
-            .forEach(m => { seen.add(`lab_${m.id}`); items.push({ author: m.author, text: m.text, section: "연구실 채팅", tabId: "labChat", timestamp: m.id, type: "mention" }); });
-        Object.entries(teamMemos).forEach(([tName, data]) => {
-            (data.chat || []).filter(m => m.author !== userName && !m.deleted && m.text?.includes(mentionTag))
-                .forEach(m => { seen.add(`tm_${tName}_${m.id}`); items.push({ author: m.author, text: m.text, section: tName, tabId: `teamMemo_${tName}`, timestamp: m.id, type: "mention" }); });
-        });
-        Object.entries(piChat).forEach(([name, msgs]) => {
-            msgs.filter(m => m.author !== userName && !m.deleted && m.text?.includes(mentionTag))
-                .forEach(m => { seen.add(`pi_${name}_${m.id}`); items.push({ author: m.author, text: m.text, section: `${name} 채팅`, tabId: `memo_${name}`, timestamp: m.id, type: "mention" }); });
-        });
+        // Single-pass helper: classify each message as mention or chat
+        const addMsgs = (msgs: typeof labChat, keyPrefix: string, section: string, tabId: string) => {
+            for (const m of msgs) {
+                if (m.author === userName || m.deleted) continue;
+                const isMention = m.text?.includes(mentionTag);
+                items.push({ author: m.author, text: m.text, section, tabId, timestamp: m.id, type: isMention ? "mention" : "chat" });
+            }
+        };
 
-        // 1b) Mentions in casualChat
-        casualChat.filter(m => m.author !== userName && !m.deleted && m.text?.includes(mentionTag))
-            .forEach(m => { seen.add(`casual_${m.id}`); items.push({ author: m.author, text: m.text, section: "잡담", tabId: "chat", timestamp: m.id, type: "mention" }); });
+        // 1) Lab chat + casual chat (single pass each)
+        addMsgs(labChat, "lab", "연구실 채팅", "labChat");
+        addMsgs(casualChat, "casual", "잡담", "chat");
 
-        // 2) Announcements — everyone sees these
+        // 2) Team chat (user's teams)
+        myTeams.forEach(tName => addMsgs(teamMemos[tName]?.chat || [], `tm_${tName}`, tName, `teamMemo_${tName}`));
+
+        // 3) PI chat
+        if (userName === "박일웅") {
+            Object.entries(piChat).forEach(([name, msgs]) => addMsgs(msgs, `pi_${name}`, `${name} 채팅`, `memo_${name}`));
+        } else {
+            addMsgs(piChat[userName] || [], `pi_${userName}`, "PI 채팅", `memo_${userName}`);
+        }
+
+        // 4) Announcements
         announcements.filter(a => a.author !== userName)
             .forEach(a => items.push({ author: a.author, text: a.text, section: "공지사항", tabId: "announcements", timestamp: new Date(a.date).getTime(), type: "announcement" }));
-
-        // 3) Lab chat messages (not already added as mentions)
-        labChat.filter(m => m.author !== userName && !m.deleted && !seen.has(`lab_${m.id}`))
-            .forEach(m => items.push({ author: m.author, text: m.text, section: "연구실 채팅", tabId: "labChat", timestamp: m.id, type: "chat" }));
-
-        // 3b) Casual chat messages
-        casualChat.filter(m => m.author !== userName && !m.deleted && !seen.has(`casual_${m.id}`))
-            .forEach(m => items.push({ author: m.author, text: m.text, section: "잡담", tabId: "chat", timestamp: m.id, type: "chat" }));
-
-        // 4) Team chat messages (user's teams only, not already added as mentions)
-        myTeams.forEach(tName => {
-            (teamMemos[tName]?.chat || []).filter(m => m.author !== userName && !m.deleted && !seen.has(`tm_${tName}_${m.id}`))
-                .forEach(m => items.push({ author: m.author, text: m.text, section: tName, tabId: `teamMemo_${tName}`, timestamp: m.id, type: "chat" }));
-        });
-
-        // 5) PI chat messages — PI sees all channels, students see own channel only
-        if (userName === "박일웅") {
-            Object.entries(piChat).forEach(([name, msgs]) => {
-                msgs.filter(m => m.author !== userName && !m.deleted && !seen.has(`pi_${name}_${m.id}`))
-                    .forEach(m => items.push({ author: m.author, text: m.text, section: `${name} 채팅`, tabId: `memo_${name}`, timestamp: m.id, type: "chat" }));
-            });
-        } else {
-            (piChat[userName] || []).filter(m => m.author !== userName && !m.deleted && !seen.has(`pi_${userName}_${m.id}`))
-                .forEach(m => items.push({ author: m.author, text: m.text, section: "PI 채팅", tabId: `memo_${userName}`, timestamp: m.id, type: "chat" }));
-        }
 
         // 6) Lab board new posts
         labBoard.filter(b => b.author !== userName)
@@ -9285,7 +9280,7 @@ export default function DashboardPage() {
     );
     if (!loggedIn) return <LoginScreen onLogin={handleLogin} members={displayMembers} />;
 
-    const discussionCounts: Record<string, number> = {
+    const discussionCounts = useMemo<Record<string, number>>(() => ({
         todos: todos.filter(t => t.needsDiscussion).length,
         papers: papers.filter(p => p.needsDiscussion).length,
         reports: reports.filter(r => r.needsDiscussion).length,
@@ -9298,9 +9293,9 @@ export default function DashboardPage() {
         meetings: meetings.filter(m => m.needsDiscussion).length,
         ...Object.fromEntries(teamNames.map(t => [`teamMemo_${t}`, (teamMemos[t]?.kanban || []).filter(c => c.needsDiscussion).length])),
         ...Object.fromEntries(memberNames.map(name => [`memo_${name}`, (personalMemos[name] || []).filter(m => m.needsDiscussion).length])),
-    };
+    }), [todos, papers, reports, ipPatents, experiments, analyses, resources, ideas, chatPosts, meetings, teamNames, teamMemos, memberNames, personalMemos]);
 
-    const unreadCounts: Record<string, number> = {
+    const unreadCounts = useMemo<Record<string, number>>(() => ({
         labChat: labChat.filter(m => m.author !== userName && m.id > (chatReadTs.labChat || 0)).length + labBoard.filter(c => c.author !== userName && c.id > (chatReadTs.labChat || 0)).length,
         chat: casualChat.filter(m => m.author !== userName && m.id > (chatReadTs.chat || 0)).length,
         announcements: announcements.filter(a => a.author !== userName && new Date(a.date).getTime() > (chatReadTs.announcements || 0)).length,
@@ -9311,7 +9306,7 @@ export default function DashboardPage() {
             return [`teamMemo_${t}`, chatNew + boardNew];
         })),
         ...Object.fromEntries(memberNames.map(name => [`memo_${name}`, (piChat[name] || []).filter(m => m.author !== userName && m.id > (chatReadTs[`memo_${name}`] || 0)).length])),
-    };
+    }), [labChat, casualChat, labBoard, announcements, teamNames, teamMemos, memberNames, piChat, chatReadTs, userName]);
 
     return (
         <MembersContext.Provider value={displayMembers}>
