@@ -1,189 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef, createContext, useContext, memo, startTransition } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, useContext, memo, startTransition } from "react";
 
-// ─── Unique ID generator (collision-safe, monotonic) ────────────────────────
-let _idSeq = 0;
-const genId = () => Date.now() * 100 + (_idSeq++ % 100);
-
-// ─── Constants ───────────────────────────────────────────────────────────────
-
-const DEFAULT_MEMBERS: Record<string, { team: string; role: string; emoji: string }> = {
-    "박일웅": { team: "PI", role: "교수", emoji: "👨‍🏫" },
-    "용현진": { team: "액침냉각", role: "팀장", emoji: "💧" },
-    "양재혁": { team: "시스템코드", role: "", emoji: "⚙️" },
-    "송준범": { team: "TES", role: "팀장", emoji: "🔥" },
-    "송상민": { team: "액침냉각", role: "", emoji: "🧪" },
-    "김성진": { team: "액침냉각", role: "", emoji: "🔬" },
-    "신현근": { team: "이상유동", role: "팀장", emoji: "🌊" },
-    "고경주": { team: "시스템코드", role: "", emoji: "📐" },
-    "김채연": { team: "액침냉각", role: "", emoji: "❄️" },
-    "박은빈": { team: "이상유동", role: "", emoji: "🔄" },
-    "김만호": { team: "액침냉각", role: "", emoji: "💻" },
-    "정영준": { team: "액침냉각", role: "", emoji: "📊" },
-    "현준환": { team: "TES", role: "", emoji: "🌡️" },
-};
-// Module-level aliases (fallback only — prefer MembersContext for emoji display)
-const MEMBERS = DEFAULT_MEMBERS;
-const MEMBER_NAMES = Object.keys(MEMBERS).filter(k => k !== "박일웅");
-
-// Context for dynamic member data (customEmojis merged)
-const MembersContext = createContext<Record<string, { team: string; role: string; emoji: string }>>(DEFAULT_MEMBERS);
-const ConfirmDeleteContext = createContext<(action: () => void) => void>(() => {});
-const SavingContext = createContext<Set<number>>(new Set());
+// ─── Lib imports ────────────────────────────────────────────────────────────
+import type { TeamData, Comment, Paper, Todo, Experiment, Analysis, Patent, Report, Meeting, TeamMemoCard, TeamChatMsg, LabFile, ConferenceTrip, IdeaPost, Memo, Resource, DailyTarget, Announcement, VacationEntry, ScheduleEvent, TimetableBlock, ChecklistItem, ExperimentLog, AnalysisLog, ExpLogEntry, AnalysisLogEntry } from "./lib/types";
+import { DEFAULT_MEMBERS, MEMBERS, MEMBER_NAMES, ALL_MEMBER_NAMES, STATUS_CONFIG, STATUS_KEYS, PAPER_STATUS_MIGRATE, PAPER_TAGS, REPORT_STATUS_CONFIG, REPORT_STATUS_KEYS, PRIORITY_ICON, PRIORITY_LABEL, PRIORITY_KEYS, DEFAULT_EQUIPMENT, EXP_STATUS_CONFIG, EXP_STATUS_KEYS, EXP_STATUS_MIGRATE, IP_STATUS_CONFIG, IP_STATUS_KEYS, ANALYSIS_STATUS_CONFIG, ANALYSIS_STATUS_KEYS, ANALYSIS_STATUS_MIGRATE, ANALYSIS_TOOLS, CALENDAR_TYPES, TIMETABLE_COLORS, DAY_LABELS, SLOT_COUNT, slotToTime, CATEGORY_COLORS, TEAM_COLORS, TEAM_EMOJIS, EMOJI_CATEGORIES, EMOJI_OPTIONS, MEMO_COLORS, MEMO_BORDERS, TEAM_MEMO_COLORS, MEMO_COL_MIGRATE, MEMO_COLUMNS, DEFAULT_TEAMS, DEFAULT_PAPERS, DEFAULT_TODOS, DEFAULT_EXPERIMENTS, DEFAULT_PATENTS, DEFAULT_TIMETABLE, DRAFT_PFX, FILE_MAX } from "./lib/constants";
+import { genId, toggleArr, saveDraft, loadDraft, clearDraft, hasDraft, chatKeyDown, stripMsgFlags, statusText, renderWithMentions, calcDropIdx, reorderKanbanItems, isImageFile, isPdfFile, uploadFile } from "./lib/utils";
+import { MembersContext, ConfirmDeleteContext, SavingContext } from "./lib/contexts";
+import { useConfirmDelete, useMention, MentionPopup, useCommentImg } from "./lib/hooks";
 function SavingBadge({ id }: { id: number }) {
     const s = useContext(SavingContext);
     if (!s.has(id)) return null;
     return <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded-full animate-pulse ml-1">저장 중</span>;
 }
 
-type TeamData = { lead: string; members: string[]; color: string; emoji?: string };
-
-const DEFAULT_TEAMS: Record<string, TeamData> = {};
-
-// Helper: auto text color for status badge contrast
-// Enter=send, Shift+Enter=newline, mobile=button only
-const chatKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>, send: () => void, composing?: React.MutableRefObject<boolean>) => {
-    if (composing?.current) return;
-    if (e.key !== "Enter") return;
-    if (e.shiftKey) return; // shift+enter: newline
-    e.preventDefault(); send();
-};
-
-// Draft auto-save helpers
-const DRAFT_PFX = "mftel_draft_";
-const saveDraft = (key: string, val: string) => { try { if (val.trim()) localStorage.setItem(DRAFT_PFX + key, val); else localStorage.removeItem(DRAFT_PFX + key); } catch (e) { console.warn("Draft save failed:", e); } };
-const loadDraft = (key: string) => { try { return localStorage.getItem(DRAFT_PFX + key) || ""; } catch (e) { console.warn("Draft load failed:", e); return ""; } };
-const clearDraft = (key: string) => { try { localStorage.removeItem(DRAFT_PFX + key); } catch (e) { console.warn("Draft clear failed:", e); } };
-const hasDraft = (key: string) => { try { return !!localStorage.getItem(DRAFT_PFX + key); } catch (e) { console.warn("Draft check failed:", e); return false; } };
-
-// Strip optimistic flags before persisting chat to server
-const stripMsgFlags = (msgs: TeamChatMsg[]): TeamChatMsg[] => msgs.map(({ _sending, _failed, ...rest }) => rest as TeamChatMsg);
-
-const statusText = (hex: string) => {
-    const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
-    return (r * 299 + g * 587 + b * 114) / 1000 < 160 ? "#FFFFFF" : "#1E293B";
-};
-
-// Shared category colors (soft tones matching pipeline palettes)
-const CATEGORY_COLORS = { paper: "#60A5FA", report: "#FDBA74", experiment: "#F87171", analysis: "#A78BFA", ip: "#2DD4BF" } as const;
-
-const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-    planning: { label: "기획", color: "#BFDBFE" },
-    exp_analysis: { label: "실험·해석", color: "#93C5FD" },
-    writing: { label: "작성중", color: "#60A5FA" },
-    under_review: { label: "심사중", color: "#3B82F6" },
-    completed: { label: "완료", color: "#22C55E" },
-};
-const STATUS_KEYS = ["planning", "exp_analysis", "writing", "under_review"];
-// Migration: map old statuses to merged ones
-const PAPER_STATUS_MIGRATE = (s: string) => (s === "experiment" || s === "analysis") ? "exp_analysis" : s;
-const PAPER_TAGS = ["안전예타", "생애첫", "TES", "액침냉각", "이상유동", "시스템코드", "NTNU", "PCM", "기타"];
-
-const REPORT_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-    planning: { label: "기획", color: "#FED7AA" },
-    writing: { label: "작성중", color: "#FDBA74" },
-    checking: { label: "검토중", color: "#FB923C" },
-    review: { label: "심사중", color: "#F59E0B" },
-    done: { label: "완료", color: "#22C55E" },
-};
-const REPORT_STATUS_KEYS = ["planning", "writing", "checking", "review"];
-const PRIORITY_ICON: Record<string, string> = { highest: "🔥", high: "🔴", mid: "🟡", low: "🔵", lowest: "⚪" };
-const PRIORITY_LABEL: Record<string, string> = { highest: "매우높음", high: "높음", mid: "중간", low: "낮음", lowest: "매우낮음" };
-const PRIORITY_KEYS = ["highest", "high", "mid", "low", "lowest"];
-
-const DEFAULT_EQUIPMENT = ["액침냉각", "이상유동", "예연소실", "라이덴프로스트", "모래배터리", "기타"];
-const EXP_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-    planning: { label: "기획중", color: "#FECACA" },
-    preparing: { label: "준비중", color: "#FCA5A5" },
-    running: { label: "진행중", color: "#F87171" },
-    paused_done: { label: "완료", color: "#EF4444" },
-    completed: { label: "완료", color: "#22C55E" },
-};
-const EXP_STATUS_KEYS = ["planning", "preparing", "running", "paused_done"];
-const EXP_STATUS_MIGRATE = (s: string) => s === "paused" ? "paused_done" : s;
-
-const CALENDAR_TYPES: Record<string, { label: string; color: string; short: string }> = {
-    conference: { label: "학회", color: "#60a5fa", short: "학" },
-    trip: { label: "출장", color: "#7dd3fc", short: "출" },
-    seminar: { label: "세미나", color: "#67e8f9", short: "세" },
-    meeting: { label: "회의", color: "#5eead4", short: "회" },
-    vendor: { label: "업체", color: "#6ee7b7", short: "업" },
-    other: { label: "기타", color: "#cbd5e1", short: "기" },
-    vacation: { label: "휴가", color: "#fca5a5", short: "휴" },
-    wfh: { label: "재택", color: "#fdba74", short: "재" },
-};
-
-const TIMETABLE_COLORS = ["#3b82f6", "#ef4444", "#f59e0b", "#10b981", "#8b5cf6", "#ec4899", "#f97316", "#14b8a6", "#6366f1", "#84cc16"];
-const DAY_LABELS = ["월", "화", "수", "목", "금"];
-const SLOT_COUNT = 24; // 9:00 ~ 21:00, 30min each
-function slotToTime(slot: number) {
-    const h = 9 + Math.floor(slot / 2);
-    const m = slot % 2 === 0 ? "00" : "30";
-    return `${h}:${m}`;
-}
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-type Comment = { id: number; author: string; text: string; date: string; imageUrl?: string };
-type Paper = { id: number; title: string; journal: string; status: string; assignees: string[]; tags: string[]; deadline: string; progress: number; comments: Comment[]; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string; files?: LabFile[] };
-type Todo = { id: number; text: string; assignees: string[]; done: boolean; priority: string; deadline: string; progress?: number; needsDiscussion?: boolean; comments?: Comment[] };
-type ExperimentLog = { id: number; date: string; author: string; text: string; imageUrl?: string };
-type Experiment = { id: number; title: string; equipment: string; status: string; assignees: string[]; goal: string; startDate: string; endDate: string; logs: ExperimentLog[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string; files?: LabFile[] };
-type Announcement = { id: number; text: string; author: string; date: string; pinned: boolean };
-type VacationEntry = { name: string; date: string; type: string };
-type ScheduleEvent = { name: string; date: string; type: string; description: string };
-type TimetableBlock = { id: number; day: number; startSlot: number; endSlot: number; name: string; students: string[]; color: string };
-type ChecklistItem = { id: number; text: string; done: boolean };
-type Report = { id: number; title: string; assignees: string[]; creator: string; deadline: string; progress: number; comments: Comment[]; status: string; createdAt: string; checklist: ChecklistItem[]; category?: string; needsDiscussion?: boolean; team?: string; files?: LabFile[] };
-type DailyTarget = { name: string; date: string; text: string };
-type Resource = { id: number; title: string; link: string; nasPath: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean };
-type IdeaPost = { id: number; title: string; body: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean; color?: string; borderColor?: string; imageUrl?: string };
-type Memo = { id: number; title: string; content: string; color: string; borderColor?: string; updatedAt: string; needsDiscussion?: boolean; comments?: Comment[] };
-type TeamMemoCard = { id: number; title: string; content: string; status: string; color: string; borderColor?: string; author: string; updatedAt: string; comments?: Comment[]; needsDiscussion?: boolean; imageUrl?: string };
-type TeamChatMsg = { id: number; author: string; text: string; date: string; imageUrl?: string; replyTo?: { id: number; author: string; text: string }; reactions?: Record<string, string[]>; deleted?: boolean; _sending?: boolean; _failed?: boolean };
-type LabFile = { id: number; name: string; size: number; url: string; type: string; uploader: string; date: string };
-type ConferenceTrip = { id: number; title: string; startDate: string; endDate: string; homepage: string; fee: string; participants: string[]; creator: string; createdAt: string; status?: string; comments?: Comment[]; needsDiscussion?: boolean };
-type Meeting = { id: number; title: string; goal: string; summary: string; date: string; assignees: string[]; status: string; creator: string; createdAt: string; comments: Comment[]; team?: string; needsDiscussion?: boolean };
-
-// ─── Defaults ────────────────────────────────────────────────────────────────
-
-const DEFAULT_PAPERS: Paper[] = [];
-const DEFAULT_TODOS: Todo[] = [];
-const DEFAULT_EXPERIMENTS: Experiment[] = [];
-const IP_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-    planning: { label: "기획", color: "#99F6E4" },
-    writing: { label: "작성중", color: "#5EEAD4" },
-    evaluation: { label: "평가중", color: "#2DD4BF" },
-    filed: { label: "출원", color: "#14B8A6" },
-    completed: { label: "완료", color: "#22C55E" },
-};
-const IP_STATUS_KEYS = ["planning", "writing", "evaluation", "filed"];
-
-const ANALYSIS_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-    planning: { label: "기획중", color: "#DDD6FE" },
-    preparing: { label: "준비중", color: "#C4B5FD" },
-    running: { label: "진행중", color: "#A78BFA" },
-    paused_done: { label: "완료", color: "#8B5CF6" },
-    completed: { label: "완료", color: "#22C55E" },
-};
-const ANALYSIS_STATUS_KEYS = ["planning", "preparing", "running", "paused_done"];
-const ANALYSIS_STATUS_MIGRATE = (s: string) => s === "paused" ? "paused_done" : s;
-const ANALYSIS_TOOLS = ["OpenFOAM", "ANSYS Fluent", "STAR-CCM+", "MARS-K", "CUPID", "GAMMA+", "Python/MATLAB", "기타"];
-
-type Patent = { id: number; title: string; deadline: string; status: string; assignees: string[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string; files?: LabFile[] };
-type AnalysisLog = { id: number; date: string; author: string; text: string; imageUrl?: string };
-type Analysis = { id: number; title: string; tool: string; status: string; assignees: string[]; goal: string; startDate: string; endDate: string; logs: AnalysisLog[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string; files?: LabFile[] };
-
-const DEFAULT_PATENTS: Patent[] = [];
-const DEFAULT_TIMETABLE: TimetableBlock[] = [];
-
-type ExpLogEntry = { id: number; title: string; date: string; author: string; conditions: string; specimen: string; data: string; notes: string; imageUrl?: string; createdAt: string; category?: string };
-type AnalysisLogEntry = { id: number; title: string; date: string; author: string; tool: string; meshInfo: string; boundaryConditions: string; results: string; notes: string; imageUrl?: string; createdAt: string; category?: string };
-
-// ─── Shared: Multi-select pill helper ────────────────────────────────────────
-
-// ─── Read Receipt Popup ──────────────────────────────────────────────────────
+// ─── Shared UI Components ────────────────────────────────────────────────────
 
 function ReadReceiptBadge({ msgId, currentUser, readReceipts, showZero }: { msgId: number; currentUser: string; readReceipts?: Record<string, number>; showZero?: boolean }) {
     const MEMBERS = useContext(MembersContext);
@@ -225,112 +56,6 @@ function PillSelect({ options, selected, onToggle, emojis }: { options: string[]
     );
 }
 
-// ─── Shared: Delete Confirm Dialog ───────────────────────────────────────────
-
-function useConfirmDelete() {
-    const [pending, setPending] = useState<(() => void) | null>(null);
-    const confirm = (action: () => void) => setPending(() => action);
-    const dialog = pending ? (
-        <div className="fixed inset-0 z-[70] bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setPending(null)}>
-            <div className="bg-white rounded-2xl w-full shadow-xl" style={{ maxWidth: 400, padding: 24, boxShadow: "0 8px 32px rgba(0,0,0,0.12)" }} onClick={e => e.stopPropagation()}>
-                <div className="flex flex-col items-center text-center">
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4" style={{ background: "#FEE2E2" }}>
-                        <span className="text-[22px]">🗑</span>
-                    </div>
-                    <h3 className="text-[16px] font-bold text-slate-800 mb-1">정말 삭제하시겠습니까?</h3>
-                    <p className="text-[13px] text-slate-400 mb-6">삭제된 항목은 복구할 수 없습니다.</p>
-                    <div className="flex gap-3 w-full">
-                        <button onClick={() => setPending(null)}
-                            className="flex-1 py-2.5 rounded-xl text-[14px] font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">취소</button>
-                        <button onClick={() => { pending(); setPending(null); }}
-                            className="flex-1 py-2.5 rounded-xl text-[14px] font-medium transition-colors" style={{ background: "#FEE2E2", color: "#DC2626" }}>삭제</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    ) : null;
-    return { confirm, dialog };
-}
-
-// ─── Shared: @Mention ────────────────────────────────────────────────────────
-
-const ALL_MEMBER_NAMES = Object.keys(DEFAULT_MEMBERS);
-
-function renderWithMentions(text: string) {
-    if (!text) return null;
-    const regex = new RegExp(`(@(?:${ALL_MEMBER_NAMES.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")}))(?=\\s|$|[.,!?])`, "g");
-    const parts = text.split(regex);
-    if (parts.length === 1) return text;
-    return parts.map((part, i) => {
-        if (part.startsWith("@") && ALL_MEMBER_NAMES.includes(part.slice(1))) {
-            return <span key={i} className="px-0.5 rounded text-blue-600 font-semibold" style={{ background: "rgba(59,130,246,0.1)" }}>{part}</span>;
-        }
-        return part;
-    });
-}
-
-function useMention() {
-    const [open, setOpen] = useState(false);
-    const [filter, setFilter] = useState("");
-    const [idx, setIdx] = useState(0);
-    const filtered = useMemo(() => {
-        const q = filter.toLowerCase();
-        const list = q ? ALL_MEMBER_NAMES.filter(n => n.includes(q) || (DEFAULT_MEMBERS[n]?.team || "").toLowerCase().includes(q)) : ALL_MEMBER_NAMES;
-        return list.slice(0, 6);
-    }, [filter]);
-    const check = useCallback((text: string, pos: number) => {
-        const before = text.slice(0, pos);
-        const match = before.match(/@([^\s@]*)$/);
-        if (match) { setOpen(true); setFilter(match[1]); setIdx(0); }
-        else setOpen(false);
-    }, []);
-    // Returns: string(name) = selected, true = consumed, false = not handled
-    const handleKey = useCallback((e: React.KeyboardEvent): string | boolean => {
-        if (!open || filtered.length === 0) return false;
-        if (e.key === "ArrowDown") { e.preventDefault(); setIdx(i => Math.min(i + 1, filtered.length - 1)); return true; }
-        if (e.key === "ArrowUp") { e.preventDefault(); setIdx(i => Math.max(i - 1, 0)); return true; }
-        if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); e.stopPropagation(); return filtered[idx] || false; }
-        if (e.key === "Escape") { e.preventDefault(); setOpen(false); return true; }
-        return false;
-    }, [open, filtered, idx]);
-    const apply = useCallback((text: string, pos: number, name: string) => {
-        const before = text.slice(0, pos);
-        const match = before.match(/@([^\s@]*)$/);
-        if (!match) return null;
-        const atIdx = pos - match[0].length;
-        return { newText: text.slice(0, atIdx) + `@${name} ` + text.slice(pos), cursorPos: atIdx + name.length + 2 };
-    }, []);
-    return { open, filtered, idx, setIdx, check, handleKey, apply, close: () => setOpen(false) };
-}
-
-function MentionPopup({ m, onSelect }: { m: ReturnType<typeof useMention>; onSelect: (name: string) => void }) {
-    if (!m.open || m.filtered.length === 0) return null;
-    return (
-        <div className="absolute bottom-full left-0 right-0 z-50 bg-white rounded-lg shadow-lg border border-slate-200 py-1 mb-1" onWheel={e => e.stopPropagation()}>
-            {m.filtered.map((name, i) => (
-                <button key={name} type="button" onMouseDown={e => e.preventDefault()} onClick={() => onSelect(name)}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors"
-                    style={{ background: i === m.idx ? "#F1F5F9" : "transparent" }}
-                    onMouseEnter={() => m.setIdx(i)}>
-                    <span className="text-[14px]">{DEFAULT_MEMBERS[name]?.emoji || "👤"}</span>
-                    <span className="text-[13px] text-slate-700 font-medium">{name}</span>
-                    <span className="text-[11px] text-slate-400">{DEFAULT_MEMBERS[name]?.team}</span>
-                </button>
-            ))}
-        </div>
-    );
-}
-
-// ─── Shared: Emoji Picker ────────────────────────────────────────────────────
-
-const EMOJI_CATEGORIES = [
-    { label: "😀", name: "표정", emojis: ["😀","😁","😂","🤣","😊","😇","🙂","😉","😌","😍","🥰","😘","😋","😛","😜","🤪","😝","🤗","🤔","🤫","🤭","😏","🙄","😯","😲","😳","🥺","🥹","😢","😭","😤"] },
-    { label: "👍", name: "손", emojis: ["👍","👎","👌","✌️","🤞","🤟","🤘","🤙","👈","👉","👆","👇","☝️","✋","🤚","🖖","👋","🤝","🙏","💪","🫶"] },
-    { label: "❤️", name: "하트", emojis: ["❤️","🧡","💛","💚","💙","💜","🖤","🤍","💔","❣️","💕","💞","💓","💗","💖","💝","💘"] },
-    { label: "🎉", name: "축하", emojis: ["🎉","🎊","🎈","🎁","🏆","🏅","🥇","⭐","🌟","💫","✨","🔔","📣"] },
-    { label: "🔥", name: "기타", emojis: ["🔥","💯","✅","❌","⭕","❓","❗","💡","📌","📎","📝","💬","👀","🚀","⚡","🌈","☀️","🌙","⏰","🎯"] },
-];
-
 function EmojiPickerPopup({ onSelect }: { onSelect: (emoji: string) => void }) {
     const [tab, setTab] = useState(0);
     const cat = EMOJI_CATEGORIES[tab];
@@ -353,79 +78,9 @@ function EmojiPickerPopup({ onSelect }: { onSelect: (emoji: string) => void }) {
     );
 }
 
-// ─── Shared: Comment image paste helper ──────────────────────────────────────
-
-function useCommentImg() {
-    const [img, setImg] = useState("");
-    const [uploading, setUploading] = useState(false);
-    const onPaste = async (e: React.ClipboardEvent) => {
-        const items = e.clipboardData?.items;
-        if (!items) return;
-        for (const item of Array.from(items)) {
-            if (item.type.startsWith("image/")) {
-                e.preventDefault();
-                const file = item.getAsFile(); if (!file) return;
-                if (file.size > 10 * 1024 * 1024) { alert("10MB 이하 이미지만 첨부 가능합니다."); return; }
-                setUploading(true);
-                try { setImg(await uploadFile(file)); } catch { alert("이미지 업로드 실패"); }
-                setUploading(false); return;
-            }
-        }
-    };
-    const clear = () => setImg("");
-    const preview = img ? (
-        <div className="mb-1.5 relative inline-block">
-            <img src={img} alt="" className="max-h-[80px] rounded-md" />
-            <button onClick={clear} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center">✕</button>
-        </div>
-    ) : null;
-    return { img, clear, onPaste, uploading, preview };
-}
-
-// ─── Shared: Drop indicator & kanban reorder helper ─────────────────────────
-
-function calcDropIdx(e: React.DragEvent<HTMLDivElement>, col: string) {
-    const cards = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[draggable]'));
-    let idx = cards.length;
-    for (let i = 0; i < cards.length; i++) {
-        const rect = cards[i].getBoundingClientRect();
-        if (e.clientY < rect.top + rect.height / 2) { idx = i; break; }
-    }
-    return { col, idx };
-}
-
 function DropLine() {
     return <div className="h-[3px] bg-blue-500 rounded-full mx-1 my-0.5 transition-all" style={{ animation: "dropPulse 1s ease-in-out infinite" }} />;
 }
-
-function reorderKanbanItems<T extends { id: number }>(
-    allItems: T[],
-    draggedItem: T,
-    targetStatus: string,
-    targetIdx: number,
-    getStatus: (item: T) => string,
-    setStatus: (item: T, status: string) => T
-): T[] {
-    const without = allItems.filter(i => i.id !== draggedItem.id);
-    const updated = getStatus(draggedItem) !== targetStatus ? setStatus(draggedItem, targetStatus) : draggedItem;
-    const colItems = without.filter(i => getStatus(i) === targetStatus);
-    // When dragging downward within the same column, the visual index is off by 1
-    // because onDragOver sees the column WITH the dragged item still in place
-    const origCol = allItems.filter(i => getStatus(i) === targetStatus);
-    const origIdx = origCol.findIndex(i => i.id === draggedItem.id);
-    let adjusted = targetIdx;
-    if (origIdx >= 0 && origIdx < targetIdx) adjusted = targetIdx - 1;
-    const clamped = Math.min(adjusted, colItems.length);
-    if (colItems.length === 0) return [...without, updated];
-    if (clamped >= colItems.length) {
-        const pos = without.indexOf(colItems[colItems.length - 1]);
-        const result = [...without]; result.splice(pos + 1, 0, updated); return result;
-    }
-    const pos = without.indexOf(colItems[clamped]);
-    const result = [...without]; result.splice(pos, 0, updated); return result;
-}
-
-// ─── Shared: Team Filter Bar ─────────────────────────────────────────────────
 
 function TeamFilterBar({ teamNames, selected, onSelect }: { teamNames: string[]; selected: string; onSelect: (team: string) => void }) {
     if (teamNames.length === 0) return null;
@@ -537,8 +192,6 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
     const [files, setFiles] = useState<LabFile[]>(paper?.files || []);
     const cImg = useCommentImg();
     const [tried, setTried] = useState(false);
-
-    const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const handleSave = () => {
         setTried(true);
@@ -973,7 +626,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
     const [team, setTeam] = useState(report?.team || "");
     const [files, setFiles] = useState<LabFile[]>(report?.files || []);
     const [tried, setTried] = useState(false);
-    const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
+
 
     const doneCount = checklist.filter(c => c.done).length;
     const autoProgress = checklist.length > 0 ? Math.round((doneCount / checklist.length) * 100) : 0;
@@ -1949,7 +1602,7 @@ function TimetableView({ blocks, onSave, onDelete }: {
     const [editBlock, setEditBlock] = useState<TimetableBlock | null>(null);
     const [formName, setFormName] = useState("");
     const [formStudents, setFormStudents] = useState<string[]>([]);
-    const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
+
 
     // Mirror drag state to refs so mouseup handler always reads latest values
     const dragDayRef = useRef(dragDay); dragDayRef.current = dragDay;
@@ -2083,7 +1736,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
     const [team, setTeam] = useState(experiment?.team || "");
     const [files, setFiles] = useState<LabFile[]>(experiment?.files || []);
     const [tried, setTried] = useState(false);
-    const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
+
 
     const handleSave = () => {
         setTried(true);
@@ -2528,7 +2181,7 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
     const [team, setTeam] = useState(analysis?.team || "");
     const [files, setFiles] = useState<LabFile[]>(analysis?.files || []);
     const [tried, setTried] = useState(false);
-    const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
+
 
     const handleSave = () => {
         setTried(true);
@@ -2969,7 +2622,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
     const dragItem = useRef<Todo | null>(null);
     const [editComments, setEditComments] = useState<Comment[]>([]);
     const [editNewComment, setEditNewComment] = useState("");
-    const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
+
 
     const filtered = filterPeople.length === 0 ? todos : todos.filter(t => t.assignees.some(a => filterPeople.includes(a)));
     const getCol = (t: Todo) => t.done ? "completed" : (t.progress ?? 0) > 0 ? "inProgress" : "todo";
@@ -3324,9 +2977,6 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
     );
 }
 
-const TEAM_COLORS = ["#3b82f6", "#ef4444", "#f59e0b", "#8b5cf6", "#10b981", "#ec4899", "#f97316", "#14b8a6", "#6366f1", "#0ea5e9", "#84cc16", "#d946ef", "#78716c", "#dc2626", "#059669", "#7c3aed"];
-const TEAM_EMOJIS = ["💧", "⚙️", "🔋", "🌊", "🔬", "🧪", "📐", "🔧", "❄️", "☢️", "🔥", "💻", "📊", "🌡️", "⚡", "🛠️", "🧬", "🏗️", "📡", "🎯", "🚀", "💎", "🧊", "🌀", "⚛️", "🔩", "🧲", "💡", "🔭", "🪫", "🔌", "🌍", "🛡️", "🏭", "🧫", "📈"];
-
 function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams, currentUser }: { papers: Paper[]; todos: Todo[]; experiments: Experiment[]; analyses: Analysis[]; teams: Record<string, TeamData>; onSaveTeams: (t: Record<string, TeamData>) => void; currentUser: string }) {
     const MEMBERS = useContext(MembersContext);
     const confirmDel = useContext(ConfirmDeleteContext);
@@ -3339,7 +2989,7 @@ function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams
     const [formMembers, setFormMembers] = useState<string[]>([]);
     const [formColor, setFormColor] = useState(TEAM_COLORS[0]);
     const [formEmoji, setFormEmoji] = useState(TEAM_EMOJIS[0]);
-    const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
+
     const [draggedTeam, setDraggedTeam] = useState<string | null>(null);
     const [dropIdx, setDropIdx] = useState<number | null>(null);
     const teamNames = Object.keys(teams);
@@ -3528,7 +3178,7 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
     const [team, setTeam] = useState(patent?.team || "");
     const [files, setFiles] = useState<LabFile[]>(patent?.files || []);
     const [tried, setTried] = useState(false);
-    const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
+
     return (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={onClose}>
             <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
@@ -5040,18 +4690,6 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
 
 // ─── Settings View ──────────────────────────────────────────────────────────
 
-const EMOJI_OPTIONS = [
-    "👨‍🏫","🔥","🌊","💧","⚙️","📐","🔬","💻","🧪","❄️","📊","🔄","🌡️","🎯","🚀","⭐","🎨","🛠️","📡","🧬","💎","🌟","🎓","🤖","🔮","🌈",
-    "🦊","🐱","🐶","🦁","🐼","🐻","🐸","🐙","🦋","🐝","🐺","🦄","🐯","🐮","🐷","🐵","🐰","🐨","🦅","🦇","🐳","🐬","🐠","🦈","🐢","🦜",
-    "🍀","🌸","🌺","☀️","🌙","⚡","💥","✨","🎵","🎮","🏀","⚽","🎸","🎪","🎭","🎲","🎰","🏆","🥇","🏅","🎻","🎺","🥁","🎹","🎧","🎤",
-    "🍎","🍊","🍋","🍇","🍓","🍑","🍒","🥝","🍌","🍉","🍔","🍕","🍩","🍪","🍰","🧁","🍫","🍿","☕","🍵","🥤","🧃","🍺","🧊","🍭","🎂",
-    "🚗","✈️","🚁","🚢","🏎️","🚂","🛸","🚲","🏍️","🛵","⛵","🚤","🚃","🚅","🚆","🛩️","🪂","⛷️","🏂","🏄","🚣","🤿","🧗","🪁","🛶",
-    "💪","👑","🧠","💡","🔑","❤️","💙","💚","💛","💜","🖤","🤍","💝","💖","❤️‍🔥","🫀","🩺","🔭","⚗️","🧲","🧫","🧰","🪛","⛏️","🗡️",
-    "🏔️","🌋","🏝️","🏖️","🌅","🌄","🌃","🏙️","🌉","🎡","🎢","🗼","🏯","🕌","⛩️","🗻","🌎","🌍","🌏","🗺️","🧭","⛺","🏕️","🪐","🌠","🌌",
-    "😎","🥳","🤩","😈","👻","💀","👽","🤡","🦸","🦹","🧙","🧛","🧜","🧚","🧝","🧞","🥷","🧑‍🚀","🧑‍🔬","🧑‍💻","🧑‍🎨","🧑‍🏫","🧑‍🔧","🧑‍🍳","🧑‍⚕️","🧑‍🌾",
-    "🔴","🟠","🟡","🟢","🔵","🟣","🟤","⚪","⚫","🔶","🔷","🔸","🔹","♠️","♥️","♦️","♣️","🃏","🀄","🎴","🏁","🚩","🎌","🏳️‍🌈","🏴‍☠️","🔔"
-];
-
 function PasswordChangeSection({ currentUser }: { currentUser: string }) {
     const [open, setOpen] = useState(false);
     const [currentPw, setCurrentPw] = useState("");
@@ -5283,9 +4921,6 @@ function PushNotificationSettings({ currentUser }: { currentUser: string }) {
 // ─── Login ───────────────────────────────────────────────────────────────────
 
 // ─── Personal Memo View ──────────────────────────────────────────────────────
-
-const MEMO_COLORS = ["#FFFFFF", "#FEF9C3", "#FFEDD5", "#FCE7F3", "#FEE2E2", "#F3E8FF", "#DBEAFE", "#E0F2FE", "#DCFCE7", "#F1F5F9"];
-const MEMO_BORDERS = ["", "#94a3b8", "#f59e0b", "#22c55e", "#3b82f6", "#ec4899", "#8b5cf6", "#ef4444", "#14b8a6", "#f97316"];
 
 function ColorPicker({ color, onColor, compact }: { color: string; onColor: (c: string) => void; compact?: boolean }) {
     return (
@@ -5738,8 +5373,6 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
 
     // Draft auto-save for add form
     useEffect(() => { if (!isEdit) saveDraft("meeting_add", JSON.stringify({ title, content: summary })); }, [title, summary, isEdit]);
-
-    const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const handleSave = () => {
         setTried(true);
@@ -6320,27 +5953,6 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
     );
 }
 
-// ─── File Helpers ────────────────────────────────────────────────────────────
-
-const FILE_MAX = 10 * 1024 * 1024;
-const isImageFile = (f: LabFile) => /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(f.name) || f.type?.startsWith("image/");
-const isPdfFile = (f: LabFile) => /\.pdf$/i.test(f.name) || f.type === "application/pdf";
-
-async function uploadFile(file: File): Promise<string> {
-    try {
-        const { upload } = await import("@vercel/blob/client");
-        const blob = await upload(`dashboard/${Date.now()}_${file.name}`, file, { access: "public", handleUploadUrl: "/api/dashboard-files" });
-        return blob.url;
-    } catch {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
-    }
-}
-
 function FilePreviewModal({ file, onClose }: { file: LabFile; onClose: () => void }) {
     const img = isImageFile(file);
     const pdf = isPdfFile(file);
@@ -6430,10 +6042,6 @@ function FileBox({ files, currentUser, onAddFile, onDeleteFile, compact }: {
 }
 
 // ─── Team Memo View ──────────────────────────────────────────────────────────
-
-const TEAM_MEMO_COLORS = MEMO_COLORS;
-const MEMO_COL_MIGRATE = (s: string) => (s === "done" || s === "right") ? "right" : "left";
-const MEMO_COLUMNS = [{ key: "left", label: "진행", color: "#3b82f6" }, { key: "right", label: "완료", color: "#8b5cf6" }];
 
 function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, onDeleteCard, onReorderCards, onAddChat, onUpdateChat, onDeleteChat, onClearChat, onRetryChat, onAddFile, onDeleteFile, readReceipts }: {
     teamName: string; kanban: TeamMemoCard[]; chat: TeamChatMsg[]; files: LabFile[]; currentUser: string;
