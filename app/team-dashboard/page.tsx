@@ -536,11 +536,13 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
     const [team, setTeam] = useState(paper?.team || "");
     const [files, setFiles] = useState<LabFile[]>(paper?.files || []);
     const cImg = useCommentImg();
+    const [tried, setTried] = useState(false);
 
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const handleSave = () => {
-        if (!title.trim()) return false;
+        setTried(true);
+        if (!title.trim() || assignees.length === 0) return false;
         onSave({ id: paper?.id ?? genId(), title, journal, status, assignees, tags, deadline, progress, comments, creator: paper?.creator || currentUser, createdAt: paper?.createdAt || new Date().toLocaleString("ko-KR"), team, files });
         return true;
     };
@@ -560,7 +562,8 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
                 <div className="p-4 space-y-3">
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">제목 *</label>
-                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className={`w-full border rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 ${tried && !title.trim() ? "border-red-400 ring-2 ring-red-200" : "border-slate-200"}`} />
+                        {tried && !title.trim() && <p className="text-[11px] text-red-500 mt-0.5">제목을 입력하세요</p>}
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -585,9 +588,10 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
                         </div>
                     </div>
                     <div>
-                        <label className="text-[12px] font-semibold text-slate-500 block mb-1">참여자</label>
+                        <label className="text-[12px] font-semibold text-slate-500 block mb-1">참여자 *</label>
                         <PillSelect options={MEMBER_NAMES} selected={assignees} onToggle={v => setAssignees(toggleArr(assignees, v))}
                             emojis={Object.fromEntries(Object.entries(MEMBERS).map(([k, v]) => [k, v.emoji]))} />
+                        {tried && assignees.length === 0 && <p className="text-[11px] text-red-500 mt-0.5">참여자를 선택하세요</p>}
                     </div>
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">태그</label>
@@ -968,13 +972,15 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
     const [category] = useState(report?.category || initialCategory || "계획서");
     const [team, setTeam] = useState(report?.team || "");
     const [files, setFiles] = useState<LabFile[]>(report?.files || []);
+    const [tried, setTried] = useState(false);
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const doneCount = checklist.filter(c => c.done).length;
     const autoProgress = checklist.length > 0 ? Math.round((doneCount / checklist.length) * 100) : 0;
 
     const handleSave = () => {
-        if (!title.trim()) return false;
+        setTried(true);
+        if (!title.trim() || assignees.length === 0) return false;
         onSave({ id: report?.id ?? genId(), title, assignees, creator: report?.creator || currentUser, deadline, progress: autoProgress, comments, status, createdAt: report?.createdAt || new Date().toLocaleDateString("ko-KR"), checklist, category, team, files });
         return true;
     };
@@ -1004,7 +1010,8 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                 <div className="p-4 space-y-3">
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">제목 *</label>
-                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className={`w-full border rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 ${tried && !title.trim() ? "border-red-400 ring-2 ring-red-200" : "border-slate-200"}`} />
+                        {tried && !title.trim() && <p className="text-[11px] text-red-500 mt-0.5">제목을 입력하세요</p>}
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -1026,9 +1033,10 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                         </div>
                     </div>
                     <div>
-                        <label className="text-[12px] font-semibold text-slate-500 block mb-1">담당자</label>
+                        <label className="text-[12px] font-semibold text-slate-500 block mb-1">담당자 *</label>
                         <PillSelect options={MEMBER_NAMES} selected={assignees} onToggle={v => setAssignees(toggleArr(assignees, v))}
                             emojis={Object.fromEntries(Object.entries(MEMBERS).map(([k, v]) => [k, v.emoji]))} />
+                        {tried && assignees.length === 0 && <p className="text-[11px] text-red-500 mt-0.5">담당자를 선택하세요</p>}
                     </div>
                     {teamNames && <TeamSelect teamNames={teamNames} selected={team} onSelect={setTeam} />}
                     <ItemFiles files={files} onChange={setFiles} currentUser={currentUser} />
@@ -2074,10 +2082,12 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
     const [progress, setProgress] = useState(experiment?.progress ?? 0);
     const [team, setTeam] = useState(experiment?.team || "");
     const [files, setFiles] = useState<LabFile[]>(experiment?.files || []);
+    const [tried, setTried] = useState(false);
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const handleSave = () => {
-        if (!title.trim()) return false;
+        setTried(true);
+        if (!title.trim() || assignees.length === 0) return false;
         onSave({ id: experiment?.id ?? genId(), title, equipment, status, assignees, goal, startDate, endDate, logs, progress, creator: experiment?.creator || currentUser, createdAt: experiment?.createdAt || new Date().toLocaleString("ko-KR"), team, files });
         return true;
     };
@@ -2131,9 +2141,10 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
                         </div>
                     </div>
                     <div>
-                        <label className="text-[12px] font-semibold text-slate-500 block mb-1">담당자</label>
+                        <label className="text-[12px] font-semibold text-slate-500 block mb-1">담당자 *</label>
                         <PillSelect options={MEMBER_NAMES} selected={assignees} onToggle={v => setAssignees(toggleArr(assignees, v))}
                             emojis={Object.fromEntries(Object.entries(MEMBERS).map(([k, v]) => [k, v.emoji]))} />
+                        {tried && assignees.length === 0 && <p className="text-[11px] text-red-500 mt-0.5">담당자를 선택하세요</p>}
                     </div>
                     {teamNames && <TeamSelect teamNames={teamNames} selected={team} onSelect={setTeam} />}
                     <div className="grid grid-cols-2 gap-3">
@@ -2516,10 +2527,12 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
     const [progress, setProgress] = useState(analysis?.progress ?? 0);
     const [team, setTeam] = useState(analysis?.team || "");
     const [files, setFiles] = useState<LabFile[]>(analysis?.files || []);
+    const [tried, setTried] = useState(false);
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const handleSave = () => {
-        if (!title.trim()) return false;
+        setTried(true);
+        if (!title.trim() || assignees.length === 0) return false;
         onSave({ id: analysis?.id ?? genId(), title, tool, status, assignees, goal, startDate, endDate, logs, progress, creator: analysis?.creator || currentUser, createdAt: analysis?.createdAt || new Date().toLocaleString("ko-KR"), team, files });
         return true;
     };
@@ -2573,9 +2586,10 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
                         </div>
                     </div>
                     <div>
-                        <label className="text-[12px] font-semibold text-slate-500 block mb-1">담당자</label>
+                        <label className="text-[12px] font-semibold text-slate-500 block mb-1">담당자 *</label>
                         <PillSelect options={MEMBER_NAMES} selected={assignees} onToggle={v => setAssignees(toggleArr(assignees, v))}
                             emojis={Object.fromEntries(Object.entries(MEMBERS).map(([k, v]) => [k, v.emoji]))} />
+                        {tried && assignees.length === 0 && <p className="text-[11px] text-red-500 mt-0.5">담당자를 선택하세요</p>}
                     </div>
                     {teamNames && <TeamSelect teamNames={teamNames} selected={team} onSelect={setTeam} />}
                     <div className="grid grid-cols-2 gap-3">
@@ -3513,6 +3527,7 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
     const [assignees, setAssignees] = useState<string[]>(patent?.assignees || []);
     const [team, setTeam] = useState(patent?.team || "");
     const [files, setFiles] = useState<LabFile[]>(patent?.files || []);
+    const [tried, setTried] = useState(false);
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
     return (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={onClose}>
@@ -3524,7 +3539,8 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
                 <div className="p-4 space-y-3">
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">제목 *</label>
-                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className={`w-full border rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 ${tried && !title.trim() ? "border-red-400 ring-2 ring-red-200" : "border-slate-200"}`} />
+                        {tried && !title.trim() && <p className="text-[11px] text-red-500 mt-0.5">제목을 입력하세요</p>}
                     </div>
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">기한</label>
@@ -3544,9 +3560,10 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
                         </div>
                     </div>
                     <div>
-                        <label className="text-[12px] font-semibold text-slate-500 block mb-1">담당자</label>
+                        <label className="text-[12px] font-semibold text-slate-500 block mb-1">담당자 *</label>
                         <PillSelect options={MEMBER_NAMES} selected={assignees} onToggle={v => setAssignees(toggleArr(assignees, v))}
                             emojis={Object.fromEntries(Object.entries(MEMBERS).map(([k, v]) => [k, v.emoji]))} />
+                        {tried && assignees.length === 0 && <p className="text-[11px] text-red-500 mt-0.5">담당자를 선택하세요</p>}
                     </div>
                     {teamNames && <TeamSelect teamNames={teamNames} selected={team} onSelect={setTeam} />}
                     <ItemFiles files={files} onChange={setFiles} currentUser={currentUser} />
@@ -3554,7 +3571,7 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
                 <div className="flex items-center justify-between p-4 border-t border-slate-200">
                     <div className="flex gap-2">
                         <button onClick={onClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                        <button onClick={() => { if (title.trim()) { onSave({ id: patent?.id ?? genId(), title, deadline, status, assignees, creator: patent?.creator || currentUser, createdAt: patent?.createdAt || new Date().toLocaleString("ko-KR"), team, files }); onClose(); } }}
+                        <button onClick={() => { setTried(true); if (!title.trim() || assignees.length === 0) return; onSave({ id: patent?.id ?? genId(), title, deadline, status, assignees, creator: patent?.creator || currentUser, createdAt: patent?.createdAt || new Date().toLocaleString("ko-KR"), team, files }); onClose(); }}
                             className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
                     {isEdit && onDelete && <button onClick={() => confirmDel(() => { onDelete(patent!.id); onClose(); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
@@ -4090,7 +4107,9 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
     // Draft auto-save for add form
     useEffect(() => { if (adding && !editing) saveDraft("conf_add", JSON.stringify({ title, startDate, endDate, homepage, fee })); }, [title, startDate, endDate, homepage, fee, adding, editing]);
 
+    const [tried, setTried] = useState(false);
     const handleSave = () => {
+        setTried(true);
         if (!title.trim()) return false;
         clearDraft("conf_add");
         onSave({ id: editing?.id ?? genId(), title: title.trim(), startDate, endDate, homepage: homepage.trim(), fee: fee.trim(), participants, creator: editing?.creator || currentUser, createdAt: editing?.createdAt || new Date().toISOString(), status: formStatus, comments, needsDiscussion: editing?.needsDiscussion });
@@ -4197,7 +4216,8 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
                             )}
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">학회/출장 이름 *</label>
-                                <input value={title} onChange={e => setTitle(e.target.value)} placeholder="예: NURETH-21" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+                                <input value={title} onChange={e => setTitle(e.target.value)} placeholder="예: NURETH-21" className={`w-full border rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 ${tried && !title.trim() ? "border-red-400 ring-2 ring-red-200" : "border-slate-200"}`} />
+                                {tried && !title.trim() && <p className="text-[11px] text-red-500 mt-0.5">이름을 입력하세요</p>}
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
@@ -5714,6 +5734,7 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
     const composingRef = useRef(false);
     const [meetingDraftLoaded] = useState(() => { if (meeting) return false; const d = loadDraft("meeting_add"); if (d) { try { const p = JSON.parse(d); return !!(p.title || p.content); } catch (e) { console.warn("Draft parse failed:", e); } } return false; });
     const [meetingDraftVisible, setMeetingDraftVisible] = useState(meetingDraftLoaded);
+    const [tried, setTried] = useState(false);
 
     // Draft auto-save for add form
     useEffect(() => { if (!isEdit) saveDraft("meeting_add", JSON.stringify({ title, content: summary })); }, [title, summary, isEdit]);
@@ -5721,7 +5742,8 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
     const handleSave = () => {
-        if (!title.trim()) return;
+        setTried(true);
+        if (!title.trim() || assignees.length === 0) return;
         if (!isEdit) { clearDraft("meeting_add"); setMeetingDraftVisible(false); }
         onSave({ id: meeting?.id ?? genId(), title: title.trim(), goal: goal.trim(), summary: summary.trim(), date, assignees, status: "done", creator: meeting?.creator || currentUser, createdAt: meeting?.createdAt || new Date().toLocaleString("ko-KR"), comments, team, needsDiscussion: meeting?.needsDiscussion });
     };
@@ -5749,7 +5771,8 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
                     )}
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">회의 이름 *</label>
-                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className={`w-full border rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 ${tried && !title.trim() ? "border-red-400 ring-2 ring-red-200" : "border-slate-200"}`} />
+                        {tried && !title.trim() && <p className="text-[11px] text-red-500 mt-0.5">회의 이름을 입력하세요</p>}
                     </div>
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">목표</label>
@@ -5760,8 +5783,9 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
                         <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                     </div>
                     <div>
-                        <label className="text-[12px] font-semibold text-slate-500 block mb-1">참석자</label>
+                        <label className="text-[12px] font-semibold text-slate-500 block mb-1">참석자 *</label>
                         <PillSelect options={MEMBER_NAMES} selected={assignees} onToggle={v => setAssignees(toggleArr(assignees, v))} />
+                        {tried && assignees.length === 0 && <p className="text-[11px] text-red-500 mt-0.5">참석자를 선택하세요</p>}
                     </div>
                     {teamNames.length > 0 && <TeamSelect teamNames={teamNames} selected={team} onSelect={v => setTeam(v)} />}
                     <div>
@@ -5796,7 +5820,7 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
                 <div className="flex items-center justify-between p-4 border-t border-slate-200">
                     <div className="flex gap-2">
                         <button onClick={handleClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
-                        <button onClick={() => { handleSave(); onClose(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
+                        <button onClick={() => { setTried(true); if (!title.trim() || assignees.length === 0) return; handleSave(); onClose(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
                     {isEdit && onDelete && <button onClick={() => confirmDel(() => { onDelete(meeting!.id); onClose(); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
                 </div>
