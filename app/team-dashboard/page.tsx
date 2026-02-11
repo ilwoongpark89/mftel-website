@@ -1289,8 +1289,8 @@ export default function DashboardPage() {
         notiLogs.filter(l => l.userName !== userName && !chatSections.has(l.section)).slice(0, 100)
             .forEach(l => {
                 const sec = NOTI_SECTION_MAP[l.section] || { label: l.section, icon: "📋", tabId: "overview" };
-                const tabId = l.section === "personalMemos" && l.detail ? `memo_${l.detail}` : sec.tabId;
-                const label = l.section === "personalMemos" && l.detail ? `${l.detail} 메모` : sec.label;
+                const tabId = l.section === "personalMemos" ? `memo_${l.detail || l.userName}` : sec.tabId;
+                const label = l.section === "personalMemos" ? `${l.detail || l.userName} 메모` : sec.label;
                 items.push({ author: l.userName, text: `${label}을(를) 업데이트했습니다`, section: label, tabId, timestamp: l.timestamp, type: "update" });
             });
 
@@ -2011,7 +2011,7 @@ export default function DashboardPage() {
                                 const typeIcon = alert.type === "mention" ? "💬" : alert.type === "announcement" ? "📢" : alert.type === "board" ? "📌" : alert.type === "update" ? "🔄" : "💬";
                                 return (
                                     <button key={`${alert.type}-${alert.timestamp}-${i}`} className="w-full flex items-start gap-3 px-4 py-2.5 text-left transition-colors hover:bg-slate-50"
-                                        onClick={() => { setActiveTab(alert.tabId); setNotiOpen(false); markNotiRead(); }}>
+                                        onClick={() => { if (window.getSelection()?.toString()) return; setActiveTab(alert.tabId); setNotiOpen(false); markNotiRead(); }}>
                                         <span className="text-[16px] mt-0.5 flex-shrink-0">{alert.type === "mention" ? (MEMBERS[alert.author]?.emoji || "👤") : typeIcon}</span>
                                         <div className="flex-1 min-w-0">
                                             <div className="text-[12px] text-slate-700"><span className="font-semibold">{alert.author}</span><span className="text-slate-400"> · {alert.section}</span></div>
@@ -2133,7 +2133,7 @@ export default function DashboardPage() {
                                 <div key={`${alert.type}-${alert.timestamp}-${i}`}>
                                     {showDate && <div className="px-5 pt-3.5 pb-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{currDate}</div>}
                                     <button className="w-full flex items-start gap-3 px-5 py-3 text-left transition-colors hover:bg-slate-50"
-                                        onClick={() => { setActiveTab(alert.tabId); setNotiOpen(false); markNotiRead(); }}>
+                                        onClick={() => { if (window.getSelection()?.toString()) return; setActiveTab(alert.tabId); setNotiOpen(false); markNotiRead(); }}>
                                         <span className="text-[18px] mt-0.5 flex-shrink-0">{alert.type === "mention" ? (MEMBERS[alert.author]?.emoji || "👤") : typeIcon}</span>
                                         <div className="flex-1 min-w-0">
                                             <div className="text-[13px] text-slate-700">
