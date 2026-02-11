@@ -508,7 +508,7 @@ function ItemFiles({ files, onChange, currentUser }: { files: LabFile[]; onChang
             )}
             <input ref={fileInputRef} type="file" onChange={handleUpload} className="hidden" />
             <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[12px] font-medium transition-colors disabled:opacity-50">
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[12px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                 {uploading ? "업로드 중..." : "📎 파일 첨부"}
             </button>
             {preview && <FilePreviewModal file={preview} onClose={() => setPreview(null)} />}
@@ -555,21 +555,21 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
             <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "논문 수정" : "논문 등록"}</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                 </div>
                 <div className="p-4 space-y-3">
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">제목 *</label>
-                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="text-[12px] font-semibold text-slate-500 block mb-1">저널</label>
-                            <input value={journal} onChange={e => setJournal(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                            <input value={journal} onChange={e => setJournal(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                         </div>
                         <div>
                             <label className="text-[12px] font-semibold text-slate-500 block mb-1">마감</label>
-                            <input value={deadline} onChange={e => setDeadline(e.target.value)} placeholder="예: 12/31" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                            <input value={deadline} onChange={e => setDeadline(e.target.value)} placeholder="예: 12/31" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                         </div>
                     </div>
                     <div>
@@ -617,7 +617,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
                         {cImg.preview}
                         <div className="flex gap-2">
                             <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="코멘트 작성... (Ctrl+V 이미지)"
-                                className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                 onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment)} />
                             <button onClick={addComment} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">{cImg.uploading ? "⏳" : "전송"}</button>
                         </div>
@@ -727,7 +727,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                     </div>
                     <div className="flex gap-2">
                         <input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="새 태그"
-                            className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                             onKeyDown={e => { if (e.key === "Enter" && newTag.trim() && !tagList.includes(newTag.trim())) { onSaveTags([...tagList, newTag.trim()]); setNewTag(""); } }} />
                         <button onClick={() => { if (newTag.trim() && !tagList.includes(newTag.trim())) { onSaveTags([...tagList, newTag.trim()]); setNewTag(""); } }}
                             className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">추가</button>
@@ -927,7 +927,7 @@ function KanbanView({ papers, filter, onFilterPerson, allPeople, onClickPaper, o
                                     <input value={detailComment} onChange={e => setDetailComment(e.target.value)}
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                         onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
-                                        placeholder="댓글 입력... (Ctrl+V 이미지)" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                        placeholder="댓글 입력... (Ctrl+V 이미지)" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                                     <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
                                 </div>
                                 {detailComment && hasDraft(`comment_paper_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
@@ -999,17 +999,17 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
             <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? `${report?.category || "계획서/보고서"} 수정` : `${category} 등록`}</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                 </div>
                 <div className="p-4 space-y-3">
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">제목 *</label>
-                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="text-[12px] font-semibold text-slate-500 block mb-1">기한</label>
-                            <input value={deadline} onChange={e => setDeadline(e.target.value)} placeholder="예: 3/15" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                            <input value={deadline} onChange={e => setDeadline(e.target.value)} placeholder="예: 3/15" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                         </div>
                         <div>
                             <label className="text-[12px] font-semibold text-slate-500 block mb-1">상태</label>
@@ -1058,7 +1058,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                         </div>
                         <div className="flex gap-2">
                             <input value={newItem} onChange={e => setNewItem(e.target.value)} placeholder="할 일 추가..."
-                                className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                 onKeyDown={e => e.key === "Enter" && addChecklistItem()} />
                             <button onClick={addChecklistItem} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">추가</button>
                         </div>
@@ -1080,7 +1080,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                         {cImg.preview}
                         <div className="flex gap-2">
                             <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="코멘트 작성... (Ctrl+V 이미지)"
-                                className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                 onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment)} />
                             <button onClick={addComment} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">{cImg.uploading ? "⏳" : "전송"}</button>
                         </div>
@@ -1384,7 +1384,7 @@ function ReportView({ reports, currentUser, onSave, onDelete, onToggleDiscussion
                                     <input value={detailComment} onChange={e => setDetailComment(e.target.value)}
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                         onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
-                                        placeholder="댓글 입력... (Ctrl+V 이미지)" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                        placeholder="댓글 입력... (Ctrl+V 이미지)" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                                     <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
                                 </div>
                                 {detailComment && hasDraft(`comment_report_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
@@ -1909,7 +1909,7 @@ function CalendarGrid({ data, currentUser, types, onToggle, dispatches, onDispat
                                 ))}
                             </div>
                         </div>
-                        <input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="내용입력" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="내용입력" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                         <div className="flex justify-between">
                             {editCell.existing ? (
                                 <button onClick={() => { onToggle(editCell.name, editCell.date, null); setEditCell(null); }}
@@ -1943,19 +1943,24 @@ function TimetableView({ blocks, onSave, onDelete }: {
     const [formStudents, setFormStudents] = useState<string[]>([]);
     const toggleArr = (arr: string[], v: string) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
+    // Mirror drag state to refs so mouseup handler always reads latest values
+    const dragDayRef = useRef(dragDay); dragDayRef.current = dragDay;
+    const dragStartRef = useRef(dragStart); dragStartRef.current = dragStart;
+    const dragEndRef = useRef(dragEnd); dragEndRef.current = dragEnd;
+
     useEffect(() => {
         const up = () => {
-            if (isDragging.current && dragDay !== null && dragStart !== null && dragEnd !== null) {
-                const s = Math.min(dragStart, dragEnd);
-                const e = Math.max(dragStart, dragEnd) + 1;
-                setShowForm({ day: dragDay, start: s, end: e });
+            if (isDragging.current && dragDayRef.current !== null && dragStartRef.current !== null && dragEndRef.current !== null) {
+                const s = Math.min(dragStartRef.current, dragEndRef.current);
+                const e = Math.max(dragStartRef.current, dragEndRef.current) + 1;
+                setShowForm({ day: dragDayRef.current, start: s, end: e });
                 setFormName(""); setFormStudents([]);
             }
             isDragging.current = false; setDragDay(null); setDragStart(null); setDragEnd(null);
         };
         document.addEventListener("mouseup", up);
         return () => document.removeEventListener("mouseup", up);
-    }, [dragDay, dragStart, dragEnd]);
+    }, []);
 
     const CELL_H = 28;
 
@@ -2032,7 +2037,7 @@ function TimetableView({ blocks, onSave, onDelete }: {
                         <p className="text-[12px] text-slate-400 mb-3">
                             {DAY_LABELS[showForm?.day ?? editBlock?.day ?? 0]} {slotToTime(showForm?.start ?? editBlock?.startSlot ?? 0)} ~ {slotToTime(showForm?.end ?? editBlock?.endSlot ?? 0)}
                         </p>
-                        <input value={formName} onChange={e => setFormName(e.target.value)} placeholder="수업 이름" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input value={formName} onChange={e => setFormName(e.target.value)} placeholder="수업 이름" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">수강생</label>
                         <PillSelect options={MEMBER_NAMES} selected={formStudents} onToggle={v => setFormStudents(toggleArr(formStudents, v))}
                             emojis={Object.fromEntries(Object.entries(MEMBERS).map(([k, v]) => [k, v.emoji]))} />
@@ -2087,12 +2092,12 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
             <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "실험 수정" : "실험 등록"}</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                 </div>
                 <div className="p-4 space-y-3">
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">실험 제목 *</label>
-                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                     </div>
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">실험 장치</label>
@@ -2106,7 +2111,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">목표</label>
                         <textarea value={goal} onChange={e => setGoal(e.target.value)} placeholder="실험 목표를 작성하세요..."
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] h-[60px] resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] h-[60px] resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                     </div>
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">달성도 {progress}%</label>
@@ -2135,12 +2140,12 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
                         <div>
                             <label className="text-[12px] font-semibold text-slate-500 block mb-1">시작일</label>
                             <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                         </div>
                         <div>
                             <label className="text-[12px] font-semibold text-slate-500 block mb-1">종료일</label>
                             <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                         </div>
                     </div>
                     <ItemFiles files={files} onChange={setFiles} currentUser={currentUser} />
@@ -2149,7 +2154,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">실험 일지 ({logs.length})</label>
                         <div className="flex gap-2 mb-2">
                             <input value={newLog} onChange={e => setNewLog(e.target.value)} placeholder="오늘의 실험 내용을 기록하세요..."
-                                className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                 onKeyDown={e => e.key === "Enter" && addLog()} />
                             <button onClick={addLog} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">기록</button>
                         </div>
@@ -2227,7 +2232,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                     </div>
                     <div className="flex gap-2">
                         <input value={newEq} onChange={e => setNewEq(e.target.value)} placeholder="새 장치 이름"
-                            className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                             onKeyDown={e => { if (e.key === "Enter" && newEq.trim() && !equipmentList.includes(newEq.trim())) { onSaveEquipment([...equipmentList, newEq.trim()]); setNewEq(""); } }} />
                         <button onClick={() => { if (newEq.trim() && !equipmentList.includes(newEq.trim())) { onSaveEquipment([...equipmentList, newEq.trim()]); setNewEq(""); } }}
                             className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">추가</button>
@@ -2470,7 +2475,7 @@ function ExperimentView({ experiments, onSave, onDelete, currentUser, equipmentL
                                     <input value={detailComment} onChange={e => setDetailComment(e.target.value)}
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                         onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
-                                        placeholder="실험 일지 작성... (Ctrl+V 이미지)" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                        placeholder="실험 일지 작성... (Ctrl+V 이미지)" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                                     <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
                                 </div>
                                 {detailComment && hasDraft(`comment_exp_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
@@ -2529,12 +2534,12 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
             <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "해석 수정" : "해석 등록"}</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                 </div>
                 <div className="p-4 space-y-3">
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">해석 제목 *</label>
-                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                     </div>
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">해석 도구</label>
@@ -2548,7 +2553,7 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">목표</label>
                         <textarea value={goal} onChange={e => setGoal(e.target.value)} placeholder="해석 목표를 작성하세요..."
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] h-[60px] resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] h-[60px] resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                     </div>
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">달성도 {progress}%</label>
@@ -2577,12 +2582,12 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
                         <div>
                             <label className="text-[12px] font-semibold text-slate-500 block mb-1">시작일</label>
                             <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                         </div>
                         <div>
                             <label className="text-[12px] font-semibold text-slate-500 block mb-1">종료일</label>
                             <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                         </div>
                     </div>
                     <ItemFiles files={files} onChange={setFiles} currentUser={currentUser} />
@@ -2590,7 +2595,7 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">해석 일지 ({logs.length})</label>
                         <div className="flex gap-2 mb-2">
                             <input value={newLog} onChange={e => setNewLog(e.target.value)} placeholder="오늘의 해석 내용을 기록하세요..."
-                                className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                 onKeyDown={e => e.key === "Enter" && addLog()} />
                             <button onClick={addLog} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">기록</button>
                         </div>
@@ -2668,7 +2673,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                     </div>
                     <div className="flex gap-2">
                         <input value={newTool} onChange={e => setNewTool(e.target.value)} placeholder="새 도구 이름"
-                            className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                             onKeyDown={e => { if (e.key === "Enter" && newTool.trim() && !toolList.includes(newTool.trim())) { onSaveTools([...toolList, newTool.trim()]); setNewTool(""); } }} />
                         <button onClick={() => { if (newTool.trim() && !toolList.includes(newTool.trim())) { onSaveTools([...toolList, newTool.trim()]); setNewTool(""); } }}
                             className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">추가</button>
@@ -2911,7 +2916,7 @@ function AnalysisView({ analyses, onSave, onDelete, currentUser, toolList, onSav
                                     <input value={detailComment} onChange={e => setDetailComment(e.target.value)}
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                         onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
-                                        placeholder="해석 일지 작성... (Ctrl+V 이미지)" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                        placeholder="해석 일지 작성... (Ctrl+V 이미지)" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                                     <button onClick={addDetailComment} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
                                 </div>
                                 {detailComment && hasDraft(`comment_analysis_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
@@ -3016,7 +3021,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                 <div className="hidden md:block">
                     <div className="bg-white border border-blue-200 rounded-lg p-3 mb-3 space-y-2">
                         <input value={newText} onChange={e => setNewText(e.target.value)} placeholder="할 일 내용..."
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                             onKeyDown={e => e.key === "Enter" && handleAdd()} autoFocus />
                         <div>
                             <label className="text-[11px] font-semibold text-slate-400 block mb-1">담당자 (미선택시 본인)</label>
@@ -3038,7 +3043,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                             <div>
                                 <label className="text-[11px] font-semibold text-slate-400 block mb-1">기한</label>
                                 <input value={newDeadline} onChange={e => setNewDeadline(e.target.value)} placeholder="예: 2/28"
-                                    className="border border-slate-200 rounded-lg px-2 py-1 text-[13px] w-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                    className="border border-slate-200 rounded-lg px-2 py-1 text-[13px] w-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                             </div>
                             <div>
                                 <label className="text-[11px] font-semibold text-slate-400 block mb-1">달성도 {newProgress}%</label>
@@ -3058,10 +3063,10 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                     <div className="bg-white rounded-t-2xl w-full max-w-lg shadow-2xl p-4 space-y-3" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-1">
                             <h3 className="text-[15px] font-bold text-slate-800">할 일 추가</h3>
-                            <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                         </div>
                         <input value={newText} onChange={e => setNewText(e.target.value)} placeholder="할 일 내용..."
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" autoFocus />
+                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" autoFocus />
                         <div>
                             <label className="text-[11px] font-semibold text-slate-400 block mb-1">담당자</label>
                             <div className="flex flex-nowrap overflow-x-auto gap-1">
@@ -3088,7 +3093,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                             <div>
                                 <label className="text-[11px] font-semibold text-slate-400 block mb-1">기한</label>
                                 <input value={newDeadline} onChange={e => setNewDeadline(e.target.value)} placeholder="예: 2/28"
-                                    className="border border-slate-200 rounded-lg px-2 py-1 text-[13px] w-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                    className="border border-slate-200 rounded-lg px-2 py-1 text-[13px] w-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                             </div>
                             <div className="flex-1">
                                 <label className="text-[11px] font-semibold text-slate-400 block mb-1">달성도 {newProgress}%</label>
@@ -3233,12 +3238,12 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                     <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">할 일 수정</h3>
-                            <button onClick={() => setEditingTodo(null)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <button onClick={() => setEditingTodo(null)} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">내용</label>
-                                <input value={newText} onChange={e => setNewText(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                <input value={newText} onChange={e => setNewText(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                             </div>
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">담당자</label>
@@ -3260,7 +3265,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 block mb-1">목표 기한</label>
                                     <input value={newDeadline} onChange={e => setNewDeadline(e.target.value)} placeholder="예: 2/28"
-                                        className="border border-slate-200 rounded-lg px-2 py-1 text-[13px] w-[100px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                        className="border border-slate-200 rounded-lg px-2 py-1 text-[13px] w-[100px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                                 </div>
                             </div>
                             <div>
@@ -3283,7 +3288,7 @@ function TodoList({ todos, onToggle, onAdd, onUpdate, onDelete, onReorder, curre
                                 </div>
                                 <div className="flex gap-2">
                                     <input value={editNewComment} onChange={e => setEditNewComment(e.target.value)} placeholder="댓글 작성..."
-                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                         onKeyDown={e => { if (e.key === "Enter" && editNewComment.trim()) { setEditComments([...editComments, { id: genId(), author: currentUser, text: editNewComment.trim(), date: new Date().toLocaleDateString("ko-KR") }]); setEditNewComment(""); } }} />
                                     <button onClick={() => { if (editNewComment.trim()) { setEditComments([...editComments, { id: genId(), author: currentUser, text: editNewComment.trim(), date: new Date().toLocaleDateString("ko-KR") }]); setEditNewComment(""); } }}
                                         className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">전송</button>
@@ -3439,12 +3444,12 @@ function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams
                     <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">{editingTeam ? "팀 수정" : "팀 추가"}</h3>
-                            <button onClick={() => { setEditingTeam(null); setAddingTeam(false); }} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <button onClick={() => { setEditingTeam(null); setAddingTeam(false); }} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">팀 이름 *</label>
-                                <input value={formName} onChange={e => setFormName(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                <input value={formName} onChange={e => setFormName(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                             </div>
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">아이콘</label>
@@ -3513,16 +3518,16 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
             <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "지식재산권 수정" : "지식재산권 등록"}</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                 </div>
                 <div className="p-4 space-y-3">
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">제목 *</label>
-                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                     </div>
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">기한</label>
-                        <input value={deadline} onChange={e => setDeadline(e.target.value)} placeholder="예: 12/31" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input value={deadline} onChange={e => setDeadline(e.target.value)} placeholder="예: 12/31" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                     </div>
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">상태</label>
@@ -4025,7 +4030,7 @@ function DailyTargetView({ targets, onSave, currentUser }: { targets: DailyTarge
                         <h4 className="text-[14px] mb-1" style={{fontWeight:650, color:"#334155"}}>{editCell.date === todayStr ? "오늘 목표" : `${editCell.date} 목표`}</h4>
                         <p className="text-[12px] text-slate-400 mb-3">{editCell.name}</p>
                         <textarea value={editText} onChange={e => setEditText(e.target.value)} placeholder="오늘의 목표를 작성하세요..."
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20" autoFocus />
+                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/40" autoFocus />
                         <div className="flex justify-end gap-2 mt-3">
                             <button onClick={() => setEditCell(null)} className="px-3 py-1.5 text-[13px] text-slate-500">취소</button>
                             {editText.trim() === "" && getTarget(editCell.name, editCell.date) && (
@@ -4136,7 +4141,7 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
     return (
         <div>
             <button onClick={() => openAdd()} className="mb-4 px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">+ 학회/출장 추가</button>
-            {items.length === 0 && <div className="text-center py-12 text-slate-400 text-[14px]">등록된 학회/출장이 없습니다</div>}
+            {items.length === 0 && <div className="text-center py-12"><div className="text-3xl mb-2 opacity-40">✈️</div><div className="text-slate-400 text-[14px]">등록된 학회/출장이 없습니다</div></div>}
             {monthGroups.map(group => (
                 <div key={group.key} className="mb-6">
                     <h3 className="text-[15px] font-bold text-slate-700 mb-3 pb-2 border-b border-slate-200">{group.label}</h3>
@@ -4180,7 +4185,7 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
                     <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "학회/출장 수정" : "학회/출장 추가"}</h3>
-                            <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
                             {confDraftLoaded && !isEdit && (
@@ -4191,25 +4196,25 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
                             )}
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">학회/출장 이름 *</label>
-                                <input value={title} onChange={e => setTitle(e.target.value)} placeholder="예: NURETH-21" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                <input value={title} onChange={e => setTitle(e.target.value)} placeholder="예: NURETH-21" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 block mb-1">시작일</label>
-                                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                                 </div>
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 block mb-1">종료일</label>
-                                    <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                    <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                                 </div>
                             </div>
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">홈페이지</label>
-                                <input value={homepage} onChange={e => setHomepage(e.target.value)} placeholder="https://..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                <input value={homepage} onChange={e => setHomepage(e.target.value)} placeholder="https://..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                             </div>
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">등록비</label>
-                                <input value={fee} onChange={e => setFee(e.target.value)} placeholder="예: Early bird $500 / Regular $700" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                <input value={fee} onChange={e => setFee(e.target.value)} placeholder="예: Early bird $500 / Regular $700" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                             </div>
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">참가자</label>
@@ -4239,7 +4244,7 @@ function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }:
                                 {cImg.preview}
                                 <div className="flex gap-2">
                                     <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글 작성... (Ctrl+V 이미지)"
-                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                         onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && (newComment.trim() || cImg.img)) { setComments([...comments, { id: genId(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]); setNewComment(""); cImg.clear(); } }} />
                                     <button onClick={() => { if (newComment.trim() || cImg.img) { setComments([...comments, { id: genId(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]); setNewComment(""); cImg.clear(); } }}
                                         className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">{cImg.uploading ? "⏳" : "전송"}</button>
@@ -4350,7 +4355,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
                         </div>
                     );
                 })}
-                {resources.length === 0 && <div className="text-center py-12 text-slate-400 text-[14px] col-span-full">등록된 자료가 없습니다</div>}
+                {resources.length === 0 && <div className="text-center py-12 col-span-full"><div className="text-3xl mb-2 opacity-40">📁</div><div className="text-slate-400 text-[14px]">등록된 자료가 없습니다</div></div>}
             </div>
 
             {modal && (
@@ -4358,7 +4363,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
                     <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "자료 수정" : "자료 추가"}</h3>
-                            <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
                             {resDraftLoaded && !isEdit && (
@@ -4369,15 +4374,15 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
                             )}
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">자료 이름 *</label>
-                                <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                             </div>
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">링크 (URL)</label>
-                                <input value={link} onChange={e => setLink(e.target.value)} placeholder="https://..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                <input value={link} onChange={e => setLink(e.target.value)} placeholder="https://..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                             </div>
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">NAS 경로</label>
-                                <input value={nasPath} onChange={e => setNasPath(e.target.value)} placeholder="예: \\NAS\연구자료\..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                <input value={nasPath} onChange={e => setNasPath(e.target.value)} placeholder="예: \\NAS\연구자료\..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                             </div>
                             {/* Comments */}
                             <div>
@@ -4396,7 +4401,7 @@ function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: {
                                 {cImg.preview}
                                 <div className="flex gap-2">
                                     <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="코멘트 작성... (Ctrl+V 이미지)"
-                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                         onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment)} />
                                     <button onClick={addComment} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[13px] hover:bg-slate-200">{cImg.uploading ? "⏳" : "전송"}</button>
                                 </div>
@@ -4515,7 +4520,7 @@ function SimpleChatPanel({ chat, currentUser, onAdd, onUpdate, onDelete, onClear
                                     )}
                                     {msg.replyTo && (
                                         <div className="text-[10px] text-slate-400 mb-1 px-2 py-1 rounded-lg border-l-[3px] max-w-full truncate cursor-pointer hover:bg-slate-100 transition-colors" style={{background:"#F8F9FA", borderLeftColor:"#CBD5E1"}}
-                                            onClick={() => { const el = document.querySelector(`[data-chat-id="${msg.replyTo!.id}"]`); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("bg-blue-50"); setTimeout(() => el.classList.remove("bg-blue-50"), 1500); } }}>
+                                            onClick={() => { const el = document.querySelector(`[data-chat-id="${msg.replyTo?.id}"]`); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("bg-blue-50"); setTimeout(() => el.classList.remove("bg-blue-50"), 1500); } }}>
                                             <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                         </div>
                                     )}
@@ -4701,7 +4706,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                         )}
                     </div>
                 ))}
-                {ideas.length === 0 && <div className="text-center py-12 text-slate-400 text-[14px] col-span-full">아직 글이 없습니다. 자유롭게 아이디어를 공유해 보세요!</div>}
+                {ideas.length === 0 && <div className="text-center py-12 col-span-full"><div className="text-3xl mb-2 opacity-40">💡</div><div className="text-slate-400 text-[14px]">아직 글이 없습니다. 자유롭게 아이디어를 공유해 보세요!</div></div>}
             </div>
 
             {/* Add modal */}
@@ -4710,7 +4715,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                     <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">새 글 작성</h3>
-                            <button onClick={closeAdd} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <button onClick={closeAdd} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
                             {draftLoaded && (
@@ -4721,12 +4726,12 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                             )}
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">제목 *</label>
-                                <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" style={{height:48}} onPaste={boardImg.onPaste} />
+                                <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" style={{height:48}} onPaste={boardImg.onPaste} />
                             </div>
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">내용</label>
                                 <textarea value={body} onChange={e => setBody(e.target.value)}
-                                    className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
+                                    className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
                             </div>
                             {boardImg.preview}
                             <ColorPicker color={ideaColor} onColor={setIdeaColor} />
@@ -4769,7 +4774,7 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                                 {cImg.preview}
                                 <div className="flex gap-2 items-center">
                                     <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글 작성... (Ctrl+V 이미지)"
-                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                         onCompositionStart={() => { composingRef.current = true; }}
                                         onCompositionEnd={() => { composingRef.current = false; }}
                                         onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
@@ -4799,17 +4804,17 @@ function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas:
                     <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">글 수정</h3>
-                            <button onClick={() => { setIsEditing(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <button onClick={() => { setIsEditing(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">제목 *</label>
-                                <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" style={{height:48}} onPaste={boardImg.onPaste} />
+                                <input value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" style={{height:48}} onPaste={boardImg.onPaste} />
                             </div>
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">내용</label>
                                 <textarea value={body} onChange={e => setBody(e.target.value)}
-                                    className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
+                                    className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
                             </div>
                             {boardImg.preview}
                             <ColorPicker color={ideaColor} onColor={setIdeaColor} />
@@ -4992,11 +4997,11 @@ function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder,
                     <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">{editing._col === "culture" ? "문화" : "공지사항"} 수정</h3>
-                            <button onClick={() => setEditing(null)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <button onClick={() => setEditing(null)} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                         </div>
                         <div className="p-4">
                             <textarea value={editText} onChange={e => setEditText(e.target.value)} rows={4}
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" autoFocus />
+                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" autoFocus />
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-200">
                             <div className="flex gap-2">
@@ -5053,9 +5058,9 @@ function PasswordChangeSection({ currentUser }: { currentUser: string }) {
                 <span className={`text-slate-400 text-[13px] transition-transform ${open ? "rotate-180" : ""}`}>▼</span>
             </button>
             {open && <div className="px-5 pb-5 space-y-3 max-w-[360px]">
-                <div><label className="text-[12px] text-slate-500 block mb-1">현재 비밀번호</label><input type="password" value={currentPw} onChange={e => { setCurrentPw(e.target.value); setMsg(null); }} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
-                <div><label className="text-[12px] text-slate-500 block mb-1">새 비밀번호</label><input type="password" value={newPw} onChange={e => { setNewPw(e.target.value); setMsg(null); }} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
-                <div><label className="text-[12px] text-slate-500 block mb-1">새 비밀번호 확인</label><input type="password" value={confirmPw} onChange={e => { setConfirmPw(e.target.value); setMsg(null); }} onKeyDown={e => e.key === "Enter" && !loading && submit()} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
+                <div><label className="text-[12px] text-slate-500 block mb-1">현재 비밀번호</label><input type="password" value={currentPw} onChange={e => { setCurrentPw(e.target.value); setMsg(null); }} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" /></div>
+                <div><label className="text-[12px] text-slate-500 block mb-1">새 비밀번호</label><input type="password" value={newPw} onChange={e => { setNewPw(e.target.value); setMsg(null); }} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" /></div>
+                <div><label className="text-[12px] text-slate-500 block mb-1">새 비밀번호 확인</label><input type="password" value={confirmPw} onChange={e => { setConfirmPw(e.target.value); setMsg(null); }} onKeyDown={e => e.key === "Enter" && !loading && submit()} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" /></div>
                 {msg && <p className={`text-[13px] ${msg.type === "success" ? "text-green-600" : "text-red-500"}`}>{msg.text}</p>}
                 <button onClick={submit} disabled={loading} className="px-5 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-medium hover:bg-blue-700 disabled:opacity-60">{loading ? "변경 중..." : "비밀번호 변경"}</button>
             </div>}
@@ -5135,7 +5140,7 @@ function SettingsView({ currentUser, customEmojis, onSaveEmoji, statusMessages, 
                     <div className="mb-3 px-3 py-2 bg-blue-50 rounded-lg text-[13px] text-blue-700 italic">&ldquo;{statusMessages[currentUser]}&rdquo;</div>
                 )}
                 <div className="flex gap-2">
-                    <input value={msg} onChange={e => setMsg(e.target.value)} placeholder="오늘의 한마디를 남겨보세요..." maxLength={50} className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" onKeyDown={e => { if (e.key === "Enter" && msg.trim()) { onSaveStatusMsg(currentUser, msg.trim()); } }} />
+                    <input value={msg} onChange={e => setMsg(e.target.value)} placeholder="오늘의 한마디를 남겨보세요..." maxLength={50} className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" onKeyDown={e => { if (e.key === "Enter" && msg.trim()) { onSaveStatusMsg(currentUser, msg.trim()); } }} />
                     <button onClick={() => { if (msg.trim()) onSaveStatusMsg(currentUser, msg.trim()); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-medium hover:bg-blue-700 shrink-0">저장</button>
                 </div>
                 <div className="text-[11px] text-slate-400 mt-1.5 text-right">{msg.length}/50</div>
@@ -5235,7 +5240,7 @@ function PushNotificationSettings({ currentUser }: { currentUser: string }) {
                         <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                         <span className="text-[13px] text-slate-700 font-medium">푸시 알림 활성화됨</span>
                     </div>
-                    <button onClick={handleUnsubscribe} disabled={loading} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200 disabled:opacity-50">
+                    <button onClick={handleUnsubscribe} disabled={loading} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed">
                         {loading ? "처리 중..." : "알림 끄기"}
                     </button>
                 </div>
@@ -5245,7 +5250,7 @@ function PushNotificationSettings({ currentUser }: { currentUser: string }) {
                         <p className="text-[13px] text-slate-700">새 메시지, 공지사항 알림을 받을 수 있습니다.</p>
                         <p className="text-[12px] text-slate-400 mt-0.5">채팅, 팀 메모, 공지 알림</p>
                     </div>
-                    <button onClick={handleSubscribe} disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-medium hover:bg-blue-700 disabled:opacity-50">
+                    <button onClick={handleSubscribe} disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">
                         {loading ? "처리 중..." : "알림 켜기"}
                     </button>
                 </div>
@@ -5358,7 +5363,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
     const handleChatImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file) return;
         setImgUploading(true);
-        try { const url = await uploadFile(file); setChatImg(url); } catch {}
+        try { const url = await uploadFile(file); setChatImg(url); } catch { alert("이미지 업로드에 실패했습니다."); }
         setImgUploading(false); e.target.value = "";
     };
     const handlePaste = async (e: React.ClipboardEvent) => {
@@ -5369,7 +5374,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                 e.preventDefault();
                 const file = item.getAsFile(); if (!file) return;
                 setImgUploading(true);
-                try { const url = await uploadFile(file); setChatImg(url); } catch {}
+                try { const url = await uploadFile(file); setChatImg(url); } catch { alert("이미지 업로드에 실패했습니다."); }
                 setImgUploading(false); return;
             }
         }
@@ -5389,7 +5394,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                     <button onClick={openAdd} className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
                 </div>
                 <div className="flex-1 min-h-0 overflow-y-auto">
-                    {memos.length === 0 && !adding && <div className="text-center py-12 text-slate-400 text-[13px]">노트가 없습니다</div>}
+                    {memos.length === 0 && !adding && <div className="text-center py-12"><div className="text-3xl mb-2 opacity-40">📒</div><div className="text-slate-400 text-[13px]">노트가 없습니다</div></div>}
                     <div className="grid grid-cols-2 gap-2">
                         {[...memos].sort((a, b) => b.id - a.id).map(m => {
                             const cmts = m.comments || [];
@@ -5498,7 +5503,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                         )}
                                         {msg.replyTo && (
                                             <div className="text-[11px] text-slate-400 mb-1 px-3 py-1.5 rounded-lg border-l-[3px] max-w-full truncate cursor-pointer hover:bg-slate-100 transition-colors" style={{background:"#F8F9FA", borderLeftColor:"#CBD5E1"}}
-                                                onClick={() => { const el = document.querySelector(`[data-chat-id="${msg.replyTo!.id}"]`); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("bg-blue-50"); setTimeout(() => el.classList.remove("bg-blue-50"), 1500); } }}>
+                                                onClick={() => { const el = document.querySelector(`[data-chat-id="${msg.replyTo?.id}"]`); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("bg-blue-50"); setTimeout(() => el.classList.remove("bg-blue-50"), 1500); } }}>
                                                 <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                             </div>
                                         )}
@@ -5588,7 +5593,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                 onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                 onKeyDown={e => { const mr = mention.handleKey(e); if (typeof mr === "string") { selectMention(mr); return; } if (mr === true) return; chatKeyDown(e, sendChat, composingRef); }}
                                 placeholder="메시지 입력..." rows={1}
-                                className="w-full border border-slate-200 rounded-2xl px-4 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                className="w-full border border-slate-200 rounded-2xl px-4 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" />
                             <MentionPopup m={mention} onSelect={selectMention} />
                         </div>
                         <button onClick={sendChat} className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors flex-shrink-0 text-[16px]" title="전송">›</button>
@@ -5604,11 +5609,11 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                     <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">새 노트</h3>
-                            <button onClick={() => setAdding(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <button onClick={() => setAdding(false)} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
-                            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-                            <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용..." rows={5} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+                            <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용..." rows={5} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" />
                             <ColorPicker color={color} onColor={setColor} />
                         </div>
                         <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
@@ -5627,7 +5632,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                             <h3 className="text-[15px] font-bold text-slate-800 break-words flex-1 pr-2">{selected.title}</h3>
                             <div className="flex items-center gap-2 flex-shrink-0">
                                 <button onClick={startEdit} className="text-[13px] text-blue-500 hover:text-blue-600 font-medium">수정</button>
-                                <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                                <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                             </div>
                         </div>
                         <div className="p-4">
@@ -5648,7 +5653,7 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                                 {cImg.preview}
                                 <div className="flex gap-2">
                                     <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글... (Ctrl+V 이미지)"
-                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                         onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
                                     <button onClick={addComment} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium flex-shrink-0">{cImg.uploading ? "⏳" : "전송"}</button>
@@ -5665,11 +5670,11 @@ function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteF
                     <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">노트 수정</h3>
-                            <button onClick={() => setIsEditing(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <button onClick={() => setIsEditing(false)} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
-                            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-                            <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용..." rows={5} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+                            <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용..." rows={5} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" />
                             <ColorPicker color={color} onColor={setColor} />
                         </div>
                         <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
@@ -5732,7 +5737,7 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
             <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "회의록 수정" : "회의록 작성"}</h3>
-                    <button onClick={handleClose} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                    <button onClick={handleClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                 </div>
                 <div className="p-4 space-y-3">
                     {meetingDraftVisible && !isEdit && (
@@ -5743,15 +5748,15 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
                     )}
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">회의 이름 *</label>
-                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                     </div>
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">목표</label>
-                        <input value={goal} onChange={e => setGoal(e.target.value)} placeholder="이번 회의에서 달성할 목표" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input value={goal} onChange={e => setGoal(e.target.value)} placeholder="이번 회의에서 달성할 목표" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                     </div>
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">날짜</label>
-                        <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                     </div>
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">참석자</label>
@@ -5761,7 +5766,7 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">내용 요약</label>
                         <textarea value={summary} onChange={e => setSummary(e.target.value)} rows={5} placeholder="회의 내용을 요약해 주세요..."
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" />
                     </div>
                     {/* Comments */}
                     <div>
@@ -5779,7 +5784,7 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
                         {cImg.preview}
                         <div className="flex gap-2">
                             <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글... (Ctrl+V 이미지)"
-                                className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                 onCompositionStart={() => { composingRef.current = true; }}
                                 onCompositionEnd={() => { composingRef.current = false; }}
                                 onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
@@ -5853,7 +5858,7 @@ function MeetingView({ meetings, onSave, onDelete, currentUser, teamNames }: {
                         )}
                     </div>
                 ))}
-                {sorted.length === 0 && <div className="text-[14px] text-slate-400 text-center py-12 col-span-full">아직 회의록이 없습니다</div>}
+                {sorted.length === 0 && <div className="text-center py-12 col-span-full"><div className="text-3xl mb-2 opacity-40">📝</div><div className="text-slate-400 text-[14px]">아직 회의록이 없습니다</div></div>}
             </div>
             {adding && <MeetingFormModal meeting={null} onSave={m => { onSave(m); setAdding(false); }} onClose={() => setAdding(false)} currentUser={currentUser} teamNames={teamNames} />}
             {editing && <MeetingFormModal meeting={editing} onSave={m => { onSave(m); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} teamNames={teamNames} />}
@@ -5928,7 +5933,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
     const handleChatImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file) return;
         setImgUploading(true);
-        try { const url = await uploadFile(file); setChatImg(url); } catch {}
+        try { const url = await uploadFile(file); setChatImg(url); } catch { alert("이미지 업로드에 실패했습니다."); }
         setImgUploading(false); e.target.value = "";
     };
     const handlePaste = async (e: React.ClipboardEvent) => {
@@ -5939,7 +5944,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                 e.preventDefault();
                 const file = item.getAsFile(); if (!file) return;
                 setImgUploading(true);
-                try { const url = await uploadFile(file); setChatImg(url); } catch {}
+                try { const url = await uploadFile(file); setChatImg(url); } catch { alert("이미지 업로드에 실패했습니다."); }
                 setImgUploading(false); return;
             }
         }
@@ -6081,7 +6086,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                         )}
                                         {msg.replyTo && (
                                             <div className="text-[11px] text-slate-400 mb-1 px-3 py-1.5 rounded-lg border-l-[3px] max-w-full truncate cursor-pointer hover:bg-slate-100 transition-colors" style={{background:"#F8F9FA", borderLeftColor:"#CBD5E1"}}
-                                                onClick={() => { const el = document.querySelector(`[data-chat-id="${msg.replyTo!.id}"]`); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("bg-blue-50"); setTimeout(() => el.classList.remove("bg-blue-50"), 1500); } }}>
+                                                onClick={() => { const el = document.querySelector(`[data-chat-id="${msg.replyTo?.id}"]`); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("bg-blue-50"); setTimeout(() => el.classList.remove("bg-blue-50"), 1500); } }}>
                                                 <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                             </div>
                                         )}
@@ -6171,7 +6176,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                 onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                 onKeyDown={e => { const mr = mention.handleKey(e); if (typeof mr === "string") { selectMention(mr); return; } if (mr === true) return; chatKeyDown(e, send, composingRef); }}
                                 placeholder="메시지 입력..." rows={1}
-                                className="w-full border border-slate-200 rounded-2xl px-4 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                className="w-full border border-slate-200 rounded-2xl px-4 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" />
                             <MentionPopup m={mention} onSelect={selectMention} />
                         </div>
                         <button onClick={send} className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors flex-shrink-0 text-[16px]" title="전송">›</button>
@@ -6186,11 +6191,11 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                     <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">새 글 작성</h3>
-                            <button onClick={() => { setBoardAdding(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <button onClick={() => { setBoardAdding(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
-                            <input value={boardTitle} onChange={e => setBoardTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" style={{height:48}} onPaste={boardImg.onPaste} />
-                            <textarea value={boardContent} onChange={e => setBoardContent(e.target.value)} placeholder="내용을 입력하세요... (Ctrl+V로 이미지 붙여넣기)" className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
+                            <input value={boardTitle} onChange={e => setBoardTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/40" style={{height:48}} onPaste={boardImg.onPaste} />
+                            <textarea value={boardContent} onChange={e => setBoardContent(e.target.value)} placeholder="내용을 입력하세요... (Ctrl+V로 이미지 붙여넣기)" className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
                             {boardImg.preview}
                             <ColorPicker color={boardColor} onColor={setBoardColor} />
                         </div>
@@ -6229,7 +6234,7 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                                 {boardCmtImg.preview}
                                 <div className="flex gap-2 items-center">
                                     <input value={boardComment} onChange={e => setBoardComment(e.target.value)} placeholder="댓글 작성... (Ctrl+V 이미지)"
-                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                         onPaste={boardCmtImg.onPaste}
                                         onKeyDown={e => chatKeyDown(e, () => { if (!boardComment.trim() && !boardCmtImg.img) return; clearDraft(`comment_labboard_${selectedCard.id}`); const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: genId(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: boardCmtImg.img || undefined }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); boardCmtImg.clear(); })} />
                                     <button onClick={() => { if (!boardComment.trim() && !boardCmtImg.img) return; clearDraft(`comment_labboard_${selectedCard.id}`); const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: genId(), author: currentUser, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: boardCmtImg.img || undefined }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); boardCmtImg.clear(); }}
@@ -6258,17 +6263,17 @@ function LabChatView({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, on
                     <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">글 수정</h3>
-                            <button onClick={() => { setBoardEditing(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <button onClick={() => { setBoardEditing(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">제목 *</label>
-                                <input value={boardTitle} onChange={e => setBoardTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" style={{height:48}} onPaste={boardImg.onPaste} />
+                                <input value={boardTitle} onChange={e => setBoardTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" style={{height:48}} onPaste={boardImg.onPaste} />
                             </div>
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">내용</label>
                                 <textarea value={boardContent} onChange={e => setBoardContent(e.target.value)}
-                                    className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
+                                    className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
                             </div>
                             {boardImg.preview}
                             <ColorPicker color={boardColor} onColor={setBoardColor} />
@@ -6321,7 +6326,7 @@ function FilePreviewModal({ file, onClose }: { file: LabFile; onClose: () => voi
                     <span className="text-[14px] truncate flex-1 pr-4" style={{fontWeight:650, color:"#334155"}}>{file.name}</span>
                     <div className="flex items-center gap-3 shrink-0">
                         <a href={file.url} download={file.name} className="text-[13px] text-blue-500 hover:text-blue-600 font-medium">다운로드</a>
-                        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                     </div>
                 </div>
                 <div className="overflow-auto" style={{ maxHeight: "calc(90vh - 60px)" }}>
@@ -6390,7 +6395,7 @@ function FileBox({ files, currentUser, onAddFile, onDeleteFile, compact }: {
             <div className="p-2.5 border-t border-slate-100">
                 <input ref={fileInputRef} type="file" onChange={handleUpload} className="hidden" />
                 <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
-                    className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[12px] font-medium transition-colors disabled:opacity-50">
+                    className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[12px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                     {uploading ? "업로드 중..." : "📎 파일 업로드"}
                 </button>
             </div>
@@ -6521,7 +6526,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
     const handleChatImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file) return;
         setImgUploading(true);
-        try { const url = await uploadFile(file); setChatImg(url); } catch {}
+        try { const url = await uploadFile(file); setChatImg(url); } catch { alert("이미지 업로드에 실패했습니다."); }
         setImgUploading(false); e.target.value = "";
     };
     const handlePaste = async (e: React.ClipboardEvent) => {
@@ -6532,7 +6537,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                 e.preventDefault();
                 const file = item.getAsFile(); if (!file) return;
                 setImgUploading(true);
-                try { const url = await uploadFile(file); setChatImg(url); } catch {}
+                try { const url = await uploadFile(file); setChatImg(url); } catch { alert("이미지 업로드에 실패했습니다."); }
                 setImgUploading(false); return;
             }
         }
@@ -6565,7 +6570,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                         <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
                             <div className="flex items-center justify-between p-4 border-b border-slate-200">
                                 <h3 className="text-[15px] font-bold text-slate-800">새 글 작성</h3>
-                                <button onClick={() => { setShowForm(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                                <button onClick={() => { setShowForm(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                             </div>
                             <div className="p-4 space-y-3">
                                 {cardDraftLoaded && (title.trim() || content.trim()) && (
@@ -6574,8 +6579,8 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                         <button onClick={() => { setTitle(""); setContent(""); clearDraft(cardDraftKey); setCardDraftLoaded(false); }} className="text-amber-600 hover:text-amber-800 font-medium ml-2">삭제</button>
                                     </div>
                                 )}
-                                <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" style={{height:48}} onPaste={boardImg.onPaste} />
-                                <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용을 입력하세요... (Ctrl+V로 이미지 붙여넣기)" className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
+                                <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/40" style={{height:48}} onPaste={boardImg.onPaste} />
+                                <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용을 입력하세요... (Ctrl+V로 이미지 붙여넣기)" className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
                                 {boardImg.preview}
                                 <ColorPicker color={color} onColor={setColor} />
                             </div>
@@ -6711,7 +6716,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                         )}
                                         {msg.replyTo && (
                                             <div className="text-[11px] text-slate-400 mb-1 px-3 py-1.5 rounded-lg border-l-[3px] max-w-full truncate cursor-pointer hover:bg-slate-100 transition-colors" style={{background:"#F8F9FA", borderLeftColor:"#CBD5E1"}}
-                                                onClick={() => { const el = document.querySelector(`[data-chat-id="${msg.replyTo!.id}"]`); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("bg-blue-50"); setTimeout(() => el.classList.remove("bg-blue-50"), 1500); } }}>
+                                                onClick={() => { const el = document.querySelector(`[data-chat-id="${msg.replyTo?.id}"]`); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("bg-blue-50"); setTimeout(() => el.classList.remove("bg-blue-50"), 1500); } }}>
                                                 <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                             </div>
                                         )}
@@ -6801,7 +6806,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                 onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                 onKeyDown={e => { const mr = mention.handleKey(e); if (typeof mr === "string") { selectMention(mr); return; } if (mr === true) return; chatKeyDown(e, sendChat, composingRef); }}
                                 placeholder="메시지 입력..." rows={1}
-                                className="w-full border border-slate-200 rounded-2xl px-4 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                className="w-full border border-slate-200 rounded-2xl px-4 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" />
                             <MentionPopup m={mention} onSelect={selectMention} />
                         </div>
                         <button onClick={sendChat} className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors flex-shrink-0 text-[16px]" title="전송">›</button>
@@ -6838,7 +6843,7 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                                 {cImg.preview}
                                 <div className="flex gap-2 items-center">
                                     <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="댓글 작성... (Ctrl+V 이미지)"
-                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
                                         onPaste={cImg.onPaste} onKeyDown={e => chatKeyDown(e, addComment, composingRef)} />
                                     <button onClick={addComment} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[13px] hover:bg-blue-600 font-medium flex-shrink-0">{cImg.uploading ? "⏳" : "전송"}</button>
@@ -6861,11 +6866,11 @@ function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, 
                     <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-slate-200">
                             <h3 className="text-[15px] font-bold text-slate-800">카드 수정</h3>
-                            <button onClick={() => { setIsEditing(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                            <button onClick={() => { setIsEditing(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
-                            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20" style={{height:48}} onPaste={boardImg.onPaste} />
-                            <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용을 입력하세요... (Ctrl+V로 이미지 붙여넣기)" className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
+                            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/40" style={{height:48}} onPaste={boardImg.onPaste} />
+                            <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용을 입력하세요... (Ctrl+V로 이미지 붙여넣기)" className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
                             {boardImg.preview}
                             <ColorPicker color={color} onColor={setColor} />
                         </div>
@@ -6984,7 +6989,7 @@ function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser, cat
     const handleImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file) return;
         setImgUploading(true);
-        try { const url = await uploadFile(file); setImgUrl(url); } catch {}
+        try { const url = await uploadFile(file); setImgUrl(url); } catch { alert("이미지 업로드에 실패했습니다."); }
         setImgUploading(false); e.target.value = "";
     };
     const handleSubmit = () => {
@@ -7027,7 +7032,7 @@ function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser, cat
             </div>
             {mergedEntries.length > 3 && (
                 <div className="mb-4">
-                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="도구, 격자, 경계조건, 결과 검색..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="도구, 격자, 경계조건, 결과 검색..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                 </div>
             )}
             <div className="flex items-center gap-4 mb-4 text-[13px] text-slate-500">
@@ -7037,7 +7042,8 @@ function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser, cat
             {dateGroups.length === 0 ? (
                 <div className="text-center py-16">
                     <div className="text-[40px] mb-3">🖥️</div>
-                    <div className="text-[15px] text-slate-400 mb-1">아직 해석 기록이 없습니다</div>
+                    <div className="text-3xl mb-2 opacity-40">🖥️</div>
+                <div className="text-[15px] text-slate-400 mb-1">아직 해석 기록이 없습니다</div>
                     <div className="text-[13px] text-slate-300 mb-4">해석을 진행하고 기록을 남겨보세요</div>
                     <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-xl text-[14px] font-medium hover:bg-blue-600">+ 첫 기록 추가</button>
                 </div>
@@ -7131,16 +7137,16 @@ function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser, cat
                             <div className="space-y-3">
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">해석명 *</label>
-                                    <input value={title} onChange={e => setTitle(e.target.value)} placeholder="예: ANSYS Fluent CHF 시뮬레이션 #2" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                    <input value={title} onChange={e => setTitle(e.target.value)} placeholder="예: ANSYS Fluent CHF 시뮬레이션 #2" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                                 </div>
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">날짜</label>
-                                    <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                    <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                                 </div>
                                 {categories && categories.length > 0 && (
                                     <div>
                                         <label className="text-[12px] font-semibold text-slate-500 mb-1 block">📂 분류</label>
-                                        <select value={category} onChange={e => setCategory(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white">
+                                        <select value={category} onChange={e => setCategory(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 bg-white">
                                             <option value="">미분류</option>
                                             {categories.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
@@ -7148,23 +7154,23 @@ function AnalysisLogView({ bookName, entries, onSave, onDelete, currentUser, cat
                                 )}
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">🔧 해석 도구</label>
-                                    <input value={tool} onChange={e => setTool(e.target.value)} placeholder="예: ANSYS Fluent 2024R2, OpenFOAM v2312..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                    <input value={tool} onChange={e => setTool(e.target.value)} placeholder="예: ANSYS Fluent 2024R2, OpenFOAM v2312..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                                 </div>
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">📐 격자 정보</label>
-                                    <textarea value={meshInfo} onChange={e => setMeshInfo(e.target.value)} placeholder="격자 유형, 셀 수, 격자 품질, y+ 등" rows={2} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                    <textarea value={meshInfo} onChange={e => setMeshInfo(e.target.value)} placeholder="격자 유형, 셀 수, 격자 품질, y+ 등" rows={2} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" />
                                 </div>
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">⚙️ 경계 조건</label>
-                                    <textarea value={boundaryConditions} onChange={e => setBoundaryConditions(e.target.value)} placeholder="inlet/outlet 조건, 벽면 조건, 열유속 등" rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                    <textarea value={boundaryConditions} onChange={e => setBoundaryConditions(e.target.value)} placeholder="inlet/outlet 조건, 벽면 조건, 열유속 등" rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" />
                                 </div>
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">📊 결과</label>
-                                    <textarea value={results} onChange={e => setResults(e.target.value)} placeholder="수렴 결과, 핵심 수치, 비교 분석 등" rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                    <textarea value={results} onChange={e => setResults(e.target.value)} placeholder="수렴 결과, 핵심 수치, 비교 분석 등" rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" />
                                 </div>
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">💬 의견</label>
-                                    <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="관찰사항, 문제점, 다음 해석 계획 등" rows={2} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                    <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="관찰사항, 문제점, 다음 해석 계획 등" rows={2} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" />
                                 </div>
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">📷 이미지</label>
@@ -7233,7 +7239,7 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
     const handleImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file) return;
         setImgUploading(true);
-        try { const url = await uploadFile(file); setImgUrl(url); } catch {}
+        try { const url = await uploadFile(file); setImgUrl(url); } catch { alert("이미지 업로드에 실패했습니다."); }
         setImgUploading(false); e.target.value = "";
     };
     const handleSubmit = () => {
@@ -7280,7 +7286,7 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
             {/* Search */}
             {mergedEntries.length > 3 && (
                 <div className="mb-4">
-                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="실험명, 조건, 데이터 검색..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="실험명, 조건, 데이터 검색..." className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                 </div>
             )}
 
@@ -7294,7 +7300,8 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
             {dateGroups.length === 0 ? (
                 <div className="text-center py-16">
                     <div className="text-[40px] mb-3">🧪</div>
-                    <div className="text-[15px] text-slate-400 mb-1">아직 실험 기록이 없습니다</div>
+                    <div className="text-3xl mb-2 opacity-40">🧪</div>
+                <div className="text-[15px] text-slate-400 mb-1">아직 실험 기록이 없습니다</div>
                     <div className="text-[13px] text-slate-300 mb-4">실험을 진행하고 기록을 남겨보세요</div>
                     <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-xl text-[14px] font-medium hover:bg-blue-600">+ 첫 기록 추가</button>
                 </div>
@@ -7379,16 +7386,16 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
                             <div className="space-y-3">
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">실험명 *</label>
-                                    <input value={title} onChange={e => setTitle(e.target.value)} placeholder="예: Pool boiling CHF 측정 #3" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                    <input value={title} onChange={e => setTitle(e.target.value)} placeholder="예: Pool boiling CHF 측정 #3" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                                 </div>
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">실험 날짜</label>
-                                    <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                    <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                                 </div>
                                 {categories && categories.length > 0 && (
                                     <div>
                                         <label className="text-[12px] font-semibold text-slate-500 mb-1 block">📂 분류</label>
-                                        <select value={category} onChange={e => setCategory(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white">
+                                        <select value={category} onChange={e => setCategory(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 bg-white">
                                             <option value="">미분류</option>
                                             {categories.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
@@ -7396,15 +7403,15 @@ function ExpLogView({ teamName, entries, onSave, onDelete, currentUser, categori
                                 )}
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">⚙️ 실험 조건</label>
-                                    <textarea value={conditions} onChange={e => setConditions(e.target.value)} placeholder="유속, 온도, 압력, 히터 전력, 냉각수 유량, 시편 종류(Cu 20×20mm, SiC 코팅 등) ..." rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                    <textarea value={conditions} onChange={e => setConditions(e.target.value)} placeholder="유속, 온도, 압력, 히터 전력, 냉각수 유량, 시편 종류(Cu 20×20mm, SiC 코팅 등) ..." rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" />
                                 </div>
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">📊 데이터</label>
-                                    <textarea value={dataField} onChange={e => setDataField(e.target.value)} placeholder="측정 결과, 열유속, HTC 값, 주요 수치 등" rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                    <textarea value={dataField} onChange={e => setDataField(e.target.value)} placeholder="측정 결과, 열유속, HTC 값, 주요 수치 등" rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" />
                                 </div>
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">💬 의견</label>
-                                    <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="관찰사항, 문제점, 다음 실험 계획 등" rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                                    <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="관찰사항, 문제점, 다음 실험 계획 등" rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" />
                                 </div>
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">📷 이미지</label>
@@ -7482,6 +7489,21 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
     const todayTargets = dailyTargets.filter(t => t.date === targetDateStr);
     const targetsWritten = todayTargets.length;
     const targetsMissing = MEMBER_NAMES.filter(n => !todayTargets.some(t => t.name === n));
+
+    // Pre-compute member stats (avoid 72 filter() calls per render)
+    const memberStats = useMemo(() => {
+        const map: Record<string, { papers: number; reports: number; exp: number; analysis: number; todos: number; hasTarget: boolean }> = {};
+        for (const name of MEMBER_NAMES) {
+            map[name] = { papers: 0, reports: 0, exp: 0, analysis: 0, todos: 0, hasTarget: false };
+        }
+        for (const p of papers) for (const a of p.assignees) if (map[a]) map[a].papers++;
+        for (const r of reports) for (const a of r.assignees) if (map[a]) map[a].reports++;
+        for (const e of experiments) for (const a of e.assignees) if (map[a]) map[a].exp++;
+        for (const a of analyses) for (const al of a.assignees) if (map[al]) map[al].analysis++;
+        for (const t of todos) if (!t.done) for (const a of t.assignees) if (map[a]) map[a].todos++;
+        for (const t of todayTargets) if (map[t.name]) map[t.name].hasTarget = true;
+        return map;
+    }, [papers, reports, experiments, analyses, todos, todayTargets, MEMBER_NAMES]);
 
     // Todo summary
     const activeTodos = ft.filter(t => !t.done).length;
@@ -7981,12 +8003,7 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                                 {MEMBER_NAMES.map(name => {
                                     const isMe = name === currentUser;
                                     const isOnline = onlineUsers.some(u => u.name === name);
-                                    const memberPapers = papers.filter(p => p.assignees.includes(name)).length;
-                                    const memberReports = reports.filter(r => r.assignees.includes(name)).length;
-                                    const memberExp = experiments.filter(e => e.assignees.includes(name)).length;
-                                    const memberAnalysis = analyses.filter(a => a.assignees.includes(name)).length;
-                                    const memberTodos = todos.filter(t => !t.done && t.assignees.includes(name)).length;
-                                    const hasTarget = todayTargets.some(t => t.name === name);
+                                    const ms = memberStats[name];
                                     return (
                                         <tr key={name} className={`${isMe ? "bg-blue-50/30" : "hover:bg-[#F8FAFC]"} transition-colors`} style={{borderBottom:"1px solid #F8FAFC"}}>
                                             <td className="py-2.5 px-3" style={{fontWeight:500, color:"#334155"}}>
@@ -7995,12 +8012,12 @@ function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPa
                                                     {statusMessages[name] && <span className="text-[11px] text-blue-500/80 italic ml-1.5 border-l border-slate-200 pl-1.5" style={{whiteSpace:"normal", wordBreak:"break-word"}}>&ldquo;{statusMessages[name]}&rdquo;</span>}
                                                 </div>
                                             </td>
-                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: memberPapers > 0 ? 650 : 400, color: memberPapers > 0 ? "#334155" : "#CBD5E1"}}>{memberPapers || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: memberReports > 0 ? 650 : 400, color: memberReports > 0 ? "#334155" : "#CBD5E1"}}>{memberReports || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: memberExp > 0 ? 650 : 400, color: memberExp > 0 ? "#334155" : "#CBD5E1"}}>{memberExp || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: memberAnalysis > 0 ? 650 : 400, color: memberAnalysis > 0 ? "#334155" : "#CBD5E1"}}>{memberAnalysis || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: memberTodos > 0 ? 650 : 400, color: memberTodos > 0 ? "#334155" : "#CBD5E1"}}>{memberTodos || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-3">{hasTarget ? <span className="text-emerald-500 font-bold">O</span> : <span className="text-red-400">X</span>}</td>
+                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: ms.papers > 0 ? 650 : 400, color: ms.papers > 0 ? "#334155" : "#CBD5E1"}}>{ms.papers || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: ms.reports > 0 ? 650 : 400, color: ms.reports > 0 ? "#334155" : "#CBD5E1"}}>{ms.reports || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: ms.exp > 0 ? 650 : 400, color: ms.exp > 0 ? "#334155" : "#CBD5E1"}}>{ms.exp || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: ms.analysis > 0 ? 650 : 400, color: ms.analysis > 0 ? "#334155" : "#CBD5E1"}}>{ms.analysis || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: ms.todos > 0 ? 650 : 400, color: ms.todos > 0 ? "#334155" : "#CBD5E1"}}>{ms.todos || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-3">{ms.hasTarget ? <span className="text-emerald-500 font-bold">O</span> : <span className="text-red-400">X</span>}</td>
                                             <td className="text-center py-2.5 px-3">{isOnline ? <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" /> : <span className="inline-block w-2 h-2 rounded-full bg-slate-200" />}</td>
                                         </tr>
                                     );
@@ -8225,6 +8242,7 @@ export default function DashboardPage() {
     }, [cmdKIdx, cmdKOpen]);
 
     const cmdKResults = useMemo(() => {
+        if (!cmdKOpen) return []; // Skip computation when dialog is closed
         const q = cmdKQuery.trim().toLowerCase();
         type SR = { type: string; icon: string; title: string; subtitle: string; tabId: string };
         const r: SR[] = [];
@@ -8264,7 +8282,7 @@ export default function DashboardPage() {
         // Daily targets
         dailyTargets.filter(d => d.text.toLowerCase().includes(q) || d.name.includes(q)).slice(0, M).forEach(d => r.push({ type: "목표", icon: "🎯", title: `${d.name}: ${d.text.slice(0, 60)}`, subtitle: d.date, tabId: "daily" }));
         return r;
-    }, [cmdKQuery, tabs, papers, reports, experiments, analyses, todos, ipPatents, announcements, conferenceTrips, meetings, resources, ideas, labBoard, teamMemos, dailyTargets]);
+    }, [cmdKOpen, cmdKQuery, tabs, papers, reports, experiments, analyses, todos, ipPatents, announcements, conferenceTrips, meetings, resources, ideas, labBoard, teamMemos, dailyTargets]);
 
     const handleCmdKSelect = useCallback((tabId: string) => { setActiveTab(tabId); setCmdKOpen(false); }, []);
 
@@ -9224,17 +9242,19 @@ export default function DashboardPage() {
         return total;
     }, [labChat, announcements, teamMemos, piChat, chatReadTs, userName, teamNames, memberNames]);
 
+    const lastBadgeCountRef = useRef(-1);
     useEffect(() => {
         const ORIGINAL_TITLE = "MFTEL Dashboard";
         let intervalId: ReturnType<typeof setInterval> | null = null;
         let isOriginal = true;
-        // Favicon badge helper
+        // Favicon badge helper (cached — skip if count unchanged)
         const setFaviconBadge = (count: number) => {
+            if (lastBadgeCountRef.current === count) return;
+            lastBadgeCountRef.current = count;
             const canvas = document.createElement("canvas");
             canvas.width = 32; canvas.height = 32;
             const ctx = canvas.getContext("2d");
             if (!ctx) return;
-            // Base icon
             ctx.fillStyle = "#3B82F6"; ctx.beginPath(); ctx.roundRect(2, 2, 28, 28, 6); ctx.fill();
             ctx.fillStyle = "#fff"; ctx.font = "bold 18px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
             ctx.fillText("M", 16, 17);
@@ -9575,7 +9595,7 @@ export default function DashboardPage() {
                                 <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:520}} onClick={e => e.stopPropagation()}>
                                     <div className="flex items-center justify-between mb-4">
                                         <h3 className="text-[15px] font-bold text-slate-800">실험일지 관리</h3>
-                                        <button onClick={() => { setShowExpMgr(false); setEditingCat(null); }} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                                        <button onClick={() => { setShowExpMgr(false); setEditingCat(null); }} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                                     </div>
                                     <div className="mb-4">
                                         {cats.map((cat, i) => (
@@ -9584,7 +9604,7 @@ export default function DashboardPage() {
                                                     <span className="text-[12px] text-slate-400 w-5 text-right shrink-0">{i + 1}.</span>
                                                     {editingCat === `exp_${cat.name}` ? (
                                                         <input autoFocus value={editingCatVal} onChange={e => setEditingCatVal(e.target.value)}
-                                                            className="flex-1 border border-blue-300 rounded px-2 py-0.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                            className="flex-1 border border-blue-300 rounded px-2 py-0.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                                             onKeyDown={e => { if (e.key === "Enter") { const nv = editingCatVal.trim(); if (nv && nv !== cat.name) handleRenameExpLogCategory(tName, cat.name, nv); setEditingCat(null); } if (e.key === "Escape") setEditingCat(null); }}
                                                             onBlur={() => { const nv = editingCatVal.trim(); if (nv && nv !== cat.name) handleRenameExpLogCategory(tName, cat.name, nv); setEditingCat(null); }} />
                                                     ) : (
@@ -9619,7 +9639,7 @@ export default function DashboardPage() {
                                     </div>
                                     <div className="flex gap-2 mb-4">
                                         <input value={newExpCat} onChange={e => setNewExpCat(e.target.value)} placeholder="새 실험일지 이름 입력"
-                                            className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                            className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                             onKeyDown={e => { if (e.key === "Enter" && newExpCat.trim() && !cats.some(c => c.name === newExpCat.trim())) { handleSaveExpLogCategories(tName, [...cats, { name: newExpCat.trim(), members: [] }]); setNewExpCat(""); } }} />
                                         <button onClick={() => { if (newExpCat.trim() && !cats.some(c => c.name === newExpCat.trim())) { handleSaveExpLogCategories(tName, [...cats, { name: newExpCat.trim(), members: [] }]); setNewExpCat(""); } }}
                                             className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">추가</button>
@@ -9653,7 +9673,7 @@ export default function DashboardPage() {
                                 <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:520}} onClick={e => e.stopPropagation()}>
                                     <div className="flex items-center justify-between mb-4">
                                         <h3 className="text-[15px] font-bold text-slate-800">해석일지 관리</h3>
-                                        <button onClick={() => { setShowAnalysisMgr(false); setEditingCat(null); }} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                                        <button onClick={() => { setShowAnalysisMgr(false); setEditingCat(null); }} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                                     </div>
                                     <div className="mb-4">
                                         {cats.map((cat, i) => (
@@ -9662,7 +9682,7 @@ export default function DashboardPage() {
                                                     <span className="text-[12px] text-slate-400 w-5 text-right shrink-0">{i + 1}.</span>
                                                     {editingCat === `ana_${cat.name}` ? (
                                                         <input autoFocus value={editingCatVal} onChange={e => setEditingCatVal(e.target.value)}
-                                                            className="flex-1 border border-blue-300 rounded px-2 py-0.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                            className="flex-1 border border-blue-300 rounded px-2 py-0.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                                             onKeyDown={e => { if (e.key === "Enter") { const nv = editingCatVal.trim(); if (nv && nv !== cat.name) handleRenameAnalysisLogCategory(tName, cat.name, nv); setEditingCat(null); } if (e.key === "Escape") setEditingCat(null); }}
                                                             onBlur={() => { const nv = editingCatVal.trim(); if (nv && nv !== cat.name) handleRenameAnalysisLogCategory(tName, cat.name, nv); setEditingCat(null); }} />
                                                     ) : (
@@ -9697,7 +9717,7 @@ export default function DashboardPage() {
                                     </div>
                                     <div className="flex gap-2 mb-4">
                                         <input value={newAnalysisCat} onChange={e => setNewAnalysisCat(e.target.value)} placeholder="새 해석일지 이름 입력"
-                                            className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                            className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                                             onKeyDown={e => { if (e.key === "Enter" && newAnalysisCat.trim() && !cats.some(c => c.name === newAnalysisCat.trim())) { handleSaveAnalysisLogCategories(tName, [...cats, { name: newAnalysisCat.trim(), members: [] }]); setNewAnalysisCat(""); } }} />
                                         <button onClick={() => { if (newAnalysisCat.trim() && !cats.some(c => c.name === newAnalysisCat.trim())) { handleSaveAnalysisLogCategories(tName, [...cats, { name: newAnalysisCat.trim(), members: [] }]); setNewAnalysisCat(""); } }}
                                             className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">추가</button>
@@ -9810,7 +9830,7 @@ export default function DashboardPage() {
                                     className="text-[12px] text-slate-400 hover:text-slate-600 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors">
                                     읽음
                                 </button>
-                                <button onClick={() => setNotiOpen(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                                <button onClick={() => setNotiOpen(false)} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                             </div>
                         </div>
                         {/* Filter chips */}
@@ -9859,7 +9879,7 @@ export default function DashboardPage() {
                                     </button>
                                 );
                             })}
-                            {filteredAlerts.length === 0 && <div className="py-10 text-center text-[13px] text-slate-400">알림이 없습니다</div>}
+                            {filteredAlerts.length === 0 && <div className="py-10 text-center"><div className="text-3xl mb-2 opacity-40">🔔</div><div className="text-[13px] text-slate-400">알림이 없습니다</div></div>}
                         </div>
                     </div>
                 </div>
@@ -10016,7 +10036,7 @@ export default function DashboardPage() {
                     </div>
                     <div ref={cmdKListRef} className="max-h-[50vh] overflow-y-auto modal-scroll py-1">
                         {!cmdKQuery.trim() && <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-5 pt-2 pb-1">빠른 이동</div>}
-                        {cmdKResults.length === 0 && cmdKQuery.trim() && <div className="py-10 text-center text-[14px] text-slate-400">검색 결과가 없습니다</div>}
+                        {cmdKResults.length === 0 && cmdKQuery.trim() && <div className="py-10 text-center"><div className="text-3xl mb-2 opacity-40">🔍</div><div className="text-[14px] text-slate-400">검색 결과가 없습니다</div></div>}
                         {(() => {
                             const groups: Record<string, typeof cmdKResults> = {};
                             cmdKResults.forEach(item => { (groups[item.type] ||= []).push(item); });
