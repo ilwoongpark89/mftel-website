@@ -42,7 +42,11 @@ const SettingsView = dynamic(() => import("./components/SettingsView").then(m =>
 export default function DashboardPage() {
     const [loggedIn, setLoggedIn] = useState(false);
     const [userName, setUserName] = useState("");
-    const [authChecked, setAuthChecked] = useState(false);
+    // If no saved token, skip loading screen and show login immediately
+    const [authChecked, setAuthChecked] = useState(() => {
+        if (typeof window === "undefined") return false;
+        return !localStorage.getItem("mftel-auth-token");
+    });
     const [activeTab, setActiveTab] = useState("overview");
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [cmdKOpen, setCmdKOpen] = useState(false);
@@ -400,35 +404,36 @@ export default function DashboardPage() {
         setLoggedIn(false); setUserName("");
     };
 
-    // Pre-login: validate token fast, fetch heavy data AFTER login
+    // Pre-login: validate token + fetch members (non-blocking for login screen)
     useEffect(() => {
-        (async () => {
-            const token = localStorage.getItem("mftel-auth-token");
+        const token = localStorage.getItem("mftel-auth-token");
 
-            // Fetch members + customEmojis (lightweight) + token validation in parallel
-            const [membersResult, emojisResult, authResult] = await Promise.allSettled([
-                fetch("/api/dashboard?section=members").then(r => r.json()).catch(() => null),
-                fetch("/api/dashboard?section=customEmojis").then(r => r.json()).catch(() => null),
-                token
-                    ? fetch("/api/dashboard-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "validateSession", token }) }).then(r => r.json()).catch(() => null)
-                    : Promise.resolve(null),
-            ]);
-
-            // Apply members for login screen
+        // Members/emojis fetch: fire-and-forget, login screen works with DEFAULT_MEMBERS meanwhile
+        Promise.allSettled([
+            fetch("/api/dashboard?section=members").then(r => r.json()).catch(() => null),
+            fetch("/api/dashboard?section=customEmojis").then(r => r.json()).catch(() => null),
+        ]).then(([membersResult, emojisResult]) => {
             const mData = membersResult.status === "fulfilled" ? membersResult.value?.data : null;
             if (mData && Object.keys(mData).length > 0) setMembers(mData);
             const eData = emojisResult.status === "fulfilled" ? emojisResult.value?.data : null;
             if (eData) setCustomEmojis(eData);
+        });
 
-            // Apply auth
-            const auth = authResult.status === "fulfilled" ? authResult.value : null;
-            if (auth?.valid && auth.userName) {
-                setUserName(auth.userName); setLoggedIn(true);
-                try { await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "online", action: "join", userName: auth.userName }) }); } catch (e) { console.warn("Online join failed:", e); }
-            } else if (token) {
+        // Token validation: only blocks if token exists (shows loading screen)
+        if (!token) return;
+        (async () => {
+            try {
+                const res = await fetch("/api/dashboard-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "validateSession", token }) });
+                const auth = await res.json();
+                if (auth?.valid && auth.userName) {
+                    setUserName(auth.userName); setLoggedIn(true);
+                    fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "online", action: "join", userName: auth.userName }) }).catch(() => {});
+                } else {
+                    localStorage.removeItem("mftel-auth-token");
+                }
+            } catch {
                 localStorage.removeItem("mftel-auth-token");
             }
-
             setAuthChecked(true);
         })();
     }, []);
