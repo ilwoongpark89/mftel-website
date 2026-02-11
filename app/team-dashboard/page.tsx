@@ -8248,29 +8248,33 @@ export default function DashboardPage() {
         setLoggedIn(false); setUserName("");
     };
 
-    // Pre-login: fetch members + customEmojis so LoginScreen shows correct emojis, + auto-login
+    // Pre-login: fetch members + customEmojis + auto-login (parallel)
     useEffect(() => {
         (async () => {
-            try {
-                const res = await fetch("/api/dashboard?section=all");
-                const d = await res.json();
-                if (d.members && Object.keys(d.members).length > 0) setMembers(d.members);
-                if (d.customEmojis) setCustomEmojis(d.customEmojis);
-            } catch {}
-            // Auto-login from saved token
             const token = localStorage.getItem("mftel-auth-token");
-            if (token) {
-                try {
-                    const res = await fetch("/api/dashboard-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "validateSession", token }) });
-                    const data = await res.json();
-                    if (data.valid && data.userName) {
-                        setUserName(data.userName); setLoggedIn(true);
-                        try { await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "online", action: "join", userName: data.userName }) }); } catch {}
-                    } else {
-                        localStorage.removeItem("mftel-auth-token");
-                    }
-                } catch { localStorage.removeItem("mftel-auth-token"); }
+
+            // Run data fetch and token validation in parallel
+            const [dataResult, authResult] = await Promise.allSettled([
+                fetch("/api/dashboard?section=all").then(r => r.json()).catch(() => null),
+                token
+                    ? fetch("/api/dashboard-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "validateSession", token }) }).then(r => r.json()).catch(() => null)
+                    : Promise.resolve(null),
+            ]);
+
+            // Apply data
+            const d = dataResult.status === "fulfilled" ? dataResult.value : null;
+            if (d?.members && Object.keys(d.members).length > 0) setMembers(d.members);
+            if (d?.customEmojis) setCustomEmojis(d.customEmojis);
+
+            // Apply auth
+            const auth = authResult.status === "fulfilled" ? authResult.value : null;
+            if (auth?.valid && auth.userName) {
+                setUserName(auth.userName); setLoggedIn(true);
+                try { await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "online", action: "join", userName: auth.userName }) }); } catch {}
+            } else if (token) {
+                localStorage.removeItem("mftel-auth-token");
             }
+
             setAuthChecked(true);
         })();
     }, []);
