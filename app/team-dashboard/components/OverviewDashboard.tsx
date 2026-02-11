@@ -234,7 +234,7 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
                 {upcomingDeadlines.length === 0 ? (
                     <div className="text-[13px] text-slate-300 text-center py-6">예정된 마감 없음</div>
                 ) : (
-                    <div className="flex gap-2.5 overflow-hidden pb-1">
+                    <div className="flex flex-wrap gap-2.5 overflow-hidden pb-1" style={{maxHeight:"6.5rem"}}>
                         {upcomingDeadlines.slice(0, 20).map((dl, i) => (
                             <button key={`${dl.tab}-${dl.title}-${i}`} onClick={() => onNavigate(dl.tab)} className="flex-shrink-0 rounded-xl p-3 text-left transition-all hover:shadow-md hover:-translate-y-0.5 group" style={{background:`${dl.color}08`, border:`1px solid ${dl.color}30`, minWidth:"160px", maxWidth:"200px"}}>
                                 <div className="flex items-center justify-between mb-1.5">
