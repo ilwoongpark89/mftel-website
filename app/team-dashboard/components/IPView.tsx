@@ -5,7 +5,7 @@ import type { Patent, LabFile } from "../lib/types";
 import { MEMBERS, MEMBER_NAMES, IP_STATUS_CONFIG, IP_STATUS_KEYS } from "../lib/constants";
 import { genId, toggleArr, statusText, calcDropIdx, reorderKanbanItems } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
-import { DropLine, ItemFiles, PillSelect, SavingBadge, TeamSelect } from "./shared";
+import { DropLine, ItemFiles, MobileReorderButtons, moveInColumn, PillSelect, SavingBadge, TeamSelect } from "./shared";
 
 function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames }: { patent: Patent | null; onSave: (p: Patent) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; teamNames?: string[] }) {
     const confirmDel = useContext(ConfirmDeleteContext);
@@ -18,12 +18,14 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
     const [files, setFiles] = useState<LabFile[]>(patent?.files || []);
     const [tried, setTried] = useState(false);
 
+    const isDirty = title.trim() !== (patent?.title || "");
+    const handleBackdropClose = () => { if (isDirty && !confirm("작성 중인 내용이 있습니다. 닫으시겠습니까?")) return; onClose(); };
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={handleBackdropClose}>
             <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "지식재산권 수정" : "지식재산권 등록"}</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
+                    <button onClick={handleBackdropClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                 </div>
                 <div className="p-4 space-y-3">
                     <div>
@@ -59,7 +61,7 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
                 </div>
                 <div className="flex items-center justify-between p-4 border-t border-slate-200">
                     <div className="flex gap-2">
-                        <button onClick={onClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                        <button onClick={handleBackdropClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                         <button onClick={() => { setTried(true); if (!title.trim() || assignees.length === 0) return; onSave({ id: patent?.id ?? genId(), title, deadline, status, assignees, creator: patent?.creator || currentUser, createdAt: patent?.createdAt || new Date().toLocaleString("ko-KR"), team, files }); onClose(); }}
                             className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
@@ -148,28 +150,30 @@ const IPView = memo(function IPView({ patents, onSave, onDelete, currentUser, on
             {/* Mobile single column */}
             {!showCompleted && (
             <div className="md:hidden space-y-2">
-                {kanbanFilteredPatents.filter(p => p.status === mobileCol).map(p => (
-                    <div key={p.id} onClick={() => setEditing(p)}
+                {(() => { const colItems = kanbanFilteredPatents.filter(p => p.status === mobileCol); return colItems.length === 0 ? <div className="text-center py-8 text-slate-300 text-[13px]">{IP_STATUS_CONFIG[mobileCol]?.label} 없음</div> : colItems.map((item, mi) => (
+                    <div key={item.id} onClick={() => setEditing(item)}
                         className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300`}
-                        style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${IP_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
-                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{p.title}<SavingBadge id={p.id} /></div>
+                        style={{ borderLeft: item.needsDiscussion ? "3px solid #EF4444" : `3px solid ${IP_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words min-w-0 flex-1">{item.title}<SavingBadge id={item.id} /></div>
+                            <MobileReorderButtons idx={mi} total={colItems.length} onMove={dir => onReorder(moveInColumn(patents, item.id, dir, colItems))} />
+                        </div>
                         <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
-                            {p.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{p.team}</span>}
-                            {p.deadline && <span className="text-[11px] px-1.5 py-0.5 rounded bg-red-50 text-red-500 flex-shrink-0" style={{fontWeight:500}}>~{p.deadline}</span>}
+                            {item.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{item.team}</span>}
+                            {item.deadline && <span className="text-[11px] px-1.5 py-0.5 rounded bg-red-50 text-red-500 flex-shrink-0" style={{fontWeight:500}}>~{item.deadline}</span>}
                         </div>
                         <div className="flex items-center gap-2 mt-2">
                             <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
-                                <div className="h-1 rounded-full transition-all" style={{ width: `${p.progress || 0}%`, background: "#3B82F6" }} />
+                                <div className="h-1 rounded-full transition-all" style={{ width: `${item.progress || 0}%`, background: "#3B82F6" }} />
                             </div>
-                            <span className="text-[11px] font-semibold" style={{color: (p.progress || 0) >= 80 ? "#10B981" : "#3B82F6"}}>{p.progress || 0}%</span>
+                            <span className="text-[11px] font-semibold" style={{color: (item.progress || 0) >= 80 ? "#10B981" : "#3B82F6"}}>{item.progress || 0}%</span>
                         </div>
                         <div className="flex -space-x-1 mt-1.5">
-                            {p.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
-                            {p.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{p.assignees.length - 4}</span>}
+                            {item.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
+                            {item.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{item.assignees.length - 4}</span>}
                         </div>
                     </div>
-                ))}
-                {kanbanFilteredPatents.filter(p => p.status === mobileCol).length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">{IP_STATUS_CONFIG[mobileCol]?.label} 없음</div>}
+                )); })()}
             </div>
             )}
             {/* Desktop kanban */}

@@ -6,7 +6,7 @@ import { MEMBERS, MEMBER_NAMES, ANALYSIS_STATUS_CONFIG, ANALYSIS_STATUS_KEYS, AN
 import { genId, toggleArr, statusText, chatKeyDown, renderWithMentions, saveDraft, loadDraft, clearDraft, hasDraft, calcDropIdx, reorderKanbanItems } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useCommentImg } from "../lib/hooks";
-import { DropLine, ItemFiles, PillSelect, SavingBadge, TeamSelect } from "./shared";
+import { DropLine, ItemFiles, PillSelect, SavingBadge, TeamSelect, MobileReorderButtons, moveInColumn } from "./shared";
 
 function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, toolList, teamNames }: {
     analysis: Analysis | null; onSave: (a: Analysis) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; toolList: string[]; teamNames?: string[];
@@ -39,13 +39,15 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
         setLogs([{ id: genId(), date: new Date().toLocaleDateString("ko-KR"), author: currentUser, text: newLog.trim() }, ...logs]);
         setNewLog("");
     };
+    const isDirty = title.trim() !== (analysis?.title || "");
+    const handleBackdropClose = () => { if (isDirty && !confirm("작성 중인 내용이 있습니다. 닫으시겠습니까?")) return; onClose(); };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={handleBackdropClose}>
             <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "해석 수정" : "해석 등록"}</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
+                    <button onClick={handleBackdropClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                 </div>
                 <div className="p-4 space-y-3">
                     <div>
@@ -126,7 +128,7 @@ function AnalysisFormModal({ analysis, onSave, onDelete, onClose, currentUser, t
                 </div>
                 <div className="flex items-center justify-between p-4 border-t border-slate-200">
                     <div className="flex gap-2">
-                        <button onClick={onClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                        <button onClick={handleBackdropClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                         <button onClick={() => { if (handleSave()) onClose(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
                     {isEdit && onDelete && <button onClick={() => confirmDel(() => { onDelete(analysis!.id); onClose(); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
@@ -179,7 +181,7 @@ const AnalysisView = memo(function AnalysisView({ analyses, onSave, onDelete, cu
                         {toolList.map(t => (
                             <span key={t} className="flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-full text-[12px] text-slate-700">
                                 {t}
-                                <button onClick={() => onSaveTools(toolList.filter(x => x !== t))} className="text-slate-400 hover:text-red-500 text-[11px]">✕</button>
+                                <button onClick={() => confirmDel(() => onSaveTools(toolList.filter(x => x !== t)))} className="text-slate-400 hover:text-red-500 text-[11px]">✕</button>
                             </span>
                         ))}
                     </div>
@@ -245,32 +247,38 @@ const AnalysisView = memo(function AnalysisView({ analyses, onSave, onDelete, cu
             </div>
             )}
             {/* Mobile single column */}
-            {!showCompleted && (
+            {!showCompleted && (() => {
+                const colItems = kanbanFilteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) === mobileCol);
+                return (
             <div className="md:hidden space-y-2">
-                {kanbanFilteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) === mobileCol).map(a => (
-                    <div key={a.id} onClick={() => setSelected(a)}
+                {colItems.map((item, mi) => (
+                    <div key={item.id} onClick={() => setSelected(item)}
                         className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300`}
-                        style={{ borderLeft: a.needsDiscussion ? "3px solid #EF4444" : `3px solid ${ANALYSIS_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
-                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{a.title}<SavingBadge id={a.id} /></div>
+                        style={{ borderLeft: item.needsDiscussion ? "3px solid #EF4444" : `3px solid ${ANALYSIS_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
+                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{item.title}<SavingBadge id={item.id} /></div>
                         <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
-                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">🖥️ {a.tool}</span>
-                            {a.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{a.team}</span>}
+                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">🖥️ {item.tool}</span>
+                            {item.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{item.team}</span>}
                         </div>
                         <div className="flex items-center gap-2 mt-2">
                             <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
-                                <div className="h-1 rounded-full transition-all" style={{ width: `${a.progress ?? 0}%`, background: "#3B82F6" }} />
+                                <div className="h-1 rounded-full transition-all" style={{ width: `${item.progress ?? 0}%`, background: "#3B82F6" }} />
                             </div>
-                            <span className="text-[11px] font-semibold" style={{color: (a.progress ?? 0) >= 80 ? "#10B981" : "#3B82F6"}}>{a.progress ?? 0}%</span>
+                            <span className="text-[11px] font-semibold" style={{color: (item.progress ?? 0) >= 80 ? "#10B981" : "#3B82F6"}}>{item.progress ?? 0}%</span>
                         </div>
-                        <div className="flex -space-x-1 mt-1.5">
-                            {a.assignees.slice(0, 4).map(n => <span key={n} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={n}>{MEMBERS[n]?.emoji || "👤"}</span>)}
-                            {a.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{a.assignees.length - 4}</span>}
+                        <div className="flex items-center justify-between mt-1.5">
+                            <div className="flex -space-x-1">
+                                {item.assignees.slice(0, 4).map(n => <span key={n} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={n}>{MEMBERS[n]?.emoji || "👤"}</span>)}
+                                {item.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{item.assignees.length - 4}</span>}
+                            </div>
+                            <MobileReorderButtons idx={mi} total={colItems.length} onMove={dir => onReorder(moveInColumn(analyses, item.id, dir, colItems))} />
                         </div>
                     </div>
                 ))}
-                {kanbanFilteredAnalyses.filter(a => ANALYSIS_STATUS_MIGRATE(a.status) === mobileCol).length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">{ANALYSIS_STATUS_CONFIG[mobileCol]?.label} 없음</div>}
+                {colItems.length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">{ANALYSIS_STATUS_CONFIG[mobileCol]?.label} 없음</div>}
             </div>
-            )}
+                );
+            })()}
             {/* Desktop kanban */}
             {!showCompleted && (
             <div className="hidden md:flex gap-3 pb-2">

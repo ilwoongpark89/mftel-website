@@ -6,7 +6,7 @@ import { MEMBERS, MEMBER_NAMES, REPORT_STATUS_CONFIG, REPORT_STATUS_KEYS } from 
 import { genId, toggleArr, statusText, chatKeyDown, renderWithMentions, saveDraft, loadDraft, clearDraft, hasDraft, calcDropIdx, reorderKanbanItems } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useCommentImg } from "../lib/hooks";
-import { DropLine, ItemFiles, PillSelect, SavingBadge, TeamSelect } from "./shared";
+import { DropLine, ItemFiles, PillSelect, SavingBadge, TeamSelect, MobileReorderButtons, moveInColumn } from "./shared";
 
 function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, currentUser, teamNames }: {
     report: Report | null; initialCategory?: string; onSave: (r: Report) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; teamNames?: string[];
@@ -53,12 +53,14 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
         setComments([...comments, { id: genId(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]);
         setNewComment(""); cImg.clear();
     };
+    const isDirty = title.trim() !== (report?.title || "");
+    const handleBackdropClose = () => { if (isDirty && !confirm("작성 중인 내용이 있습니다. 닫으시겠습니까?")) return; onClose(); };
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={handleBackdropClose}>
             <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? `${report?.category || "계획서/보고서"} 수정` : `${category} 등록`}</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
+                    <button onClick={handleBackdropClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                 </div>
                 <div className="p-4 space-y-3">
                     <div>
@@ -149,7 +151,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                 </div>
                 <div className="flex items-center justify-between p-4 border-t border-slate-200">
                     <div className="flex gap-2">
-                        <button onClick={onClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                        <button onClick={handleBackdropClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                         <button onClick={() => { if (handleSave()) onClose(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
                     {isEdit && onDelete && <button onClick={() => confirmDel(() => { onDelete(report!.id); onClose(); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
@@ -246,19 +248,26 @@ const ReportView = memo(function ReportView({ reports, currentUser, onSave, onDe
             </div>
             )}
             {/* Mobile single column */}
-            {!showCompleted && (
+            {!showCompleted && (() => {
+                const colItems = kanbanFilteredReports.filter(r => r.status === mobileCol);
+                return (
             <div className="md:hidden space-y-2">
-                {kanbanFilteredReports.filter(r => r.status === mobileCol).map(r => {
+                {colItems.map((r, mi) => {
                     const cl = r.checklist || [];
                     const done = cl.filter(c => c.done).length;
                     return (
                         <div key={r.id} onClick={() => setSelected(r)}
                             className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300`}
                             style={{ borderLeft: r.needsDiscussion ? "3px solid #EF4444" : `3px solid ${REPORT_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
-                            <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{r.title}<SavingBadge id={r.id} /></div>
-                            <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
-                                {r.category && <span className={`text-[11px] px-1.5 py-0.5 rounded flex-shrink-0 ${r.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`} style={{fontWeight:500}}>{r.category}</span>}
-                                {r.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{r.team}</span>}
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{r.title}<SavingBadge id={r.id} /></div>
+                                    <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
+                                        {r.category && <span className={`text-[11px] px-1.5 py-0.5 rounded flex-shrink-0 ${r.category === "보고서" ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"}`} style={{fontWeight:500}}>{r.category}</span>}
+                                        {r.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{r.team}</span>}
+                                    </div>
+                                </div>
+                                <MobileReorderButtons idx={mi} total={colItems.length} onMove={dir => onReorder(moveInColumn(reports, r.id, dir, colItems))} />
                             </div>
                             <div className="flex items-center gap-2 mt-2">
                                 <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
@@ -273,9 +282,10 @@ const ReportView = memo(function ReportView({ reports, currentUser, onSave, onDe
                         </div>
                     );
                 })}
-                {kanbanFilteredReports.filter(r => r.status === mobileCol).length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">{REPORT_STATUS_CONFIG[mobileCol]?.label} 없음</div>}
+                {colItems.length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">{REPORT_STATUS_CONFIG[mobileCol]?.label} 없음</div>}
             </div>
-            )}
+                );
+            })()}
             {/* Desktop kanban */}
             {!showCompleted && (
             <div className="hidden md:flex gap-3 pb-2">

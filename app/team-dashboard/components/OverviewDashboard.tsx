@@ -6,8 +6,21 @@ import { STATUS_CONFIG, STATUS_KEYS, PAPER_STATUS_MIGRATE, REPORT_STATUS_CONFIG,
 import { MembersContext } from "../lib/contexts";
 import { MiniBar } from "./shared";
 
-export const OverviewDashboard = memo(function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPatents, announcements, dailyTargets, ideas, resources, chatPosts, personalMemos, teamMemos, meetings, conferenceTrips, onlineUsers, currentUser, onNavigate, mode, statusMessages, members, teams }: {
-    papers: Paper[]; reports: Report[]; experiments: Experiment[]; analyses: Analysis[]; todos: Todo[]; ipPatents: Patent[]; announcements: Announcement[]; dailyTargets: DailyTarget[]; ideas: IdeaPost[]; resources: Resource[]; chatPosts: IdeaPost[]; personalMemos: Record<string, Memo[]>; teamMemos: Record<string, { kanban: TeamMemoCard[]; chat: TeamChatMsg[] }>; meetings: Meeting[]; conferenceTrips: ConferenceTrip[]; onlineUsers: Array<{ name: string; timestamp: number }>; currentUser: string; onNavigate: (tab: string) => void; mode: "team" | "personal"; statusMessages: Record<string, string>; members: Record<string, { team: string; role: string; emoji: string }>; teams: Record<string, TeamData>;
+const SectionSkeleton = ({ rows = 3, className = "" }: { rows?: number; className?: string }) => (
+    <div className={`bg-white border border-slate-200 rounded-2xl px-5 py-4 ${className}`}>
+        <div className="h-5 w-40 bg-slate-200 rounded animate-pulse mb-4" />
+        <div className="space-y-3">
+            {Array.from({ length: rows }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                    <div className="h-3 bg-slate-100 rounded animate-pulse" style={{ width: `${60 + Math.random() * 30}%` }} />
+                </div>
+            ))}
+        </div>
+    </div>
+);
+
+export const OverviewDashboard = memo(function OverviewDashboard({ papers, reports, experiments, analyses, todos, ipPatents, announcements, dailyTargets, ideas, resources, chatPosts, personalMemos, teamMemos, meetings, conferenceTrips, onlineUsers, currentUser, onNavigate, mode, statusMessages, members, teams, dataLoaded = false }: {
+    papers: Paper[]; reports: Report[]; experiments: Experiment[]; analyses: Analysis[]; todos: Todo[]; ipPatents: Patent[]; announcements: Announcement[]; dailyTargets: DailyTarget[]; ideas: IdeaPost[]; resources: Resource[]; chatPosts: IdeaPost[]; personalMemos: Record<string, Memo[]>; teamMemos: Record<string, { kanban: TeamMemoCard[]; chat: TeamChatMsg[] }>; meetings: Meeting[]; conferenceTrips: ConferenceTrip[]; onlineUsers: Array<{ name: string; timestamp: number }>; currentUser: string; onNavigate: (tab: string) => void; mode: "team" | "personal"; statusMessages: Record<string, string>; members: Record<string, { team: string; role: string; emoji: string }>; teams: Record<string, TeamData>; dataLoaded?: boolean;
 }) {
     const MEMBERS = useContext(MembersContext);
     const today = new Date();
@@ -164,7 +177,7 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
             {/* Team mode: page title + date + online users */}
             {!isPersonal && (
                 <div className="mb-2">
-                    <h2 className="text-[24px] font-bold tracking-tight mb-3" style={{color:"#0F172A", letterSpacing:"-0.02em", lineHeight:"1.3"}}>🏠 연구실 현황</h2>
+                    <h2 className="text-[24px] font-bold tracking-tight mb-3 flex items-center gap-2" style={{color:"#0F172A", letterSpacing:"-0.02em", lineHeight:"1.3"}}>🏠 연구실 현황{!dataLoaded && <span className="inline-block w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />}</h2>
                     <div className="flex items-center gap-3 py-1">
                         <span className="text-[13px]" style={{color:"#94A3B8"}}>{dateLabel}</span>
                         <span className="text-[13px] flex items-center gap-1.5" style={{color:"#94A3B8"}}>
@@ -184,7 +197,7 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
             {/* Personal mode header */}
             {isPersonal && (
                 <div>
-                    <h2 className="text-[24px] font-bold tracking-tight mb-4" style={{color:"#0F172A", letterSpacing:"-0.02em", lineHeight:"1.3"}}>👤 개별 현황 ({currentUser})</h2>
+                    <h2 className="text-[24px] font-bold tracking-tight mb-4 flex items-center gap-2" style={{color:"#0F172A", letterSpacing:"-0.02em", lineHeight:"1.3"}}>👤 개별 현황 ({currentUser}){!dataLoaded && <span className="inline-block w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />}</h2>
                     <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 flex items-center justify-between flex-wrap gap-4">
                         <div className="flex items-center gap-3 flex-shrink-0">
                             <div className="w-[38px] h-[38px] rounded-full flex items-center justify-center text-[18px]" style={{background:"#F1F5F9", border:"2px solid #E2E8F0"}}>{members[currentUser]?.emoji || "👤"}</div>
@@ -213,12 +226,14 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
             )}
 
             {/* D-day: 다가오는 마감 */}
-            {upcomingDeadlines.length > 0 && (
-                <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200" style={{borderTop:"2px solid #F59E0B"}}>
-                    <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-amber-500 flex items-center gap-2">
-                        {isPersonal ? "내 마감 일정" : "다가오는 마감"}
-                        <span className="px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600 text-[11px] font-semibold">{upcomingDeadlines.length}</span>
-                    </h3>
+            <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200" style={{borderTop:"2px solid #F59E0B"}}>
+                <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-amber-500 flex items-center gap-2">
+                    {isPersonal ? "내 마감 일정" : "다가오는 마감"}
+                    {upcomingDeadlines.length > 0 && <span className="px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600 text-[11px] font-semibold">{upcomingDeadlines.length}</span>}
+                </h3>
+                {upcomingDeadlines.length === 0 ? (
+                    <div className="text-[13px] text-slate-300 text-center py-6">예정된 마감 없음</div>
+                ) : (
                     <div className="flex gap-2.5 overflow-hidden pb-1">
                         {upcomingDeadlines.slice(0, 20).map((dl, i) => (
                             <button key={`${dl.tab}-${dl.title}-${i}`} onClick={() => onNavigate(dl.tab)} className="flex-shrink-0 rounded-xl p-3 text-left transition-all hover:shadow-md hover:-translate-y-0.5 group" style={{background:`${dl.color}08`, border:`1px solid ${dl.color}30`, minWidth:"160px", maxWidth:"200px"}}>
@@ -231,8 +246,8 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
                             </button>
                         ))}
                     </div>
-                </div>
-            )}
+                )}
+            </div>
 
             {/* Row 1: 연구 파이프라인 5개 한 줄 */}
             <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200" style={{borderTop:"2px solid #3B82F6"}}>
@@ -600,6 +615,12 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
             {/* Row 4: 팀별 현황 (team only) */}
             {!isPersonal && (() => {
                 const hasTeams = Object.keys(teams).length > 0;
+                if (!hasTeams) return (
+                    <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
+                        <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">팀별 연구 현황</h3>
+                        <div className="text-[13px] text-slate-300 text-center py-6">등록된 팀 없음</div>
+                    </div>
+                );
                 const teamEntries: Array<{ name: string; members: string[]; color: string }> = hasTeams
                     ? Object.entries(teams).map(([name, t]) => ({ name, members: t.members, color: t.color }))
                     : [...new Set(Object.values(members).map(m => m.team))].filter(t => t !== "PI").map(t => ({

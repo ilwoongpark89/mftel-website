@@ -1,5 +1,6 @@
 import { Redis } from '@upstash/redis';
 import { NextRequest, NextResponse } from 'next/server';
+import { validateToken } from '../lib/auth';
 
 const isRedisConfigured = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 const redis = isRedisConfigured ? new Redis({
@@ -52,6 +53,9 @@ const MAX_LOG_ENTRIES = 5000;
 
 // GET - Retrieve admin dashboard data
 export async function GET(request: NextRequest) {
+    const auth = await validateToken(request);
+    if (!auth.valid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
 
@@ -105,6 +109,9 @@ export async function GET(request: NextRequest) {
 
 // POST - Admin operations
 export async function POST(request: NextRequest) {
+    const auth = await validateToken(request);
+    if (!auth.valid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     try {
         const body = await request.json();
         const { action } = body;
@@ -232,8 +239,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: true, date: dateStr, size: backupJson.length });
         }
 
-        // 4. Delete a specific backup
+        // 4. Delete a specific backup (admin only)
         if (action === 'deleteBackup') {
+            if (auth.userName !== '박일웅') return NextResponse.json({ error: '관리자만 백업을 삭제할 수 있습니다' }, { status: 403 });
             const { date } = body as { date: string; action: string };
 
             if (!date) {
@@ -252,8 +260,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: true });
         }
 
-        // 5. Restore backup (destructive - must be POST)
+        // 5. Restore backup (destructive - admin only)
         if (action === 'restore') {
+            if (auth.userName !== '박일웅') return NextResponse.json({ error: '관리자만 백업을 복원할 수 있습니다' }, { status: 403 });
             const { date } = body as { date: string; action: string };
             if (!date) {
                 return NextResponse.json({ error: 'Date parameter required for restore' }, { status: 400 });

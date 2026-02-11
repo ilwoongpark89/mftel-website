@@ -6,6 +6,36 @@ import { EMOJI_CATEGORIES, MEMO_COLORS, FILE_MAX } from "../lib/constants";
 import { genId, uploadFile, isImageFile, isPdfFile } from "../lib/utils";
 import { MembersContext, SavingContext } from "../lib/contexts";
 
+// ─── Mobile Reorder Helper ────────────────────────────────────────────────────
+
+export function moveInColumn<T extends { id: number }>(
+    fullList: T[],
+    itemId: number,
+    direction: -1 | 1,
+    columnItems: T[],
+): T[] {
+    const idx = columnItems.findIndex(x => x.id === itemId);
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= columnItems.length) return fullList;
+    const swapped = [...columnItems];
+    [swapped[idx], swapped[targetIdx]] = [swapped[targetIdx], swapped[idx]];
+    const colIds = new Set(columnItems.map(x => x.id));
+    let ci = 0;
+    return fullList.map(x => colIds.has(x.id) ? swapped[ci++] : x);
+}
+
+// ─── MobileReorderButtons ────────────────────────────────────────────────────
+
+export function MobileReorderButtons({ idx, total, onMove }: { idx: number; total: number; onMove: (dir: -1 | 1) => void }) {
+    if (total <= 1) return null;
+    return (
+        <div className="flex gap-1 md:hidden">
+            {idx > 0 && <button onClick={e => { e.stopPropagation(); onMove(-1); }} className="w-6 h-6 flex items-center justify-center rounded bg-slate-100 text-slate-500 text-[12px] hover:bg-slate-200 active:bg-slate-300">▲</button>}
+            {idx < total - 1 && <button onClick={e => { e.stopPropagation(); onMove(1); }} className="w-6 h-6 flex items-center justify-center rounded bg-slate-100 text-slate-500 text-[12px] hover:bg-slate-200 active:bg-slate-300">▼</button>}
+        </div>
+    );
+}
+
 // ─── SavingBadge ─────────────────────────────────────────────────────────────
 
 export function SavingBadge({ id }: { id: number }) {
@@ -179,7 +209,7 @@ export function ItemFiles({ files, onChange, currentUser }: { files: LabFile[]; 
 
     const handleDelete = async (id: number) => {
         const f = files.find(x => x.id === id);
-        if (f?.url?.startsWith("https://")) { try { await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: f.url }), headers: { "Content-Type": "application/json" } }); } catch (e) { console.warn("파일 삭제 실패:", e); } }
+        if (f?.url?.startsWith("https://")) { try { const tk = typeof window !== "undefined" ? localStorage.getItem("dashToken") || "" : ""; await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: f.url }), headers: { "Content-Type": "application/json", ...(tk ? { Authorization: `Bearer ${tk}` } : {}) } }); } catch (e) { console.warn("파일 삭제 실패:", e); } }
         onChange(files.filter(x => x.id !== id));
     };
 

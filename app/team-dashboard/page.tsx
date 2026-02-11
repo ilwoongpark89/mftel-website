@@ -10,6 +10,7 @@ import { MembersContext, ConfirmDeleteContext, SavingContext } from "./lib/conte
 import { useConfirmDelete } from "./lib/hooks";
 import dynamic from "next/dynamic";
 import { LoginScreen } from "./components/LoginScreen";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 // ─── Lazy-loaded components (code splitting) ─────────────────────────────────
 const OverviewDashboard = dynamic(() => import("./components/OverviewDashboard").then(m => ({ default: m.OverviewDashboard })), { ssr: false });
@@ -42,6 +43,7 @@ const SettingsView = dynamic(() => import("./components/SettingsView").then(m =>
 export default function DashboardPage() {
     const [loggedIn, setLoggedIn] = useState(false);
     const [userName, setUserName] = useState("");
+    const [mustChangePassword, setMustChangePassword] = useState(false);
     // If no saved token, skip loading screen and show login immediately
     const [authChecked, setAuthChecked] = useState(() => {
         if (typeof window === "undefined") return false;
@@ -51,9 +53,12 @@ export default function DashboardPage() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [cmdKOpen, setCmdKOpen] = useState(false);
     const [cmdKQuery, setCmdKQuery] = useState("");
+    const [debouncedCmdKQuery, setDebouncedCmdKQuery] = useState("");
     const [cmdKIdx, setCmdKIdx] = useState(0);
     const cmdKRef = useRef<HTMLInputElement>(null);
     const cmdKListRef = useRef<HTMLDivElement>(null);
+    const scrollPositionsRef = useRef<Record<string, number>>({});
+    const mainContentRef = useRef<HTMLDivElement>(null);
     const [notiOpen, setNotiOpen] = useState(false);
     const [notiLogs, setNotiLogs] = useState<Array<{ userName: string; section: string; action: string; timestamp: number }>>([]);
     const [notiLastSeen, setNotiLastSeen] = useState(0);
@@ -122,6 +127,7 @@ export default function DashboardPage() {
     const [newAnalysisCat, setNewAnalysisCat] = useState("");
     const [editingCat, setEditingCat] = useState<string | null>(null);
     const [editingCatVal, setEditingCatVal] = useState("");
+    const [dataLoaded, setDataLoaded] = useState(false);
 
     const tabs = [
         { id: "overview", label: "연구실 현황", icon: "🏠" },
@@ -179,9 +185,14 @@ export default function DashboardPage() {
         }
     }, [cmdKIdx, cmdKOpen]);
 
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedCmdKQuery(cmdKQuery), 200);
+        return () => clearTimeout(timer);
+    }, [cmdKQuery]);
+
     const cmdKResults = useMemo(() => {
         if (!cmdKOpen) return []; // Skip computation when dialog is closed
-        const q = cmdKQuery.trim().toLowerCase();
+        const q = debouncedCmdKQuery.trim().toLowerCase();
         type SR = { type: string; icon: string; title: string; subtitle: string; tabId: string };
         const r: SR[] = [];
         const M = 4;
@@ -220,13 +231,18 @@ export default function DashboardPage() {
         // Daily targets
         dailyTargets.filter(d => d.text.toLowerCase().includes(q) || d.name.includes(q)).slice(0, M).forEach(d => r.push({ type: "목표", icon: "🎯", title: `${d.name}: ${d.text.slice(0, 60)}`, subtitle: d.date, tabId: "daily" }));
         return r;
-    }, [cmdKOpen, cmdKQuery, tabs, papers, reports, experiments, analyses, todos, ipPatents, announcements, conferenceTrips, meetings, resources, ideas, labBoard, teamMemos, dailyTargets]);
+    }, [cmdKOpen, debouncedCmdKQuery, tabs, papers, reports, experiments, analyses, todos, ipPatents, announcements, conferenceTrips, meetings, resources, ideas, labBoard, teamMemos, dailyTargets]);
 
     const handleCmdKSelect = useCallback((tabId: string) => { setActiveTab(tabId); setCmdKOpen(false); }, []);
 
+    const getAuthHeaders = useCallback((): Record<string, string> => {
+        const token = localStorage.getItem("mftel-auth-token");
+        return token ? { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } : { "Content-Type": "application/json" };
+    }, []);
+
     const saveSection = useCallback(async (section: string, data: unknown): Promise<boolean> => {
-        try { const r = await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section, data, userName }) }); return r.ok; } catch { return false; }
-    }, [userName]);
+        try { const r = await fetch("/api/dashboard", { method: "POST", headers: getAuthHeaders(), body: JSON.stringify({ section, data, userName }) }); return r.ok; } catch { return false; }
+    }, [userName, getAuthHeaders]);
 
     const trackSave = useCallback((itemId: number, section: string, data: unknown, rollback: () => void) => {
         setSavingIds(prev => new Set(prev).add(itemId));
@@ -238,60 +254,51 @@ export default function DashboardPage() {
         });
     }, [saveSection]);
 
-    const pollBackoffRef = useRef(0);
-    const fetchData = useCallback(async () => {
-        // Skip polling if saves are in-flight to avoid overwriting optimistic state
-        if (pendingSavesRef.current > 0) return;
-        try {
-            const ctrl = new AbortController();
-            const timeout = setTimeout(() => ctrl.abort(), 10000);
-            const res = await fetch("/api/dashboard?section=all", { signal: ctrl.signal });
-            clearTimeout(timeout);
-            const d = await res.json();
-            pollBackoffRef.current = 0; // Reset backoff on success
-            // Re-check after fetch — a save may have started during the network round-trip
-            if (pendingSavesRef.current > 0) return;
-            startTransition(() => {
-            if (d.announcements) setAnnouncements(d.announcements);
-            if (d.papers) setPapers(d.papers);
-            if (d.experiments) setExperiments(d.experiments);
-            if (d.todos) setTodos(d.todos);
-            if (d.patents) setIpPatents(d.patents);
-            if (d.vacations) setVacations(d.vacations);
-            if (d.schedule) setSchedule(d.schedule);
-            if (d.dispatches) setDispatches(d.dispatches);
-            if (d.timetable) setTimetable(d.timetable);
-            if (d.reports) setReports(d.reports);
-            if (d.teams) setTeams(d.teams);
-            if (d.dailyTargets) setDailyTargets(d.dailyTargets);
-            if (d.philosophy) setPhilosophy(d.philosophy);
-            if (d.resources) setResources(d.resources);
-            if (d.conferences) setConferenceTrips(d.conferences);
-            if (d.meetings) setMeetings(d.meetings);
-            if (d.ideas) setIdeas(d.ideas);
-            if (d.analyses) setAnalyses(d.analyses);
-            if (d.chatPosts) setChatPosts(d.chatPosts);
-            if (d.customEmojis) setCustomEmojis(d.customEmojis);
-            if (d.statusMessages) setStatusMessages(d.statusMessages);
-            if (d.equipmentList) setEquipmentList(d.equipmentList);
-            if (d.personalMemos) setPersonalMemos(d.personalMemos);
-            if (d.personalFiles) setPersonalFiles(d.personalFiles);
-            if (d.piChat) setPiChat(d.piChat);
-            if (d.teamMemos) setTeamMemos(d.teamMemos);
-            if (d.labChat) setLabChat(d.labChat);
-            if (d.casualChat) setCasualChat(d.casualChat);
-            if (d.labFiles) setLabFiles(d.labFiles);
-            if (d.labBoard) setLabBoard(d.labBoard);
-            if (d.readReceipts) setReadReceipts(d.readReceipts);
-            if (d.pushPrefs) setPushPrefs(d.pushPrefs);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const hydrateData = useCallback((d: any) => {
+      try {
+        if (!d || typeof d !== 'object') throw new Error('Invalid data format');
+        const arr = (v: unknown) => Array.isArray(v);
+        const obj = (v: unknown) => v && typeof v === 'object' && !Array.isArray(v);
+        startTransition(() => {
+            if (arr(d.announcements)) setAnnouncements(d.announcements);
+            if (arr(d.papers)) setPapers(d.papers);
+            if (arr(d.experiments)) setExperiments(d.experiments);
+            if (arr(d.todos)) setTodos(d.todos);
+            if (arr(d.patents)) setIpPatents(d.patents);
+            if (arr(d.vacations)) setVacations(d.vacations);
+            if (arr(d.schedule)) setSchedule(d.schedule);
+            if (arr(d.dispatches)) setDispatches(d.dispatches);
+            if (arr(d.timetable)) setTimetable(d.timetable);
+            if (arr(d.reports)) setReports(d.reports);
+            if (obj(d.teams)) setTeams(d.teams);
+            if (arr(d.dailyTargets)) setDailyTargets(d.dailyTargets);
+            if (arr(d.philosophy)) setPhilosophy(d.philosophy);
+            if (arr(d.resources)) setResources(d.resources);
+            if (arr(d.conferences)) setConferenceTrips(d.conferences);
+            if (arr(d.meetings)) setMeetings(d.meetings);
+            if (arr(d.ideas)) setIdeas(d.ideas);
+            if (arr(d.analyses)) setAnalyses(d.analyses);
+            if (arr(d.chatPosts)) setChatPosts(d.chatPosts);
+            if (obj(d.customEmojis)) setCustomEmojis(d.customEmojis);
+            if (obj(d.statusMessages)) setStatusMessages(d.statusMessages);
+            if (arr(d.equipmentList)) setEquipmentList(d.equipmentList);
+            if (obj(d.personalMemos)) setPersonalMemos(d.personalMemos);
+            if (obj(d.personalFiles)) setPersonalFiles(d.personalFiles);
+            if (obj(d.piChat)) setPiChat(d.piChat);
+            if (obj(d.teamMemos)) setTeamMemos(d.teamMemos);
+            if (arr(d.labChat)) setLabChat(d.labChat);
+            if (arr(d.casualChat)) setCasualChat(d.casualChat);
+            if (arr(d.labFiles)) setLabFiles(d.labFiles);
+            if (arr(d.labBoard)) setLabBoard(d.labBoard);
+            if (obj(d.readReceipts)) setReadReceipts(d.readReceipts);
+            if (obj(d.pushPrefs)) setPushPrefs(d.pushPrefs);
             if (d.experimentLogs) {
-                // Migrate: if old book format (has 'entries'), flatten to flat entries with category
                 const raw = d.experimentLogs as Record<string, unknown>;
                 const migrated: Record<string, ExpLogEntry[]> = {};
                 const migratedCats: Record<string, Array<{name: string; members: string[]}>> = {};
                 for (const [team, val] of Object.entries(raw)) {
                     if (Array.isArray(val) && val.length > 0 && 'entries' in val[0]) {
-                        // Book format → flatten
                         const books = val as Array<{ name: string; entries: ExpLogEntry[] }>;
                         migrated[team] = books.flatMap(b => b.entries.map(e => ({ ...e, category: e.category || b.name })));
                         migratedCats[team] = books.map(b => ({ name: b.name, members: [] }));
@@ -300,7 +307,6 @@ export default function DashboardPage() {
                     }
                 }
                 setExperimentLogs(migrated);
-                // Seed categories from migrated books if not already loaded
                 if (Object.keys(migratedCats).length > 0) {
                     setExpLogCategories(prev => {
                         const merged = { ...prev };
@@ -351,32 +357,64 @@ export default function DashboardPage() {
                 }
                 setAnalysisLogCategories(norm);
             }
-            if (d.analysisToolList) setAnalysisToolList(d.analysisToolList);
-            if (d.paperTagList) setPaperTagList(d.paperTagList);
-            if (d.members && Object.keys(d.members).length > 0) {
+            if (arr(d.analysisToolList)) setAnalysisToolList(d.analysisToolList);
+            if (arr(d.paperTagList)) setPaperTagList(d.paperTagList);
+            setDataLoaded(true);
+            if (obj(d.members) && Object.keys(d.members).length > 0) {
                 setMembers(d.members);
             } else {
-                // Auto-seed default members to server if none exist
-                fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "members", data: DEFAULT_MEMBERS }) }).catch(e => console.warn("Background request failed:", e));
+                const tk = localStorage.getItem("mftel-auth-token");
+                if (tk) fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tk}` }, body: JSON.stringify({ section: "members", data: DEFAULT_MEMBERS }) }).catch(e => console.warn("Background request failed:", e));
             }
-            }); // end startTransition
-        } catch {
-            pollBackoffRef.current = Math.min(pollBackoffRef.current + 1, 3);
-        }
+        });
+      } catch (err) {
+        console.error('hydrateData error:', err);
+        setToast("캐시 데이터에 오류가 있어 초기화합니다.");
+        try { localStorage.removeItem('mftel-dc'); } catch {}
+      }
     }, []);
 
+    const pollBackoffRef = useRef(0);
+    const fetchingRef = useRef(false);
+    const fetchData = useCallback(async () => {
+        const token = localStorage.getItem("mftel-auth-token");
+        if (!token) return; // Skip if not authenticated
+        if (pendingSavesRef.current > 0 || fetchingRef.current) return;
+        fetchingRef.current = true;
+        try {
+            const ctrl = new AbortController();
+            const timeout = setTimeout(() => ctrl.abort(), 10000);
+            const res = await fetch("/api/dashboard?section=all", { signal: ctrl.signal, headers: { "Authorization": `Bearer ${token}` } });
+            clearTimeout(timeout);
+            const d = await res.json();
+            pollBackoffRef.current = 0;
+            if (pendingSavesRef.current > 0) return;
+            // Cache for instant hydration on next visit
+            try { localStorage.setItem('mftel-dc', JSON.stringify(d)); } catch {}
+            hydrateData(d);
+        } catch {
+            pollBackoffRef.current = Math.min(pollBackoffRef.current + 1, 3);
+        } finally {
+            fetchingRef.current = false;
+        }
+    }, [hydrateData]);
+
     const fetchOnline = useCallback(async () => {
-        try { const r = await fetch("/api/dashboard?section=online"); const d = await r.json(); setOnlineUsers(d.users || []); } catch { /* ignore */ }
+        const token = localStorage.getItem("mftel-auth-token");
+        if (!token) return;
+        try { const r = await fetch("/api/dashboard?section=online", { headers: { "Authorization": `Bearer ${token}` } }); const d = await r.json(); setOnlineUsers(d.users || []); } catch { /* ignore */ }
     }, []);
 
     const sendHeartbeat = useCallback(async () => {
         if (!userName) return;
-        try { await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "online", action: "heartbeat", userName }) }); } catch { /* ignore */ }
-    }, [userName]);
+        try { await fetch("/api/dashboard", { method: "POST", headers: getAuthHeaders(), body: JSON.stringify({ section: "online", action: "heartbeat", userName }) }); } catch { /* ignore */ }
+    }, [userName, getAuthHeaders]);
 
     const fetchLogs = useCallback(async () => {
+        const token = localStorage.getItem("mftel-auth-token");
+        if (!token) return;
         try {
-            const res = await fetch("/api/dashboard?section=logs");
+            const res = await fetch("/api/dashboard?section=logs", { headers: { "Authorization": `Bearer ${token}` } });
             const d = await res.json();
             if (d.data) setNotiLogs(d.data);
         } catch { /* ignore */ }
@@ -387,47 +425,68 @@ export default function DashboardPage() {
             const res = await fetch("/api/dashboard-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "login", userName: name, password }) });
             const data = await res.json();
             if (!res.ok) return data.error || "로그인 실패";
-            if (rememberMe && data.token) localStorage.setItem("mftel-auth-token", data.token);
+            // Always store token (needed for API auth); rememberMe only controls auto-login
+            if (data.token) localStorage.setItem("mftel-auth-token", data.token);
+            if (data.isDefaultPassword) { setMustChangePassword(true); setUserName(name); return null; }
             setUserName(name); setLoggedIn(true);
-            try { await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "online", action: "join", userName: name }) }); } catch (e) { console.warn("Online join failed:", e); }
+            const authH = { "Content-Type": "application/json", "Authorization": `Bearer ${data.token}` };
+            fetchData(); fetchOnline(); fetchLogs();
+            fetch("/api/dashboard", { method: "POST", headers: authH, body: JSON.stringify({ section: "online", action: "join", userName: name }) }).catch(e => console.warn("Online join failed:", e));
             return null;
         } catch { return "서버 연결 실패"; }
     };
 
     const handleLogout = async () => {
         const token = localStorage.getItem("mftel-auth-token");
+        const authH: Record<string, string> = token ? { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } : { "Content-Type": "application/json" };
         if (token) {
             try { await fetch("/api/dashboard-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "logout", token }) }); } catch (e) { console.warn("Logout failed:", e); }
             localStorage.removeItem("mftel-auth-token");
         }
-        try { navigator.sendBeacon("/api/dashboard", new Blob([JSON.stringify({ section: "online", action: "leave", userName })], { type: "application/json" })); } catch (e) { console.warn("Online leave failed:", e); }
-        setLoggedIn(false); setUserName("");
+        try { fetch("/api/dashboard", { method: "POST", headers: authH, body: JSON.stringify({ section: "online", action: "leave", userName }), keepalive: true }); } catch (e) { console.warn("Online leave failed:", e); }
+        try { localStorage.removeItem('mftel-dc'); } catch {}
+        setLoggedIn(false); setUserName(""); setDataLoaded(false); setMustChangePassword(false);
     };
 
-    // Pre-login: validate token + fetch members (non-blocking for login screen)
+    // Pre-login: hydrate cache + validate token
     useEffect(() => {
         const token = localStorage.getItem("mftel-auth-token");
 
-        // Members/emojis fetch: fire-and-forget, login screen works with DEFAULT_MEMBERS meanwhile
-        Promise.allSettled([
-            fetch("/api/dashboard?section=members").then(r => r.json()).catch(() => null),
-            fetch("/api/dashboard?section=customEmojis").then(r => r.json()).catch(() => null),
-        ]).then(([membersResult, emojisResult]) => {
-            const mData = membersResult.status === "fulfilled" ? membersResult.value?.data : null;
-            if (mData && Object.keys(mData).length > 0) setMembers(mData);
-            const eData = emojisResult.status === "fulfilled" ? emojisResult.value?.data : null;
-            if (eData) setCustomEmojis(eData);
-        });
+        // 1. Instant hydrate from localStorage cache (0ms — data visible immediately)
+        try {
+            const cached = localStorage.getItem('mftel-dc');
+            if (cached) hydrateData(JSON.parse(cached));
+        } catch {}
 
-        // Token validation: only blocks if token exists (shows loading screen)
+        // 2. If token exists, pre-fetch data in background (requires auth)
+        if (token) fetchData();
+
+        // 3. Members/emojis for login screen (requires auth, fallback to cache/defaults)
+        if (token) {
+            const authH = { "Authorization": `Bearer ${token}` };
+            Promise.allSettled([
+                fetch("/api/dashboard?section=members", { headers: authH }).then(r => r.json()).catch(() => null),
+                fetch("/api/dashboard?section=customEmojis", { headers: authH }).then(r => r.json()).catch(() => null),
+            ]).then(([membersResult, emojisResult]) => {
+                const mData = membersResult.status === "fulfilled" ? membersResult.value?.data : null;
+                if (mData && Object.keys(mData).length > 0) setMembers(mData);
+                const eData = emojisResult.status === "fulfilled" ? emojisResult.value?.data : null;
+                if (eData) setCustomEmojis(eData);
+            });
+        }
+
+        // 4. Token validation: only blocks if token exists (shows loading screen)
         if (!token) return;
         (async () => {
             try {
                 const res = await fetch("/api/dashboard-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "validateSession", token }) });
-                const auth = await res.json();
-                if (auth?.valid && auth.userName) {
-                    setUserName(auth.userName); setLoggedIn(true);
-                    fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "online", action: "join", userName: auth.userName }) }).catch(() => {});
+                const authResp = await res.json();
+                if (authResp?.valid && authResp.userName) {
+                    if (authResp.isDefaultPassword) { setMustChangePassword(true); setUserName(authResp.userName); }
+                    else { setUserName(authResp.userName); setLoggedIn(true); }
+                    const authH = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
+                    fetchOnline(); fetchLogs();
+                    fetch("/api/dashboard", { method: "POST", headers: authH, body: JSON.stringify({ section: "online", action: "join", userName: authResp.userName }) }).catch(() => {});
                 } else {
                     localStorage.removeItem("mftel-auth-token");
                 }
@@ -440,8 +499,8 @@ export default function DashboardPage() {
 
     useEffect(() => {
         if (!loggedIn) return;
-        // Use intervals starting at 0 for initial fetch to avoid lint warning about setState in effect body
-        const d = setTimeout(() => { fetchData(); fetchOnline(); fetchLogs(); }, 0);
+        // Initial fetch only if not already triggered eagerly from login/token validation
+        const d = dataLoaded ? undefined : setTimeout(() => { fetchData(); fetchOnline(); fetchLogs(); }, 0);
         const a = setInterval(() => {
             const delay = pollBackoffRef.current * 5000; // 0, 5s, 10s, 15s backoff
             if (delay > 0) { pollBackoffRef.current--; return; }
@@ -450,15 +509,27 @@ export default function DashboardPage() {
         const b = setInterval(fetchOnline, 15000);
         const c = setInterval(sendHeartbeat, 15000);
         const l = setInterval(fetchLogs, 30000);
-        return () => { clearTimeout(d); clearInterval(a); clearInterval(b); clearInterval(c); clearInterval(l); };
+        return () => { if (d) clearTimeout(d); clearInterval(a); clearInterval(b); clearInterval(c); clearInterval(l); };
     }, [loggedIn, fetchData, fetchOnline, sendHeartbeat, fetchLogs]);
 
     useEffect(() => {
         if (!userName) return;
-        const h = () => navigator.sendBeacon("/api/dashboard", new Blob([JSON.stringify({ section: "online", action: "leave", userName })], { type: "application/json" }));
+        const h = () => {
+            const token = localStorage.getItem("mftel-auth-token");
+            const headers: Record<string, string> = token
+                ? { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
+                : { "Content-Type": "application/json" };
+            try { fetch("/api/dashboard", { method: "POST", headers, body: JSON.stringify({ section: "online", action: "leave", userName }), keepalive: true }); } catch {}
+        };
         window.addEventListener("beforeunload", h);
         return () => window.removeEventListener("beforeunload", h);
     }, [userName]);
+
+    // Scroll position restore on tab switch
+    useEffect(() => {
+        const el = mainContentRef.current;
+        if (el) el.scrollTop = scrollPositionsRef.current[activeTab] || 0;
+    }, [activeTab]);
 
     // chatReadTs: init from localStorage
     useEffect(() => {
@@ -520,7 +591,8 @@ export default function DashboardPage() {
             const next = { ...prev, [tabId]: { ...(prev[tabId] || {}), [userName]: ts } };
             if (readReceiptTimerRef.current) clearTimeout(readReceiptTimerRef.current);
             readReceiptTimerRef.current = setTimeout(() => {
-                fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "readReceipts", data: next, userName }) }).catch(e => console.warn("Background request failed:", e));
+                const tk = localStorage.getItem("mftel-auth-token");
+                if (tk) fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tk}` }, body: JSON.stringify({ section: "readReceipts", data: next, userName }) }).catch(e => console.warn("Background request failed:", e));
             }, 1000);
             return next;
         });
@@ -537,19 +609,19 @@ export default function DashboardPage() {
     }, [activeTab, userName, activeChatLen, saveReadReceipt]);
 
     // Handlers
-    const handleToggleTodo = useCallback((id: number) => { setTodos(prev => { const u = prev.map(t => t.id === id ? { ...t, done: !t.done } : t); saveSection("todos", u); return u; }); }, [saveSection]);
+    const handleToggleTodo = useCallback((id: number) => { pendingSavesRef.current++; setTodos(prev => { const u = prev.map(t => t.id === id ? { ...t, done: !t.done } : t); saveSection("todos", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
     const handleAddTodo = useCallback((t: Todo) => { setTodos(prev => { const u = [...prev, t]; trackSave(t.id, "todos", u, () => setTodos(pp => pp.filter(x => x.id !== t.id))); return u; }); }, [trackSave]);
-    const handleDeleteTodo = useCallback((id: number) => { setTodos(prev => { const u = prev.filter(t => t.id !== id); saveSection("todos", u); return u; }); }, [saveSection]);
-    const handleUpdateTodo = useCallback((t: Todo) => { setTodos(prev => { const u = prev.map(x => x.id === t.id ? t : x); saveSection("todos", u); return u; }); }, [saveSection]);
+    const handleDeleteTodo = useCallback((id: number) => { pendingSavesRef.current++; setTodos(prev => { const u = prev.filter(t => t.id !== id); saveSection("todos", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleUpdateTodo = useCallback((t: Todo) => { pendingSavesRef.current++; setTodos(prev => { const u = prev.map(x => x.id === t.id ? t : x); saveSection("todos", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
     const handleReorderTodos = useCallback((list: Todo[]) => { setTodos(list); pendingSavesRef.current++; saveSection("todos", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleAddAnn = useCallback((text: string, pinned = false) => { const nid = genId(); setAnnouncements(prev => { const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned }, ...prev]; trackSave(nid, "announcements", u, () => setAnnouncements(pp => pp.filter(a => a.id !== nid))); return u; }); }, [userName, trackSave]);
-    const handleDelAnn = useCallback((id: number) => { setAnnouncements(prev => { const u = prev.filter(a => a.id !== id); saveSection("announcements", u); return u; }); }, [saveSection]);
-    const handleUpdateAnn = useCallback((ann: Announcement) => { setAnnouncements(prev => { const u = prev.map(a => a.id === ann.id ? ann : a); saveSection("announcements", u); return u; }); }, [saveSection]);
-    const handleReorderAnn = useCallback((list: Announcement[]) => { setAnnouncements(list); saveSection("announcements", list); }, [saveSection]);
+    const handleDelAnn = useCallback((id: number) => { pendingSavesRef.current++; setAnnouncements(prev => { const u = prev.filter(a => a.id !== id); saveSection("announcements", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleUpdateAnn = useCallback((ann: Announcement) => { pendingSavesRef.current++; setAnnouncements(prev => { const u = prev.map(a => a.id === ann.id ? ann : a); saveSection("announcements", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleReorderAnn = useCallback((list: Announcement[]) => { setAnnouncements(list); pendingSavesRef.current++; saveSection("announcements", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleAddPhil = useCallback((text: string) => { const nid = genId(); setPhilosophy(prev => { const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned: false }, ...prev]; trackSave(nid, "philosophy", u, () => setPhilosophy(pp => pp.filter(p => p.id !== nid))); return u; }); }, [userName, trackSave]);
     const handleDelPhil = useCallback((id: number) => { pendingSavesRef.current++; setPhilosophy(prev => { const u = prev.filter(p => p.id !== id); saveSection("philosophy", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
     const handleUpdatePhil = useCallback((p: Announcement) => { pendingSavesRef.current++; setPhilosophy(prev => { const u = prev.map(x => x.id === p.id ? p : x); saveSection("philosophy", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleReorderPhil = useCallback((list: Announcement[]) => { setPhilosophy(list); saveSection("philosophy", list); }, [saveSection]);
+    const handleReorderPhil = useCallback((list: Announcement[]) => { setPhilosophy(list); pendingSavesRef.current++; saveSection("philosophy", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
 
     const handleSavePaper = useCallback((p: Paper) => {
         setPaperModal(null);
@@ -700,30 +772,31 @@ export default function DashboardPage() {
     const handleDeleteChat = useCallback((id: number) => { pendingSavesRef.current++; setChatPosts(prev => { const u = prev.filter(p => p.id !== id); saveSection("chatPosts", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
     const handleReorderChatPosts = useCallback((list: IdeaPost[]) => { setChatPosts(list); pendingSavesRef.current++; saveSection("chatPosts", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleSaveEmoji = useCallback((name: string, emoji: string) => {
-        setCustomEmojis(prev => { const u = { ...prev, [name]: emoji }; saveSection("customEmojis", u); return u; });
+        pendingSavesRef.current++; setCustomEmojis(prev => { const u = { ...prev, [name]: emoji }; saveSection("customEmojis", u).then(() => { pendingSavesRef.current--; }); return u; });
     }, [saveSection]);
     const handleSaveStatusMsg = useCallback((name: string, msg: string) => {
-        setStatusMessages(prev => { const u = { ...prev, [name]: msg }; saveSection("statusMessages", u); return u; });
+        pendingSavesRef.current++; setStatusMessages(prev => { const u = { ...prev, [name]: msg }; saveSection("statusMessages", u).then(() => { pendingSavesRef.current--; }); return u; });
     }, [saveSection]);
-    const handleSaveEquipment = useCallback((list: string[]) => { setEquipmentList(list); saveSection("equipmentList", list); }, [saveSection]);
-    const handleSaveAnalysisTools = useCallback((list: string[]) => { setAnalysisToolList(list); saveSection("analysisToolList", list); }, [saveSection]);
-    const handleSavePaperTags = useCallback((list: string[]) => { setPaperTagList(list); saveSection("paperTagList", list); }, [saveSection]);
+    const handleSaveEquipment = useCallback((list: string[]) => { setEquipmentList(list); pendingSavesRef.current++; saveSection("equipmentList", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleSaveAnalysisTools = useCallback((list: string[]) => { setAnalysisToolList(list); pendingSavesRef.current++; saveSection("analysisToolList", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleSavePaperTags = useCallback((list: string[]) => { setPaperTagList(list); pendingSavesRef.current++; saveSection("paperTagList", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleSaveMemo = useCallback((memberName: string, memo: Memo) => {
         setPersonalMemos(prev => {
             const existing = prev[memberName] || [];
             const found = existing.find(m => m.id === memo.id);
             const updated = found ? existing.map(m => m.id === memo.id ? memo : m) : [...existing, memo];
             const u = { ...prev, [memberName]: updated };
-            if (found) saveSection("personalMemos", u);
+            if (found) { pendingSavesRef.current++; saveSection("personalMemos", u).then(() => { pendingSavesRef.current--; }); }
             else trackSave(memo.id, "personalMemos", u, () => setPersonalMemos(pp => { const arr = pp[memberName] || []; return { ...pp, [memberName]: arr.filter(m => m.id !== memo.id) }; }));
             return u;
         });
     }, [saveSection, trackSave]);
     const handleDeleteMemo = useCallback((memberName: string, id: number) => {
+        pendingSavesRef.current++;
         setPersonalMemos(prev => {
             const updated = (prev[memberName] || []).filter(m => m.id !== id);
             const u = { ...prev, [memberName]: updated };
-            saveSection("personalMemos", u);
+            saveSection("personalMemos", u).then(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
@@ -735,9 +808,10 @@ export default function DashboardPage() {
         });
     }, [trackSave]);
     const handleDeletePersonalFile = useCallback((name: string, id: number) => {
+        pendingSavesRef.current++;
         setPersonalFiles(prev => {
             const u = { ...prev, [name]: (prev[name] || []).filter(f => f.id !== id) };
-            saveSection("personalFiles", u);
+            saveSection("personalFiles", u).then(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
@@ -765,10 +839,10 @@ export default function DashboardPage() {
         });
     }, [saveSection]);
     const handleDeletePiChat = useCallback((name: string, id: number) => {
-        setPiChat(prev => { const u = { ...prev, [name]: (prev[name] || []).filter(m => m.id !== id) }; saveSection("piChat", u); return u; });
+        pendingSavesRef.current++; setPiChat(prev => { const u = { ...prev, [name]: (prev[name] || []).filter(m => m.id !== id) }; saveSection("piChat", u).then(() => { pendingSavesRef.current--; }); return u; });
     }, [saveSection]);
     const handleClearPiChat = useCallback((name: string) => {
-        setPiChat(prev => { const u = { ...prev, [name]: [] }; saveSection("piChat", u); return u; });
+        pendingSavesRef.current++; setPiChat(prev => { const u = { ...prev, [name]: [] }; saveSection("piChat", u).then(() => { pendingSavesRef.current--; }); return u; });
     }, [saveSection]);
     const handleUpdatePiChat = useCallback((name: string, msg: TeamChatMsg) => {
         pendingSavesRef.current++;
@@ -982,7 +1056,7 @@ export default function DashboardPage() {
             const data = prev[teamName] || { kanban: [], chat: [], files: [] };
             // Delete blob first (fire-and-forget)
             const fileToDelete = (data.files || []).find(f => f.id === id);
-            if (fileToDelete?.url?.startsWith("https://")) { fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: fileToDelete.url }), headers: { "Content-Type": "application/json" } }).catch(e => console.warn("Background request failed:", e)); }
+            if (fileToDelete?.url?.startsWith("https://")) { fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: fileToDelete.url }), headers: getAuthHeaders() }).catch(e => console.warn("Background request failed:", e)); }
             const toSave = { ...prev, [teamName]: { ...data, files: (data.files || []).filter(f => f.id !== id) } };
             saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; });
             return toSave;
@@ -1109,21 +1183,22 @@ export default function DashboardPage() {
         pendingSavesRef.current++;
         setLabFiles(prev => {
             const file = prev.find(f => f.id === id);
-            if (file?.url?.startsWith("https://")) { fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: file.url }), headers: { "Content-Type": "application/json" } }).catch(e => console.warn("파일 삭제 실패:", e)); }
+            if (file?.url?.startsWith("https://")) { fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: file.url }), headers: getAuthHeaders() }).catch(e => console.warn("파일 삭제 실패:", e)); }
             const u = prev.filter(f => f.id !== id);
             saveSection("labFiles", u).then(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
     const handleDispatchSave = useCallback((d: { id: number; name: string; start: string; end: string; description: string }) => {
+        pendingSavesRef.current++;
         setDispatches(prev => {
             const u = d.id && prev.find(x => x.id === d.id) ? prev.map(x => x.id === d.id ? d : x) : [...prev, d];
-            saveSection("dispatches", u);
+            saveSection("dispatches", u).then(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
     const handleDispatchDelete = useCallback((id: number) => {
-        setDispatches(prev => { const u = prev.filter(x => x.id !== id); saveSection("dispatches", u); return u; });
+        pendingSavesRef.current++; setDispatches(prev => { const u = prev.filter(x => x.id !== id); saveSection("dispatches", u).then(() => { pendingSavesRef.current--; }); return u; });
     }, [saveSection]);
     // ─── Notification Center helpers ─────────────────────────────────────────
     const NOTI_SECTION_MAP: Record<string, { label: string; icon: string; tabId: string }> = {
@@ -1230,7 +1305,8 @@ export default function DashboardPage() {
         const current = myPushPrefs[cat] !== false; // default true
         const next = { ...pushPrefs, [userName]: { ...myPushPrefs, [cat]: !current } };
         setPushPrefs(next);
-        fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: "pushPrefs", data: next, userName }) }).catch(e => console.warn("Background request failed:", e));
+        const tk = localStorage.getItem("mftel-auth-token");
+        if (tk) fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tk}` }, body: JSON.stringify({ section: "pushPrefs", data: next, userName }) }).catch(e => console.warn("Background request failed:", e));
     };
     const notiTimeAgo = (ts: number) => {
         const diff = Math.floor((Date.now() - ts) / 1000);
@@ -1338,24 +1414,70 @@ export default function DashboardPage() {
             </div>
         </div>
     );
-    if (!loggedIn) return <LoginScreen onLogin={handleLogin} members={displayMembers} />;
+    if (!loggedIn && !mustChangePassword) return <LoginScreen onLogin={handleLogin} members={displayMembers} />;
+
+    if (mustChangePassword) return (
+        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl p-8 w-full" style={{ maxWidth: 400, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+                <div className="text-center mb-6">
+                    <div className="w-14 h-14 rounded-xl mx-auto mb-3 flex items-center justify-center text-2xl" style={{ background: "#FEF3C7" }}>🔒</div>
+                    <h2 className="text-[18px] font-bold text-slate-800">비밀번호 변경 필요</h2>
+                    <p className="text-[13px] text-slate-400 mt-1">보안을 위해 기본 비밀번호를 변경해주세요.</p>
+                </div>
+                <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    const form = e.target as HTMLFormElement;
+                    const newPw = (form.elements.namedItem("newPw") as HTMLInputElement).value;
+                    const confirmPw = (form.elements.namedItem("confirmPw") as HTMLInputElement).value;
+                    if (newPw.length < 4) { setToast("비밀번호는 4자 이상이어야 합니다."); return; }
+                    if (newPw === "0000") { setToast("기본 비밀번호와 같은 비밀번호는 사용할 수 없습니다."); return; }
+                    if (newPw !== confirmPw) { setToast("비밀번호가 일치하지 않습니다."); return; }
+                    try {
+                        const res = await fetch("/api/dashboard-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "changePassword", userName, currentPassword: "0000", newPassword: newPw }) });
+                        const data = await res.json();
+                        if (!res.ok) { setToast(data.error || "변경 실패"); return; }
+                        setMustChangePassword(false); setLoggedIn(true);
+                        const token = localStorage.getItem("mftel-auth-token");
+                        if (token) {
+                            const authH = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
+                            fetchData(); fetchOnline(); fetchLogs();
+                            fetch("/api/dashboard", { method: "POST", headers: authH, body: JSON.stringify({ section: "online", action: "join", userName }) }).catch(() => {});
+                        }
+                        setToast("비밀번호가 변경되었습니다!");
+                    } catch { setToast("서버 연결 실패"); }
+                }} className="space-y-4">
+                    <div>
+                        <label className="block text-[13px] font-medium text-slate-600 mb-1">새 비밀번호</label>
+                        <input name="newPw" type="password" required minLength={4} className="w-full px-4 py-3 rounded-xl border border-slate-200 text-[14px] outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="4자 이상" />
+                    </div>
+                    <div>
+                        <label className="block text-[13px] font-medium text-slate-600 mb-1">비밀번호 확인</label>
+                        <input name="confirmPw" type="password" required minLength={4} className="w-full px-4 py-3 rounded-xl border border-slate-200 text-[14px] outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="다시 입력" />
+                    </div>
+                    <button type="submit" className="w-full py-3 rounded-xl text-[14px] font-semibold text-white transition-colors" style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6)" }}>비밀번호 변경</button>
+                </form>
+            </div>
+            {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-2.5 bg-slate-800 text-white text-[13px] rounded-full shadow-lg">{toast}</div>}
+        </div>
+    );
 
     return (
         <MembersContext.Provider value={displayMembers}>
         <SavingContext.Provider value={savingIds}>
         <ConfirmDeleteContext.Provider value={confirmDel}>
+        <ErrorBoundary>
         <div className="min-h-screen bg-[#F8FAFC] text-slate-800 leading-normal" style={{ fontFamily: "'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif" }}>
 
             {/* Mobile top header */}
             <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-[56px] px-4" style={{background:"#0F172A", boxShadow:"0 1px 4px rgba(0,0,0,0.2)"}}>
-                <button onClick={() => setMobileMenuOpen(true)} className="text-[22px] text-white w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/10">☰</button>
+                <button onClick={() => setMobileMenuOpen(true)} className="text-[22px] text-white w-11 h-11 flex items-center justify-center rounded-lg hover:bg-white/10">☰</button>
                 <span className="text-[15px] font-bold text-white truncate">{(() => { const found = tabs.find(t => t.id === activeTab); const extra: Record<string, string> = { teams: "팀 관리", settings: "설정" }; return found ? `${found.icon} ${found.label}` : extra[activeTab] || "대시보드"; })()}</span>
                 <div className="flex items-center gap-2">
-                    <button onClick={openNoti} className="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">
+                    <button onClick={openNoti} className="relative w-11 h-11 flex items-center justify-center rounded-lg hover:bg-white/10">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
                         {notiUnreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center px-0.5">{notiUnreadCount > 99 ? "99+" : notiUnreadCount}</span>}
                     </button>
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[16px] flex-shrink-0" style={{background:"rgba(59,130,246,0.1)", border:"1.5px solid rgba(59,130,246,0.25)"}}>{displayMembers[userName]?.emoji || "👤"}</div>
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-[16px] flex-shrink-0" style={{background:"rgba(59,130,246,0.1)", border:"1.5px solid rgba(59,130,246,0.25)"}}>{displayMembers[userName]?.emoji || "👤"}</div>
                 </div>
             </div>
             {/* Mobile slide menu */}
@@ -1564,7 +1686,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 p-4 md:py-7 md:px-9 overflow-y-auto flex flex-col min-h-0">
+                <div ref={mainContentRef} onScroll={e => { scrollPositionsRef.current[activeTab] = (e.target as HTMLDivElement).scrollTop; }} className="flex-1 p-4 pb-20 md:py-7 md:px-9 md:pb-7 overflow-y-auto flex flex-col min-h-0">
                     {activeTab !== "overview" && activeTab !== "overview_me" && !activeTab.startsWith("expLog_") && !activeTab.startsWith("analysisLog_") && (() => {
                         const extraTabs: Record<string, { icon: string; label: string }> = { teams: { icon: "👥", label: "팀 관리" }, settings: { icon: "⚙️", label: "설정" } };
                         const found = tabs.find(t => t.id === activeTab) || extraTabs[activeTab];
@@ -1742,8 +1864,8 @@ export default function DashboardPage() {
                         );
                     })()}
 
-                    {activeTab === "overview" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} chatPosts={chatPosts} personalMemos={personalMemos} teamMemos={teamMemos} meetings={meetings} conferenceTrips={conferenceTrips} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="team" statusMessages={statusMessages} members={displayMembers} teams={teams} />}
-                    {activeTab === "overview_me" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} chatPosts={chatPosts} personalMemos={personalMemos} teamMemos={teamMemos} meetings={meetings} conferenceTrips={conferenceTrips} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="personal" statusMessages={statusMessages} members={displayMembers} teams={teams} />}
+                    {activeTab === "overview" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} chatPosts={chatPosts} personalMemos={personalMemos} teamMemos={teamMemos} meetings={meetings} conferenceTrips={conferenceTrips} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="team" statusMessages={statusMessages} members={displayMembers} teams={teams} dataLoaded={dataLoaded} />}
+                    {activeTab === "overview_me" && <OverviewDashboard papers={papers} reports={reports} experiments={experiments} analyses={analyses} todos={todos} ipPatents={ipPatents} announcements={announcements} dailyTargets={dailyTargets} ideas={ideas} resources={resources} chatPosts={chatPosts} personalMemos={personalMemos} teamMemos={teamMemos} meetings={meetings} conferenceTrips={conferenceTrips} onlineUsers={onlineUsers} currentUser={userName} onNavigate={setActiveTab} mode="personal" statusMessages={statusMessages} members={displayMembers} teams={teams} dataLoaded={dataLoaded} />}
                     {activeTab === "announcements" && <AnnouncementView announcements={announcements} onAdd={handleAddAnn} onDelete={handleDelAnn} onUpdate={handleUpdateAnn} onReorder={handleReorderAnn} philosophy={philosophy} onAddPhilosophy={handleAddPhil} onDeletePhilosophy={handleDelPhil} onUpdatePhilosophy={handleUpdatePhil} onReorderPhilosophy={handleReorderPhil} currentUser={userName} />}
                     {activeTab === "daily" && <DailyTargetView targets={dailyTargets} onSave={handleSaveDailyTargets} currentUser={userName} />}
                     {activeTab === "papers" && <KanbanView papers={papers} filter={selectedPerson} onFilterPerson={setSelectedPerson} allPeople={allPeople} onClickPaper={p => setPaperModal({ paper: p, mode: "edit" })} onAddPaper={() => setPaperModal({ paper: null, mode: "add" })} onSavePaper={handleSavePaper} onDeletePaper={handleDeletePaper} onReorder={handleReorderPapers} tagList={paperTagList} onSaveTags={handleSavePaperTags} teamNames={teamNames} currentUser={userName} />}
@@ -2089,6 +2211,7 @@ export default function DashboardPage() {
 
         {confirmDialog}
         </div>
+        </ErrorBoundary>
         </ConfirmDeleteContext.Provider>
         </SavingContext.Provider>
         </MembersContext.Provider>

@@ -9,6 +9,11 @@ type Member = { team: string; role: string; emoji: string };
 
 const ADMIN_PW = "1009";
 
+function getAuthHeaders(): Record<string, string> {
+    const token = typeof window !== "undefined" ? localStorage.getItem("mftel-auth-token") : null;
+    return token ? { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } : { "Content-Type": "application/json" };
+}
+
 const DEFAULT_MEMBERS: Record<string, Member> = {
     "박일웅": { team: "PI", role: "교수", emoji: "👨‍🏫" },
     "용현진": { team: "액침냉각", role: "팀장", emoji: "💧" },
@@ -50,9 +55,10 @@ export default function AdminPage() {
     const fetchLogs = useCallback(async () => {
         setLoading(true);
         try {
+            const h = getAuthHeaders();
             const [ar, mr] = await Promise.all([
-                fetch(`/api/dashboard-admin?action=accessLogs&days=${days}`),
-                fetch(`/api/dashboard-admin?action=modLogs&days=${days}`),
+                fetch(`/api/dashboard-admin?action=accessLogs&days=${days}`, { headers: h }),
+                fetch(`/api/dashboard-admin?action=modLogs&days=${days}`, { headers: h }),
             ]);
             const ad = await ar.json();
             const md = await mr.json();
@@ -64,7 +70,7 @@ export default function AdminPage() {
 
     const fetchBackups = useCallback(async () => {
         try {
-            const r = await fetch("/api/dashboard-admin?action=backups");
+            const r = await fetch("/api/dashboard-admin?action=backups", { headers: getAuthHeaders() });
             const d = await r.json();
             setBackups(d.backups || []);
         } catch { /* ignore */ }
@@ -72,13 +78,13 @@ export default function AdminPage() {
 
     const fetchMembers = useCallback(async () => {
         try {
-            const r = await fetch("/api/dashboard-admin?action=members");
+            const r = await fetch("/api/dashboard-admin?action=members", { headers: getAuthHeaders() });
             const d = await r.json();
             const m = d.members || {};
             if (Object.keys(m).length === 0) {
                 // Seed default members if none exist
                 setMembers(DEFAULT_MEMBERS);
-                await fetch("/api/dashboard-admin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "saveMembers", members: DEFAULT_MEMBERS }) });
+                await fetch("/api/dashboard-admin", { method: "POST", headers: getAuthHeaders(), body: JSON.stringify({ action: "saveMembers", members: DEFAULT_MEMBERS }) });
             } else {
                 setMembers(m);
             }
@@ -124,7 +130,7 @@ export default function AdminPage() {
     const handleBackup = async () => {
         setLoading(true);
         try {
-            await fetch("/api/dashboard-admin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "backup" }) });
+            await fetch("/api/dashboard-admin", { method: "POST", headers: getAuthHeaders(), body: JSON.stringify({ action: "backup" }) });
             await fetchBackups();
         } catch { alert("백업 생성 실패"); }
         setLoading(false);
@@ -133,7 +139,7 @@ export default function AdminPage() {
     const handleDeleteBackup = async (date: string) => {
         if (!confirm(`${date} 백업을 삭제하시겠습니까?`)) return;
         try {
-            await fetch("/api/dashboard-admin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "deleteBackup", date }) });
+            await fetch("/api/dashboard-admin", { method: "POST", headers: getAuthHeaders(), body: JSON.stringify({ action: "deleteBackup", date }) });
             await fetchBackups();
         } catch { alert("백업 삭제 실패"); }
     };
@@ -142,7 +148,7 @@ export default function AdminPage() {
         if (!confirm(`${date} 백업으로 복원하시겠습니까? 현재 데이터가 덮어씌워집니다.`)) return;
         setLoading(true);
         try {
-            const res = await fetch('/api/dashboard-admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'restore', date }) });
+            const res = await fetch('/api/dashboard-admin', { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ action: 'restore', date }) });
             const data = await res.json();
             if (data.success) alert("복원 완료");
             else alert(`복원 실패: ${data.error || "알 수 없는 오류"}`);
@@ -152,7 +158,7 @@ export default function AdminPage() {
 
     const handleSaveMembers = async (updated: Record<string, Member>) => {
         setMembers(updated);
-        await fetch("/api/dashboard-admin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "saveMembers", members: updated }) });
+        await fetch("/api/dashboard-admin", { method: "POST", headers: getAuthHeaders(), body: JSON.stringify({ action: "saveMembers", members: updated }) });
     };
 
     const handleAddMember = async () => {

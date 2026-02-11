@@ -42,7 +42,11 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
         setNewComment(""); cImg.clear();
     };
 
-    const handleClose = () => { if (!isEdit && (title.trim() || summary.trim())) saveDraft("meeting_add", JSON.stringify({ title, content: summary })); onClose(); };
+    const handleClose = () => {
+        const isDirty = title.trim() !== (meeting?.title || "") || summary.trim() !== (meeting?.summary || "");
+        if (isDirty && !confirm("작성 중인 내용이 있습니다. 닫으시겠습니까?")) return;
+        if (!isEdit && (title.trim() || summary.trim())) saveDraft("meeting_add", JSON.stringify({ title, content: summary })); onClose();
+    };
 
     return (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={handleClose}>
@@ -136,7 +140,7 @@ const MeetingView = memo(function MeetingView({ meetings, onSave, onDelete, curr
                 <span className="text-[13px] text-slate-400">총 {filtered.length}건</span>
             </div>
             {teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {sorted.map(m => (
                     <div key={m.id} onClick={() => setEditing(m)}
                         className={`bg-white rounded-xl p-4 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col ${m.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}>

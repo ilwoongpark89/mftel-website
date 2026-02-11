@@ -1,5 +1,6 @@
 import { Redis } from '@upstash/redis';
 import { NextRequest, NextResponse } from 'next/server';
+import { loginLimiter, getClientIp } from '../lib/auth';
 
 const isRedisConfigured = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 const redis = isRedisConfigured ? new Redis({
@@ -70,6 +71,12 @@ export async function POST(request: NextRequest) {
 
         // --- login ---
         if (action === 'login') {
+            if (loginLimiter) {
+                const ip = getClientIp(request);
+                const { success } = await loginLimiter.limit(ip);
+                if (!success) return NextResponse.json({ error: '로그인 시도가 너무 많습니다. 1분 후 다시 시도해주세요.' }, { status: 429 });
+            }
+
             const { userName, password } = body as { userName: string; password: string; action: string };
             if (!userName || password === undefined) {
                 return NextResponse.json({ error: '이름과 비밀번호가 필요합니다' }, { status: 400 });
@@ -99,12 +106,15 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: '비밀번호가 틀렸습니다' }, { status: 401 });
             }
 
+            const defaultHash = await hashPassword('0000');
+            const isDefaultPassword = passwords[userName] === defaultHash;
+
             const token = generateToken();
             const sessions = await getSessions();
             sessions[token] = { userName, expiresAt: Date.now() + THIRTY_DAYS };
             await setSessions(sessions);
 
-            return NextResponse.json({ success: true, token, userName });
+            return NextResponse.json({ success: true, token, userName, isDefaultPassword });
         }
 
         // --- validateSession ---
@@ -120,7 +130,11 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ valid: false });
             }
 
-            return NextResponse.json({ valid: true, userName: session.userName });
+            const passwords = await getPasswords();
+            const defaultHash = await hashPassword('0000');
+            const isDefaultPassword = passwords[session.userName] === defaultHash;
+
+            return NextResponse.json({ valid: true, userName: session.userName, isDefaultPassword });
         }
 
         // --- logout ---
@@ -160,7 +174,7 @@ export async function POST(request: NextRequest) {
         // --- resetPassword (admin) ---
         if (action === 'resetPassword') {
             const { adminPassword, targetUser } = body as { adminPassword: string; targetUser: string; action: string };
-            if (adminPassword !== '1009') {
+            if (adminPassword !== (process.env.DASHBOARD_ADMIN_PASSWORD || '1009')) {
                 return NextResponse.json({ error: '관리자 비밀번호가 틀렸습니다' }, { status: 401 });
             }
             if (!targetUser) {

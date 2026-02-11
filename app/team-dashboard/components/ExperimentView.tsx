@@ -6,7 +6,7 @@ import { MEMBERS, MEMBER_NAMES, EXP_STATUS_CONFIG, EXP_STATUS_KEYS, EXP_STATUS_M
 import { genId, toggleArr, statusText, chatKeyDown, renderWithMentions, saveDraft, loadDraft, clearDraft, hasDraft, calcDropIdx, reorderKanbanItems } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useCommentImg } from "../lib/hooks";
-import { DropLine, ItemFiles, PillSelect, SavingBadge, TeamSelect } from "./shared";
+import { DropLine, ItemFiles, PillSelect, SavingBadge, TeamSelect, MobileReorderButtons, moveInColumn } from "./shared";
 
 function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUser, equipmentList, teamNames }: {
     experiment: Experiment | null; onSave: (e: Experiment) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; equipmentList: string[]; teamNames?: string[];
@@ -39,13 +39,15 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
         setLogs([{ id: genId(), date: new Date().toLocaleDateString("ko-KR"), author: currentUser, text: newLog.trim() }, ...logs]);
         setNewLog("");
     };
+    const isDirty = title.trim() !== (experiment?.title || "");
+    const handleBackdropClose = () => { if (isDirty && !confirm("작성 중인 내용이 있습니다. 닫으시겠습니까?")) return; onClose(); };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={handleBackdropClose}>
             <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "실험 수정" : "실험 등록"}</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
+                    <button onClick={handleBackdropClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                 </div>
                 <div className="p-4 space-y-3">
                     <div>
@@ -127,7 +129,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
                 </div>
                 <div className="flex items-center justify-between p-4 border-t border-slate-200">
                     <div className="flex gap-2">
-                        <button onClick={onClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                        <button onClick={handleBackdropClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                         <button onClick={() => { if (handleSave()) onClose(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
                     {isEdit && onDelete && <button onClick={() => confirmDel(() => { onDelete(experiment!.id); onClose(); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>}
@@ -180,7 +182,7 @@ const ExperimentView = memo(function ExperimentView({ experiments, onSave, onDel
                         {equipmentList.map(eq => (
                             <span key={eq} className="flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-full text-[12px] text-slate-700">
                                 {eq}
-                                <button onClick={() => onSaveEquipment(equipmentList.filter(e => e !== eq))} className="text-slate-400 hover:text-red-500 text-[11px]">✕</button>
+                                <button onClick={() => confirmDel(() => onSaveEquipment(equipmentList.filter(e => e !== eq)))} className="text-slate-400 hover:text-red-500 text-[11px]">✕</button>
                             </span>
                         ))}
                     </div>
@@ -246,13 +248,18 @@ const ExperimentView = memo(function ExperimentView({ experiments, onSave, onDel
             </div>
             )}
             {/* Mobile single column */}
-            {!showCompleted && (
+            {!showCompleted && (() => {
+                const colItems = kanbanFilteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) === mobileCol);
+                return (
             <div className="md:hidden space-y-2">
-                {kanbanFilteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) === mobileCol).map(exp => (
+                {colItems.map((exp, mi) => (
                     <div key={exp.id} onClick={() => setSelected(exp)}
                         className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300`}
                         style={{ borderLeft: exp.needsDiscussion ? "3px solid #EF4444" : `3px solid ${EXP_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
-                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{exp.title}<SavingBadge id={exp.id} /></div>
+                        <div className="flex items-center gap-1">
+                            <div className="flex-1 text-[13px] font-semibold text-slate-800 leading-snug break-words">{exp.title}<SavingBadge id={exp.id} /></div>
+                            <MobileReorderButtons idx={mi} total={colItems.length} onMove={dir => onReorder(moveInColumn(experiments, exp.id, dir, colItems))} />
+                        </div>
                         <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
                             <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">🔧 {exp.equipment}</span>
                             {exp.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{exp.team}</span>}
@@ -269,9 +276,10 @@ const ExperimentView = memo(function ExperimentView({ experiments, onSave, onDel
                         </div>
                     </div>
                 ))}
-                {kanbanFilteredExperiments.filter(e => EXP_STATUS_MIGRATE(e.status) === mobileCol).length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">{EXP_STATUS_CONFIG[mobileCol]?.label} 없음</div>}
+                {colItems.length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">{EXP_STATUS_CONFIG[mobileCol]?.label} 없음</div>}
             </div>
-            )}
+                );
+            })()}
             {/* Desktop kanban */}
             {!showCompleted && (
             <div className="hidden md:flex gap-3 pb-2">

@@ -6,7 +6,7 @@ import { MEMBERS, MEMBER_NAMES, STATUS_CONFIG, STATUS_KEYS, PAPER_STATUS_MIGRATE
 import { genId, toggleArr, statusText, chatKeyDown, renderWithMentions, saveDraft, loadDraft, clearDraft, hasDraft, calcDropIdx, reorderKanbanItems } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useCommentImg } from "../lib/hooks";
-import { DropLine, ItemFiles, PillSelect, SavingBadge, TeamSelect } from "./shared";
+import { DropLine, ItemFiles, PillSelect, SavingBadge, TeamSelect, MobileReorderButtons, moveInColumn } from "./shared";
 
 function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList, teamNames }: {
     paper: Paper | null; onSave: (p: Paper) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; tagList: string[]; teamNames?: string[];
@@ -39,13 +39,15 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
         setComments([...comments, { id: genId(), author: currentUser, text: newComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }]);
         setNewComment(""); cImg.clear();
     };
+    const isDirty = title.trim() !== (paper?.title || "");
+    const handleBackdropClose = () => { if (isDirty && !confirm("작성 중인 내용이 있습니다. 닫으시겠습니까?")) return; onClose(); };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={handleBackdropClose}>
             <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "논문 수정" : "논문 등록"}</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
+                    <button onClick={handleBackdropClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                 </div>
                 <div className="p-4 space-y-3">
                     <div>
@@ -117,7 +119,7 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
                 </div>
                 <div className="flex items-center justify-between p-4 border-t border-slate-200">
                     <div className="flex gap-2">
-                        <button onClick={onClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                        <button onClick={handleBackdropClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                         <button onClick={() => { if (handleSave()) onClose(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
                     </div>
                     {isEdit && onDelete && (
@@ -243,17 +245,24 @@ const KanbanView = memo(function KanbanView({ papers, filter, onFilterPerson, al
             </div>
             )}
             {/* Mobile single column */}
-            {!showCompleted && (
+            {!showCompleted && (() => {
+                const colItems = kanbanFiltered.filter(p => PAPER_STATUS_MIGRATE(p.status) === mobileCol);
+                return (
             <div className="md:hidden space-y-2">
-                {kanbanFiltered.filter(p => PAPER_STATUS_MIGRATE(p.status) === mobileCol).map(p => (
+                {colItems.map((p, mi) => (
                     <div key={p.id} onClick={() => setSelected(p)}
                         className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300`}
                         style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
-                        <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{p.title}<SavingBadge id={p.id} /></div>
-                        <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
-                            {p.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md flex-shrink-0" style={{background:"#EFF6FF", color:"#3B82F6", fontWeight:500}}>{p.team}</span>}
-                            {p.tags.slice(0, 2).map(t => <span key={t} className="text-[11px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">{t}</span>)}
-                            {p.tags.length > 2 && <span className="text-[11px] text-slate-400 flex-shrink-0">+{p.tags.length - 2}</span>}
+                        <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                                <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{p.title}<SavingBadge id={p.id} /></div>
+                                <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
+                                    {p.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md flex-shrink-0" style={{background:"#EFF6FF", color:"#3B82F6", fontWeight:500}}>{p.team}</span>}
+                                    {p.tags.slice(0, 2).map(t => <span key={t} className="text-[11px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 flex-shrink-0">{t}</span>)}
+                                    {p.tags.length > 2 && <span className="text-[11px] text-slate-400 flex-shrink-0">+{p.tags.length - 2}</span>}
+                                </div>
+                            </div>
+                            <MobileReorderButtons idx={mi} total={colItems.length} onMove={dir => onReorder(moveInColumn(papers, p.id, dir, colItems))} />
                         </div>
                         <div className="flex items-center gap-2 mt-2">
                             <div className="flex-1 rounded-full h-1" style={{background:"#F1F5F9"}}>
@@ -267,9 +276,10 @@ const KanbanView = memo(function KanbanView({ papers, filter, onFilterPerson, al
                         </div>
                     </div>
                 ))}
-                {kanbanFiltered.filter(p => PAPER_STATUS_MIGRATE(p.status) === mobileCol).length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">{STATUS_CONFIG[mobileCol]?.label} 없음</div>}
+                {colItems.length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">{STATUS_CONFIG[mobileCol]?.label} 없음</div>}
             </div>
-            )}
+                );
+            })()}
             {/* Desktop kanban */}
             {!showCompleted && (
             <div className="hidden md:flex gap-3 pb-2">

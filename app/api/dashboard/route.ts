@@ -1,5 +1,6 @@
 import { Redis } from '@upstash/redis';
 import { NextRequest, NextResponse } from 'next/server';
+import { validateToken, dashboardLimiter, getClientIp } from '../lib/auth';
 
 const isRedisConfigured = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 
@@ -51,6 +52,9 @@ async function appendLog(logKey: string, entry: Record<string, unknown>) {
 
 // GET - Retrieve dashboard data
 export async function GET(request: NextRequest) {
+    const auth = await validateToken(request);
+    if (!auth.valid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { searchParams } = new URL(request.url);
     const section = searchParams.get('section');
 
@@ -93,6 +97,15 @@ export async function GET(request: NextRequest) {
 
 // POST - Update dashboard data
 export async function POST(request: NextRequest) {
+    const auth = await validateToken(request);
+    if (!auth.valid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    if (dashboardLimiter) {
+        const ip = getClientIp(request);
+        const { success } = await dashboardLimiter.limit(ip);
+        if (!success) return NextResponse.json({ error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' }, { status: 429 });
+    }
+
     try {
         const body = await request.json();
         const { section, data, action, userName } = body;

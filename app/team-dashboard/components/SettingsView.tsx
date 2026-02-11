@@ -50,7 +50,8 @@ function AdminLogSection() {
     useEffect(() => {
         (async () => {
             try {
-                const res = await fetch("/api/dashboard?section=logs");
+                const tk = typeof window !== "undefined" ? localStorage.getItem("dashToken") || "" : "";
+                const res = await fetch("/api/dashboard?section=logs", { headers: tk ? { Authorization: `Bearer ${tk}` } : {} });
                 const data = await res.json();
                 setLogs(data.data || []);
             } catch (e) { console.warn("로그 조회 실패:", e); }
