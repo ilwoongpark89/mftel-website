@@ -392,17 +392,17 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
                 <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
                     <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">멤버별 현황</h3>
                     <div className="overflow-x-auto">
-                        <table className="w-full text-[13px]" style={{tableLayout:"fixed", minWidth:"700px"}}>
+                        <table className="w-full text-[13px]" style={{tableLayout:"fixed", minWidth:"760px"}}>
                             <colgroup>
-                                <col style={{width:"72px"}} />
-                                <col style={{width:"200px"}} />
-                                <col style={{width:"1fr"}} />
-                                <col style={{width:"1fr"}} />
-                                <col style={{width:"1fr"}} />
-                                <col style={{width:"1fr"}} />
-                                <col style={{width:"1fr"}} />
-                                <col style={{width:"1fr"}} />
-                                <col style={{width:"1fr"}} />
+                                <col style={{width:"9%"}} />
+                                <col style={{width:"28%"}} />
+                                <col style={{width:"9%"}} />
+                                <col style={{width:"9%"}} />
+                                <col style={{width:"9%"}} />
+                                <col style={{width:"9%"}} />
+                                <col style={{width:"9%"}} />
+                                <col style={{width:"9%"}} />
+                                <col style={{width:"9%"}} />
                             </colgroup>
                             <thead>
                                 <tr style={{borderBottom:"1px solid #F1F5F9"}}>
