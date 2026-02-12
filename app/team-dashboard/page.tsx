@@ -126,6 +126,8 @@ export default function DashboardPage() {
     const [analysisLogCategories, setAnalysisLogCategories] = useState<Record<string, Array<{name: string; members: string[]}>>>({});
     const [showExpMgr, setShowExpMgr] = useState(false);
     const [showAnalysisMgr, setShowAnalysisMgr] = useState(false);
+    const [showTeamLayoutSettings, setShowTeamLayoutSettings] = useState(false);
+    const [showPersonalLayoutSettings, setShowPersonalLayoutSettings] = useState(false);
     const [newExpCat, setNewExpCat] = useState("");
     const [newAnalysisCat, setNewAnalysisCat] = useState("");
     const [editingCat, setEditingCat] = useState<string | null>(null);
@@ -1761,9 +1763,10 @@ export default function DashboardPage() {
                         const extraTabs: Record<string, { icon: string; label: string }> = { teams: { icon: "👥", label: "팀 관리" }, settings: { icon: "⚙️", label: "설정" }, admin_members: { icon: "🔑", label: "멤버 관리" }, admin_backups: { icon: "💾", label: "백업 관리" }, admin_access: { icon: "🔐", label: "접속 로그" } };
                         const found = tabs.find(t => t.id === activeTab) || extraTabs[activeTab];
                         const isTeamPage = activeTab.startsWith("teamMemo_");
+                        const isMemoPage = activeTab.startsWith("memo_");
                         const teamName4Header = isTeamPage ? activeTab.replace("teamMemo_", "") : "";
                         return found ? (
-                            <div className={`${isTeamPage ? "mb-3" : "mb-6"} flex-shrink-0 hidden md:flex items-center justify-between`}>
+                            <div className={`${isTeamPage || isMemoPage ? "mb-3" : "mb-6"} flex-shrink-0 hidden md:flex items-center justify-between`}>
                                 <h2 className="text-[24px] font-bold tracking-tight" style={{color:"#0F172A", letterSpacing:"-0.02em", lineHeight:"1.3"}}>
                                     {found.icon} {found.label}
                                 </h2>
@@ -1771,6 +1774,12 @@ export default function DashboardPage() {
                                     <div className="flex items-center gap-2">
                                         <button onClick={() => { setShowExpMgr(true); setShowAnalysisMgr(false); }} className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[11px] font-medium hover:bg-slate-200 whitespace-nowrap">✏️ 실험일지 관리</button>
                                         <button onClick={() => { setShowAnalysisMgr(true); setShowExpMgr(false); }} className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[11px] font-medium hover:bg-slate-200 whitespace-nowrap">💻 해석일지 관리</button>
+                                        <button onClick={() => setShowTeamLayoutSettings(true)} className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[11px] font-medium hover:bg-slate-200 whitespace-nowrap">⚙️ 보드 설정</button>
+                                    </div>
+                                )}
+                                {isMemoPage && (
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => setShowPersonalLayoutSettings(true)} className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[11px] font-medium hover:bg-slate-200 whitespace-nowrap">⚙️ 보드 설정</button>
                                     </div>
                                 )}
                             </div>
@@ -1979,11 +1988,11 @@ export default function DashboardPage() {
                     {activeTab.startsWith("teamMemo_") && (() => {
                         const tName = activeTab.replace("teamMemo_", "");
                         const data = teamMemos[tName] || { kanban: [], chat: [] };
-                        return <TeamMemoView teamName={tName} kanban={data.kanban} chat={data.chat} files={data.files || []} currentUser={userName} onSaveCard={c => handleSaveTeamMemo(tName, c)} onDeleteCard={id => handleDeleteTeamMemo(tName, id)} onReorderCards={cards => handleReorderTeamMemo(tName, cards)} onAddChat={msg => handleAddTeamChat(tName, msg)} onUpdateChat={msg => handleUpdateTeamChat(tName, msg)} onDeleteChat={id => handleDeleteTeamChat(tName, id)} onClearChat={() => handleClearTeamChat(tName)} onRetryChat={id => handleRetryTeamChat(tName, id)} onAddFile={f => handleAddTeamFile(tName, f)} onDeleteFile={id => handleDeleteTeamFile(tName, id)} readReceipts={readReceipts[`teamMemo_${tName}`]} />;
+                        return <TeamMemoView teamName={tName} kanban={data.kanban} chat={data.chat} files={data.files || []} currentUser={userName} onSaveCard={c => handleSaveTeamMemo(tName, c)} onDeleteCard={id => handleDeleteTeamMemo(tName, id)} onReorderCards={cards => handleReorderTeamMemo(tName, cards)} onAddChat={msg => handleAddTeamChat(tName, msg)} onUpdateChat={msg => handleUpdateTeamChat(tName, msg)} onDeleteChat={id => handleDeleteTeamChat(tName, id)} onClearChat={() => handleClearTeamChat(tName)} onRetryChat={id => handleRetryTeamChat(tName, id)} onAddFile={f => handleAddTeamFile(tName, f)} onDeleteFile={id => handleDeleteTeamFile(tName, id)} readReceipts={readReceipts[`teamMemo_${tName}`]} externalLayoutOpen={showTeamLayoutSettings} onExternalLayoutClose={() => setShowTeamLayoutSettings(false)} />;
                     })()}
                     {activeTab.startsWith("memo_") && (() => {
                         const name = activeTab.replace("memo_", "");
-                        return <PersonalMemoView memos={personalMemos[name] || []} onSave={m => handleSaveMemo(name, m)} onDelete={id => handleDeleteMemo(name, id)} files={personalFiles[name] || []} onAddFile={f => handleAddPersonalFile(name, f)} onDeleteFile={id => handleDeletePersonalFile(name, id)} chat={piChat[name] || []} onAddChat={msg => handleAddPiChat(name, msg)} onUpdateChat={msg => handleUpdatePiChat(name, msg)} onDeleteChat={id => handleDeletePiChat(name, id)} onClearChat={() => handleClearPiChat(name)} onRetryChat={id => handleRetryPiChat(name, id)} currentUser={userName} readReceipts={readReceipts[`memo_${name}`]} />;
+                        return <PersonalMemoView memos={personalMemos[name] || []} onSave={m => handleSaveMemo(name, m)} onDelete={id => handleDeleteMemo(name, id)} files={personalFiles[name] || []} onAddFile={f => handleAddPersonalFile(name, f)} onDeleteFile={id => handleDeletePersonalFile(name, id)} chat={piChat[name] || []} onAddChat={msg => handleAddPiChat(name, msg)} onUpdateChat={msg => handleUpdatePiChat(name, msg)} onDeleteChat={id => handleDeletePiChat(name, id)} onClearChat={() => handleClearPiChat(name)} onRetryChat={id => handleRetryPiChat(name, id)} currentUser={userName} readReceipts={readReceipts[`memo_${name}`]} externalLayoutOpen={showPersonalLayoutSettings} onExternalLayoutClose={() => setShowPersonalLayoutSettings(false)} />;
                     })()}
                     {activeTab.startsWith("expLog_") && (() => {
                         const rest = activeTab.replace("expLog_", "");

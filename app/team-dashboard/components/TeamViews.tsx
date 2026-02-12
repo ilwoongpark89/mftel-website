@@ -200,12 +200,13 @@ const TeamOverview = memo(function TeamOverview({ papers, todos, experiments, an
 });
 
 
-const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, onDeleteCard, onReorderCards, onAddChat, onUpdateChat, onDeleteChat, onClearChat, onRetryChat, onAddFile, onDeleteFile, readReceipts }: {
+const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files, currentUser, onSaveCard, onDeleteCard, onReorderCards, onAddChat, onUpdateChat, onDeleteChat, onClearChat, onRetryChat, onAddFile, onDeleteFile, readReceipts, externalLayoutOpen, onExternalLayoutClose }: {
     teamName: string; kanban: TeamMemoCard[]; chat: TeamChatMsg[]; files: LabFile[]; currentUser: string;
     onSaveCard: (card: TeamMemoCard) => void; onDeleteCard: (id: number) => void; onReorderCards: (cards: TeamMemoCard[]) => void;
     onAddChat: (msg: TeamChatMsg) => void; onUpdateChat: (msg: TeamChatMsg) => void; onDeleteChat: (id: number) => void; onClearChat: () => void; onRetryChat: (id: number) => void;
     onAddFile: (f: LabFile) => void; onDeleteFile: (id: number) => void;
     readReceipts?: Record<string, number>;
+    externalLayoutOpen?: boolean; onExternalLayoutClose?: () => void;
 }) {
     const MEMBERS = useContext(MembersContext);
     const confirmDel = useContext(ConfirmDeleteContext);
@@ -222,6 +223,8 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
     const [borderClr, setBorderClr] = useState("");
     const [chatText, setChatText] = useState("");
     const [showLayoutSettings, setShowLayoutSettings] = useState(false);
+    const layoutOpen = showLayoutSettings || !!externalLayoutOpen;
+    const closeLayout = () => { setShowLayoutSettings(false); onExternalLayoutClose?.(); };
     const { settings: layoutSettings, update: updateLayout, reset: resetLayout, gridTemplate } = useLayoutSettings("team");
     const [chatImg, setChatImg] = useState("");
     const [imgUploading, setImgUploading] = useState(false);
@@ -342,14 +345,9 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
 
     return (
         <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0 relative" style={{gridTemplateColumns: gridTemplate}}>
-            <button onClick={() => setShowLayoutSettings(v => !v)}
-                className="absolute -top-8 right-0 w-6 h-6 hidden md:flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors z-10"
-                title="레이아웃 설정">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" /></svg>
-            </button>
-            {showLayoutSettings && (
+            {layoutOpen && (
                 <LayoutSettingsOverlay settings={layoutSettings} onUpdate={updateLayout} onReset={resetLayout}
-                    onClose={() => setShowLayoutSettings(false)} />
+                    onClose={closeLayout} />
             )}
             {/* Mobile tab bar — 3 tabs (mobile only) */}
             <div className="md:hidden flex border-b border-slate-200 bg-white flex-shrink-0 -mt-1">
