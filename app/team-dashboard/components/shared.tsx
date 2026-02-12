@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useContext, useRef } from "react";
+import { useState, useEffect, useContext, useRef, useCallback } from "react";
 import type { LabFile } from "../lib/types";
 import { EMOJI_CATEGORIES, MEMO_COLORS, FILE_MAX } from "../lib/constants";
-import { genId, uploadFile, isImageFile, isPdfFile } from "../lib/utils";
-import { MembersContext, SavingContext } from "../lib/contexts";
+import { genId, uploadFile, isImageFile, isPdfFile, renderWithMentions, saveDraft, loadDraft, clearDraft, hasDraft } from "../lib/utils";
+import { MembersContext, SavingContext, ConfirmDeleteContext } from "../lib/contexts";
+import { useCommentImg } from "../lib/hooks";
 
 // ─── Mobile Reorder Helper ────────────────────────────────────────────────────
 
@@ -115,7 +116,7 @@ export function EmojiPickerPopup({ onSelect }: { onSelect: (emoji: string) => vo
 // ─── DropLine ────────────────────────────────────────────────────────────────
 
 export function DropLine() {
-    return <div className="h-[3px] bg-blue-500 rounded-full mx-1 my-0.5 transition-all" style={{ animation: "dropPulse 1s ease-in-out infinite" }} />;
+    return <div className="h-[6px] bg-blue-500 rounded-full mx-1 my-1 transition-all" style={{ animation: "dropPulse 1s ease-in-out infinite", boxShadow: "0 0 8px rgba(59,130,246,0.4)" }} />;
 }
 
 // ─── TeamFilterBar ───────────────────────────────────────────────────────────
@@ -249,6 +250,7 @@ export function FileBox({ files, currentUser, onAddFile, onDeleteFile, compact }
     files: LabFile[]; currentUser: string; onAddFile: (f: LabFile) => void; onDeleteFile: (id: number) => void; compact?: boolean;
 }) {
     const MEMBERS = useContext(MembersContext);
+    const confirmDel = useContext(ConfirmDeleteContext);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [preview, setPreview] = useState<LabFile | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -284,7 +286,7 @@ export function FileBox({ files, currentUser, onAddFile, onDeleteFile, compact }
                                 <div className="text-[11px] text-slate-400 mt-0.5">{(f.size / 1024).toFixed(0)} KB · {MEMBERS[f.uploader]?.emoji || ""}{f.uploader}</div>
                             </div>
                             {(f.uploader === currentUser || currentUser === "박일웅") && (
-                                <button onClick={() => { if (confirm("삭제?")) onDeleteFile(f.id); }}
+                                <button onClick={() => confirmDel(() => onDeleteFile(f.id))}
                                     className="text-[11px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">✕</button>
                             )}
                         </div>
@@ -330,6 +332,245 @@ export function MiniBar({ items, maxVal }: { items: Array<{ label: string; count
                     <span className="w-[16px] text-[12px]" style={{fontWeight: 600, color: item.count > 0 ? "#334155" : "#CBD5E1"}}>{item.count}</span>
                 </div>
             ))}
+        </div>
+    );
+}
+
+// ─── Layout Settings ─────────────────────────────────────────────────────────
+
+export interface LayoutSettings {
+    boardRatio: number;
+    filesRatio: number;
+    chatRatio: number;
+    boardColumns: number;
+}
+
+const LAYOUT_DEFAULTS: Record<string, LayoutSettings> = {
+    personal: { boardRatio: 3, filesRatio: 2, chatRatio: 2.5, boardColumns: 2 },
+    team: { boardRatio: 2, filesRatio: 2, chatRatio: 4, boardColumns: 1 },
+};
+
+export function useLayoutSettings(key: "personal" | "team") {
+    const storageKey = `mftel_layout_${key}`;
+    const defaults = LAYOUT_DEFAULTS[key];
+    const [settings, setSettings] = useState<LayoutSettings>(defaults);
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem(storageKey);
+            if (saved) setSettings(JSON.parse(saved));
+        } catch { /* ignore */ }
+    }, [storageKey]);
+
+    const update = useCallback((patch: Partial<LayoutSettings>) => {
+        setSettings(prev => {
+            const next = { ...prev, ...patch };
+            try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* ignore */ }
+            return next;
+        });
+    }, [storageKey]);
+
+    const reset = useCallback(() => {
+        setSettings(defaults);
+        try { localStorage.removeItem(storageKey); } catch { /* ignore */ }
+    }, [storageKey, defaults]);
+
+    const gridTemplate = `${settings.boardRatio}fr ${settings.filesRatio}fr ${settings.chatRatio}fr`;
+
+    return { settings, update, reset, gridTemplate };
+}
+
+export function LayoutSettingsOverlay({ settings, onUpdate, onReset, onClose, showBoardColumns }: {
+    settings: LayoutSettings;
+    onUpdate: (patch: Partial<LayoutSettings>) => void;
+    onReset: () => void;
+    onClose: () => void;
+    showBoardColumns?: boolean;
+}) {
+    const backdropRef = useRef<HTMLDivElement>(null);
+
+    return (
+        <div ref={backdropRef} className="fixed inset-0 z-50" onClick={e => { if (e.target === backdropRef.current) onClose(); }}>
+            <div className="absolute top-12 right-4 w-[280px] bg-white rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-slate-200 overflow-hidden"
+                onClick={e => e.stopPropagation()}>
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                    <span className="text-[13px] font-bold text-slate-700">⚙️ 레이아웃 설정</span>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-[16px] leading-none">✕</button>
+                </div>
+                <div className="px-4 py-3 space-y-4">
+                    <div>
+                        <div className="text-[12px] font-semibold text-slate-500 mb-2">패널 너비 비율</div>
+                        <RatioSlider label="📝 보드" value={settings.boardRatio} onChange={v => onUpdate({ boardRatio: v })} />
+                        <RatioSlider label="📎 파일" value={settings.filesRatio} onChange={v => onUpdate({ filesRatio: v })} />
+                        <RatioSlider label="💬 채팅" value={settings.chatRatio} onChange={v => onUpdate({ chatRatio: v })} />
+                    </div>
+                    {showBoardColumns && (
+                        <div>
+                            <div className="text-[12px] font-semibold text-slate-500 mb-2">보드 열 개수</div>
+                            <div className="flex gap-1.5">
+                                {[1, 2, 3, 4].map(n => (
+                                    <button key={n} onClick={() => onUpdate({ boardColumns: n })}
+                                        className={`flex-1 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${settings.boardColumns === n ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
+                                        {n}열
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+                <div className="px-4 py-2.5 border-t border-slate-100 flex justify-end">
+                    <button onClick={onReset} className="text-[11px] text-slate-400 hover:text-red-500 transition-colors">초기화</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function RatioSlider({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+    return (
+        <div className="flex items-center gap-2 mb-2">
+            <span className="text-[11px] text-slate-500 w-[52px] shrink-0">{label}</span>
+            <input type="range" min={1} max={5} step={0.5} value={value} onChange={e => onChange(parseFloat(e.target.value))}
+                className="flex-1 h-1.5 accent-blue-500 cursor-pointer" />
+            <span className="text-[11px] text-slate-400 w-[24px] text-right">{value}</span>
+        </div>
+    );
+}
+
+// ─── DetailChatPanel ────────────────────────────────────────────────────────
+
+export type ChatMessage = { id: number; date: string; author: string; text: string; imageUrl?: string };
+
+export function DetailChatPanel({ messages, currentUser, onAdd, onDelete, title = "댓글", placeholder = "댓글 입력... (Ctrl+V 이미지)", emptyText, draftKey }: {
+    messages: ChatMessage[];
+    currentUser: string;
+    onAdd: (msg: ChatMessage) => void;
+    onDelete: (id: number) => void;
+    title?: string;
+    placeholder?: string;
+    emptyText?: string;
+    draftKey?: string;
+}) {
+    const MEMBERS = useContext(MembersContext);
+    const [text, setText] = useState("");
+    const cImg = useCommentImg();
+    const composingRef = useRef(false);
+    const bottomRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => { if (draftKey) { const d = loadDraft(draftKey); if (d) setText(d); } }, [draftKey]);
+    useEffect(() => { if (draftKey) saveDraft(draftKey, text); }, [text, draftKey]);
+
+    const handleAdd = () => {
+        if (!text.trim() && !cImg.img) return;
+        if (draftKey) clearDraft(draftKey);
+        onAdd({ id: genId(), date: new Date().toLocaleDateString("ko-KR"), author: currentUser, text: text.trim(), imageUrl: cImg.img || undefined });
+        setText(""); cImg.clear();
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    };
+
+    return (
+        <div className="flex flex-col h-full">
+            <div className="px-4 py-3 border-b border-slate-100 flex-shrink-0">
+                <span className="text-[13px] font-bold text-slate-700">💬 {title} ({messages.length})</span>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2 modal-scroll">
+                {messages.map(c => (
+                    <div key={c.id} className="flex gap-2 group">
+                        <div className="flex-1 bg-slate-50 rounded-lg p-2.5">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className="text-[12px] font-semibold text-slate-700">{MEMBERS[c.author]?.emoji} {c.author}</span>
+                                <span className="text-[11px] text-slate-400">{c.date}</span>
+                            </div>
+                            <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                        </div>
+                        {(c.author === currentUser || currentUser === "박일웅") && (
+                            <button onClick={() => onDelete(c.id)} className="text-[11px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 self-start mt-2 flex-shrink-0">삭제</button>
+                        )}
+                    </div>
+                ))}
+                {messages.length === 0 && <div className="text-center py-8"><div className="text-2xl mb-2 opacity-30">💬</div><div className="text-[12px] text-slate-300">{emptyText || "댓글이 없습니다"}</div></div>}
+                <div ref={bottomRef} />
+            </div>
+            <div className="p-3 border-t border-slate-100 flex-shrink-0">
+                {cImg.preview}
+                <div className="flex gap-2 items-center">
+                    <input value={text} onChange={e => setText(e.target.value)}
+                        onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
+                        onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) handleAdd(); }}
+                        placeholder={placeholder} className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+                    <button onClick={handleAdd} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
+                </div>
+                {text && draftKey && hasDraft(draftKey) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
+            </div>
+        </div>
+    );
+}
+
+// ─── DetailModal3Col ────────────────────────────────────────────────────────
+
+export function DetailModal3Col({ onClose, onEdit, onDelete, files, currentUser, onAddFile, onDeleteFile, chatMessages, onAddChat, onDeleteChat, chatTitle, chatPlaceholder, chatDraftKey, chatEmptyText, children }: {
+    onClose: () => void;
+    onEdit: () => void;
+    onDelete?: () => void;
+    files: LabFile[];
+    currentUser: string;
+    onAddFile: (f: LabFile) => void;
+    onDeleteFile: (id: number) => void;
+    chatMessages: ChatMessage[];
+    onAddChat: (msg: ChatMessage) => void;
+    onDeleteChat: (id: number) => void;
+    chatTitle?: string;
+    chatPlaceholder?: string;
+    chatDraftKey?: string;
+    chatEmptyText?: string;
+    children: React.ReactNode;
+}) {
+    const confirmDel = useContext(ConfirmDeleteContext);
+    const [mobileTab, setMobileTab] = useState<"detail" | "files" | "chat">("detail");
+
+    return (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={onClose} style={{ animation: "backdropIn 0.15s ease" }}>
+            <div className="bg-white rounded-2xl w-[90vw] max-w-6xl h-[85vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()} style={{ animation: "modalIn 0.2s ease" }}>
+                {/* Mobile tab bar */}
+                <div className="md:hidden flex border-b border-slate-200">
+                    {([["detail", "📋 상세"], ["files", `📎 파일 (${files.length})`], ["chat", `💬 ${chatTitle || "댓글"} (${chatMessages.length})`]] as const).map(([key, label]) => (
+                        <button key={key} onClick={() => setMobileTab(key as "detail" | "files" | "chat")}
+                            className={`flex-1 text-center py-3 text-[13px] font-semibold transition-colors ${mobileTab === key ? "border-b-2 border-blue-500 text-blue-600" : "text-slate-400"}`}>
+                            {label}
+                        </button>
+                    ))}
+                </div>
+                {/* Desktop 3-col / Mobile single panel */}
+                <div className="flex-1 min-h-0 md:grid overflow-hidden" style={{ gridTemplateColumns: "1fr 1.8fr 1.2fr" }}>
+                    {/* Left: Files */}
+                    <div className={`flex flex-col border-r border-slate-200 ${mobileTab === "files" ? "" : "hidden md:flex"}`}>
+                        <div className="px-4 py-3 border-b border-slate-100 flex-shrink-0">
+                            <span className="text-[13px] font-bold text-slate-700">📎 파일 ({files.length})</span>
+                        </div>
+                        <FileBox files={files} currentUser={currentUser} onAddFile={onAddFile} onDeleteFile={onDeleteFile} />
+                    </div>
+                    {/* Center: Detail content */}
+                    <div className={`flex flex-col border-r border-slate-200 ${mobileTab === "detail" ? "" : "hidden md:flex"}`}>
+                        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4 modal-scroll">
+                            {children}
+                        </div>
+                        <div className="flex items-center justify-between p-4 border-t border-slate-100 flex-shrink-0">
+                            <button onClick={onEdit} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
+                            <div className="flex items-center gap-3">
+                                {onDelete && (
+                                    <button onClick={() => confirmDel(onDelete)} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                                )}
+                                <button onClick={onClose} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Right: Chat */}
+                    <div className={`flex flex-col ${mobileTab === "chat" ? "" : "hidden md:flex"}`}>
+                        <DetailChatPanel messages={chatMessages} currentUser={currentUser} onAdd={onAddChat} onDelete={onDeleteChat}
+                            title={chatTitle} placeholder={chatPlaceholder} draftKey={chatDraftKey} emptyText={chatEmptyText} />
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

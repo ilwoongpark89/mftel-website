@@ -20,6 +20,7 @@ const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd
     const composingRef = useRef(false);
     const [replyTo, setReplyTo] = useState<TeamChatMsg | null>(null);
     const [moreMenuMsgId, setMoreMenuMsgId] = useState<number | null>(null);
+    const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
     const mention = useMention();
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const selectMention = (name: string) => {
@@ -83,7 +84,7 @@ const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd
                                     <div className="flex-1 h-px bg-slate-200" />
                                 </div>
                             )}
-                            <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-[5px]" : "mt-[18px]"} group/msg`}
+                            <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-[3px]" : "mt-3"} group/msg`}
                                 style={{ opacity: msg._sending ? 0.7 : 1 }}>
                                 {!isMe && (
                                     <div className="w-8 flex-shrink-0 mr-1.5 self-start">
@@ -115,10 +116,17 @@ const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd
                                             {!msg._sending && !msg._failed && (
                                                 <div className="absolute -top-3 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
                                                     <div className="flex items-center bg-white rounded-full px-1.5 py-1 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
-                                                        {["👍","✅","😂"].map(em => (
+                                                        {["👍","✅"].map(em => (
                                                             <button key={em} onClick={() => toggleReaction(msg.id, em)}
                                                                 className={`w-6 h-6 flex items-center justify-center rounded-full text-[12px] transition-colors ${reactions[em]?.includes(currentUser) ? "bg-blue-50" : "hover:bg-slate-100"}`}>{em}</button>
                                                         ))}
+                                                        <div className="relative">
+                                                            <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
+                                                                className="w-6 h-6 flex items-center justify-center rounded-full text-[12px] hover:bg-slate-100 relative" title="이모지 추가">😊<span className="absolute -top-0.5 -right-0.5 text-[7px] font-bold text-blue-500 leading-none">+</span></button>
+                                                            {emojiPickerMsgId === msg.id && (
+                                                                <EmojiPickerPopup onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
+                                                            )}
+                                                        </div>
                                                         <button onClick={() => setReplyTo(msg)} className="w-6 h-6 flex items-center justify-center rounded-full text-[12px] hover:bg-slate-100">↩</button>
                                                         {(isMe || currentUser === "박일웅") && (
                                                             <div className="relative">
@@ -137,7 +145,7 @@ const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd
                                                     </div>
                                                 </div>
                                             )}
-                                            <div className={`px-3 py-2 rounded-2xl text-[13px] leading-relaxed break-words whitespace-pre-wrap ${isMe ? "rounded-tr-md" : "rounded-tl-md"}`}
+                                            <div className={`px-3 py-1.5 rounded-2xl text-[13px] leading-snug break-words whitespace-pre-wrap ${isMe ? "rounded-tr-md" : "rounded-tl-md"}`}
                                                 style={{ background: isMe ? "#3B82F6" : "#F1F5F9", color: isMe ? "#FFFFFF" : "#1E293B" }}>
                                                 {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full rounded-lg mb-1 max-h-[200px] object-contain cursor-pointer" />}
                                                 {msg.text && renderWithMentions(msg.text)}
@@ -378,7 +386,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                                         <div className="flex-1 h-px bg-slate-200" />
                                     </div>
                                 )}
-                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-[5px]" : "mt-[18px]"} group/msg`}
+                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-[3px]" : "mt-3"} group/msg`}
                                     style={{ opacity: msg._sending ? 0.7 : 1 }}>
                                     {!isMe && (
                                         <div className="w-9 flex-shrink-0 mr-2 self-start">
@@ -414,13 +422,13 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                                                 {!msg._sending && !msg._failed && (
                                                     <div className="absolute -top-3 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
                                                         <div className="flex items-center bg-white rounded-full px-2 py-1.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
-                                                            {["👍","✅","😂"].map(em => (
+                                                            {["👍","✅"].map(em => (
                                                                 <button key={em} onClick={() => toggleReaction(msg.id, em)}
                                                                     className={`w-7 h-7 flex items-center justify-center rounded-full text-[14px] transition-colors ${reactions[em]?.includes(currentUser) ? "bg-blue-50" : "hover:bg-slate-100"}`}>{em}</button>
                                                             ))}
                                                             <div className="relative">
                                                                 <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
-                                                                    className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] transition-colors">😊</button>
+                                                                    className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[13px] transition-colors relative" title="이모지 추가">😊<span className="absolute -top-0.5 -right-0.5 text-[8px] font-bold text-blue-500 leading-none">+</span></button>
                                                                 {emojiPickerMsgId === msg.id && (
                                                                     <EmojiPickerPopup onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
                                                                 )}
@@ -435,7 +443,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                                                                     <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 min-w-[160px] z-30">
                                                                         <button onClick={() => { onSaveBoard({ id: genId(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", status: "left", color: "#DBEAFE", author: msg.author, updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setMoreMenuMsgId(null); }}
                                                                             className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 보드에 고정</button>
-                                                                        {msg.author === currentUser && (<>
+                                                                        {(msg.author === currentUser || currentUser === "박일웅") && (<>
                                                                             <div className="h-px bg-slate-100 my-1" />
                                                                             <button onClick={() => confirmDel(() => { onUpdate({ ...msg, deleted: true, text: "", imageUrl: undefined }); setMoreMenuMsgId(null); })}
                                                                                 className="w-full text-left px-3 py-2 text-[13px] text-slate-600 hover:bg-slate-50 flex items-center gap-2"><span className="text-red-400">🗑</span> 삭제</button>
@@ -446,7 +454,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                                                         </div>
                                                     </div>
                                                 )}
-                                                <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "12px 16px", lineHeight: "1.65" }}
+                                                <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "7px 14px", lineHeight: "1.5" }}
                                                     className="text-[13px] text-slate-800">
                                                     {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1.5 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollLabChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                                     {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
@@ -541,7 +549,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                                 <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto">
                                     {(selectedCard.comments || []).map(c => (
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group/c relative">
-                                            <button onClick={() => { const updated = { ...selectedCard, comments: (selectedCard.comments || []).filter(x => x.id !== c.id) }; onSaveBoard(updated); setSelectedCard(updated); }}
+                                            <button onClick={() => confirmDel(() => { const updated = { ...selectedCard, comments: (selectedCard.comments || []).filter(x => x.id !== c.id) }; onSaveBoard(updated); setSelectedCard(updated); })}
                                                 className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
                                             <div className="text-[13px] text-slate-700 pr-4 break-words">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>

@@ -178,16 +178,16 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
             {!isPersonal && (
                 <div className="mb-2">
                     <h2 className="text-[24px] font-bold tracking-tight mb-3 flex items-center gap-2" style={{color:"#0F172A", letterSpacing:"-0.02em", lineHeight:"1.3"}}>🏠 연구실 현황{!dataLoaded && <span className="inline-block w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />}</h2>
-                    <div className="flex items-center gap-3 py-1">
-                        <span className="text-[13px]" style={{color:"#94A3B8"}}>{dateLabel}</span>
-                        <span className="text-[13px] flex items-center gap-1.5" style={{color:"#94A3B8"}}>
+                    <div className="flex items-center gap-3 py-1 flex-wrap">
+                        <span className="text-[13px] whitespace-nowrap" style={{color:"#94A3B8"}}>{dateLabel}</span>
+                        <span className="text-[13px] flex items-center gap-1.5 whitespace-nowrap" style={{color:"#94A3B8"}}>
                             · 접속 중 <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" /></span>
                             <span style={{color:"#10B981", fontWeight:600}}>{onlineUsers.length}명</span>
                         </span>
                         {onlineUsers.length > 0 && (
-                            <div className="flex items-center gap-1.5 ml-1 flex-wrap">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                                 {onlineUsers.map(u => (
-                                    <span key={u.name} className="inline-flex items-center gap-1 text-[12px] font-medium px-2.5 py-0.5 rounded-full" style={{background:"#F0FDF4", color:"#16A34A", border:"1px solid #DCFCE7"}} title={u.name}>{MEMBERS[u.name]?.emoji || "👤"} {u.name}</span>
+                                    <span key={u.name} className="inline-flex items-center gap-1 text-[12px] font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap" style={{background:"#F0FDF4", color:"#16A34A", border:"1px solid #DCFCE7"}} title={u.name}>{MEMBERS[u.name]?.emoji || "👤"} {u.name}</span>
                                 ))}
                             </div>
                         )}
@@ -234,15 +234,15 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
                 {upcomingDeadlines.length === 0 ? (
                     <div className="text-[13px] text-slate-300 text-center py-6">예정된 마감 없음</div>
                 ) : (
-                    <div className="flex flex-wrap gap-2.5 overflow-hidden pb-1" style={{maxHeight:"6.5rem"}}>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">
                         {upcomingDeadlines.slice(0, 20).map((dl, i) => (
-                            <button key={`${dl.tab}-${dl.title}-${i}`} onClick={() => onNavigate(dl.tab)} className="flex-shrink-0 rounded-xl p-3 text-left transition-all hover:shadow-md hover:-translate-y-0.5 group" style={{background:`${dl.color}08`, border:`1px solid ${dl.color}30`, minWidth:"160px", maxWidth:"200px"}}>
+                            <button key={`${dl.tab}-${dl.title}-${i}`} onClick={() => onNavigate(dl.tab)} className="rounded-xl p-3 text-left transition-all hover:shadow-md hover:-translate-y-0.5 group" style={{background:`${dl.color}08`, border:`1px solid ${dl.color}30`}}>
                                 <div className="flex items-center justify-between mb-1.5">
-                                    <span className="text-[12px] font-semibold px-1.5 py-0.5 rounded" style={{background:`${dl.color}18`, color:dl.color}}>{dl.icon} {dl.type}</span>
-                                    <span className="text-[13px] font-black" style={{color:ddayColor(dl.dday)}}>{ddayLabel(dl.dday)}</span>
+                                    <span className="text-[12px] font-semibold px-1.5 py-0.5 rounded truncate" style={{background:`${dl.color}18`, color:dl.color}}>{dl.icon} {dl.type}</span>
+                                    <span className="text-[13px] font-black flex-shrink-0 ml-1" style={{color:ddayColor(dl.dday)}}>{ddayLabel(dl.dday)}</span>
                                 </div>
                                 <div className="text-[13px] font-semibold text-slate-800 leading-snug truncate group-hover:text-slate-900">{dl.title}</div>
-                                <div className="text-[11px] text-slate-400 mt-1">{dl.deadline} · {dl.assignees.slice(0, 2).join(", ")}{dl.assignees.length > 2 ? ` +${dl.assignees.length - 2}` : ""}</div>
+                                <div className="text-[11px] text-slate-400 mt-1 truncate">{dl.deadline} · {dl.assignees.slice(0, 2).join(", ")}{dl.assignees.length > 2 ? ` +${dl.assignees.length - 2}` : ""}</div>
                             </button>
                         ))}
                     </div>
@@ -570,17 +570,29 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
                 <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
                     <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">멤버별 현황</h3>
                     <div className="overflow-x-auto">
-                        <table className="w-full text-[13px]">
+                        <table className="w-full text-[13px]" style={{tableLayout:"fixed", minWidth:"700px"}}>
+                            <colgroup>
+                                <col style={{width:"72px"}} />
+                                <col style={{width:"200px"}} />
+                                <col style={{width:"1fr"}} />
+                                <col style={{width:"1fr"}} />
+                                <col style={{width:"1fr"}} />
+                                <col style={{width:"1fr"}} />
+                                <col style={{width:"1fr"}} />
+                                <col style={{width:"1fr"}} />
+                                <col style={{width:"1fr"}} />
+                            </colgroup>
                             <thead>
                                 <tr style={{borderBottom:"1px solid #F1F5F9"}}>
-                                    <th className="text-left py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>멤버</th>
-                                    <th className="text-center py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>논문</th>
-                                    <th className="text-center py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>계획/보고</th>
-                                    <th className="text-center py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>실험</th>
-                                    <th className="text-center py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>해석</th>
-                                    <th className="text-center py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>To-do</th>
-                                    <th className="text-center py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>목표</th>
-                                    <th className="text-center py-2 px-3" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>접속</th>
+                                    <th className="text-left py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>멤버</th>
+                                    <th className="text-left py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>한마디</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>논문</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>계획/보고</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>실험</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>해석</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>To-do</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>목표</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>접속</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -590,19 +602,19 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
                                     const ms = memberStats[name];
                                     return (
                                         <tr key={name} className={`${isMe ? "bg-blue-50/30" : "hover:bg-[#F8FAFC]"} transition-colors`} style={{borderBottom:"1px solid #F8FAFC"}}>
-                                            <td className="py-2.5 px-3" style={{fontWeight:500, color:"#334155"}}>
-                                                <div className="flex items-start gap-1">
-                                                    <span className="whitespace-nowrap">{members[name]?.emoji} {name}</span>
-                                                    {statusMessages[name] && <span className="text-[11px] text-blue-500/80 italic ml-1.5 border-l border-slate-200 pl-1.5" style={{whiteSpace:"normal", wordBreak:"break-word"}}>&ldquo;{statusMessages[name]}&rdquo;</span>}
-                                                </div>
+                                            <td className="py-2.5 px-2 whitespace-nowrap" style={{fontWeight:500, color:"#334155"}}>
+                                                {members[name]?.emoji} {name}
                                             </td>
-                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: ms.papers > 0 ? 650 : 400, color: ms.papers > 0 ? "#334155" : "#CBD5E1"}}>{ms.papers || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: ms.reports > 0 ? 650 : 400, color: ms.reports > 0 ? "#334155" : "#CBD5E1"}}>{ms.reports || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: ms.exp > 0 ? 650 : 400, color: ms.exp > 0 ? "#334155" : "#CBD5E1"}}>{ms.exp || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: ms.analysis > 0 ? 650 : 400, color: ms.analysis > 0 ? "#334155" : "#CBD5E1"}}>{ms.analysis || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-3"><span style={{fontWeight: ms.todos > 0 ? 650 : 400, color: ms.todos > 0 ? "#334155" : "#CBD5E1"}}>{ms.todos || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-3">{ms.hasTarget ? <span className="text-emerald-500 font-bold">O</span> : <span className="text-red-400">X</span>}</td>
-                                            <td className="text-center py-2.5 px-3">{isOnline ? <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" /> : <span className="inline-block w-2 h-2 rounded-full bg-slate-200" />}</td>
+                                            <td className="py-2.5 px-2">
+                                                {statusMessages[name] && <span className="text-[11px] text-blue-500/80 italic truncate block">&ldquo;{statusMessages[name]}&rdquo;</span>}
+                                            </td>
+                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: ms.papers > 0 ? 650 : 400, color: ms.papers > 0 ? "#334155" : "#CBD5E1"}}>{ms.papers || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: ms.reports > 0 ? 650 : 400, color: ms.reports > 0 ? "#334155" : "#CBD5E1"}}>{ms.reports || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: ms.exp > 0 ? 650 : 400, color: ms.exp > 0 ? "#334155" : "#CBD5E1"}}>{ms.exp || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: ms.analysis > 0 ? 650 : 400, color: ms.analysis > 0 ? "#334155" : "#CBD5E1"}}>{ms.analysis || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: ms.todos > 0 ? 650 : 400, color: ms.todos > 0 ? "#334155" : "#CBD5E1"}}>{ms.todos || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-1">{ms.hasTarget ? <span className="text-emerald-500 font-bold">O</span> : <span className="text-red-400">X</span>}</td>
+                                            <td className="text-center py-2.5 px-1">{isOnline ? <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" /> : <span className="inline-block w-2 h-2 rounded-full bg-slate-200" />}</td>
                                         </tr>
                                     );
                                 })}
@@ -632,9 +644,9 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
                     <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
                         <div className="flex items-center justify-between mb-3">
                             <h3 className="text-[16px] font-bold text-slate-900 pl-2 border-l-[3px] border-blue-500">팀별 연구 현황</h3>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 flex-wrap">
                                 {[{label:"논문",color:CATEGORY_COLORS.paper},{label:"계획/보고",color:CATEGORY_COLORS.report},{label:"실험",color:CATEGORY_COLORS.experiment},{label:"해석",color:CATEGORY_COLORS.analysis},{label:"지식재산권",color:CATEGORY_COLORS.ip}].map(c => (
-                                    <span key={c.label} className="flex items-center gap-1 text-[11px]" style={{color:"#94A3B8"}}><span className="w-2 h-2 rounded-sm" style={{background:c.color}} />{c.label}</span>
+                                    <span key={c.label} className="flex items-center gap-1 text-[11px] whitespace-nowrap" style={{color:"#94A3B8"}}><span className="w-2 h-2 rounded-sm" style={{background:c.color}} />{c.label}</span>
                                 ))}
                             </div>
                         </div>
@@ -665,11 +677,11 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
                                                 {team.tPatents > 0 && <div className="rounded-sm" style={{ width: `${(team.tPatents / maxTotal) * 100}%`, background: CATEGORY_COLORS.ip }} />}
                                             </div>
                                             <div className="flex gap-2.5 mt-1 flex-wrap">
-                                                {team.tPapers > 0 && <span className="text-[11px]" style={{color:CATEGORY_COLORS.paper}}>논문 {team.tPapers}</span>}
-                                                {team.tReports > 0 && <span className="text-[11px]" style={{color:CATEGORY_COLORS.report}}>계획/보고 {team.tReports}</span>}
-                                                {team.tExp > 0 && <span className="text-[11px]" style={{color:CATEGORY_COLORS.experiment}}>실험 {team.tExp}</span>}
-                                                {team.tAnalysis > 0 && <span className="text-[11px]" style={{color:CATEGORY_COLORS.analysis}}>해석 {team.tAnalysis}</span>}
-                                                {team.tPatents > 0 && <span className="text-[11px]" style={{color:CATEGORY_COLORS.ip}}>지식재산권 {team.tPatents}</span>}
+                                                {team.tPapers > 0 && <span className="text-[11px] whitespace-nowrap" style={{color:CATEGORY_COLORS.paper}}>논문 {team.tPapers}</span>}
+                                                {team.tReports > 0 && <span className="text-[11px] whitespace-nowrap" style={{color:CATEGORY_COLORS.report}}>계획/보고 {team.tReports}</span>}
+                                                {team.tExp > 0 && <span className="text-[11px] whitespace-nowrap" style={{color:CATEGORY_COLORS.experiment}}>실험 {team.tExp}</span>}
+                                                {team.tAnalysis > 0 && <span className="text-[11px] whitespace-nowrap" style={{color:CATEGORY_COLORS.analysis}}>해석 {team.tAnalysis}</span>}
+                                                {team.tPatents > 0 && <span className="text-[11px] whitespace-nowrap" style={{color:CATEGORY_COLORS.ip}}>지식재산권 {team.tPatents}</span>}
                                             </div>
                                         </div>
                                     ))}

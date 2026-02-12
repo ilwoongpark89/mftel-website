@@ -383,6 +383,7 @@ const ExpLogView = memo(function ExpLogView({ teamName, entries, onSave, onDelet
                                                     <div className="flex items-center gap-3 mt-1 flex-wrap">
                                                         {entry.category && <span className="text-[11px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{entry.category}</span>}
                                                         {entry.conditions && <span className="text-[12px] text-slate-400 truncate max-w-[200px]">⚙️ {entry.conditions}</span>}
+                                                        {entry.specimen && <span className="text-[12px] text-slate-400 truncate max-w-[200px]">🧪 {entry.specimen}</span>}
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2 shrink-0">
@@ -397,6 +398,12 @@ const ExpLogView = memo(function ExpLogView({ teamName, entries, onSave, onDelet
                                                             <div className="rounded-lg p-3" style={{background:"#F8FAFC"}}>
                                                                 <div className="text-[11px] font-bold text-slate-400 mb-1">⚙️ 실험 조건</div>
                                                                 <div className="text-[13px] text-slate-700 whitespace-pre-wrap leading-relaxed">{entry.conditions}</div>
+                                                            </div>
+                                                        )}
+                                                        {entry.specimen && (
+                                                            <div className="rounded-lg p-3" style={{background:"#FDF2F8"}}>
+                                                                <div className="text-[11px] font-bold text-slate-400 mb-1">🧪 시편/장비</div>
+                                                                <div className="text-[13px] text-slate-700 whitespace-pre-wrap leading-relaxed">{entry.specimen}</div>
                                                             </div>
                                                         )}
                                                         {entry.data && (
@@ -461,7 +468,11 @@ const ExpLogView = memo(function ExpLogView({ teamName, entries, onSave, onDelet
                                 )}
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">⚙️ 실험 조건</label>
-                                    <textarea value={conditions} onChange={e => setConditions(e.target.value)} placeholder="유속, 온도, 압력, 히터 전력, 냉각수 유량, 시편 종류(Cu 20×20mm, SiC 코팅 등) ..." rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" />
+                                    <textarea value={conditions} onChange={e => setConditions(e.target.value)} placeholder="유속, 온도, 압력, 히터 전력, 냉각수 유량 등" rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" />
+                                </div>
+                                <div>
+                                    <label className="text-[12px] font-semibold text-slate-500 mb-1 block">🧪 시편/장비</label>
+                                    <textarea value={specimen} onChange={e => setSpecimen(e.target.value)} placeholder="시편 종류(Cu 20×20mm, SiC 코팅 등), 사용 장비, 센서 정보 등" rows={2} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" />
                                 </div>
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 mb-1 block">📊 데이터</label>

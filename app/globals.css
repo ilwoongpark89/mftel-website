@@ -150,8 +150,28 @@
 }
 
 @keyframes dropPulse {
-  0%, 100% { opacity: 0.5; transform: scaleX(0.95); }
+  0%, 100% { opacity: 0.6; transform: scaleX(0.97); }
   50% { opacity: 1; transform: scaleX(1); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translate(-50%, 16px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 @keyframes subtle-pulse {
@@ -167,6 +187,17 @@
 @keyframes fadeInUp {
   from { opacity: 0; transform: translate(-50%, 10px); }
   to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Auto-scale dashboard on large screens (user's browser zoom stays 100%) */
+@media (min-width: 1600px) {
+  .dashboard-root { zoom: 1.08; }
+}
+@media (min-width: 1920px) {
+  .dashboard-root { zoom: 1.15; }
+}
+@media (min-width: 2400px) {
+  .dashboard-root { zoom: 1.25; }
 }
 
 /* Dark sidebar thin scrollbar */

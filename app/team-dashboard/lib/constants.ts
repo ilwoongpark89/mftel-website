@@ -58,7 +58,7 @@ export const EXP_STATUS_CONFIG: Record<string, { label: string; color: string }>
     planning: { label: "기획중", color: "#FECACA" },
     preparing: { label: "준비중", color: "#FCA5A5" },
     running: { label: "진행중", color: "#F87171" },
-    paused_done: { label: "완료", color: "#EF4444" },
+    paused_done: { label: "논의", color: "#EF4444" },
     completed: { label: "완료", color: "#22C55E" },
 };
 export const EXP_STATUS_KEYS = ["planning", "preparing", "running", "paused_done"];
@@ -81,7 +81,7 @@ export const ANALYSIS_STATUS_CONFIG: Record<string, { label: string; color: stri
     planning: { label: "기획중", color: "#DDD6FE" },
     preparing: { label: "준비중", color: "#C4B5FD" },
     running: { label: "진행중", color: "#A78BFA" },
-    paused_done: { label: "완료", color: "#8B5CF6" },
+    paused_done: { label: "논의", color: "#8B5CF6" },
     completed: { label: "완료", color: "#22C55E" },
 };
 export const ANALYSIS_STATUS_KEYS = ["planning", "preparing", "running", "paused_done"];

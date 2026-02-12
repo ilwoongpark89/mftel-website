@@ -37,6 +37,9 @@ const AnnouncementView = dynamic(() => import("./components/MiscViews").then(m =
 const ExpLogView = dynamic(() => import("./components/LogViews").then(m => ({ default: m.ExpLogView })), { ssr: false });
 const AnalysisLogView = dynamic(() => import("./components/LogViews").then(m => ({ default: m.AnalysisLogView })), { ssr: false });
 const SettingsView = dynamic(() => import("./components/SettingsView").then(m => ({ default: m.SettingsView })), { ssr: false });
+const AdminMemberView = dynamic(() => import("./components/AdminView").then(m => ({ default: m.AdminMemberView })), { ssr: false });
+const AdminBackupView = dynamic(() => import("./components/AdminView").then(m => ({ default: m.AdminBackupView })), { ssr: false });
+const AdminAccessLogView = dynamic(() => import("./components/AdminView").then(m => ({ default: m.AdminAccessLogView })), { ssr: false });
 
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 
@@ -164,19 +167,26 @@ export default function DashboardPage() {
     const [savingIds, setSavingIds] = useState<Set<number>>(new Set());
     const pendingSavesRef = useRef(0);
     const [toast, setToast] = useState("");
-    useEffect(() => { if (toast) { const t = setTimeout(() => setToast(""), 3000); return () => clearTimeout(t); } }, [toast]);
+    const [toastType, setToastType] = useState<"error" | "success">("error");
+    const showToast = useCallback((msg: string, type: "error" | "success" = "error") => { setToast(msg); setToastType(type); }, []);
+    useEffect(() => { if (toast) { const t = setTimeout(() => setToast(""), toastType === "success" ? 2000 : 3000); return () => clearTimeout(t); } }, [toast, toastType]);
 
-    // ─── Cmd+K Global Search ─────────────────────────────────────────────────
+    // ─── Keyboard Shortcuts ──────────────────────────────────────────────────
+    const [shortcutsOpen, setShortcutsOpen] = useState(false);
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && e.key === "k") {
                 e.preventDefault();
                 setCmdKOpen(o => { if (!o) { setCmdKQuery(""); setCmdKIdx(0); } return !o; });
             }
+            if (e.key === "?" && !e.metaKey && !e.ctrlKey && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
+                e.preventDefault(); setShortcutsOpen(o => !o);
+            }
+            if (e.key === "Escape" && shortcutsOpen) setShortcutsOpen(false);
         };
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
-    }, []);
+    }, [shortcutsOpen]);
     useEffect(() => { if (cmdKOpen) setTimeout(() => cmdKRef.current?.focus(), 50); }, [cmdKOpen]);
     useEffect(() => {
         if (cmdKOpen && cmdKListRef.current) {
@@ -200,6 +210,11 @@ export default function DashboardPage() {
 
         // Tab navigation
         tabs.filter(t => t.label.toLowerCase().includes(q)).forEach(t => r.push({ type: "이동", icon: t.icon, title: t.label, subtitle: "탭 이동", tabId: t.id }));
+        // Admin tabs (PI only)
+        if (userName === "박일웅") {
+            [{ id: "admin_members", icon: "🔑", label: "멤버 관리" }, { id: "admin_backups", icon: "💾", label: "백업 관리" }, { id: "admin_access", icon: "🔐", label: "접속 로그" }]
+                .filter(t => t.label.toLowerCase().includes(q)).forEach(t => r.push({ type: "이동", icon: t.icon, title: t.label, subtitle: "관리", tabId: t.id }));
+        }
         // Papers
         papers.filter(p => p.title.toLowerCase().includes(q) || p.journal?.toLowerCase().includes(q) || p.assignees.some(a => a.includes(q)) || p.tags?.some(t => t.toLowerCase().includes(q))).slice(0, M).forEach(p => r.push({ type: "논문", icon: "📄", title: p.title, subtitle: `${p.journal || ""} · ${p.assignees.join(", ")}`, tabId: "papers" }));
         // Reports
@@ -250,9 +265,9 @@ export default function DashboardPage() {
         saveSection(section, data, detail).then(ok => {
             pendingSavesRef.current--;
             setSavingIds(prev => { const s = new Set(prev); s.delete(itemId); return s; });
-            if (!ok) { rollback(); setToast("저장에 실패했습니다. 다시 시도해주세요."); }
+            if (!ok) { rollback(); showToast("저장에 실패했습니다. 다시 시도해주세요."); }
         });
-    }, [saveSection]);
+    }, [saveSection, showToast]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const hydrateData = useCallback((d: any) => {
@@ -369,7 +384,7 @@ export default function DashboardPage() {
         });
       } catch (err) {
         console.error('hydrateData error:', err);
-        setToast("캐시 데이터에 오류가 있어 초기화합니다.");
+        showToast("캐시 데이터에 오류가 있어 초기화합니다.");
         try { localStorage.removeItem('mftel-dc'); } catch {}
       }
     }, []);
@@ -599,7 +614,7 @@ export default function DashboardPage() {
     }, [userName]);
     useEffect(() => {
         if (!userName || activeChatLen < 0) return;
-        const now = Date.now();
+        const now = Date.now() * 100; // match genId() scale
         setChatReadTs(prev => {
             const next = { ...prev, [activeTab]: now };
             try { localStorage.setItem(`mftel_chatReadTs_${userName}`, JSON.stringify(next)); } catch (e) { console.warn("chatReadTs save failed:", e); }
@@ -683,6 +698,27 @@ export default function DashboardPage() {
             pendingSavesRef.current++; saveSection("schedule", us).then(() => { pendingSavesRef.current--; });
             return us;
         });
+        // Auto-insert into today's daily target
+        if (type && !isVacType && desc) {
+            const todayStr = new Date().toISOString().split("T")[0];
+            if (dates.includes(todayStr)) {
+                const typeLabel = CALENDAR_TYPES[type]?.label || type;
+                const prefix = `(${typeLabel}) ${desc}`;
+                pendingSavesRef.current++;
+                setDailyTargets(prev => {
+                    const existing = prev.find(t => t.name === name && t.date === todayStr);
+                    let updated: DailyTarget[];
+                    if (existing) {
+                        if (existing.text.includes(prefix)) { pendingSavesRef.current--; return prev; }
+                        updated = prev.map(t => t.name === name && t.date === todayStr ? { ...t, text: prefix + "\n" + t.text } : t);
+                    } else {
+                        updated = [...prev, { name, date: todayStr, text: prefix }];
+                    }
+                    saveSection("dailyTargets", updated).then(() => { pendingSavesRef.current--; });
+                    return updated;
+                });
+            }
+        }
     }, [saveSection]);
     const handleTimetableSave = useCallback((b: TimetableBlock) => {
         setTimetable(prev => {
@@ -1335,7 +1371,7 @@ export default function DashboardPage() {
     // Tab notification: flash title + favicon badge when hidden & unread
     const totalUnread = useMemo(() => {
         const labNew = labChat.filter(m => m.author !== userName && m.id > (chatReadTs.labChat || 0)).length;
-        const annNew = announcements.filter(a => a.author !== userName && new Date(a.date).getTime() > (chatReadTs.announcements || 0)).length;
+        const annNew = announcements.filter(a => a.author !== userName && a.id > (chatReadTs.announcements || 0)).length;
         const teamNew = teamNames.reduce((sum, t) => {
             const ts = chatReadTs[`teamMemo_${t}`] || 0;
             return sum + (teamMemos[t]?.chat || []).filter(m => m.author !== userName && m.id > ts).length;
@@ -1411,7 +1447,7 @@ export default function DashboardPage() {
     const unreadCounts = useMemo<Record<string, number>>(() => ({
         labChat: labChat.filter(m => m.author !== userName && m.id > (chatReadTs.labChat || 0)).length + labBoard.filter(c => c.author !== userName && c.id > (chatReadTs.labChat || 0)).length,
         chat: casualChat.filter(m => m.author !== userName && m.id > (chatReadTs.chat || 0)).length,
-        announcements: announcements.filter(a => a.author !== userName && new Date(a.date).getTime() > (chatReadTs.announcements || 0)).length,
+        announcements: announcements.filter(a => a.author !== userName && a.id > (chatReadTs.announcements || 0)).length,
         ...Object.fromEntries(teamNames.map(t => {
             const ts = chatReadTs[`teamMemo_${t}`] || 0;
             const chatNew = (teamMemos[t]?.chat || []).filter(m => m.author !== userName && m.id > ts).length;
@@ -1444,13 +1480,13 @@ export default function DashboardPage() {
                     const form = e.target as HTMLFormElement;
                     const newPw = (form.elements.namedItem("newPw") as HTMLInputElement).value;
                     const confirmPw = (form.elements.namedItem("confirmPw") as HTMLInputElement).value;
-                    if (newPw.length < 4) { setToast("비밀번호는 4자 이상이어야 합니다."); return; }
-                    if (newPw === "0000") { setToast("기본 비밀번호와 같은 비밀번호는 사용할 수 없습니다."); return; }
-                    if (newPw !== confirmPw) { setToast("비밀번호가 일치하지 않습니다."); return; }
+                    if (newPw.length < 4) { showToast("비밀번호는 4자 이상이어야 합니다."); return; }
+                    if (newPw === "0000") { showToast("기본 비밀번호와 같은 비밀번호는 사용할 수 없습니다."); return; }
+                    if (newPw !== confirmPw) { showToast("비밀번호가 일치하지 않습니다."); return; }
                     try {
                         const res = await fetch("/api/dashboard-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "changePassword", userName, currentPassword: "0000", newPassword: newPw }) });
                         const data = await res.json();
-                        if (!res.ok) { setToast(data.error || "변경 실패"); return; }
+                        if (!res.ok) { showToast(data.error || "변경 실패"); return; }
                         setMustChangePassword(false); setLoggedIn(true);
                         const token = localStorage.getItem("mftel-auth-token");
                         if (token) {
@@ -1458,8 +1494,8 @@ export default function DashboardPage() {
                             fetchData(); fetchOnline(); fetchLogs();
                             fetch("/api/dashboard", { method: "POST", headers: authH, body: JSON.stringify({ section: "online", action: "join", userName }) }).catch(() => {});
                         }
-                        setToast("비밀번호가 변경되었습니다!");
-                    } catch { setToast("서버 연결 실패"); }
+                        showToast("비밀번호가 변경되었습니다!", "success");
+                    } catch { showToast("서버 연결 실패"); }
                 }} className="space-y-4">
                     <div>
                         <label className="block text-[13px] font-medium text-slate-600 mb-1">새 비밀번호</label>
@@ -1472,7 +1508,7 @@ export default function DashboardPage() {
                     <button type="submit" className="w-full py-3 rounded-xl text-[14px] font-semibold text-white transition-colors" style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6)" }}>비밀번호 변경</button>
                 </form>
             </div>
-            {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-2.5 bg-slate-800 text-white text-[13px] rounded-full shadow-lg">{toast}</div>}
+            {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-2.5 text-white text-[13px] rounded-full shadow-lg" style={{ background: toastType === "success" ? "#10B981" : "#334155", animation: "toastSlideIn 0.25s ease" }}>{toastType === "success" ? "✓ " : ""}{toast}</div>}
         </div>
     );
 
@@ -1481,12 +1517,12 @@ export default function DashboardPage() {
         <SavingContext.Provider value={savingIds}>
         <ConfirmDeleteContext.Provider value={confirmDel}>
         <ErrorBoundary>
-        <div className="min-h-screen bg-[#F8FAFC] text-slate-800 leading-normal" style={{ fontFamily: "'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+        <div className="dashboard-root min-h-screen bg-[#F8FAFC] text-slate-800 leading-normal" style={{ fontFamily: "'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif" }}>
 
             {/* Mobile top header */}
             <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-[56px] px-4" style={{background:"#0F172A", boxShadow:"0 1px 4px rgba(0,0,0,0.2)"}}>
                 <button onClick={() => setMobileMenuOpen(true)} className="text-[22px] text-white w-11 h-11 flex items-center justify-center rounded-lg hover:bg-white/10">☰</button>
-                <span className="text-[15px] font-bold text-white truncate">{(() => { const found = tabs.find(t => t.id === activeTab); const extra: Record<string, string> = { teams: "팀 관리", settings: "설정" }; return found ? `${found.icon} ${found.label}` : extra[activeTab] || "대시보드"; })()}</span>
+                <span className="text-[15px] font-bold text-white truncate">{(() => { const found = tabs.find(t => t.id === activeTab); const extra: Record<string, string> = { teams: "팀 관리", settings: "설정", admin_members: "🔑 멤버 관리", admin_backups: "💾 백업 관리", admin_access: "🔐 접속 로그" }; return found ? `${found.icon} ${found.label}` : extra[activeTab] || "대시보드"; })()}</span>
                 <div className="flex items-center gap-2">
                     <button onClick={openNoti} className="relative w-11 h-11 flex items-center justify-center rounded-lg hover:bg-white/10">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -1529,6 +1565,15 @@ export default function DashboardPage() {
                             {userName === "박일웅" && <div className="mt-5 mb-1.5 px-4"><div className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>관리</div></div>}
                             {userName === "박일웅" && <button onClick={() => { setActiveTab("teams"); setMobileMenuOpen(false); }} className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13px] whitespace-nowrap" style={{ fontWeight: activeTab === "teams" ? 600 : 450, color: activeTab === "teams" ? "#FFFFFF" : "#94A3B8", background: activeTab === "teams" ? "rgba(59,130,246,0.15)" : "transparent" }}>
                                 <span className="text-[15px]">👥</span><span>팀 관리</span>
+                            </button>}
+                            {userName === "박일웅" && <button onClick={() => { setActiveTab("admin_members"); setMobileMenuOpen(false); }} className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13px] whitespace-nowrap" style={{ fontWeight: activeTab === "admin_members" ? 600 : 450, color: activeTab === "admin_members" ? "#FFFFFF" : "#94A3B8", background: activeTab === "admin_members" ? "rgba(59,130,246,0.15)" : "transparent" }}>
+                                <span className="text-[15px]">🔑</span><span>멤버 관리</span>
+                            </button>}
+                            {userName === "박일웅" && <button onClick={() => { setActiveTab("admin_backups"); setMobileMenuOpen(false); }} className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13px] whitespace-nowrap" style={{ fontWeight: activeTab === "admin_backups" ? 600 : 450, color: activeTab === "admin_backups" ? "#FFFFFF" : "#94A3B8", background: activeTab === "admin_backups" ? "rgba(59,130,246,0.15)" : "transparent" }}>
+                                <span className="text-[15px]">💾</span><span>백업 관리</span>
+                            </button>}
+                            {userName === "박일웅" && <button onClick={() => { setActiveTab("admin_access"); setMobileMenuOpen(false); }} className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13px] whitespace-nowrap" style={{ fontWeight: activeTab === "admin_access" ? 600 : 450, color: activeTab === "admin_access" ? "#FFFFFF" : "#94A3B8", background: activeTab === "admin_access" ? "rgba(59,130,246,0.15)" : "transparent" }}>
+                                <span className="text-[15px]">🔐</span><span>접속 로그</span>
                             </button>}
                             <button onClick={() => { setActiveTab("settings"); setMobileMenuOpen(false); }} className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13px] whitespace-nowrap" style={{ fontWeight: activeTab === "settings" ? 600 : 450, color: activeTab === "settings" ? "#FFFFFF" : "#94A3B8", background: activeTab === "settings" ? "rgba(59,130,246,0.15)" : "transparent" }}>
                                 <span className="text-[15px]">⚙️</span><span>설정</span>
@@ -1574,7 +1619,7 @@ export default function DashboardPage() {
                         {notiUnreadCount > 0 && <span className="px-1.5 py-0.5 rounded-md text-[11px] font-bold" style={{ background: "#EF4444", color: "#fff" }}>{notiUnreadCount > 99 ? "99+" : notiUnreadCount}</span>}
                     </button>
                     {/* Sidebar nav */}
-                    <div className="flex-1 min-h-0 flex md:flex-col overflow-x-auto md:overflow-x-visible md:overflow-y-auto p-3 md:p-0 md:pt-2 md:pb-2 md:px-1 gap-px dark-scrollbar">
+                    <div className="flex-1 min-h-0 flex flex-wrap md:flex-nowrap md:flex-col overflow-y-auto overflow-x-hidden md:overflow-x-visible p-3 md:p-0 md:pt-2 md:pb-2 md:px-1 gap-px dark-scrollbar">
                         {tabs.map((tab, i) => {
                             const sectionBreaks: Record<string, string> = { announcements: "운영", todos: "내 노트", papers: "연구", conferenceTrips: "커뮤니케이션" };
                             const showBreak = !tab.id.startsWith("memo_") && !tab.id.startsWith("teamMemo_") && sectionBreaks[tab.id];
@@ -1614,7 +1659,7 @@ export default function DashboardPage() {
                                         const anaCats = (analysisLogCategories[tName] || []).filter(c => c.members.length === 0 || c.members.includes(userName));
                                         if (expCats.length === 0 && anaCats.length === 0) return null;
                                         return (
-                                            <div className="hidden md:block">
+                                            <div>
                                                 {expCats.map(cat => {
                                                     const subId = `expLog_${tName}_${cat.name}`;
                                                     const isSubActive = activeTab === subId;
@@ -1651,26 +1696,31 @@ export default function DashboardPage() {
                                 </div>
                             );
                         })}
-                        {/* Admin: 팀 관리 + 설정 */}
+                        {/* Admin: 관리 section */}
                         {userName === "박일웅" && (
                             <div className="hidden md:block mt-4 mb-1 px-3">
                                 <div className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>관리</div>
                             </div>
                         )}
-                        {userName === "박일웅" && (() => {
-                            const isActive = activeTab === "teams";
+                        {userName === "박일웅" && [
+                            { id: "teams", icon: "👥", label: "팀 관리" },
+                            { id: "admin_members", icon: "🔑", label: "멤버 관리" },
+                            { id: "admin_backups", icon: "💾", label: "백업 관리" },
+                            { id: "admin_access", icon: "🔐", label: "접속 로그" },
+                        ].map(t => {
+                            const isActive = activeTab === t.id;
                             return (
-                                <button onClick={() => setActiveTab("teams")}
+                                <button key={t.id} onClick={() => setActiveTab(t.id)}
                                     className="relative w-full flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] whitespace-nowrap transition-all"
                                     style={{ fontWeight: isActive ? 600 : 450, letterSpacing: "-0.01em", color: isActive ? "#FFFFFF" : "#94A3B8", background: isActive ? "rgba(59,130,246,0.15)" : "transparent" }}
                                     onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#E2E8F0"; } }}
                                     onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94A3B8"; } }}>
                                     {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-blue-400" />}
-                                    <span className="text-[14px]">👥</span>
-                                    <span>팀 관리</span>
+                                    <span className="text-[14px]">{t.icon}</span>
+                                    <span>{t.label}</span>
                                 </button>
                             );
-                        })()}
+                        })}
                         {(() => {
                             const isActive = activeTab === "settings";
                             return (
@@ -1701,9 +1751,9 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Main Content */}
-                <div ref={mainContentRef} onScroll={e => { scrollPositionsRef.current[activeTab] = (e.target as HTMLDivElement).scrollTop; }} className="flex-1 p-4 pb-20 md:py-7 md:px-9 md:pb-7 overflow-y-auto flex flex-col min-h-0">
+                <div key={activeTab} ref={mainContentRef} onScroll={e => { scrollPositionsRef.current[activeTab] = (e.target as HTMLDivElement).scrollTop; }} className="flex-1 p-4 pb-20 md:py-7 md:px-9 md:pb-7 overflow-y-auto flex flex-col min-h-0" style={{ animation: "fadeIn 0.15s ease" }}>
                     {activeTab !== "overview" && activeTab !== "overview_me" && !activeTab.startsWith("expLog_") && !activeTab.startsWith("analysisLog_") && (() => {
-                        const extraTabs: Record<string, { icon: string; label: string }> = { teams: { icon: "👥", label: "팀 관리" }, settings: { icon: "⚙️", label: "설정" } };
+                        const extraTabs: Record<string, { icon: string; label: string }> = { teams: { icon: "👥", label: "팀 관리" }, settings: { icon: "⚙️", label: "설정" }, admin_members: { icon: "🔑", label: "멤버 관리" }, admin_backups: { icon: "💾", label: "백업 관리" }, admin_access: { icon: "🔐", label: "접속 로그" } };
                         const found = tabs.find(t => t.id === activeTab) || extraTabs[activeTab];
                         const isTeamPage = activeTab.startsWith("teamMemo_");
                         const teamName4Header = isTeamPage ? activeTab.replace("teamMemo_", "") : "";
@@ -1740,8 +1790,8 @@ export default function DashboardPage() {
                             handleSaveExpLogCategories(tName, updated);
                         };
                         return (
-                            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setShowExpMgr(false); setEditingCat(null); }}>
-                                <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:520}} onClick={e => e.stopPropagation()}>
+                            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" style={{ animation: "backdropIn 0.15s ease" }} onClick={() => { setShowExpMgr(false); setEditingCat(null); }}>
+                                <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:520, animation: "modalIn 0.2s ease"}} onClick={e => e.stopPropagation()}>
                                     <div className="flex items-center justify-between mb-4">
                                         <h3 className="text-[15px] font-bold text-slate-800">실험일지 관리</h3>
                                         <button onClick={() => { setShowExpMgr(false); setEditingCat(null); }} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
@@ -1818,8 +1868,8 @@ export default function DashboardPage() {
                             handleSaveAnalysisLogCategories(tName, updated);
                         };
                         return (
-                            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setShowAnalysisMgr(false); setEditingCat(null); }}>
-                                <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:520}} onClick={e => e.stopPropagation()}>
+                            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" style={{ animation: "backdropIn 0.15s ease" }} onClick={() => { setShowAnalysisMgr(false); setEditingCat(null); }}>
+                                <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:520, animation: "modalIn 0.2s ease"}} onClick={e => e.stopPropagation()}>
                                     <div className="flex items-center justify-between mb-4">
                                         <h3 className="text-[15px] font-bold text-slate-800">해석일지 관리</h3>
                                         <button onClick={() => { setShowAnalysisMgr(false); setEditingCat(null); }} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
@@ -1917,6 +1967,9 @@ export default function DashboardPage() {
                         </div>
                     )}
                     {activeTab === "settings" && <SettingsView currentUser={userName} customEmojis={customEmojis} onSaveEmoji={handleSaveEmoji} statusMessages={statusMessages} onSaveStatusMsg={handleSaveStatusMsg} />}
+                    {activeTab === "admin_members" && userName === "박일웅" && <AdminMemberView />}
+                    {activeTab === "admin_backups" && userName === "박일웅" && <AdminBackupView />}
+                    {activeTab === "admin_access" && userName === "박일웅" && <AdminAccessLogView />}
                     {activeTab === "labChat" && <LabChatView chat={labChat} currentUser={userName} onAdd={handleAddLabChat} onUpdate={handleUpdateLabChat} onDelete={handleDeleteLabChat} onClear={handleClearLabChat} onRetry={handleRetryLabChat} files={labFiles} onAddFile={handleAddLabFile} onDeleteFile={handleDeleteLabFile} board={labBoard} onSaveBoard={handleSaveLabBoard} onDeleteBoard={handleDeleteLabBoard} readReceipts={readReceipts["labChat"]} />}
                     {activeTab.startsWith("teamMemo_") && (() => {
                         const tName = activeTab.replace("teamMemo_", "");
@@ -1957,8 +2010,35 @@ export default function DashboardPage() {
 
             {/* Toast */}
             {toast && (
-                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] px-5 py-3 rounded-xl text-[14px] font-medium text-white shadow-lg animate-[fadeInUp_0.3s_ease]" style={{ background: "#EF4444" }}>
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] px-5 py-3 rounded-xl text-[14px] font-medium text-white shadow-lg flex items-center gap-2" style={{ background: toastType === "success" ? "#10B981" : "#EF4444", animation: "toastSlideIn 0.25s ease" }}>
+                    {toastType === "success" && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>}
                     {toast}
+                </div>
+            )}
+            {/* Keyboard Shortcuts */}
+            {shortcutsOpen && (
+                <div className="fixed inset-0 z-[90] bg-black/40 flex items-center justify-center p-4" onClick={() => setShortcutsOpen(false)} style={{ animation: "backdropIn 0.15s ease" }}>
+                    <div className="bg-white rounded-2xl w-full shadow-xl p-6" style={{ maxWidth: 420, animation: "modalIn 0.2s ease" }} onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-5">
+                            <h3 className="text-[16px] font-bold text-slate-800">키보드 단축키</h3>
+                            <button onClick={() => setShortcutsOpen(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+                        </div>
+                        <div className="space-y-3">
+                            {[
+                                ["Cmd + K", "빠른 검색"],
+                                ["?", "단축키 도움말"],
+                                ["Esc", "모달/패널 닫기"],
+                                ["@ + 이름", "멘션"],
+                                ["Ctrl + V", "이미지 붙여넣기"],
+                                ["Enter", "메시지 전송 / 항목 확인"],
+                            ].map(([key, desc]) => (
+                                <div key={key} className="flex items-center justify-between">
+                                    <span className="text-[13px] text-slate-600">{desc}</span>
+                                    <kbd className="px-2.5 py-1 bg-slate-100 rounded-lg text-[12px] font-mono text-slate-500 border border-slate-200">{key}</kbd>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             )}
         {/* Notification Panel — PC: right slide panel, Mobile: center modal */}

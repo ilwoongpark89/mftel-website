@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useRef, useContext, memo } from "react";
-import type { Patent, LabFile } from "../lib/types";
+import type { Patent, Comment, LabFile } from "../lib/types";
 import { MEMBERS, MEMBER_NAMES, IP_STATUS_CONFIG, IP_STATUS_KEYS } from "../lib/constants";
 import { genId, toggleArr, statusText, calcDropIdx, reorderKanbanItems } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
-import { DropLine, ItemFiles, MobileReorderButtons, moveInColumn, PillSelect, SavingBadge, TeamSelect } from "./shared";
+import { DropLine, ItemFiles, MobileReorderButtons, moveInColumn, PillSelect, SavingBadge, TeamSelect, DetailModal3Col } from "./shared";
+import type { ChatMessage } from "./shared";
 
 function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames }: { patent: Patent | null; onSave: (p: Patent) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; teamNames?: string[] }) {
     const confirmDel = useContext(ConfirmDeleteContext);
@@ -21,8 +22,8 @@ function IPFormModal({ patent, onSave, onDelete, onClose, currentUser, teamNames
     const isDirty = title.trim() !== (patent?.title || "");
     const handleBackdropClose = () => { if (isDirty && !confirm("작성 중인 내용이 있습니다. 닫으시겠습니까?")) return; onClose(); };
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={handleBackdropClose}>
-            <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={handleBackdropClose} style={{ animation: "backdropIn 0.15s ease" }}>
+            <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()} style={{ animation: "modalIn 0.2s ease" }}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "지식재산권 수정" : "지식재산권 등록"}</h3>
                     <button onClick={handleBackdropClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
@@ -85,6 +86,11 @@ const IPView = memo(function IPView({ patents, onSave, onDelete, currentUser, on
     const teamFilteredPatents = filterTeam === "전체" ? patents : patents.filter(p => p.team === filterTeam);
     const filteredPatents = filterPerson === "전체" ? teamFilteredPatents : teamFilteredPatents.filter(p => p.assignees?.includes(filterPerson));
     const [showCompleted, setShowCompleted] = useState(false);
+    const [selected, setSelected] = useState<Patent | null>(null);
+    const handleChatAdd = (msg: ChatMessage) => { if (!selected) return; const u = { ...selected, comments: [...(selected.comments || []), msg] }; onSave(u); setSelected(u); };
+    const handleChatDelete = (id: number) => { if (!selected) return; const u = { ...selected, comments: (selected.comments || []).filter(c => c.id !== id) }; onSave(u); setSelected(u); };
+    const handleFileAdd = (f: LabFile) => { if (!selected) return; const u = { ...selected, files: [...(selected.files || []), f] }; onSave(u); setSelected(u); };
+    const handleFileDelete = async (id: number) => { if (!selected) return; const f = (selected.files || []).find(x => x.id === id); if (f?.url?.startsWith("https://")) { try { const tk = typeof window !== "undefined" ? localStorage.getItem("dashToken") || "" : ""; await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: f.url }), headers: { "Content-Type": "application/json", ...(tk ? { Authorization: `Bearer ${tk}` } : {} as Record<string, string>) } }); } catch (e) { console.warn("파일 삭제 실패:", e); } } const u = { ...selected, files: (selected.files || []).filter(x => x.id !== id) }; onSave(u); setSelected(u); };
     const completedPatents = filteredPatents.filter(p => p.status === "completed");
     const kanbanFilteredPatents = filteredPatents.filter(p => p.status !== "completed");
     return (
@@ -150,10 +156,14 @@ const IPView = memo(function IPView({ patents, onSave, onDelete, currentUser, on
             {/* Mobile single column */}
             {!showCompleted && (
             <div className="md:hidden space-y-2">
-                {(() => { const colItems = kanbanFilteredPatents.filter(p => p.status === mobileCol); return colItems.length === 0 ? <div className="text-center py-8 text-slate-300 text-[13px]">{IP_STATUS_CONFIG[mobileCol]?.label} 없음</div> : colItems.map((item, mi) => (
-                    <div key={item.id} onClick={() => { if (window.getSelection()?.toString()) return; setEditing(item); }}
-                        className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300`}
+                {(() => { const colItems = kanbanFilteredPatents.filter(p => p.status === mobileCol); return colItems.length === 0 ? <div className="text-center py-10"><div className="text-3xl mb-2 opacity-30">💡</div><div className="text-[13px] text-slate-300">특허가 없습니다</div></div> : colItems.map((item, mi) => (
+                    <div key={item.id} onClick={() => { if (window.getSelection()?.toString()) return; setSelected(item); }}
+                        className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300 hover:shadow-sm`}
                         style={{ borderLeft: item.needsDiscussion ? "3px solid #EF4444" : `3px solid ${IP_STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
+                        <label className="flex items-center gap-1 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
+                            <input type="checkbox" checked={!!item.needsDiscussion} onChange={() => onToggleDiscussion(item)} className="w-3 h-3 accent-red-500" />
+                            <span className={`text-[11px] font-medium ${item.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
+                        </label>
                         <div className="flex items-center justify-between gap-2">
                             <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words min-w-0 flex-1">{item.title}<SavingBadge id={item.id} /></div>
                             <MobileReorderButtons idx={mi} total={colItems.length} onMove={dir => onReorder(moveInColumn(patents, item.id, dir, colItems))} />
@@ -168,9 +178,8 @@ const IPView = memo(function IPView({ patents, onSave, onDelete, currentUser, on
                             </div>
                             <span className="text-[11px] font-semibold" style={{color: (item.progress || 0) >= 80 ? "#10B981" : "#3B82F6"}}>{item.progress || 0}%</span>
                         </div>
-                        <div className="flex -space-x-1 mt-1.5">
-                            {item.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
-                            {item.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{item.assignees.length - 4}</span>}
+                        <div className="text-[11px] text-slate-500 mt-1.5 truncate">
+                            {item.assignees.map((a, i) => <span key={a}>{i > 0 && ", "}{MEMBERS[a]?.emoji || "👤"}{a}</span>)}
                         </div>
                     </div>
                 )); })()}
@@ -199,9 +208,13 @@ const IPView = memo(function IPView({ patents, onSave, onDelete, currentUser, on
                                     <div draggable onDragStart={() => { dragItem.current = p; setDraggedId(p.id); }}
                                         onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
                                         onDragOver={e => { e.preventDefault(); if (draggedId === p.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
-                                        onClick={() => { if (window.getSelection()?.toString()) return; setEditing(p); }}
-                                        className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === p.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
+                                        onClick={() => { if (window.getSelection()?.toString()) return; setSelected(p); }}
+                                        className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 ${draggedId === p.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
                                         style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${cfg.color}` }}>
+                                        <label className="flex items-center gap-1 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
+                                            <input type="checkbox" checked={!!p.needsDiscussion} onChange={() => onToggleDiscussion(p)} className="w-3 h-3 accent-red-500" />
+                                            <span className={`text-[11px] font-medium ${p.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
+                                        </label>
                                         <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{p.title}<SavingBadge id={p.id} /></div>
                                         <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
                                             {p.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-slate-50 text-slate-500 flex-shrink-0" style={{fontWeight:500}}>{p.team}</span>}
@@ -213,15 +226,14 @@ const IPView = memo(function IPView({ patents, onSave, onDelete, currentUser, on
                                             </div>
                                             <span className="text-[11px] font-semibold" style={{color: (p.progress || 0) >= 80 ? "#10B981" : "#3B82F6"}}>{p.progress || 0}%</span>
                                         </div>
-                                        <div className="flex -space-x-1 mt-1.5">
-                                            {p.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
-                                            {p.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{p.assignees.length - 4}</span>}
+                                        <div className="text-[11px] text-slate-500 mt-1.5 truncate">
+                                            {p.assignees.map((a, i) => <span key={a}>{i > 0 && ", "}{MEMBERS[a]?.emoji || "👤"}{a}</span>)}
                                         </div>
                                     </div>
                                     </div>
                                 ))}
                                 {dropTarget?.col === status && dropTarget?.idx === col.length && <DropLine />}
-                                {col.length === 0 && <div className="text-[12px] text-slate-300 text-center py-6">—</div>}
+                                {col.length === 0 && <div className="text-center py-8"><div className="text-2xl mb-1 opacity-30">💡</div><div className="text-[12px] text-slate-300">항목 없음</div></div>}
                             </div>
                         </div>
                     );
@@ -231,8 +243,8 @@ const IPView = memo(function IPView({ patents, onSave, onDelete, currentUser, on
             {showCompleted && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {completedPatents.map(p => (
-                        <div key={p.id} onClick={() => { if (window.getSelection()?.toString()) return; setEditing(p); }}
-                            className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
+                        <div key={p.id} onClick={() => { if (window.getSelection()?.toString()) return; setSelected(p); }}
+                            className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 hover:border-slate-300"
                             style={{ borderLeft: "3px solid #22c55e" }}>
                             <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{p.title}<SavingBadge id={p.id} /></div>
                             {p.team && <div className="mb-1"><span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{p.team}</span></div>}
@@ -251,8 +263,61 @@ const IPView = memo(function IPView({ patents, onSave, onDelete, currentUser, on
             {adding && <IPFormModal patent={null} onSave={p => { onSave(p); setAdding(false); }} onClose={() => setAdding(false)} currentUser={currentUser} teamNames={teamNames} />}
             {editing && <IPFormModal patent={editing} onSave={p => { onSave(p); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} teamNames={teamNames} />}
             {/* Mobile FAB */}
-            {!adding && !editing && (
+            {!adding && !editing && !selected && (
                 <button onClick={() => setAdding(true)} className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-teal-500 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-teal-600 active:scale-95 transition-transform">+</button>
+            )}
+            {selected && !editing && !adding && (
+                <DetailModal3Col
+                    onClose={() => setSelected(null)}
+                    onEdit={() => { setEditing(selected); setSelected(null); }}
+                    onDelete={(currentUser === selected.creator || currentUser === "박일웅") ? () => { onDelete(selected.id); setSelected(null); } : undefined}
+                    files={selected.files || []}
+                    currentUser={currentUser}
+                    onAddFile={handleFileAdd}
+                    onDeleteFile={handleFileDelete}
+                    chatMessages={selected.comments || []}
+                    onAddChat={handleChatAdd}
+                    onDeleteChat={handleChatDelete}
+                    chatDraftKey={`comment_patent_${selected.id}`}
+                >
+                    <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selected.title}</h2>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[12px] font-semibold text-slate-500">상태</span>
+                        <span className="text-[12px] px-2 py-0.5 rounded-full font-medium" style={{background: IP_STATUS_CONFIG[selected.status]?.color || "#94A3B8", color: statusText(IP_STATUS_CONFIG[selected.status]?.color || "#94A3B8")}}>{IP_STATUS_CONFIG[selected.status]?.label || selected.status}</span>
+                    </div>
+                    {selected.team && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-[12px] font-semibold text-slate-500">소속 팀</span>
+                            <span className="text-[12px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-600 font-medium">{selected.team}</span>
+                        </div>
+                    )}
+                    <div>
+                        <span className="text-[12px] font-semibold text-slate-500 block mb-1.5">담당자</span>
+                        <div className="flex flex-wrap gap-1.5">
+                            {selected.assignees.map(a => <span key={a} className="text-[12px] px-2 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[a]?.emoji || "👤"} {a}</span>)}
+                        </div>
+                    </div>
+                    {selected.deadline && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-[12px] font-semibold text-slate-500">마감</span>
+                            <span className="text-[13px] text-red-500 font-medium">{selected.deadline}</span>
+                        </div>
+                    )}
+                    <div>
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="text-[12px] font-semibold text-slate-500">진행률</span>
+                            <span className="text-[13px] font-bold" style={{color: (selected.progress || 0) >= 80 ? "#10B981" : "#3B82F6"}}>{selected.progress || 0}%</span>
+                        </div>
+                        <div className="w-full rounded-full h-2" style={{background:"#F1F5F9"}}>
+                            <div className="h-2 rounded-full transition-all" style={{ width: `${selected.progress || 0}%`, background: (selected.progress || 0) >= 80 ? "#10B981" : "#3B82F6" }} />
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[12px] font-semibold text-slate-500">논의 필요</span>
+                        <span className={`text-[12px] font-medium ${selected.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>{selected.needsDiscussion ? "예" : "—"}</span>
+                    </div>
+                    {selected.creator && <div className="text-[11px] text-slate-400">작성: {MEMBERS[selected.creator]?.emoji || ""}{selected.creator}{selected.createdAt ? ` · ${selected.createdAt}` : ""}</div>}
+                </DetailModal3Col>
             )}
         </div>
     );

@@ -403,7 +403,7 @@ const CalendarGrid = memo(function CalendarGrid({ data, currentUser, types, onTo
                         dd.setDate(monday.getDate() + i);
                         weekDates.push(`${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, "0")}-${String(dd.getDate()).padStart(2, "0")}`);
                     }
-                    const weekItems = data.filter(v => weekDates.includes(v.date));
+                    const weekItems = data.filter(v => weekDates.includes(v.date) && v.type !== "vacation" && v.type !== "wfh");
                     const monLabel = `${monday.getMonth() + 1}/${monday.getDate()}`;
                     const fri = new Date(monday); fri.setDate(monday.getDate() + 4);
                     const friLabel = `${fri.getMonth() + 1}/${fri.getDate()}`;
@@ -432,9 +432,9 @@ const CalendarGrid = memo(function CalendarGrid({ data, currentUser, types, onTo
                                                 <div className={`text-[11px] font-semibold ${dayTitleColor} mt-1 mb-0.5 ${isSelected ? "underline underline-offset-2" : ""}`}>{dayLabel}</div>
                                                 {dayItems.map(v => {
                                                     const vt = types[v.type];
-                                                    return <div key={`${v.name}-${v.type}-${v.date}`} className={`text-[13px] px-2 py-1 rounded-md bg-white border ${cardBorder} mb-0.5`}>
+                                                    return <div key={`${v.name}-${v.type}-${v.date}`} className={`text-[13px] px-2 py-1 rounded-md bg-white border ${cardBorder} mb-0.5 overflow-hidden`}>
                                                         <span className="font-medium">{MEMBERS[v.name]?.emoji || "⭐"}{v.name}</span>
-                                                        <span className="text-[12px] text-slate-500 ml-1">{vt?.label}{v.description ? `: ${v.description}` : ""}</span>
+                                                        <span className="text-[12px] text-slate-500 ml-1 break-words">{vt?.label}{v.description ? `: ${v.description}` : ""}</span>
                                                     </div>;
                                                 })}
                                             </div>

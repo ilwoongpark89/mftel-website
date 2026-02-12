@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useContext, memo } from "react";
+import { useState, useEffect, useRef, useContext, useMemo, memo } from "react";
 import type { Comment, Meeting } from "../lib/types";
 import { MEMBERS, MEMBER_NAMES } from "../lib/constants";
 import { genId, toggleArr, chatKeyDown, renderWithMentions, saveDraft, loadDraft, clearDraft } from "../lib/utils";
@@ -8,14 +8,15 @@ import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useCommentImg } from "../lib/hooks";
 import { PillSelect, SavingBadge, TeamFilterBar, TeamSelect } from "./shared";
 
-function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, teamNames }: {
+function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, teamNames, templateInit }: {
     meeting: Meeting | null; onSave: (m: Meeting) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; teamNames: string[];
+    templateInit?: { title: string; goal: string; summary: string } | null;
 }) {
     const confirmDel = useContext(ConfirmDeleteContext);
     const isEdit = !!meeting;
-    const [title, setTitle] = useState(() => { if (meeting) return meeting.title; const d = loadDraft("meeting_add"); if (d) { try { return JSON.parse(d).title || ""; } catch (e) { console.warn("Draft parse failed:", e); } } return ""; });
-    const [goal, setGoal] = useState(meeting?.goal || "");
-    const [summary, setSummary] = useState(() => { if (meeting) return meeting.summary || ""; const d = loadDraft("meeting_add"); if (d) { try { return JSON.parse(d).content || ""; } catch (e) { console.warn("Draft parse failed:", e); } } return ""; });
+    const [title, setTitle] = useState(() => { if (templateInit) return templateInit.title; if (meeting) return meeting.title; const d = loadDraft("meeting_add"); if (d) { try { return JSON.parse(d).title || ""; } catch (e) { console.warn("Draft parse failed:", e); } } return ""; });
+    const [goal, setGoal] = useState(templateInit?.goal || meeting?.goal || "");
+    const [summary, setSummary] = useState(() => { if (templateInit) return templateInit.summary; if (meeting) return meeting.summary || ""; const d = loadDraft("meeting_add"); if (d) { try { return JSON.parse(d).content || ""; } catch (e) { console.warn("Draft parse failed:", e); } } return ""; });
     const [date, setDate] = useState(meeting?.date || new Date().toISOString().split("T")[0]);
     const [assignees, setAssignees] = useState<string[]>(meeting?.assignees || []);
     const [team, setTeam] = useState(meeting?.team || "");
@@ -122,6 +123,16 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
     );
 }
 
+const MEETING_TEMPLATES = (() => {
+    const d = new Date();
+    const mm = d.getMonth() + 1, dd = d.getDate();
+    return [
+        { label: "📋 주간 회의", title: `주간 회의 (${mm}/${dd})`, goal: "주간 진행 상황 공유 및 다음 주 계획 논의", summary: "1. 지난주 진행 사항\n\n2. 이번 주 계획\n\n3. 논의 사항\n\n4. 결정 사항" },
+        { label: "🔬 연구 진행 회의", title: "연구 진행 회의 - ", goal: "연구 현황 점검", summary: "1. 연구 진행 현황\n\n2. 실험/해석 결과\n\n3. 문제점 및 해결 방안\n\n4. 다음 단계" },
+        { label: "🤝 외부 미팅", title: "미팅 - ", goal: "", summary: "참석자:\n\n안건:\n\n논의 내용:\n\n결정 사항:\n\n후속 조치:" },
+    ];
+})();
+
 const MeetingView = memo(function MeetingView({ meetings, onSave, onDelete, currentUser, teamNames }: {
     meetings: Meeting[]; onSave: (m: Meeting) => void; onDelete: (id: number) => void; currentUser: string; teamNames: string[];
 }) {
@@ -129,19 +140,52 @@ const MeetingView = memo(function MeetingView({ meetings, onSave, onDelete, curr
     const [editing, setEditing] = useState<Meeting | null>(null);
     const [adding, setAdding] = useState(false);
     const [filterTeam, setFilterTeam] = useState("전체");
+    const [showTemplates, setShowTemplates] = useState(false);
+    const [templateInit, setTemplateInit] = useState<{ title: string; goal: string; summary: string } | null>(null);
 
     const filtered = filterTeam === "전체" ? meetings : meetings.filter(m => m.team === filterTeam);
-    const sorted = [...filtered].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const sorted = useMemo(() => [...filtered].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), [filtered]);
+
+    const monthGroups = useMemo(() => {
+        const groups: { label: string; key: string; items: Meeting[] }[] = [];
+        for (const m of sorted) {
+            const d = m.date ? new Date(m.date) : null;
+            const key = d && !isNaN(d.getTime()) ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` : "no-date";
+            const label = d && !isNaN(d.getTime()) ? `📅 ${d.getFullYear()}년 ${d.getMonth() + 1}월` : "📅 날짜 미정";
+            let group = groups.find(g => g.key === key);
+            if (!group) { group = { label, key, items: [] }; groups.push(group); }
+            group.items.push(m);
+        }
+        return groups;
+    }, [sorted]);
 
     return (
         <div>
             <div className="flex items-center justify-between mb-4">
-                <button onClick={() => setAdding(true)} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">+ 회의록 작성</button>
+                <div className="flex items-center gap-2">
+                    <button onClick={() => { setTemplateInit(null); setAdding(true); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">+ 회의록 작성</button>
+                    <div className="relative">
+                        <button onClick={() => setShowTemplates(v => !v)} className="px-3 py-2 text-[13px] bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 font-medium">📋 양식</button>
+                        {showTemplates && (<>
+                            <div className="fixed inset-0 z-20" onClick={() => setShowTemplates(false)} />
+                            <div className="absolute left-0 top-full mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-30 min-w-[180px]">
+                                {MEETING_TEMPLATES.map(t => (
+                                    <button key={t.label} onClick={() => { setTemplateInit({ title: t.title, goal: t.goal, summary: t.summary }); setAdding(true); setShowTemplates(false); }}
+                                        className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50">{t.label}</button>
+                                ))}
+                            </div>
+                        </>)}
+                    </div>
+                </div>
                 <span className="text-[13px] text-slate-400">총 {filtered.length}건</span>
             </div>
             {teamNames.length > 0 && <TeamFilterBar teamNames={teamNames} selected={filterTeam} onSelect={setFilterTeam} />}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {sorted.map(m => (
+            {sorted.length === 0 && <div className="text-center py-12"><div className="text-3xl mb-2 opacity-40">📝</div><div className="text-slate-400 text-[14px]">아직 회의록이 없습니다</div></div>}
+            {monthGroups.map(group => (
+                <div key={group.key} className="mb-6">
+                    <h3 className="text-[15px] font-bold text-slate-700 mb-3 pb-2 border-b border-slate-200">{group.label} <span className="text-[12px] text-slate-400 font-normal ml-1">({group.items.length}건)</span></h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {group.items.map(m => (
                     <div key={m.id} onClick={() => setEditing(m)}
                         className={`bg-white rounded-xl p-4 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col ${m.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}>
                         <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
@@ -176,9 +220,10 @@ const MeetingView = memo(function MeetingView({ meetings, onSave, onDelete, curr
                         )}
                     </div>
                 ))}
-                {sorted.length === 0 && <div className="text-center py-12 col-span-full"><div className="text-3xl mb-2 opacity-40">📝</div><div className="text-slate-400 text-[14px]">아직 회의록이 없습니다</div></div>}
-            </div>
-            {adding && <MeetingFormModal meeting={null} onSave={m => { onSave(m); setAdding(false); }} onClose={() => setAdding(false)} currentUser={currentUser} teamNames={teamNames} />}
+                    </div>
+                </div>
+            ))}
+            {adding && <MeetingFormModal meeting={null} onSave={m => { onSave(m); setAdding(false); setTemplateInit(null); }} onClose={() => { setAdding(false); setTemplateInit(null); }} currentUser={currentUser} teamNames={teamNames} templateInit={templateInit} />}
             {editing && <MeetingFormModal meeting={editing} onSave={m => { onSave(m); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} teamNames={teamNames} />}
         </div>
     );

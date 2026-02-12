@@ -18,7 +18,7 @@ export type VacationEntry = { name: string; date: string; type: string };
 
 export type ScheduleEvent = { name: string; date: string; type: string; description: string };
 
-export type TimetableBlock = { id: number; day: number; startSlot: number; endSlot: number; name: string; students: string[]; color: string };
+export type TimetableBlock = { id: number; day: number; startSlot: number; endSlot: number; name: string; students: string[]; color: string; semester?: string };
 
 export type ChecklistItem = { id: number; text: string; done: boolean };
 
@@ -42,7 +42,7 @@ export type ConferenceTrip = { id: number; title: string; startDate: string; end
 
 export type Meeting = { id: number; title: string; goal: string; summary: string; date: string; assignees: string[]; status: string; creator: string; createdAt: string; comments: Comment[]; team?: string; needsDiscussion?: boolean };
 
-export type Patent = { id: number; title: string; deadline: string; status: string; assignees: string[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string; files?: LabFile[] };
+export type Patent = { id: number; title: string; deadline: string; status: string; assignees: string[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string; files?: LabFile[]; comments?: Comment[] };
 
 export type AnalysisLog = { id: number; date: string; author: string; text: string; imageUrl?: string };
 

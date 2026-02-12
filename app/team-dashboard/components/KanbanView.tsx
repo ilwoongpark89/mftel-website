@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef, useContext, memo } from "react";
+import { useState, useRef, useContext, memo } from "react";
 import type { Comment, Paper, LabFile } from "../lib/types";
 import { MEMBERS, MEMBER_NAMES, STATUS_CONFIG, STATUS_KEYS, PAPER_STATUS_MIGRATE } from "../lib/constants";
-import { genId, toggleArr, statusText, chatKeyDown, renderWithMentions, saveDraft, loadDraft, clearDraft, hasDraft, calcDropIdx, reorderKanbanItems } from "../lib/utils";
+import { genId, toggleArr, statusText, chatKeyDown, renderWithMentions, calcDropIdx, reorderKanbanItems } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useCommentImg } from "../lib/hooks";
-import { DropLine, ItemFiles, PillSelect, SavingBadge, TeamSelect, MobileReorderButtons, moveInColumn } from "./shared";
+import { DropLine, ItemFiles, PillSelect, SavingBadge, TeamSelect, MobileReorderButtons, moveInColumn, DetailModal3Col } from "./shared";
+import type { ChatMessage } from "./shared";
 
 function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList, teamNames }: {
     paper: Paper | null; onSave: (p: Paper) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; tagList: string[]; teamNames?: string[];
@@ -43,8 +44,8 @@ function PaperFormModal({ paper, onSave, onDelete, onClose, currentUser, tagList
     const handleBackdropClose = () => { if (isDirty && !confirm("작성 중인 내용이 있습니다. 닫으시겠습니까?")) return; onClose(); };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={handleBackdropClose}>
-            <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={handleBackdropClose} style={{ animation: "backdropIn 0.15s ease" }}>
+            <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()} style={{ animation: "modalIn 0.2s ease" }}>
                 <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <h3 className="text-[15px] font-bold text-slate-800">{isEdit ? "논문 수정" : "논문 등록"}</h3>
                     <button onClick={handleBackdropClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
@@ -145,14 +146,10 @@ const KanbanView = memo(function KanbanView({ papers, filter, onFilterPerson, al
     const dragItem = useRef<Paper | null>(null);
     const [showCompleted, setShowCompleted] = useState(false);
     const [selected, setSelected] = useState<Paper | null>(null);
-    const [detailComment, setDetailComment] = useState("");
-    const cImg = useCommentImg();
-    const composingRef = useRef(false);
-    // Comment draft
-    useEffect(() => { if (selected) { const d = loadDraft(`comment_paper_${selected.id}`); if (d) setDetailComment(d); else setDetailComment(""); } }, [selected?.id]);
-    useEffect(() => { if (selected) saveDraft(`comment_paper_${selected.id}`, detailComment); }, [detailComment, selected?.id]);
-    const addDetailComment = () => { if (!selected || (!detailComment.trim() && !cImg.img)) return; clearDraft(`comment_paper_${selected.id}`); const u = { ...selected, comments: [...selected.comments, { id: genId(), author: currentUser, text: detailComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: cImg.img || undefined }] }; onSavePaper(u); setSelected(u); setDetailComment(""); cImg.clear(); };
-    const delDetailComment = (cid: number) => { if (!selected) return; const u = { ...selected, comments: selected.comments.filter(c => c.id !== cid) }; onSavePaper(u); setSelected(u); };
+    const handleChatAdd = (msg: ChatMessage) => { if (!selected) return; const u = { ...selected, comments: [...selected.comments, msg] }; onSavePaper(u); setSelected(u); };
+    const handleChatDelete = (id: number) => { if (!selected) return; const u = { ...selected, comments: selected.comments.filter(c => c.id !== id) }; onSavePaper(u); setSelected(u); };
+    const handleFileAdd = (f: LabFile) => { if (!selected) return; const u = { ...selected, files: [...(selected.files || []), f] }; onSavePaper(u); setSelected(u); };
+    const handleFileDelete = async (id: number) => { if (!selected) return; const f = (selected.files || []).find(x => x.id === id); if (f?.url?.startsWith("https://")) { try { const tk = typeof window !== "undefined" ? localStorage.getItem("dashToken") || "" : ""; await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: f.url }), headers: { "Content-Type": "application/json", ...(tk ? { Authorization: `Bearer ${tk}` } : {} as Record<string, string>) } }); } catch (e) { console.warn("파일 삭제 실패:", e); } } const u = { ...selected, files: (selected.files || []).filter(x => x.id !== id) }; onSavePaper(u); setSelected(u); };
     const completedPapers = filtered.filter(p => PAPER_STATUS_MIGRATE(p.status) === "completed");
     const kanbanFiltered = filtered.filter(p => PAPER_STATUS_MIGRATE(p.status) !== "completed");
     return (
@@ -251,8 +248,12 @@ const KanbanView = memo(function KanbanView({ papers, filter, onFilterPerson, al
             <div className="md:hidden space-y-2">
                 {colItems.map((p, mi) => (
                     <div key={p.id} onClick={() => { if (window.getSelection()?.toString()) return; setSelected(p); }}
-                        className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300`}
+                        className={`bg-white rounded-xl py-3 px-4 cursor-pointer transition-all border border-slate-200 hover:border-slate-300 hover:shadow-sm`}
                         style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${STATUS_CONFIG[mobileCol]?.color || "#ccc"}` }}>
+                        <label className="flex items-center gap-1 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
+                            <input type="checkbox" checked={!!p.needsDiscussion} onChange={() => onSavePaper({ ...p, needsDiscussion: !p.needsDiscussion })} className="w-3 h-3 accent-red-500" />
+                            <span className={`text-[11px] font-medium ${p.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
+                        </label>
                         <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
                                 <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words">{p.title}<SavingBadge id={p.id} /></div>
@@ -270,13 +271,12 @@ const KanbanView = memo(function KanbanView({ papers, filter, onFilterPerson, al
                             </div>
                             <span className="text-[11px] font-semibold" style={{color: p.progress >= 80 ? "#10B981" : "#3B82F6"}}>{p.progress}%</span>
                         </div>
-                        <div className="flex -space-x-1 mt-1.5">
-                            {p.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
-                            {p.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{p.assignees.length - 4}</span>}
+                        <div className="text-[11px] text-slate-500 mt-1.5 truncate">
+                            {p.assignees.map((a, i) => <span key={a}>{i > 0 && ", "}{MEMBERS[a]?.emoji || "👤"}{a}</span>)}
                         </div>
                     </div>
                 ))}
-                {colItems.length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">{STATUS_CONFIG[mobileCol]?.label} 없음</div>}
+                {colItems.length === 0 && <div className="text-center py-10"><div className="text-3xl mb-2 opacity-30">📄</div><div className="text-[13px] text-slate-300">{STATUS_CONFIG[mobileCol]?.label} 논문이 없습니다</div></div>}
             </div>
                 );
             })()}
@@ -304,8 +304,12 @@ const KanbanView = memo(function KanbanView({ papers, filter, onFilterPerson, al
                                         onDragEnd={() => { dragItem.current = null; setDraggedId(null); setDropTarget(null); }}
                                         onDragOver={e => { e.preventDefault(); if (draggedId === p.id) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); const mid = rect.top + rect.height / 2; setDropTarget({ col: status, idx: e.clientY < mid ? cardIdx : cardIdx + 1 }); }}
                                         onClick={() => { if (window.getSelection()?.toString()) return; setSelected(p); }}
-                                        className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${draggedId === p.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
+                                        className={`bg-white rounded-xl py-3 px-4 cursor-grab transition-all overflow-hidden hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 ${draggedId === p.id ? "opacity-40 scale-95" : ""} border border-slate-200 hover:border-slate-300`}
                                         style={{ borderLeft: p.needsDiscussion ? "3px solid #EF4444" : `3px solid ${st.color}` }}>
+                                        <label className="flex items-center gap-1 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
+                                            <input type="checkbox" checked={!!p.needsDiscussion} onChange={() => onSavePaper({ ...p, needsDiscussion: !p.needsDiscussion })} className="w-3 h-3 accent-red-500" />
+                                            <span className={`text-[11px] font-medium ${p.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
+                                        </label>
                                         <div className="text-[13px] font-semibold text-slate-800 leading-snug break-words line-clamp-2">{p.title}<SavingBadge id={p.id} /></div>
                                         <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
                                             {p.team && <span className="text-[11px] px-1.5 py-0.5 rounded-md flex-shrink-0" style={{background:"#EFF6FF", color:"#3B82F6", fontWeight:500}}>{p.team}</span>}
@@ -319,15 +323,14 @@ const KanbanView = memo(function KanbanView({ papers, filter, onFilterPerson, al
                                             </div>
                                             <span className="text-[11px] font-semibold" style={{color: p.progress >= 80 ? "#10B981" : "#3B82F6"}}>{p.progress}%</span>
                                         </div>
-                                        <div className="flex -space-x-1 mt-1.5">
-                                            {p.assignees.slice(0, 4).map(a => <span key={a} className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9"}} title={a}>{MEMBERS[a]?.emoji || "👤"}</span>)}
-                                            {p.assignees.length > 4 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] border border-white" style={{background:"#F1F5F9", color:"#94A3B8"}}>+{p.assignees.length - 4}</span>}
+                                        <div className="text-[11px] text-slate-500 mt-1.5 truncate">
+                                            {p.assignees.map((a, i) => <span key={a}>{i > 0 && ", "}{MEMBERS[a]?.emoji || "👤"}{a}</span>)}
                                         </div>
                                     </div>
                                     </div>
                                 ))}
                                 {dropTarget?.col === status && dropTarget?.idx === col.length && <DropLine />}
-                                {col.length === 0 && <div className="text-[12px] text-slate-300 text-center py-6">—</div>}
+                                {col.length === 0 && <div className="text-center py-8"><div className="text-2xl mb-1 opacity-30">📄</div><div className="text-[12px] text-slate-300">항목 없음</div></div>}
                             </div>
                         </div>
                     );
@@ -338,7 +341,7 @@ const KanbanView = memo(function KanbanView({ papers, filter, onFilterPerson, al
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {completedPapers.map(p => (
                         <div key={p.id} onClick={() => { if (window.getSelection()?.toString()) return; setSelected(p); }}
-                            className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:border-slate-300"
+                            className="bg-white rounded-xl p-4 cursor-pointer transition-all border border-emerald-200 hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:-translate-y-0.5"
                             style={{ borderLeft: "3px solid #059669" }}>
                             <div className="text-[14px] font-semibold text-slate-800 mb-1 leading-snug break-words">{p.title}<SavingBadge id={p.id} /></div>
                             {p.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold">{p.team}</span>}
@@ -364,88 +367,56 @@ const KanbanView = memo(function KanbanView({ papers, filter, onFilterPerson, al
                 <button onClick={onAddPaper} className="md:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-blue-600 active:scale-95 transition-transform">+</button>
             )}
             {selected && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setSelected(null); setDetailComment(""); }}>
-                    <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <div className="p-5 pb-3">
-                            <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selected.title}</h2>
-                            {selected.journal !== "TBD" && <p className="text-[13px] text-slate-500 italic mt-1">{selected.journal}</p>}
+                <DetailModal3Col
+                    onClose={() => setSelected(null)}
+                    onEdit={() => { onClickPaper(selected); setSelected(null); }}
+                    onDelete={onDeletePaper && (currentUser === selected.creator || currentUser === "박일웅") ? () => { onDeletePaper!(selected.id); setSelected(null); } : undefined}
+                    files={selected.files || []}
+                    currentUser={currentUser}
+                    onAddFile={handleFileAdd}
+                    onDeleteFile={handleFileDelete}
+                    chatMessages={selected.comments}
+                    onAddChat={handleChatAdd}
+                    onDeleteChat={handleChatDelete}
+                    chatDraftKey={`comment_paper_${selected.id}`}
+                >
+                    <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selected.title}</h2>
+                    {selected.journal !== "TBD" && <p className="text-[13px] text-slate-500 italic mt-1">{selected.journal}</p>}
+                    <div className="flex flex-wrap gap-1.5">
+                        {selected.team && <span className="text-[11px] px-2 py-0.5 rounded-md font-medium" style={{background:"#EFF6FF", color:"#3B82F6"}}>{selected.team}</span>}
+                        {selected.tags.map(t => <span key={t} className="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-500">{t}</span>)}
+                    </div>
+                    <div>
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="text-[12px] font-semibold text-slate-500">진행률</span>
+                            <span className="text-[13px] font-bold" style={{color: selected.progress >= 80 ? "#10B981" : "#3B82F6"}}>{selected.progress}%</span>
                         </div>
-                        <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4 space-y-4 modal-scroll">
-                            <div className="flex flex-wrap gap-1.5">
-                                {selected.team && <span className="text-[11px] px-2 py-0.5 rounded-md font-medium" style={{background:"#EFF6FF", color:"#3B82F6"}}>{selected.team}</span>}
-                                {selected.tags.map(t => <span key={t} className="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-500">{t}</span>)}
-                            </div>
-                            <div>
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className="text-[12px] font-semibold text-slate-500">진행률</span>
-                                    <span className="text-[13px] font-bold" style={{color: selected.progress >= 80 ? "#10B981" : "#3B82F6"}}>{selected.progress}%</span>
-                                </div>
-                                <div className="w-full rounded-full h-2" style={{background:"#F1F5F9"}}>
-                                    <div className="h-2 rounded-full transition-all" style={{ width: `${selected.progress}%`, background: selected.progress >= 80 ? "#10B981" : "#3B82F6" }} />
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[12px] font-semibold text-slate-500">상태</span>
-                                <span className="text-[12px] px-2 py-0.5 rounded-full font-medium" style={{background: STATUS_CONFIG[PAPER_STATUS_MIGRATE(selected.status)]?.color || "#94A3B8", color: statusText(STATUS_CONFIG[PAPER_STATUS_MIGRATE(selected.status)]?.color || "#94A3B8")}}>{STATUS_CONFIG[PAPER_STATUS_MIGRATE(selected.status)]?.label || selected.status}</span>
-                            </div>
-                            <div>
-                                <span className="text-[12px] font-semibold text-slate-500 block mb-1.5">담당자</span>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {selected.assignees.map(a => <span key={a} className="text-[12px] px-2 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[a]?.emoji || "👤"} {a}</span>)}
-                                </div>
-                            </div>
-                            {selected.deadline && (
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[12px] font-semibold text-slate-500">마감</span>
-                                    <span className="text-[13px] text-red-500 font-medium">{selected.deadline}</span>
-                                </div>
-                            )}
-                            <div className="flex items-center gap-2">
-                                <span className="text-[12px] font-semibold text-slate-500">논의 필요</span>
-                                <span className={`text-[12px] font-medium ${selected.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>{selected.needsDiscussion ? "예" : "—"}</span>
-                            </div>
-                            {selected.creator && <div className="text-[11px] text-slate-400">작성: {MEMBERS[selected.creator]?.emoji || ""}{selected.creator}{selected.createdAt ? ` · ${selected.createdAt}` : ""}</div>}
-                            <div className="border-t border-slate-100" />
-                            <div>
-                                <span className="text-[12px] font-semibold text-slate-500 block mb-2">댓글 ({selected.comments.length})</span>
-                                <div className="space-y-2 mb-3">
-                                    {selected.comments.map(c => (
-                                        <div key={c.id} className="flex gap-2 group">
-                                            <div className="flex-1 bg-slate-50 rounded-lg p-2.5">
-                                                <div className="flex items-center gap-1.5 mb-0.5">
-                                                    <span className="text-[12px] font-semibold text-slate-700">{MEMBERS[c.author]?.emoji} {c.author}</span>
-                                                    <span className="text-[11px] text-slate-400">{c.date}</span>
-                                                </div>
-                                                <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
-                                            </div>
-                                            {(c.author === currentUser || currentUser === "박일웅") && (
-                                                <button onClick={() => delDetailComment(c.id)} className="text-[11px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 self-start mt-2">삭제</button>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                                {cImg.preview}
-                                <div className="flex gap-2 items-center">
-                                    <input value={detailComment} onChange={e => setDetailComment(e.target.value)}
-                                        onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
-                                        onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) addDetailComment(); }}
-                                        placeholder="댓글 입력... (Ctrl+V 이미지)" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
-                                    <button onClick={addDetailComment} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
-                                </div>
-                                {detailComment && hasDraft(`comment_paper_${selected.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
-                            </div>
-                        </div>
-                        <div className="flex items-center justify-between p-4 border-t border-slate-100">
-                            <button onClick={() => { onClickPaper(selected); setSelected(null); setDetailComment(""); }} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
-                            <div className="flex items-center gap-3">
-                                {onDeletePaper && (currentUser === selected.creator || currentUser === "박일웅") && (
-                                    <button onClick={() => confirmDel(() => { onDeletePaper(selected.id); setSelected(null); setDetailComment(""); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
-                                )}
-                                <button onClick={() => { setSelected(null); setDetailComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
-                            </div>
+                        <div className="w-full rounded-full h-2" style={{background:"#F1F5F9"}}>
+                            <div className="h-2 rounded-full transition-all" style={{ width: `${selected.progress}%`, background: selected.progress >= 80 ? "#10B981" : "#3B82F6" }} />
                         </div>
                     </div>
-                </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[12px] font-semibold text-slate-500">상태</span>
+                        <span className="text-[12px] px-2 py-0.5 rounded-full font-medium" style={{background: STATUS_CONFIG[PAPER_STATUS_MIGRATE(selected.status)]?.color || "#94A3B8", color: statusText(STATUS_CONFIG[PAPER_STATUS_MIGRATE(selected.status)]?.color || "#94A3B8")}}>{STATUS_CONFIG[PAPER_STATUS_MIGRATE(selected.status)]?.label || selected.status}</span>
+                    </div>
+                    <div>
+                        <span className="text-[12px] font-semibold text-slate-500 block mb-1.5">담당자</span>
+                        <div className="flex flex-wrap gap-1.5">
+                            {selected.assignees.map(a => <span key={a} className="text-[12px] px-2 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[a]?.emoji || "👤"} {a}</span>)}
+                        </div>
+                    </div>
+                    {selected.deadline && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-[12px] font-semibold text-slate-500">마감</span>
+                            <span className="text-[13px] text-red-500 font-medium">{selected.deadline}</span>
+                        </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                        <span className="text-[12px] font-semibold text-slate-500">논의 필요</span>
+                        <span className={`text-[12px] font-medium ${selected.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>{selected.needsDiscussion ? "예" : "—"}</span>
+                    </div>
+                    {selected.creator && <div className="text-[11px] text-slate-400">작성: {MEMBERS[selected.creator]?.emoji || ""}{selected.creator}{selected.createdAt ? ` · ${selected.createdAt}` : ""}</div>}
+                </DetailModal3Col>
             )}
         </div>
     );

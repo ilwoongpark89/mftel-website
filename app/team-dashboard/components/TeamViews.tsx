@@ -6,7 +6,7 @@ import { MEMBERS, MEMBER_NAMES, TEAM_COLORS, TEAM_EMOJIS, TEAM_MEMO_COLORS, MEMO
 import { genId, toggleArr, chatKeyDown, renderWithMentions, saveDraft, loadDraft, clearDraft, hasDraft, calcDropIdx, reorderKanbanItems, uploadFile } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useMention, MentionPopup, useCommentImg } from "../lib/hooks";
-import { ColorPicker, DropLine, EmojiPickerPopup, FileBox, PillSelect, ReadReceiptBadge, SavingBadge } from "./shared";
+import { ColorPicker, DropLine, EmojiPickerPopup, FileBox, PillSelect, ReadReceiptBadge, SavingBadge, useLayoutSettings, LayoutSettingsOverlay } from "./shared";
 
 const TeamOverview = memo(function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams, currentUser }: { papers: Paper[]; todos: Todo[]; experiments: Experiment[]; analyses: Analysis[]; teams: Record<string, TeamData>; onSaveTeams: (t: Record<string, TeamData>) => void; currentUser: string }) {
     const MEMBERS = useContext(MembersContext);
@@ -221,6 +221,8 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
     const [color, setColor] = useState(TEAM_MEMO_COLORS[0]);
     const [borderClr, setBorderClr] = useState("");
     const [chatText, setChatText] = useState("");
+    const [showLayoutSettings, setShowLayoutSettings] = useState(false);
+    const { settings: layoutSettings, update: updateLayout, reset: resetLayout, gridTemplate } = useLayoutSettings("team");
     const [chatImg, setChatImg] = useState("");
     const [imgUploading, setImgUploading] = useState(false);
     const [previewImg, setPreviewImg] = useState("");
@@ -339,7 +341,16 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
     }, [chat.length, scrollTeamChat]);
 
     return (
-        <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{gridTemplateColumns: "1fr 1fr 2fr"}}>
+        <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0 relative" style={{gridTemplateColumns: gridTemplate}}>
+            <button onClick={() => setShowLayoutSettings(v => !v)}
+                className="absolute -top-8 right-0 w-6 h-6 hidden md:flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors z-10"
+                title="레이아웃 설정">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" /></svg>
+            </button>
+            {showLayoutSettings && (
+                <LayoutSettingsOverlay settings={layoutSettings} onUpdate={updateLayout} onReset={resetLayout}
+                    onClose={() => setShowLayoutSettings(false)} />
+            )}
             {/* Mobile tab bar — 3 tabs (mobile only) */}
             <div className="md:hidden flex border-b border-slate-200 bg-white flex-shrink-0 -mt-1">
                 {([["chat","💬","채팅"],["board","📌","보드"],["files","📎","파일"]] as const).map(([id,icon,label]) => (
@@ -480,7 +491,7 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
                                         <div className="flex-1 h-px bg-slate-200" />
                                     </div>
                                 )}
-                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-[5px]" : "mt-[18px]"} group/msg`}
+                                <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-[3px]" : "mt-3"} group/msg`}
                                     style={{ opacity: msg._sending ? 0.7 : 1 }}>
                                     {!isMe && (
                                         <div className="w-9 flex-shrink-0 mr-2 self-start">
@@ -516,13 +527,13 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
                                                 {!msg._sending && !msg._failed && (
                                                     <div className="absolute -top-3 right-0 opacity-0 group-hover/msg:opacity-100 transition-opacity z-10">
                                                         <div className="flex items-center bg-white rounded-full px-2 py-1.5 gap-0.5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
-                                                            {["👍","✅","😂"].map(em => (
+                                                            {["👍","✅"].map(em => (
                                                                 <button key={em} onClick={() => toggleReaction(msg.id, em)}
                                                                     className={`w-7 h-7 flex items-center justify-center rounded-full text-[14px] transition-colors ${reactions[em]?.includes(currentUser) ? "bg-blue-50" : "hover:bg-slate-100"}`}>{em}</button>
                                                             ))}
                                                             <div className="relative">
                                                                 <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
-                                                                    className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[14px] transition-colors">😊</button>
+                                                                    className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-[13px] transition-colors relative" title="이모지 추가">😊<span className="absolute -top-0.5 -right-0.5 text-[8px] font-bold text-blue-500 leading-none">+</span></button>
                                                                 {emojiPickerMsgId === msg.id && (
                                                                     <EmojiPickerPopup onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
                                                                 )}
@@ -537,7 +548,7 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
                                                                     <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 min-w-[160px] z-30">
                                                                         <button onClick={() => { onSaveCard({ id: genId(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", status: "left", color: "#DBEAFE", author: msg.author, updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setMoreMenuMsgId(null); }}
                                                                             className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 보드에 고정</button>
-                                                                        {msg.author === currentUser && (<>
+                                                                        {(msg.author === currentUser || currentUser === "박일웅") && (<>
                                                                             <div className="h-px bg-slate-100 my-1" />
                                                                             <button onClick={() => confirmDel(() => { onUpdateChat({ ...msg, deleted: true, text: "", imageUrl: undefined }); setMoreMenuMsgId(null); })}
                                                                                 className="w-full text-left px-3 py-2 text-[13px] text-slate-600 hover:bg-slate-50 flex items-center gap-2"><span className="text-red-400">🗑</span> 삭제</button>
@@ -548,7 +559,7 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
                                                         </div>
                                                     </div>
                                                 )}
-                                                <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "12px 16px", lineHeight: "1.65" }}
+                                                <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "7px 14px", lineHeight: "1.5" }}
                                                     className="text-[13px] text-slate-800">
                                                     {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1.5 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollTeamChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                                     {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
