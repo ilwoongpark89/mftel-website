@@ -67,7 +67,7 @@ function ChatWithAiTab({ chatPosts, handleSaveChat, handleDeleteChat, handleReor
             {/* Desktop: 2fr 3fr grid / Mobile: tab switching */}
             <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{ gridTemplateColumns: "2fr 3fr" }}>
                 <div className={`flex-1 min-h-0 overflow-y-auto ${mobileTab === "bot" ? "hidden md:block" : ""}`}>
-                    <IdeasView ideas={chatPosts} onSave={handleSaveChat} onDelete={handleDeleteChat} onReorder={handleReorderChatPosts} currentUser={userName} />
+                    <IdeasView ideas={chatPosts} onSave={handleSaveChat} onDelete={handleDeleteChat} onReorder={handleReorderChatPosts} currentUser={userName} columns={2} />
                 </div>
                 <div className={`flex flex-col min-h-0 ${mobileTab === "cards" ? "hidden md:flex" : "flex"}`}>
                     <AiBotChat messages={aiBotChat} currentUser={userName}
@@ -1395,7 +1395,7 @@ export default function DashboardPage() {
 
         // 4) Announcements
         announcements.filter(a => a.author !== userName)
-            .forEach(a => items.push({ author: a.author, text: a.text, section: "공지사항", tabId: "announcements", timestamp: new Date(a.date).getTime(), type: "announcement" }));
+            .forEach(a => items.push({ author: a.author, text: a.text, section: "공지사항", tabId: "announcements", timestamp: new Date(a.date).getTime() * 100, type: "announcement" }));
 
         // 6) Lab board new posts
         labBoard.filter(b => b.author !== userName)
@@ -1414,7 +1414,7 @@ export default function DashboardPage() {
                 const sec = NOTI_SECTION_MAP[l.section] || { label: l.section, icon: "📋", tabId: "overview" };
                 const tabId = l.section === "personalMemos" ? `memo_${l.detail || l.userName}` : sec.tabId;
                 const label = l.section === "personalMemos" ? `${l.detail || l.userName} 메모` : sec.label;
-                items.push({ author: l.userName, text: `${label}을(를) 업데이트했습니다`, section: label, tabId, timestamp: l.timestamp, type: "update" });
+                items.push({ author: l.userName, text: `${label}을(를) 업데이트했습니다`, section: label, tabId, timestamp: l.timestamp * 100, type: "update" });
             });
 
         return items.sort((a, b) => b.timestamp - a.timestamp);
@@ -1428,7 +1428,8 @@ export default function DashboardPage() {
         markNotiRead();
     };
     const markNotiRead = () => {
-        const now = Date.now();
+        // genId() = Date.now()*100 + seq, so notiLastSeen must use same scale
+        const now = Date.now() * 100 + 99;
         setNotiLastSeen(now);
         try { localStorage.setItem(`mftel_notiLastSeen_${userName}`, String(now)); } catch (e) { console.warn("notiLastSeen save failed:", e); }
     };

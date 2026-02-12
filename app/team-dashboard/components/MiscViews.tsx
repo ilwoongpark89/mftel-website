@@ -733,7 +733,7 @@ const IDEA_TEMPLATES = [
     { label: "📝 문헌 리뷰", title: "문헌 리뷰: ", body: "논문 정보:\n\n핵심 내용:\n\n우리 연구와의 관련성:\n\n적용 가능성:" },
 ];
 
-const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser }: { ideas: IdeaPost[]; onSave: (i: IdeaPost) => void; onDelete: (id: number) => void; onReorder: (list: IdeaPost[]) => void; currentUser: string }) {
+const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser, columns }: { ideas: IdeaPost[]; onSave: (i: IdeaPost) => void; onDelete: (id: number) => void; onReorder: (list: IdeaPost[]) => void; currentUser: string; columns?: number }) {
     const MEMBERS = useContext(MembersContext);
     const confirmDel = useContext(ConfirmDeleteContext);
     const [selected, setSelected] = useState<IdeaPost | null>(null);
@@ -815,7 +815,7 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
                     </>)}
                 </div>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3"
+            <div className={`grid gap-3 ${columns === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}
                 onDragOver={e => e.preventDefault()}
                 onDrop={() => { if (dragIdea.current !== null && dragOverIdea !== null && dragIdea.current !== dragOverIdea) { const reordered = [...ideas]; const [moved] = reordered.splice(dragIdea.current, 1); reordered.splice(dragOverIdea, 0, moved); onReorder(reordered); } dragIdea.current = null; setDragOverIdea(null); }}>
                 {ideas.map((idea, idx) => (
