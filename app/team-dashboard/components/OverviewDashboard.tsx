@@ -225,132 +225,7 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
                 </div>
             )}
 
-            {/* D-day: 다가오는 마감 */}
-            <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200" style={{borderTop:"2px solid #F59E0B"}}>
-                <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-amber-500 flex items-center gap-2">
-                    {isPersonal ? "내 마감 일정" : "다가오는 마감"}
-                    {upcomingDeadlines.length > 0 && <span className="px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600 text-[11px] font-semibold">{upcomingDeadlines.length}</span>}
-                </h3>
-                {upcomingDeadlines.length === 0 ? (
-                    <div className="text-[13px] text-slate-300 text-center py-6">예정된 마감 없음</div>
-                ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">
-                        {upcomingDeadlines.slice(0, 20).map((dl, i) => (
-                            <button key={`${dl.tab}-${dl.title}-${i}`} onClick={() => onNavigate(dl.tab)} className="rounded-xl p-3 text-left transition-all hover:shadow-md hover:-translate-y-0.5 group" style={{background:`${dl.color}08`, border:`1px solid ${dl.color}30`}}>
-                                <div className="flex items-center justify-between mb-1.5">
-                                    <span className="text-[12px] font-semibold px-1.5 py-0.5 rounded truncate" style={{background:`${dl.color}18`, color:dl.color}}>{dl.icon} {dl.type}</span>
-                                    <span className="text-[13px] font-black flex-shrink-0 ml-1" style={{color:ddayColor(dl.dday)}}>{ddayLabel(dl.dday)}</span>
-                                </div>
-                                <div className="text-[13px] font-semibold text-slate-800 leading-snug truncate group-hover:text-slate-900">{dl.title}</div>
-                                <div className="text-[11px] text-slate-400 mt-1 truncate">{dl.deadline} · {dl.assignees.slice(0, 2).join(", ")}{dl.assignees.length > 2 ? ` +${dl.assignees.length - 2}` : ""}</div>
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* Row 1: 연구 파이프라인 5개 한 줄 */}
-            <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200" style={{borderTop:"2px solid #3B82F6"}}>
-                <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">{isPersonal ? "내 연구 파이프라인" : "연구 파이프라인"}</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
-                    <button onClick={() => onNavigate("papers")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
-                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.paper}} />논문 <span className="font-bold" style={{color:"#334155"}}>({fp.length})</span>
-                        </div>
-                        <MiniBar items={papersByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...papersByStatus.map(s => s.count))} />
-                    </button>
-                    <button onClick={() => onNavigate("reports")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
-                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.report}} />계획서/보고서 <span className="font-bold" style={{color:"#334155"}}>({fr.length})</span>
-                        </div>
-                        <MiniBar items={reportsByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...reportsByStatus.map(s => s.count))} />
-                    </button>
-                    <button onClick={() => onNavigate("experiments")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
-                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.experiment}} />실험 <span className="font-bold" style={{color:"#334155"}}>({fe.length})</span>
-                        </div>
-                        <MiniBar items={expByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...expByStatus.map(s => s.count))} />
-                    </button>
-                    <button onClick={() => onNavigate("analysis")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
-                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.analysis}} />해석 <span className="font-bold" style={{color:"#334155"}}>({fa.length})</span>
-                        </div>
-                        <MiniBar items={analysisByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...analysisByStatus.map(s => s.count))} />
-                    </button>
-                    <button onClick={() => onNavigate("ip")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
-                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.ip}} />지식재산권 <span className="font-bold" style={{color:"#334155"}}>({fip.length})</span>
-                        </div>
-                        <MiniBar items={patentsByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...patentsByStatus.map(s => s.count))} />
-                    </button>
-                </div>
-            </div>
-
-            {/* Row 2: 오늘 목표 현황 (full width) / 내 To-do (personal) */}
-            {isPersonal ? (
-                <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
-                    <button onClick={() => onNavigate("todos")} className="w-full text-left">
-                        <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500 flex items-center gap-2">
-                            내 To-do
-                            {myTodos.length > 0 && <span className="min-w-[20px] h-[20px] flex items-center justify-center rounded-full bg-red-500 text-white text-[12px] font-bold">{myTodos.length}</span>}
-                        </h3>
-                    </button>
-                    {myTodos.length === 0 ? (
-                        <div className="text-[13px] text-slate-300 text-center py-6">할 일 없음</div>
-                    ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                            {myTodos.map(t => (
-                                <div key={t.id} className="flex items-start gap-1.5 text-[12px] text-slate-600 p-2.5 rounded-lg hover:bg-slate-50" style={{background:"#F8FAFC"}}>
-                                    <span className="shrink-0">{PRIORITY_ICON[t.priority]}</span>
-                                    <span className="leading-relaxed">{t.text}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            ) : (
-                <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
-                    <button onClick={() => onNavigate("daily")} className="w-full text-left">
-                        <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">
-                            오늘 목표 현황
-                        </h3>
-                    </button>
-                    <div className="mb-3 flex items-center gap-3">
-                        <div className="flex-1 rounded-[4px] h-[8px]" style={{background:"#F1F5F9"}}>
-                            <div className="h-[8px] rounded-[4px]" style={{ width: `${MEMBER_NAMES.length > 0 ? (targetsWritten / MEMBER_NAMES.length) * 100 : 0}%`, background: "linear-gradient(90deg, #22C55E, #3B82F6)", transition: "width 1s cubic-bezier(0.4, 0, 0.2, 1)" }} />
-                        </div>
-                        <span className="text-[13px] font-bold text-slate-700 shrink-0">{targetsWritten}/{MEMBER_NAMES.length}</span>
-                    </div>
-                    {targetsMissing.length > 0 && (
-                        <div className="mb-3">
-                            <div className="text-[12px] text-slate-400 mb-1.5">미작성:</div>
-                            <div className="flex flex-wrap gap-1.5">
-                                {targetsMissing.map(name => (
-                                    <span key={name} className="text-[11px] px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-100">{MEMBERS[name]?.emoji} {name}</span>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                    {targetsMissing.length === 0 && (
-                        <div className="text-[13px] text-emerald-500 font-medium mb-3">전원 작성 완료</div>
-                    )}
-                    {todayTargets.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0">
-                            {todayTargets.map((t, i) => (
-                                <div key={t.name} className="flex items-center gap-2" style={{padding:"8px 12px", background:"#FAFBFC", borderBottom: i < todayTargets.length - 1 || (i + 1) % 3 !== 0 ? "1px solid #F1F5F9" : "none"}}>
-                                    <span className="text-[14px] shrink-0">{MEMBERS[t.name]?.emoji}</span>
-                                    <div className="min-w-0 flex-1">
-                                        <div className="text-[14px] font-bold text-slate-700">{t.name}</div>
-                                        <div className="text-[13px] text-slate-500 truncate">{t.text}</div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Row 3: 긴급 공지 | 일반 공지 | 논의 필요 */}
+            {/* 1. 긴급 공지 | 일반 공지 | 논의 필요 */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
                 {/* 긴급 공지 */}
                 <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
@@ -421,8 +296,195 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
                 </div>
             </div>
 
-            {/* Row 3: 멤버별 현황 (team) / 내 현황 (personal) */}
-            {isPersonal ? (<>
+            {/* 2. 오늘 목표 현황 (team only) */}
+            {!isPersonal && (
+                <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
+                    <button onClick={() => onNavigate("daily")} className="w-full text-left">
+                        <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">
+                            오늘 목표 현황
+                        </h3>
+                    </button>
+                    <div className="mb-3 flex items-center gap-3">
+                        <div className="flex-1 rounded-[4px] h-[8px]" style={{background:"#F1F5F9"}}>
+                            <div className="h-[8px] rounded-[4px]" style={{ width: `${MEMBER_NAMES.length > 0 ? (targetsWritten / MEMBER_NAMES.length) * 100 : 0}%`, background: "linear-gradient(90deg, #22C55E, #3B82F6)", transition: "width 1s cubic-bezier(0.4, 0, 0.2, 1)" }} />
+                        </div>
+                        <span className="text-[13px] font-bold text-slate-700 shrink-0">{targetsWritten}/{MEMBER_NAMES.length}</span>
+                    </div>
+                    {targetsMissing.length > 0 && (
+                        <div className="mb-3">
+                            <div className="text-[12px] text-slate-400 mb-1.5">미작성:</div>
+                            <div className="flex flex-wrap gap-1.5">
+                                {targetsMissing.map(name => (
+                                    <span key={name} className="text-[11px] px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-100">{MEMBERS[name]?.emoji} {name}</span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {targetsMissing.length === 0 && (
+                        <div className="text-[13px] text-emerald-500 font-medium mb-3">전원 작성 완료</div>
+                    )}
+                    {todayTargets.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0">
+                            {todayTargets.map((t, i) => (
+                                <div key={t.name} className="flex items-center gap-2" style={{padding:"8px 12px", background:"#FAFBFC", borderBottom: i < todayTargets.length - 1 || (i + 1) % 3 !== 0 ? "1px solid #F1F5F9" : "none"}}>
+                                    <span className="text-[14px] shrink-0">{MEMBERS[t.name]?.emoji}</span>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="text-[14px] font-bold text-slate-700">{t.name}</div>
+                                        <div className="text-[13px] text-slate-500 truncate">{t.text}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* 3. D-day: 다가오는 마감 */}
+            <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200" style={{borderTop:"2px solid #F59E0B"}}>
+                <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-amber-500 flex items-center gap-2">
+                    {isPersonal ? "내 마감 일정" : "다가오는 마감"}
+                    {upcomingDeadlines.length > 0 && <span className="px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600 text-[11px] font-semibold">{upcomingDeadlines.length}</span>}
+                </h3>
+                {upcomingDeadlines.length === 0 ? (
+                    <div className="text-[13px] text-slate-300 text-center py-6">예정된 마감 없음</div>
+                ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">
+                        {upcomingDeadlines.slice(0, 20).map((dl, i) => (
+                            <button key={`${dl.tab}-${dl.title}-${i}`} onClick={() => onNavigate(dl.tab)} className="rounded-xl p-3 text-left transition-all hover:shadow-md hover:-translate-y-0.5 group" style={{background:`${dl.color}08`, border:`1px solid ${dl.color}30`}}>
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <span className="text-[12px] font-semibold px-1.5 py-0.5 rounded truncate" style={{background:`${dl.color}18`, color:dl.color}}>{dl.icon} {dl.type}</span>
+                                    <span className="text-[13px] font-black flex-shrink-0 ml-1" style={{color:ddayColor(dl.dday)}}>{ddayLabel(dl.dday)}</span>
+                                </div>
+                                <div className="text-[13px] font-semibold text-slate-800 leading-snug truncate group-hover:text-slate-900">{dl.title}</div>
+                                <div className="text-[11px] text-slate-400 mt-1 truncate">{dl.deadline} · {dl.assignees.slice(0, 2).join(", ")}{dl.assignees.length > 2 ? ` +${dl.assignees.length - 2}` : ""}</div>
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* 4. 내 To-do (personal only) */}
+            {isPersonal && (
+                <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
+                    <button onClick={() => onNavigate("todos")} className="w-full text-left">
+                        <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500 flex items-center gap-2">
+                            내 To-do
+                            {myTodos.length > 0 && <span className="min-w-[20px] h-[20px] flex items-center justify-center rounded-full bg-red-500 text-white text-[12px] font-bold">{myTodos.length}</span>}
+                        </h3>
+                    </button>
+                    {myTodos.length === 0 ? (
+                        <div className="text-[13px] text-slate-300 text-center py-6">할 일 없음</div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {myTodos.map(t => (
+                                <div key={t.id} className="flex items-start gap-1.5 text-[12px] text-slate-600 p-2.5 rounded-lg hover:bg-slate-50" style={{background:"#F8FAFC"}}>
+                                    <span className="shrink-0">{PRIORITY_ICON[t.priority]}</span>
+                                    <span className="leading-relaxed">{t.text}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* 4-team / 5-personal: 멤버별 현황 (team) */}
+            {!isPersonal && (
+                <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
+                    <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">멤버별 현황</h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-[13px]" style={{tableLayout:"fixed", minWidth:"700px"}}>
+                            <colgroup>
+                                <col style={{width:"72px"}} />
+                                <col style={{width:"200px"}} />
+                                <col style={{width:"1fr"}} />
+                                <col style={{width:"1fr"}} />
+                                <col style={{width:"1fr"}} />
+                                <col style={{width:"1fr"}} />
+                                <col style={{width:"1fr"}} />
+                                <col style={{width:"1fr"}} />
+                                <col style={{width:"1fr"}} />
+                            </colgroup>
+                            <thead>
+                                <tr style={{borderBottom:"1px solid #F1F5F9"}}>
+                                    <th className="text-left py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>멤버</th>
+                                    <th className="text-left py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>한마디</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>논문</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>계획/보고</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>실험</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>해석</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>To-do</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>목표</th>
+                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>접속</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {MEMBER_NAMES.map(name => {
+                                    const isMe = name === currentUser;
+                                    const isOnline = onlineUsers.some(u => u.name === name);
+                                    const ms = memberStats[name];
+                                    return (
+                                        <tr key={name} className={`${isMe ? "bg-blue-50/30" : "hover:bg-[#F8FAFC]"} transition-colors`} style={{borderBottom:"1px solid #F8FAFC"}}>
+                                            <td className="py-2.5 px-2 whitespace-nowrap" style={{fontWeight:500, color:"#334155"}}>
+                                                {members[name]?.emoji} {name}
+                                            </td>
+                                            <td className="py-2.5 px-2">
+                                                {statusMessages[name] && <span className="text-[11px] text-blue-500/80 italic truncate block">&ldquo;{statusMessages[name]}&rdquo;</span>}
+                                            </td>
+                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: ms.papers > 0 ? 650 : 400, color: ms.papers > 0 ? "#334155" : "#CBD5E1"}}>{ms.papers || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: ms.reports > 0 ? 650 : 400, color: ms.reports > 0 ? "#334155" : "#CBD5E1"}}>{ms.reports || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: ms.exp > 0 ? 650 : 400, color: ms.exp > 0 ? "#334155" : "#CBD5E1"}}>{ms.exp || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: ms.analysis > 0 ? 650 : 400, color: ms.analysis > 0 ? "#334155" : "#CBD5E1"}}>{ms.analysis || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: ms.todos > 0 ? 650 : 400, color: ms.todos > 0 ? "#334155" : "#CBD5E1"}}>{ms.todos || "-"}</span></td>
+                                            <td className="text-center py-2.5 px-1">{ms.hasTarget ? <span className="text-emerald-500 font-bold">O</span> : <span className="text-red-400">X</span>}</td>
+                                            <td className="text-center py-2.5 px-1">{isOnline ? <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" /> : <span className="inline-block w-2 h-2 rounded-full bg-slate-200" />}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* 5. 연구 파이프라인 */}
+            <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200" style={{borderTop:"2px solid #3B82F6"}}>
+                <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">{isPersonal ? "내 연구 파이프라인" : "연구 파이프라인"}</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
+                    <button onClick={() => onNavigate("papers")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
+                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.paper}} />논문 <span className="font-bold" style={{color:"#334155"}}>({fp.length})</span>
+                        </div>
+                        <MiniBar items={papersByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...papersByStatus.map(s => s.count))} />
+                    </button>
+                    <button onClick={() => onNavigate("reports")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
+                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.report}} />계획서/보고서 <span className="font-bold" style={{color:"#334155"}}>({fr.length})</span>
+                        </div>
+                        <MiniBar items={reportsByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...reportsByStatus.map(s => s.count))} />
+                    </button>
+                    <button onClick={() => onNavigate("experiments")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
+                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.experiment}} />실험 <span className="font-bold" style={{color:"#334155"}}>({fe.length})</span>
+                        </div>
+                        <MiniBar items={expByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...expByStatus.map(s => s.count))} />
+                    </button>
+                    <button onClick={() => onNavigate("analysis")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
+                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.analysis}} />해석 <span className="font-bold" style={{color:"#334155"}}>({fa.length})</span>
+                        </div>
+                        <MiniBar items={analysisByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...analysisByStatus.map(s => s.count))} />
+                    </button>
+                    <button onClick={() => onNavigate("ip")} className="text-left hover:bg-slate-50 rounded-lg p-2 -m-2 transition-colors">
+                        <div className="text-[13px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full" style={{background:CATEGORY_COLORS.ip}} />지식재산권 <span className="font-bold" style={{color:"#334155"}}>({fip.length})</span>
+                        </div>
+                        <MiniBar items={patentsByStatus.map(s => ({ label: s.label, count: s.count, color: s.color }))} maxVal={Math.max(1, ...patentsByStatus.map(s => s.count))} />
+                    </button>
+                </div>
+            </div>
+
+            {/* 6-personal: 내 전체 현황 */}
+            {isPersonal && (
                 <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
                     <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">내 전체 현황</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -493,8 +555,10 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
                         </div>
                     </div>
                 </div>
+            )}
 
-                {/* 피드백 + 스트릭 (personal only) */}
+            {/* 7-personal: 피드백 + 스트릭 */}
+            {isPersonal && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                     {/* 나에게 온 피드백 */}
                     <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
@@ -566,65 +630,9 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
                         })()}
                     </div>
                 </div>
-            </>) : (
-                <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-px duration-200">
-                    <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">멤버별 현황</h3>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-[13px]" style={{tableLayout:"fixed", minWidth:"700px"}}>
-                            <colgroup>
-                                <col style={{width:"72px"}} />
-                                <col style={{width:"200px"}} />
-                                <col style={{width:"1fr"}} />
-                                <col style={{width:"1fr"}} />
-                                <col style={{width:"1fr"}} />
-                                <col style={{width:"1fr"}} />
-                                <col style={{width:"1fr"}} />
-                                <col style={{width:"1fr"}} />
-                                <col style={{width:"1fr"}} />
-                            </colgroup>
-                            <thead>
-                                <tr style={{borderBottom:"1px solid #F1F5F9"}}>
-                                    <th className="text-left py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>멤버</th>
-                                    <th className="text-left py-2 px-2" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8"}}>한마디</th>
-                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>논문</th>
-                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>계획/보고</th>
-                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>실험</th>
-                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>해석</th>
-                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>To-do</th>
-                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>목표</th>
-                                    <th className="text-center py-2 px-1" style={{fontSize:"11.5px", fontWeight:600, color:"#94A3B8", whiteSpace:"nowrap"}}>접속</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {MEMBER_NAMES.map(name => {
-                                    const isMe = name === currentUser;
-                                    const isOnline = onlineUsers.some(u => u.name === name);
-                                    const ms = memberStats[name];
-                                    return (
-                                        <tr key={name} className={`${isMe ? "bg-blue-50/30" : "hover:bg-[#F8FAFC]"} transition-colors`} style={{borderBottom:"1px solid #F8FAFC"}}>
-                                            <td className="py-2.5 px-2 whitespace-nowrap" style={{fontWeight:500, color:"#334155"}}>
-                                                {members[name]?.emoji} {name}
-                                            </td>
-                                            <td className="py-2.5 px-2">
-                                                {statusMessages[name] && <span className="text-[11px] text-blue-500/80 italic truncate block">&ldquo;{statusMessages[name]}&rdquo;</span>}
-                                            </td>
-                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: ms.papers > 0 ? 650 : 400, color: ms.papers > 0 ? "#334155" : "#CBD5E1"}}>{ms.papers || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: ms.reports > 0 ? 650 : 400, color: ms.reports > 0 ? "#334155" : "#CBD5E1"}}>{ms.reports || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: ms.exp > 0 ? 650 : 400, color: ms.exp > 0 ? "#334155" : "#CBD5E1"}}>{ms.exp || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: ms.analysis > 0 ? 650 : 400, color: ms.analysis > 0 ? "#334155" : "#CBD5E1"}}>{ms.analysis || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-1"><span style={{fontWeight: ms.todos > 0 ? 650 : 400, color: ms.todos > 0 ? "#334155" : "#CBD5E1"}}>{ms.todos || "-"}</span></td>
-                                            <td className="text-center py-2.5 px-1">{ms.hasTarget ? <span className="text-emerald-500 font-bold">O</span> : <span className="text-red-400">X</span>}</td>
-                                            <td className="text-center py-2.5 px-1">{isOnline ? <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" /> : <span className="inline-block w-2 h-2 rounded-full bg-slate-200" />}</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
             )}
 
-            {/* Row 4: 팀별 현황 (team only) */}
+            {/* 6-team: 팀별 현황 (team only) */}
             {!isPersonal && (() => {
                 const hasTeams = Object.keys(teams).length > 0;
                 if (!hasTeams) return (

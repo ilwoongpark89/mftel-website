@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useMemo, useRef, useContext, startTra
 import type { TeamData, Paper, Todo, Experiment, Analysis, Patent, Report, Meeting, TeamMemoCard, TeamChatMsg, LabFile, ConferenceTrip, IdeaPost, Memo, Resource, DailyTarget, Announcement, VacationEntry, ScheduleEvent, TimetableBlock, ExpLogEntry, AnalysisLogEntry } from "./lib/types";
 import { DEFAULT_MEMBERS, MEMBERS, MEMBER_NAMES, STATUS_CONFIG, STATUS_KEYS, PAPER_TAGS, DEFAULT_EQUIPMENT, ANALYSIS_TOOLS, CALENDAR_TYPES, CATEGORY_COLORS, DEFAULT_TEAMS, DEFAULT_PAPERS, DEFAULT_TODOS, DEFAULT_EXPERIMENTS, DEFAULT_PATENTS, DEFAULT_TIMETABLE } from "./lib/constants";
 import { genId, stripMsgFlags } from "./lib/utils";
+import type { DashboardData } from "./lib/aiBot";
 import { MembersContext, ConfirmDeleteContext, SavingContext } from "./lib/contexts";
 import { useConfirmDelete } from "./lib/hooks";
 import dynamic from "next/dynamic";
@@ -23,7 +24,6 @@ const IPView = dynamic(() => import("./components/IPView").then(m => ({ default:
 const TodoList = dynamic(() => import("./components/TodoList").then(m => ({ default: m.TodoList })), { ssr: false });
 const CalendarGrid = dynamic(() => import("./components/CalendarView").then(m => ({ default: m.CalendarGrid })), { ssr: false });
 const TimetableView = dynamic(() => import("./components/TimetableView").then(m => ({ default: m.TimetableView })), { ssr: false });
-const SimpleChatPanel = dynamic(() => import("./components/ChatViews").then(m => ({ default: m.SimpleChatPanel })), { ssr: false });
 const LabChatView = dynamic(() => import("./components/ChatViews").then(m => ({ default: m.LabChatView })), { ssr: false });
 const TeamOverview = dynamic(() => import("./components/TeamViews").then(m => ({ default: m.TeamOverview })), { ssr: false });
 const TeamMemoView = dynamic(() => import("./components/TeamViews").then(m => ({ default: m.TeamMemoView })), { ssr: false });
@@ -40,8 +40,46 @@ const SettingsView = dynamic(() => import("./components/SettingsView").then(m =>
 const AdminMemberView = dynamic(() => import("./components/AdminView").then(m => ({ default: m.AdminMemberView })), { ssr: false });
 const AdminBackupView = dynamic(() => import("./components/AdminView").then(m => ({ default: m.AdminBackupView })), { ssr: false });
 const AdminAccessLogView = dynamic(() => import("./components/AdminView").then(m => ({ default: m.AdminAccessLogView })), { ssr: false });
+const AiBotChat = dynamic(() => import("./components/AiBotChat").then(m => ({ default: m.AiBotChat })), { ssr: false });
 
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
+
+// ─── Chat with AI Tab (mobile tab switching + desktop 2:3 layout) ────────────
+function ChatWithAiTab({ chatPosts, handleSaveChat, handleDeleteChat, handleReorderChatPosts, userName, aiBotChat, handleAddAiBotChat, handleUpdateAiBotChat, handleDeleteAiBotChat, handleClearAiBotChat, dashboardData, handleCalendarToggle }: {
+    chatPosts: IdeaPost[]; handleSaveChat: (p: IdeaPost) => void; handleDeleteChat: (id: number) => void; handleReorderChatPosts: (list: IdeaPost[]) => void; userName: string;
+    aiBotChat: TeamChatMsg[]; handleAddAiBotChat: (msg: TeamChatMsg) => void; handleUpdateAiBotChat: (msg: TeamChatMsg) => void; handleDeleteAiBotChat: (id: number) => void; handleClearAiBotChat: () => void;
+    dashboardData: DashboardData; handleCalendarToggle: (name: string, date: string, type: string | null, desc?: string) => void;
+}) {
+    const [mobileTab, setMobileTab] = useState<"cards" | "bot">("bot");
+    return (
+        <div className="flex flex-col flex-1 min-h-0">
+            {/* Mobile tab toggle */}
+            <div className="flex md:hidden border-b border-slate-200 mb-2">
+                <button onClick={() => setMobileTab("cards")}
+                    className={`flex-1 py-2 text-[13px] font-medium transition-colors ${mobileTab === "cards" ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400"}`}>
+                    잡담
+                </button>
+                <button onClick={() => setMobileTab("bot")}
+                    className={`flex-1 py-2 text-[13px] font-medium transition-colors ${mobileTab === "bot" ? "text-violet-600 border-b-2 border-violet-500" : "text-slate-400"}`}>
+                    AI 봇
+                </button>
+            </div>
+            {/* Desktop: 2fr 3fr grid / Mobile: tab switching */}
+            <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{ gridTemplateColumns: "2fr 3fr" }}>
+                <div className={`flex-1 min-h-0 overflow-y-auto ${mobileTab === "bot" ? "hidden md:block" : ""}`}>
+                    <IdeasView ideas={chatPosts} onSave={handleSaveChat} onDelete={handleDeleteChat} onReorder={handleReorderChatPosts} currentUser={userName} />
+                </div>
+                <div className={`flex flex-col min-h-0 ${mobileTab === "cards" ? "hidden md:flex" : "flex"}`}>
+                    <AiBotChat messages={aiBotChat} currentUser={userName}
+                        onAddMessage={handleAddAiBotChat} onUpdateMessage={handleUpdateAiBotChat}
+                        onDeleteMessage={handleDeleteAiBotChat} onClearChat={handleClearAiBotChat}
+                        dashboardData={dashboardData}
+                        onCalendarToggle={handleCalendarToggle} />
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function DashboardPage() {
     const [loggedIn, setLoggedIn] = useState(false);
@@ -91,6 +129,7 @@ export default function DashboardPage() {
     const [resources, setResources] = useState<Resource[]>([]);
     const [conferenceTrips, setConferenceTrips] = useState<ConferenceTrip[]>([]);
     const [meetings, setMeetings] = useState<Meeting[]>([]);
+    const [meetingTemplateItems, setMeetingTemplateItems] = useState<string[]>([]);
     const [philosophy, setPhilosophy] = useState<Announcement[]>([]);
     const [ideas, setIdeas] = useState<IdeaPost[]>([]);
     const [analyses, setAnalyses] = useState<Analysis[]>([]);
@@ -114,6 +153,7 @@ export default function DashboardPage() {
     const [teamMemos, setTeamMemos] = useState<Record<string, { kanban: TeamMemoCard[]; chat: TeamChatMsg[]; files?: LabFile[] }>>({});
     const [labChat, setLabChat] = useState<TeamChatMsg[]>([]);
     const [casualChat, setCasualChat] = useState<TeamChatMsg[]>([]);
+    const [aiBotChat, setAiBotChat] = useState<TeamChatMsg[]>([]);
     const [labFiles, setLabFiles] = useState<LabFile[]>([]);
     const [labBoard, setLabBoard] = useState<TeamMemoCard[]>([]);
     const [chatReadTs, setChatReadTs] = useState<Record<string, number>>({});
@@ -138,7 +178,7 @@ export default function DashboardPage() {
         { id: "overview", label: "연구실 현황", icon: "🏠" },
         { id: "overview_me", label: `개별 현황 (${userName})`, icon: "👤" },
         { id: "labChat", label: "연구실 채팅", icon: "💬" },
-        { id: "chat", label: "잡담", icon: "🗣️" },
+        { id: "chat", label: "잡담 with AI", icon: "💡" },
         // 운영
         { id: "announcements", label: "공지사항", icon: "📢" },
         { id: "calendar", label: "일정/휴가", icon: "📅" },
@@ -165,6 +205,11 @@ export default function DashboardPage() {
     ], [userName, teamNames, teams, memberNames, customEmojis, members]);
 
     const allPeople = useMemo(() => ["전체", ...memberNames], [memberNames]);
+
+    const dashboardData = useMemo(() => ({
+        papers, experiments, analyses, reports, patents: ipPatents, meetings,
+        todos, vacations, schedule, dailyTargets, conferenceTrips, onlineUsers,
+    }), [papers, experiments, analyses, reports, ipPatents, meetings, todos, vacations, schedule, dailyTargets, conferenceTrips, onlineUsers]);
 
     const [savingIds, setSavingIds] = useState<Set<number>>(new Set());
     const pendingSavesRef = useRef(0);
@@ -294,6 +339,7 @@ export default function DashboardPage() {
             if (arr(d.resources)) setResources(d.resources);
             if (arr(d.conferences)) setConferenceTrips(d.conferences);
             if (arr(d.meetings)) setMeetings(d.meetings);
+            if (arr(d.meetingTemplateItems)) setMeetingTemplateItems(d.meetingTemplateItems);
             if (arr(d.ideas)) setIdeas(d.ideas);
             if (arr(d.analyses)) setAnalyses(d.analyses);
             if (arr(d.chatPosts)) setChatPosts(d.chatPosts);
@@ -306,6 +352,7 @@ export default function DashboardPage() {
             if (obj(d.teamMemos)) setTeamMemos(d.teamMemos);
             if (arr(d.labChat)) setLabChat(d.labChat);
             if (arr(d.casualChat)) setCasualChat(d.casualChat);
+            if (arr(d.aiBotChat)) setAiBotChat(d.aiBotChat);
             if (arr(d.labFiles)) setLabFiles(d.labFiles);
             if (arr(d.labBoard)) setLabBoard(d.labBoard);
             if (obj(d.readReceipts) && !pendingReadReceiptRef.current) setReadReceipts(d.readReceipts);
@@ -596,7 +643,7 @@ export default function DashboardPage() {
 
     // chatReadTs: mark current tab as read (on tab switch + when new msgs arrive while viewing)
     const activeChatLen = activeTab === "labChat" ? (labChat.length + labBoard.length)
-        : activeTab === "chat" ? (casualChat.length + chatPosts.length)
+        : activeTab === "chat" ? (aiBotChat.length + chatPosts.length)
         : activeTab.startsWith("teamMemo_") ? ((teamMemos[activeTab.replace("teamMemo_", "")]?.chat || []).length + (teamMemos[activeTab.replace("teamMemo_", "")]?.kanban || []).length)
         : activeTab.startsWith("memo_") ? (piChat[activeTab.replace("memo_", "")] || []).length
         : activeTab === "announcements" ? announcements.length : -1;
@@ -779,6 +826,7 @@ export default function DashboardPage() {
         });
     }, [saveSection, trackSave]);
     const handleDeleteMeeting = useCallback((id: number) => { pendingSavesRef.current++; setMeetings(prev => { const u = prev.filter(m => m.id !== id); saveSection("meetings", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleSaveMeetingTemplate = useCallback((items: string[]) => { setMeetingTemplateItems(items); pendingSavesRef.current++; saveSection("meetingTemplateItems", items).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleSaveDailyTargets = useCallback((t: DailyTarget[]) => { setDailyTargets(t); pendingSavesRef.current++; saveSection("dailyTargets", t).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleSaveIdea = useCallback((idea: IdeaPost) => {
         setIdeas(prev => {
@@ -1192,6 +1240,39 @@ export default function DashboardPage() {
             return u;
         });
     }, [saveSection]);
+    // ─── AI Bot Chat Handlers ────────────────────────────────────────────────
+    const handleAddAiBotChat = useCallback((msg: TeamChatMsg) => {
+        setAiBotChat(prev => [...prev, { ...msg, _sending: true }]);
+        pendingSavesRef.current++;
+        setAiBotChat(cur => {
+            saveSection("aiBotChat", stripMsgFlags(cur)).then(ok => {
+                pendingSavesRef.current--;
+                setAiBotChat(p => p.map(m => m.id === msg.id ? { ...m, _sending: undefined, ...(ok ? {} : { _failed: true }) } : m));
+            });
+            return cur;
+        });
+    }, [saveSection]);
+    const handleUpdateAiBotChat = useCallback((msg: TeamChatMsg) => {
+        pendingSavesRef.current++;
+        setAiBotChat(prev => {
+            const u = prev.map(m => m.id === msg.id ? msg : m);
+            saveSection("aiBotChat", stripMsgFlags(u)).then(() => { pendingSavesRef.current--; });
+            return u;
+        });
+    }, [saveSection]);
+    const handleDeleteAiBotChat = useCallback((id: number) => {
+        pendingSavesRef.current++;
+        setAiBotChat(prev => {
+            const u = prev.filter(c => c.id !== id);
+            saveSection("aiBotChat", stripMsgFlags(u)).then(() => { pendingSavesRef.current--; });
+            return u;
+        });
+    }, [saveSection]);
+    const handleClearAiBotChat = useCallback(() => {
+        pendingSavesRef.current++;
+        setAiBotChat([]);
+        saveSection("aiBotChat", []).then(() => { pendingSavesRef.current--; });
+    }, [saveSection]);
     const handleSaveLabBoard = useCallback((card: TeamMemoCard) => {
         pendingSavesRef.current++;
         setLabBoard(prev => {
@@ -1255,8 +1336,8 @@ export default function DashboardPage() {
         meetings: { label: "회의", icon: "📝", tabId: "meetings" },
         resources: { label: "자료", icon: "📁", tabId: "resources" },
         ideas: { label: "아이디어", icon: "💡", tabId: "ideas" },
-        chatPosts: { label: "잡담", icon: "🗣️", tabId: "chat" },
-        casualChat: { label: "잡담 채팅", icon: "🗣️", tabId: "chat" },
+        chatPosts: { label: "잡담 with AI", icon: "💡", tabId: "chat" },
+        aiBotChat: { label: "AI 봇", icon: "🤖", tabId: "chat" },
         teams: { label: "팀", icon: "👥", tabId: "teams" },
         dailyTargets: { label: "오늘 목표", icon: "🎯", tabId: "daily" },
         schedule: { label: "일정", icon: "📅", tabId: "calendar" },
@@ -1300,7 +1381,7 @@ export default function DashboardPage() {
 
         // 1) Lab chat + casual chat (single pass each)
         addMsgs(labChat, "lab", "연구실 채팅", "labChat");
-        addMsgs(casualChat, "casual", "잡담", "chat");
+        addMsgs(aiBotChat, "aibot", "AI 봇", "chat");
 
         // 2) Team chat (user's teams)
         myTeams.forEach(tName => addMsgs(teamMemos[tName]?.chat || [], `tm_${tName}`, tName, `teamMemo_${tName}`));
@@ -1337,7 +1418,7 @@ export default function DashboardPage() {
             });
 
         return items.sort((a, b) => b.timestamp - a.timestamp);
-    }, [labChat, casualChat, teamMemos, piChat, userName, announcements, labBoard, teams, teamNames, notiLogs]);
+    }, [labChat, aiBotChat, teamMemos, piChat, userName, announcements, labBoard, teams, teamNames, notiLogs]);
 
     const notiUnreadCount = useMemo(() => alerts.filter(a => a.timestamp > notiLastSeen).length, [alerts, notiLastSeen]);
     const [notiFilter, setNotiFilter] = useState<"all" | "mention" | "chat" | "announcement" | "board" | "update">("all");
@@ -1967,19 +2048,10 @@ export default function DashboardPage() {
                     {activeTab === "lectures" && <TimetableView blocks={timetable} onSave={handleTimetableSave} onDelete={handleTimetableDelete} />}
                     {activeTab === "ip" && <IPView patents={ipPatents} onSave={handleSavePatent} onDelete={handleDeletePatent} currentUser={userName} onToggleDiscussion={p => handleSavePatent({ ...p, needsDiscussion: !p.needsDiscussion })} onReorder={handleReorderPatents} teamNames={teamNames} />}
                     {activeTab === "conferenceTrips" && <ConferenceTripView items={conferenceTrips} onSave={handleSaveConference} onDelete={handleDeleteConference} onReorder={handleReorderConferences} currentUser={userName} />}
-                    {activeTab === "meetings" && <MeetingView meetings={meetings} onSave={handleSaveMeeting} onDelete={handleDeleteMeeting} currentUser={userName} teamNames={teamNames} />}
+                    {activeTab === "meetings" && <MeetingView meetings={meetings} onSave={handleSaveMeeting} onDelete={handleDeleteMeeting} currentUser={userName} teamNames={teamNames} templateItems={meetingTemplateItems} onSaveTemplate={handleSaveMeetingTemplate} />}
                     {activeTab === "resources" && <ResourceView resources={resources} onSave={handleSaveResource} onDelete={handleDeleteResource} onReorder={handleReorderResources} currentUser={userName} />}
                     {activeTab === "ideas" && <IdeasView ideas={ideas} onSave={handleSaveIdea} onDelete={handleDeleteIdea} onReorder={handleReorderIdeas} currentUser={userName} />}
-                    {activeTab === "chat" && (
-                        <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{gridTemplateColumns:"2fr 1fr"}}>
-                            <div className="flex-1 min-h-0 overflow-y-auto">
-                                <IdeasView ideas={chatPosts} onSave={handleSaveChat} onDelete={handleDeleteChat} onReorder={handleReorderChatPosts} currentUser={userName} />
-                            </div>
-                            <div className="hidden md:flex flex-col min-h-0">
-                                <SimpleChatPanel chat={casualChat} currentUser={userName} onAdd={handleAddCasualChat} onUpdate={handleUpdateCasualChat} onDelete={handleDeleteCasualChat} onClear={handleClearCasualChat} onRetry={handleRetryCasualChat} readReceipts={readReceipts["chat"]} />
-                            </div>
-                        </div>
-                    )}
+                    {activeTab === "chat" && <ChatWithAiTab chatPosts={chatPosts} handleSaveChat={handleSaveChat} handleDeleteChat={handleDeleteChat} handleReorderChatPosts={handleReorderChatPosts} userName={userName} aiBotChat={aiBotChat} handleAddAiBotChat={handleAddAiBotChat} handleUpdateAiBotChat={handleUpdateAiBotChat} handleDeleteAiBotChat={handleDeleteAiBotChat} handleClearAiBotChat={handleClearAiBotChat} dashboardData={dashboardData} handleCalendarToggle={handleCalendarToggle} />}
                     {activeTab === "settings" && <SettingsView currentUser={userName} customEmojis={customEmojis} onSaveEmoji={handleSaveEmoji} statusMessages={statusMessages} onSaveStatusMsg={handleSaveStatusMsg} />}
                     {activeTab === "admin_members" && userName === "박일웅" && <AdminMemberView />}
                     {activeTab === "admin_backups" && userName === "박일웅" && <AdminBackupView />}
