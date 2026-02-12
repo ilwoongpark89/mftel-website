@@ -306,7 +306,7 @@ export default function DashboardPage() {
             if (arr(d.casualChat)) setCasualChat(d.casualChat);
             if (arr(d.labFiles)) setLabFiles(d.labFiles);
             if (arr(d.labBoard)) setLabBoard(d.labBoard);
-            if (obj(d.readReceipts)) setReadReceipts(d.readReceipts);
+            if (obj(d.readReceipts) && !pendingReadReceiptRef.current) setReadReceipts(d.readReceipts);
             if (obj(d.pushPrefs)) setPushPrefs(d.pushPrefs);
             if (d.experimentLogs) {
                 const raw = d.experimentLogs as Record<string, unknown>;
@@ -600,14 +600,18 @@ export default function DashboardPage() {
         : activeTab === "announcements" ? announcements.length : -1;
     // Debounced save of readReceipts to server
     const readReceiptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pendingReadReceiptRef = useRef(false);
     const saveReadReceipt = useCallback((tabId: string, ts: number) => {
         if (!userName) return;
         setReadReceipts(prev => {
             const next = { ...prev, [tabId]: { ...(prev[tabId] || {}), [userName]: ts } };
             if (readReceiptTimerRef.current) clearTimeout(readReceiptTimerRef.current);
+            pendingReadReceiptRef.current = true;
             readReceiptTimerRef.current = setTimeout(() => {
                 const tk = localStorage.getItem("mftel-auth-token");
-                if (tk) fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tk}` }, body: JSON.stringify({ section: "readReceipts", data: next, userName }) }).catch(e => console.warn("Background request failed:", e));
+                if (tk) fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tk}` }, body: JSON.stringify({ section: "readReceipts", data: next, userName }) })
+                    .then(() => { pendingReadReceiptRef.current = false; })
+                    .catch(e => { pendingReadReceiptRef.current = false; console.warn("Background request failed:", e); });
             }, 1000);
             return next;
         });
@@ -1338,6 +1342,7 @@ export default function DashboardPage() {
     const filteredAlerts = useMemo(() => notiFilter === "all" ? alerts : alerts.filter(a => a.type === notiFilter), [alerts, notiFilter]);
     const openNoti = () => {
         setNotiOpen(true);
+        markNotiRead();
     };
     const markNotiRead = () => {
         const now = Date.now();
