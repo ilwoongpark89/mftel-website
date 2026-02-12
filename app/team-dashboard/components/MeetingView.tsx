@@ -123,25 +123,100 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
     );
 }
 
-const MEETING_TEMPLATES = (() => {
-    const d = new Date();
-    const mm = d.getMonth() + 1, dd = d.getDate();
-    return [
-        { label: "📋 주간 회의", title: `주간 회의 (${mm}/${dd})`, goal: "주간 진행 상황 공유 및 다음 주 계획 논의", summary: "1. 지난주 진행 사항\n\n2. 이번 주 계획\n\n3. 논의 사항\n\n4. 결정 사항" },
-        { label: "🔬 연구 진행 회의", title: "연구 진행 회의 - ", goal: "연구 현황 점검", summary: "1. 연구 진행 현황\n\n2. 실험/해석 결과\n\n3. 문제점 및 해결 방안\n\n4. 다음 단계" },
-        { label: "🤝 외부 미팅", title: "미팅 - ", goal: "", summary: "참석자:\n\n안건:\n\n논의 내용:\n\n결정 사항:\n\n후속 조치:" },
-    ];
-})();
+const DEFAULT_TEMPLATE_ITEMS = ["연구 진행 현황", "실험/해석 결과", "문제점 및 해결 방안", "다음 단계"];
 
-const MeetingView = memo(function MeetingView({ meetings, onSave, onDelete, currentUser, teamNames }: {
+function TemplateEditorModal({ items, onSave, onClose }: { items: string[]; onSave: (items: string[]) => void; onClose: () => void }) {
+    const [list, setList] = useState<string[]>(items.length > 0 ? [...items] : [...DEFAULT_TEMPLATE_ITEMS]);
+    const [newItem, setNewItem] = useState("");
+    const [editIdx, setEditIdx] = useState<number | null>(null);
+    const [editVal, setEditVal] = useState("");
+
+    const move = (i: number, dir: -1 | 1) => {
+        const j = i + dir;
+        if (j < 0 || j >= list.length) return;
+        const next = [...list];
+        [next[i], next[j]] = [next[j], next[i]];
+        setList(next);
+    };
+    const remove = (i: number) => setList(list.filter((_, idx) => idx !== i));
+    const add = () => {
+        if (!newItem.trim()) return;
+        setList([...list, newItem.trim()]);
+        setNewItem("");
+    };
+    const startEdit = (i: number) => { setEditIdx(i); setEditVal(list[i]); };
+    const finishEdit = () => {
+        if (editIdx === null) return;
+        if (editVal.trim()) {
+            const next = [...list]; next[editIdx] = editVal.trim(); setList(next);
+        }
+        setEditIdx(null); setEditVal("");
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={onClose}>
+            <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between p-4 border-b border-slate-200">
+                    <h3 className="text-[15px] font-bold text-slate-800">회의록 양식 편집</h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
+                </div>
+                <div className="p-4">
+                    <p className="text-[12px] text-slate-400 mb-3">회의록 작성 시 &quot;내용 요약&quot;에 기본으로 채워지는 항목을 편집합니다.</p>
+                    <div className="space-y-1.5 mb-4">
+                        {list.map((item, i) => (
+                            <div key={i} className="flex items-center gap-1.5 group">
+                                <span className="text-[12px] text-slate-400 w-5 text-right shrink-0">{i + 1}.</span>
+                                {editIdx === i ? (
+                                    <input autoFocus value={editVal} onChange={e => setEditVal(e.target.value)}
+                                        className="flex-1 border border-blue-300 rounded px-2 py-1 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                                        onKeyDown={e => { if (e.key === "Enter") finishEdit(); if (e.key === "Escape") { setEditIdx(null); setEditVal(""); } }}
+                                        onBlur={finishEdit} />
+                                ) : (
+                                    <span className="flex-1 text-[13px] text-slate-700 cursor-pointer hover:text-blue-600" onClick={() => startEdit(i)}>{item}</span>
+                                )}
+                                <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                    <button onClick={() => move(i, -1)} disabled={i === 0} className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30 text-[12px]">↑</button>
+                                    <button onClick={() => move(i, 1)} disabled={i === list.length - 1} className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30 text-[12px]">↓</button>
+                                    <button onClick={() => remove(i)} className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-500 text-[12px]">✕</button>
+                                </div>
+                            </div>
+                        ))}
+                        {list.length === 0 && <div className="text-[13px] text-slate-400 text-center py-3">항목이 없습니다</div>}
+                    </div>
+                    <div className="flex gap-2">
+                        <input value={newItem} onChange={e => setNewItem(e.target.value)} placeholder="새 항목 추가..."
+                            className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                            onKeyDown={e => { if (e.key === "Enter") add(); }} />
+                        <button onClick={add} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">추가</button>
+                    </div>
+                </div>
+                <div className="flex items-center justify-between p-4 border-t border-slate-200">
+                    <button onClick={() => setList([...DEFAULT_TEMPLATE_ITEMS])} className="text-[12px] text-slate-400 hover:text-slate-600">기본값 복원</button>
+                    <div className="flex gap-2">
+                        <button onClick={onClose} className="px-4 py-2 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                        <button onClick={() => { onSave(list); onClose(); }} className="px-4 py-2 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">저장</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function buildSummaryFromTemplate(items: string[]): string {
+    return items.map((item, i) => `${i + 1}. ${item}`).join("\n\n");
+}
+
+const MeetingView = memo(function MeetingView({ meetings, onSave, onDelete, currentUser, teamNames, templateItems, onSaveTemplate }: {
     meetings: Meeting[]; onSave: (m: Meeting) => void; onDelete: (id: number) => void; currentUser: string; teamNames: string[];
+    templateItems?: string[]; onSaveTemplate?: (items: string[]) => void;
 }) {
     const MEMBERS = useContext(MembersContext);
     const [editing, setEditing] = useState<Meeting | null>(null);
     const [adding, setAdding] = useState(false);
     const [filterTeam, setFilterTeam] = useState("전체");
-    const [showTemplates, setShowTemplates] = useState(false);
+    const [showTemplateEditor, setShowTemplateEditor] = useState(false);
     const [templateInit, setTemplateInit] = useState<{ title: string; goal: string; summary: string } | null>(null);
+    const currentTemplateItems = templateItems && templateItems.length > 0 ? templateItems : DEFAULT_TEMPLATE_ITEMS;
 
     const filtered = filterTeam === "전체" ? meetings : meetings.filter(m => m.team === filterTeam);
     const sorted = useMemo(() => [...filtered].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), [filtered]);
@@ -163,19 +238,8 @@ const MeetingView = memo(function MeetingView({ meetings, onSave, onDelete, curr
         <div>
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                    <button onClick={() => { setTemplateInit(null); setAdding(true); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">+ 회의록 작성</button>
-                    <div className="relative">
-                        <button onClick={() => setShowTemplates(v => !v)} className="px-3 py-2 text-[13px] bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 font-medium">📋 양식</button>
-                        {showTemplates && (<>
-                            <div className="fixed inset-0 z-20" onClick={() => setShowTemplates(false)} />
-                            <div className="absolute left-0 top-full mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-30 min-w-[180px]">
-                                {MEETING_TEMPLATES.map(t => (
-                                    <button key={t.label} onClick={() => { setTemplateInit({ title: t.title, goal: t.goal, summary: t.summary }); setAdding(true); setShowTemplates(false); }}
-                                        className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50">{t.label}</button>
-                                ))}
-                            </div>
-                        </>)}
-                    </div>
+                    <button onClick={() => { setTemplateInit({ title: "", goal: "", summary: buildSummaryFromTemplate(currentTemplateItems) }); setAdding(true); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">+ 회의록 작성</button>
+                    <button onClick={() => setShowTemplateEditor(true)} className="px-3 py-2 text-[13px] bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 font-medium">📋 양식</button>
                 </div>
                 <span className="text-[13px] text-slate-400">총 {filtered.length}건</span>
             </div>
@@ -225,6 +289,7 @@ const MeetingView = memo(function MeetingView({ meetings, onSave, onDelete, curr
             ))}
             {adding && <MeetingFormModal meeting={null} onSave={m => { onSave(m); setAdding(false); setTemplateInit(null); }} onClose={() => { setAdding(false); setTemplateInit(null); }} currentUser={currentUser} teamNames={teamNames} templateInit={templateInit} />}
             {editing && <MeetingFormModal meeting={editing} onSave={m => { onSave(m); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} teamNames={teamNames} />}
+            {showTemplateEditor && <TemplateEditorModal items={currentTemplateItems} onSave={items => onSaveTemplate?.(items)} onClose={() => setShowTemplateEditor(false)} />}
         </div>
     );
 });
