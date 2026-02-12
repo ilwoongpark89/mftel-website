@@ -30,25 +30,26 @@ function DispatchPanel({ dispatches, currentUser, onSave, onDelete }: {
         reset();
     };
     return (
-        <div className="mt-2 p-2.5 rounded-lg border border-violet-200 bg-violet-50/50">
-            <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[13px] font-semibold text-violet-700">🟣 파견 현황</span>
+        <div className="mt-3 rounded-xl border border-slate-200 bg-white overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100">
+                <span className="text-[13px] font-semibold text-slate-800">🟣 파견 현황 ({active.length})</span>
                 {currentUser === "박일웅" && !showForm && (
-                    <button onClick={() => setShowForm(true)} className="text-[11px] px-2 py-0.5 rounded bg-violet-100 text-violet-600 hover:bg-violet-200">+ 추가</button>
+                    <button onClick={() => setShowForm(true)} className="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-500 hover:bg-slate-200 font-medium">+ 추가</button>
                 )}
             </div>
+            <div className="p-2.5">
             {active.length > 0 ? (
                 <div className="flex flex-col gap-1">
                     {active.map(d => (
-                        <div key={d.id} className="flex items-center justify-between text-[12px] px-2 py-1 rounded bg-white border border-violet-100">
+                        <div key={d.id} className="flex items-center justify-between text-[12px] px-2 py-1.5 rounded-md bg-slate-50 border border-slate-100">
                             <div>
-                                <span className="font-medium text-violet-800">{MEMBERS[d.name]?.emoji} {d.name}</span>
+                                <span className="font-medium text-slate-700">{MEMBERS[d.name]?.emoji} {d.name}</span>
                                 <span className="text-slate-400 ml-1.5">{d.start.slice(5)} ~ {d.end.slice(5)}</span>
                                 {d.description && <span className="text-slate-500 ml-1">· {d.description}</span>}
                             </div>
                             {currentUser === "박일웅" && (
                                 <div className="flex gap-1 shrink-0">
-                                    <button onClick={() => openEdit(d)} className="text-[11px] text-violet-500 hover:text-violet-700">수정</button>
+                                    <button onClick={() => openEdit(d)} className="text-[11px] text-blue-500 hover:text-blue-700">수정</button>
                                     <button onClick={() => onDelete?.(d.id)} className="text-[11px] text-red-400 hover:text-red-600">삭제</button>
                                 </div>
                             )}
@@ -59,7 +60,7 @@ function DispatchPanel({ dispatches, currentUser, onSave, onDelete }: {
                 <div className="text-[12px] text-slate-400">파견 중인 인원 없음</div>
             )}
             {showForm && (
-                <div className="mt-1.5 p-2 rounded bg-white border border-violet-200 space-y-1.5">
+                <div className="mt-1.5 p-2 rounded-md bg-slate-50 border border-slate-200 space-y-1.5">
                     <select value={name} onChange={e => setName(e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1 text-[13px]">
                         {Object.keys(MEMBERS).filter(k => k !== "박일웅").map(n => <option key={n} value={n}>{n}</option>)}
                     </select>
@@ -71,10 +72,11 @@ function DispatchPanel({ dispatches, currentUser, onSave, onDelete }: {
                     <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="파견처" className="w-full border border-slate-200 rounded px-2 py-1 text-[13px]" />
                     <div className="flex justify-end gap-1.5">
                         <button onClick={reset} className="text-[12px] text-slate-400 px-2 py-0.5">취소</button>
-                        <button onClick={submit} className="text-[12px] text-white bg-violet-500 rounded px-2 py-0.5 font-medium">{editId ? "수정" : "추가"}</button>
+                        <button onClick={submit} className="text-[12px] text-white bg-blue-500 rounded px-2 py-0.5 font-medium">{editId ? "수정" : "추가"}</button>
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 }
@@ -414,11 +416,13 @@ const CalendarGrid = memo(function CalendarGrid({ data, currentUser, types, onTo
                     const cardBorder = isThisWeek ? "border-slate-200 text-slate-700" : "border-blue-200 text-blue-800";
                     const weekLabel = isThisWeek ? "이번 주" : `${monLabel} ~ ${friLabel} 주`;
                     return (
-                        <div className={`p-3 rounded-xl border sticky top-0 ${bgColor}`} style={{borderLeft: isThisWeek ? "3px solid #F59E0B" : "3px solid #3B82F6"}}>
-                            <div className="flex items-center justify-between mb-2">
-                                <span className={`text-[14px] font-semibold ${titleColor}`}>📋 {weekLabel} ({monLabel} ~ {friLabel})</span>
-                                {selectedDate && <button onClick={() => setSelectedDate(null)} className="text-[11px] text-blue-400 hover:text-blue-600">✕ 이번 주</button>}
+                        <div className="rounded-xl border border-slate-200 bg-white sticky top-0 overflow-hidden">
+                            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100">
+                                <span className="text-[13px] font-semibold text-slate-800">🗓 {weekLabel} ({weekItems.length})</span>
+                                {selectedDate && <button onClick={() => setSelectedDate(null)} className="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-500 hover:bg-slate-200 font-medium">✕ 이번 주</button>}
                             </div>
+                            <div className="p-2.5">
+                                <div className="text-[11px] text-slate-400 mb-1">{monLabel} ~ {friLabel}</div>
                             {weekItems.length > 0 ? (
                                 <div className="flex flex-col gap-1">
                                     {weekDates.map(dateStr => {
@@ -444,6 +448,7 @@ const CalendarGrid = memo(function CalendarGrid({ data, currentUser, types, onTo
                             ) : (
                                 <div className="text-[13px] text-slate-400">이번 주 일정이 없습니다</div>
                             )}
+                            </div>
                         </div>
                     );
                 })()}
@@ -460,14 +465,16 @@ const CalendarGrid = memo(function CalendarGrid({ data, currentUser, types, onTo
                     const weekDl = deadlines.filter(dl => dl.date >= monStr && dl.date <= friStr);
                     if (weekDl.length === 0) return null;
                     return (
-                        <div className="p-3 rounded-xl border border-red-200 bg-white sticky mt-3" style={{borderLeft:"3px solid #EF4444"}}>
-                            <div className="text-[14px] font-semibold text-red-600 mb-2">📌 이번 주 마감 ({weekDl.length})</div>
-                            <div className="space-y-1">
+                        <div className="mt-3 rounded-xl border border-slate-200 bg-white overflow-hidden">
+                            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100">
+                                <span className="text-[13px] font-semibold text-slate-800">📌 이번 주 마감 ({weekDl.length})</span>
+                            </div>
+                            <div className="p-2.5 space-y-1">
                                 {weekDl.map((dl, i) => {
                                     const dd = new Date(dl.date);
                                     const dayL2 = ["일", "월", "화", "수", "목", "금", "토"];
                                     return (
-                                        <button key={i} onClick={() => onNavigate?.(dl.tab)} className="w-full text-left text-[13px] px-2 py-1.5 rounded-md hover:bg-red-50 transition-colors flex items-center gap-2">
+                                        <button key={i} onClick={() => onNavigate?.(dl.tab)} className="w-full text-left text-[13px] px-2 py-1.5 rounded-md hover:bg-slate-50 transition-colors flex items-center gap-2">
                                             <span className="w-2 h-2 rounded-full shrink-0" style={{background:dl.color}} />
                                             <span className="font-medium text-slate-700 truncate flex-1">{dl.title}</span>
                                             <span className="text-[11px] text-slate-400 shrink-0">{dd.getMonth() + 1}/{dd.getDate()}({dayL2[dd.getDay()]})</span>
