@@ -8,6 +8,7 @@ import { ALL_MEMBER_NAMES } from "../lib/constants";
 import { genId, chatKeyDown, renderWithMentions } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useMention, MentionPopup, useCommentImg } from "../lib/hooks";
+import { ReadReceiptBadge } from "./shared";
 
 // ─── Simple Markdown-like Renderer ──────────────────────────────────────────
 
@@ -52,7 +53,7 @@ function renderUserText(text: string) {
 
 export const AiBotChat = memo(function AiBotChat({
     messages, currentUser, onAddMessage, onUpdateMessage, onDeleteMessage, onClearChat,
-    dashboardData, onCalendarToggle,
+    dashboardData, onCalendarToggle, readReceipts,
 }: {
     messages: TeamChatMsg[];
     currentUser: string;
@@ -62,6 +63,7 @@ export const AiBotChat = memo(function AiBotChat({
     onClearChat: () => void;
     dashboardData: DashboardData;
     onCalendarToggle: (name: string, date: string, type: string | null, desc?: string) => void;
+    readReceipts?: Record<string, number>;
 }) {
     const MEMBERS = useContext(MembersContext);
     const confirmDel = useContext(ConfirmDeleteContext);
@@ -257,14 +259,18 @@ export const AiBotChat = memo(function AiBotChat({
                                     )}
 
                                     {/* Message bubble */}
-                                    <div className={`px-3 py-2 rounded-2xl text-[13px] leading-relaxed break-words whitespace-pre-wrap ${isMe ? "rounded-tr-md" : "rounded-tl-md"}`}
-                                        style={{
-                                            background: isBot ? "#F8F5FF" : isMe ? "#3B82F6" : "#EFF6FF",
-                                            color: isMe ? "#FFFFFF" : "#1E293B",
-                                            borderLeft: isBot ? "3px solid #8B5CF6" : "none",
-                                        }}>
-                                        {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full rounded-lg mb-1 max-h-[200px] object-contain" />}
-                                        {isBot ? renderBotText(msg.text) : renderUserText(msg.text)}
+                                    <div className="flex items-end gap-1">
+                                        {isMe && !msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} />}
+                                        <div className={`px-3 py-2 rounded-2xl text-[13px] leading-relaxed break-words whitespace-pre-wrap ${isMe ? "rounded-tr-md" : "rounded-tl-md"}`}
+                                            style={{
+                                                background: isBot ? "#F8F5FF" : isMe ? "#3B82F6" : "#EFF6FF",
+                                                color: isMe ? "#FFFFFF" : "#1E293B",
+                                                borderLeft: isBot ? "3px solid #8B5CF6" : "none",
+                                            }}>
+                                            {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full rounded-lg mb-1 max-h-[200px] object-contain" />}
+                                            {isBot ? renderBotText(msg.text) : renderUserText(msg.text)}
+                                        </div>
+                                        {!isMe && !isBot && !msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} showZero={true} />}
                                     </div>
 
                                     {/* Confirm/Cancel buttons */}

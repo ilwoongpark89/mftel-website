@@ -313,11 +313,6 @@ const CONF_COL_COLORS: Record<string, { bg: string; border: string; header: stri
     "완료": { bg: "bg-green-50/50", border: "border-green-200", header: "text-green-700", count: "bg-green-100 text-green-600" },
 };
 
-const CONF_TEMPLATES = [
-    { label: "🏛 국내 학회", title: "국내 학회: ", fee: "등록비:\n교통:\n숙박:" },
-    { label: "✈️ 해외 학회", title: "해외 학회: ", fee: "등록비 (Early/Regular):\n항공:\n숙박:\nVisa:" },
-    { label: "🚗 출장", title: "출장: ", fee: "교통:\n숙박:" },
-];
 
 const ConferenceTripView = memo(function ConferenceTripView({ items, onSave, onDelete, onReorder, currentUser }: { items: ConferenceTrip[]; onSave: (c: ConferenceTrip) => void; onDelete: (id: number) => void; onReorder: (list: ConferenceTrip[]) => void; currentUser: string }) {
     const MEMBERS = useContext(MembersContext);
@@ -332,7 +327,6 @@ const ConferenceTripView = memo(function ConferenceTripView({ items, onSave, onD
     const [participants, setParticipants] = useState<string[]>([]);
     const [formStatus, setFormStatus] = useState<string>("관심");
     const [draggedId, setDraggedId] = useState<number | null>(null);
-    const [showTemplates, setShowTemplates] = useState(false);
 
     const modal = adding || editing !== null;
     const isEdit = !!editing;
@@ -410,18 +404,6 @@ const ConferenceTripView = memo(function ConferenceTripView({ items, onSave, onD
         <div>
             <div className="flex items-center gap-2 mb-4">
                 <button onClick={() => openAdd()} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">+ 학회/출장 추가</button>
-                <div className="relative">
-                    <button onClick={() => setShowTemplates(v => !v)} className="px-3 py-2 text-[13px] bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 font-medium">📋 양식</button>
-                    {showTemplates && (<>
-                        <div className="fixed inset-0 z-20" onClick={() => setShowTemplates(false)} />
-                        <div className="absolute left-0 top-full mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-30 min-w-[160px]">
-                            {CONF_TEMPLATES.map(t => (
-                                <button key={t.label} onClick={() => { setTitle(t.title); setFee(t.fee); setStartDate(""); setEndDate(""); setHomepage(""); setParticipants([]); setFormStatus("관심"); setComments([]); setNewComment(""); setEditing(null); setConfDraftLoaded(false); setAdding(true); setShowTemplates(false); }}
-                                    className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50">{t.label}</button>
-                            ))}
-                        </div>
-                    </>)}
-                </div>
             </div>
             {items.length === 0 && <div className="text-center py-12"><div className="text-3xl mb-2 opacity-40">✈️</div><div className="text-slate-400 text-[14px]">등록된 학회/출장이 없습니다</div></div>}
             {monthGroups.map(group => (
@@ -550,11 +532,6 @@ const ConferenceTripView = memo(function ConferenceTripView({ items, onSave, onD
 
 // ─── Resource View ──────────────────────────────────────────────────────────
 
-const RES_TEMPLATES = [
-    { label: "📄 논문 자료", title: "논문: ", link: "https://doi.org/", nasPath: "" },
-    { label: "💻 코드/소프트웨어", title: "코드: ", link: "https://github.com/", nasPath: "" },
-    { label: "📖 매뉴얼/가이드", title: "매뉴얼: ", link: "", nasPath: "" },
-];
 
 const ResourceView = memo(function ResourceView({ resources, onSave, onDelete, onReorder, currentUser }: { resources: Resource[]; onSave: (r: Resource) => void; onDelete: (id: number) => void; onReorder: (list: Resource[]) => void; currentUser: string }) {
     const MEMBERS = useContext(MembersContext);
@@ -564,7 +541,6 @@ const ResourceView = memo(function ResourceView({ resources, onSave, onDelete, o
     const [title, setTitle] = useState("");
     const [link, setLink] = useState("");
     const [nasPath, setNasPath] = useState("");
-    const [showTemplates, setShowTemplates] = useState(false);
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState("");
     const cImg = useCommentImg();
@@ -605,18 +581,6 @@ const ResourceView = memo(function ResourceView({ resources, onSave, onDelete, o
         <div>
             <div className="flex items-center gap-2 mb-3">
                 <button onClick={openAdd} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">+ 자료 추가</button>
-                <div className="relative">
-                    <button onClick={() => setShowTemplates(v => !v)} className="px-3 py-2 text-[13px] bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 font-medium">📋 양식</button>
-                    {showTemplates && (<>
-                        <div className="fixed inset-0 z-20" onClick={() => setShowTemplates(false)} />
-                        <div className="absolute left-0 top-full mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-30 min-w-[160px]">
-                            {RES_TEMPLATES.map(t => (
-                                <button key={t.label} onClick={() => { setTitle(t.title); setLink(t.link); setNasPath(t.nasPath); setComments([]); setNewComment(""); setEditing(null); setResDraftLoaded(false); setAdding(true); setShowTemplates(false); }}
-                                    className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50">{t.label}</button>
-                            ))}
-                        </div>
-                    </>)}
-                </div>
             </div>
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-3"
                 onDragOver={e => e.preventDefault()}
@@ -727,11 +691,6 @@ const ResourceView = memo(function ResourceView({ resources, onSave, onDelete, o
 
 // ─── Simple Chat Panel (used by 잡담 tab) ─────────────────────────────────────
 
-const IDEA_TEMPLATES = [
-    { label: "🔬 연구 아이디어", title: "연구 아이디어: ", body: "배경:\n\n가설:\n\n방법론:\n\n기대 효과:" },
-    { label: "💡 개선 제안", title: "개선 제안: ", body: "현재 문제:\n\n제안 내용:\n\n기대 효과:" },
-    { label: "📝 문헌 리뷰", title: "문헌 리뷰: ", body: "논문 정보:\n\n핵심 내용:\n\n우리 연구와의 관련성:\n\n적용 가능성:" },
-];
 
 const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, currentUser, columns }: { ideas: IdeaPost[]; onSave: (i: IdeaPost) => void; onDelete: (id: number) => void; onReorder: (list: IdeaPost[]) => void; currentUser: string; columns?: number }) {
     const MEMBERS = useContext(MembersContext);
@@ -741,7 +700,6 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
     const [isEditing, setIsEditing] = useState(false);
     const [title, setTitle] = useState("");
     const [body, setBody] = useState("");
-    const [showTemplates, setShowTemplates] = useState(false);
     const [ideaColor, setIdeaColor] = useState(MEMO_COLORS[0]);
     const [ideaBorder, setIdeaBorder] = useState("");
     const [newComment, setNewComment] = useState("");
@@ -802,18 +760,6 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
         <div>
             <div className="flex items-center gap-2 mb-4">
                 <button onClick={openAdd} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">+ 새 글 작성</button>
-                <div className="relative">
-                    <button onClick={() => setShowTemplates(v => !v)} className="px-3 py-2 text-[13px] bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 font-medium">📋 양식</button>
-                    {showTemplates && (<>
-                        <div className="fixed inset-0 z-20" onClick={() => setShowTemplates(false)} />
-                        <div className="absolute left-0 top-full mt-1 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-30 min-w-[180px]">
-                            {IDEA_TEMPLATES.map(t => (
-                                <button key={t.label} onClick={() => { setTitle(t.title); setBody(t.body); setIdeaColor(MEMO_COLORS[0]); setIdeaBorder(""); setDraftLoaded(false); setAdding(true); setShowTemplates(false); }}
-                                    className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50">{t.label}</button>
-                            ))}
-                        </div>
-                    </>)}
-                </div>
             </div>
             <div className={`grid gap-3 ${columns === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}
                 onDragOver={e => e.preventDefault()}

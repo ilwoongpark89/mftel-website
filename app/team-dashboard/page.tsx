@@ -4,14 +4,15 @@ import { useState, useEffect, useCallback, useMemo, useRef, useContext, startTra
 
 // ─── Lib imports ────────────────────────────────────────────────────────────
 import type { TeamData, Paper, Todo, Experiment, Analysis, Patent, Report, Meeting, TeamMemoCard, TeamChatMsg, LabFile, ConferenceTrip, IdeaPost, Memo, Resource, DailyTarget, Announcement, VacationEntry, ScheduleEvent, TimetableBlock, ExpLogEntry, AnalysisLogEntry } from "./lib/types";
-import { DEFAULT_MEMBERS, MEMBERS, MEMBER_NAMES, STATUS_CONFIG, STATUS_KEYS, PAPER_TAGS, DEFAULT_EQUIPMENT, ANALYSIS_TOOLS, CALENDAR_TYPES, CATEGORY_COLORS, DEFAULT_TEAMS, DEFAULT_PAPERS, DEFAULT_TODOS, DEFAULT_EXPERIMENTS, DEFAULT_PATENTS, DEFAULT_TIMETABLE } from "./lib/constants";
-import { genId, stripMsgFlags } from "./lib/utils";
+import { DEFAULT_MEMBERS, MEMBERS, MEMBER_NAMES, STATUS_CONFIG, STATUS_KEYS, PAPER_TAGS, DEFAULT_EQUIPMENT, ANALYSIS_TOOLS, CALENDAR_TYPES, CATEGORY_COLORS, DEFAULT_TEAMS, DEFAULT_PAPERS, DEFAULT_TODOS, DEFAULT_EXPERIMENTS, DEFAULT_PATENTS, DEFAULT_TIMETABLE, MEMO_COLORS } from "./lib/constants";
+import { genId, stripMsgFlags, renderWithMentions, saveDraft, loadDraft, clearDraft, hasDraft, chatKeyDown } from "./lib/utils";
 import type { DashboardData } from "./lib/aiBot";
 import { MembersContext, ConfirmDeleteContext, SavingContext } from "./lib/contexts";
-import { useConfirmDelete } from "./lib/hooks";
+import { useConfirmDelete, useCommentImg } from "./lib/hooks";
 import dynamic from "next/dynamic";
 import { LoginScreen } from "./components/LoginScreen";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ColorPicker, SavingBadge } from "./components/shared";
 
 // ─── Lazy-loaded components (code splitting) ─────────────────────────────────
 const OverviewDashboard = dynamic(() => import("./components/OverviewDashboard").then(m => ({ default: m.OverviewDashboard })), { ssr: false });
@@ -44,39 +45,206 @@ const AiBotChat = dynamic(() => import("./components/AiBotChat").then(m => ({ de
 
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 
-// ─── Chat with AI Tab (mobile tab switching + desktop 2:3 layout) ────────────
-function ChatWithAiTab({ chatPosts, handleSaveChat, handleDeleteChat, handleReorderChatPosts, userName, aiBotChat, handleAddAiBotChat, handleUpdateAiBotChat, handleDeleteAiBotChat, handleClearAiBotChat, dashboardData, handleCalendarToggle }: {
+// ─── Chat with AI Tab (board + ideas + AI bot) ──────────────────────────────
+function ChatWithAiTab({ chatPosts, handleSaveChat, handleDeleteChat, handleReorderChatPosts, userName, aiBotChat, handleAddAiBotChat, handleUpdateAiBotChat, handleDeleteAiBotChat, handleClearAiBotChat, dashboardData, handleCalendarToggle, readReceipts, board, onSaveBoard, onDeleteBoard }: {
     chatPosts: IdeaPost[]; handleSaveChat: (p: IdeaPost) => void; handleDeleteChat: (id: number) => void; handleReorderChatPosts: (list: IdeaPost[]) => void; userName: string;
     aiBotChat: TeamChatMsg[]; handleAddAiBotChat: (msg: TeamChatMsg) => void; handleUpdateAiBotChat: (msg: TeamChatMsg) => void; handleDeleteAiBotChat: (id: number) => void; handleClearAiBotChat: () => void;
     dashboardData: DashboardData; handleCalendarToggle: (name: string, date: string, type: string | null, desc?: string) => void;
+    readReceipts?: Record<string, number>;
+    board: TeamMemoCard[]; onSaveBoard: (c: TeamMemoCard) => void; onDeleteBoard: (id: number) => void;
 }) {
-    const [mobileTab, setMobileTab] = useState<"cards" | "bot">("bot");
+    const MCTX = useContext(MembersContext);
+    const confirmDel = useContext(ConfirmDeleteContext);
+    const [mobileTab, setMobileTab] = useState<"board" | "cards" | "bot">("bot");
+    // Board state
+    const [boardAdding, setBoardAdding] = useState(false);
+    const [boardTitle, setBoardTitle] = useState("");
+    const [boardContent, setBoardContent] = useState("");
+    const [boardColor, setBoardColor] = useState(MEMO_COLORS[0]);
+    const [selectedCard, setSelectedCard] = useState<TeamMemoCard | null>(null);
+    const [boardComment, setBoardComment] = useState("");
+    const [boardEditing, setBoardEditing] = useState(false);
+    const boardImg = useCommentImg();
+    const boardCmtImg = useCommentImg();
+    const openBoardDetail = (card: TeamMemoCard) => { setSelectedCard(card); setBoardComment(loadDraft(`comment_aibotboard_${card.id}`)); };
+    useEffect(() => { if (selectedCard) saveDraft(`comment_aibotboard_${selectedCard.id}`, boardComment); }, [boardComment, selectedCard?.id]);
+    const openBoardAdd = () => { setBoardAdding(true); setBoardTitle(""); setBoardContent(""); setBoardColor(MEMO_COLORS[0]); boardImg.clear(); };
+    const saveBoard = () => {
+        onSaveBoard({ id: genId(), title: boardTitle.trim() || "제목 없음", content: boardContent, status: "left", color: boardColor, author: userName, updatedAt: new Date().toISOString().split("T")[0], imageUrl: boardImg.img || undefined });
+        setBoardAdding(false); boardImg.clear();
+    };
+
     return (
         <div className="flex flex-col flex-1 min-h-0">
             {/* Mobile tab toggle */}
             <div className="flex md:hidden border-b border-slate-200 mb-2">
-                <button onClick={() => setMobileTab("cards")}
-                    className={`flex-1 py-2 text-[13px] font-medium transition-colors ${mobileTab === "cards" ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400"}`}>
-                    잡담
-                </button>
-                <button onClick={() => setMobileTab("bot")}
-                    className={`flex-1 py-2 text-[13px] font-medium transition-colors ${mobileTab === "bot" ? "text-violet-600 border-b-2 border-violet-500" : "text-slate-400"}`}>
-                    AI 봇
-                </button>
+                {([["board", "📌", "보드"], ["cards", "💡", "잡담"], ["bot", "🤖", "AI 봇"]] as const).map(([id, icon, label]) => (
+                    <button key={id} onClick={() => setMobileTab(id as typeof mobileTab)}
+                        className={`flex-1 py-2 text-[13px] font-medium transition-colors ${mobileTab === id ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400"}`}>
+                        {icon} {label}
+                    </button>
+                ))}
             </div>
-            {/* Desktop: 2fr 3fr grid / Mobile: tab switching */}
-            <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{ gridTemplateColumns: "2fr 3fr" }}>
-                <div className={`flex-1 min-h-0 overflow-y-auto ${mobileTab === "bot" ? "hidden md:block" : ""}`}>
-                    <IdeasView ideas={chatPosts} onSave={handleSaveChat} onDelete={handleDeleteChat} onReorder={handleReorderChatPosts} currentUser={userName} columns={2} />
+            {/* Desktop: 1fr 1.5fr 2.5fr grid / Mobile: tab switching */}
+            <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{ gridTemplateColumns: "1fr 1.5fr 2.5fr" }}>
+                {/* Board */}
+                <div className={`flex-col min-w-0 ${mobileTab === "board" ? "flex flex-1 min-h-0" : "hidden"} md:flex`}>
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-[14px] font-bold text-slate-700">📌 보드</h3>
+                        <button onClick={openBoardAdd} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
+                    </div>
+                    <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
+                        {board.map(card => {
+                            const cmts = card.comments || [];
+                            return (
+                                <div key={card.id} onClick={() => openBoardDetail(card)}
+                                    className="rounded-xl p-3 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col group relative"
+                                    style={{ background: card.color || "#fff", border: "1px solid #E2E8F0", borderLeft: card.needsDiscussion ? "3px solid #EF4444" : undefined }}>
+                                    <label className="flex items-center gap-1 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
+                                        <input type="checkbox" checked={!!card.needsDiscussion} onChange={() => onSaveBoard({ ...card, needsDiscussion: !card.needsDiscussion })} className="w-3 h-3 accent-red-500" />
+                                        <span className={`text-[11px] font-medium ${card.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
+                                    </label>
+                                    <div className="flex items-start justify-between mb-1">
+                                        <h4 className="text-[13px] font-semibold text-slate-800 break-words flex-1">{card.title}<SavingBadge id={card.id} /></h4>
+                                        <span className="text-[11px] text-slate-400 ml-1 whitespace-nowrap">{card.updatedAt}</span>
+                                    </div>
+                                    {card.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-2 break-words">{card.content}</div>}
+                                    <div className="text-[11px] text-slate-400 mb-1">{MCTX[card.author]?.emoji || "👤"} {card.author}</div>
+                                    {cmts.length > 0 ? (
+                                        <div className="border-t border-slate-100 pt-1.5 mt-auto space-y-0.5">
+                                            <div className="text-[11px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
+                                            {cmts.slice(-2).map(c => (
+                                                <div key={c.id} className="text-[11px] text-slate-500 truncate">
+                                                    <span className="font-medium text-slate-600">{MCTX[c.author]?.emoji}{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="border-t border-slate-100 pt-1.5 mt-auto">
+                                            <div className="text-[11px] text-slate-300">💬 댓글 없음</div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                        {board.length === 0 && (
+                            <button onClick={openBoardAdd} className="w-full py-6 text-[12px] text-slate-400 hover:text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">+ 추가</button>
+                        )}
+                    </div>
                 </div>
-                <div className={`flex flex-col min-h-0 ${mobileTab === "cards" ? "hidden md:flex" : "flex"}`}>
+                {/* Ideas */}
+                <div className={`flex-1 min-h-0 overflow-y-auto ${mobileTab !== "cards" ? "hidden md:block" : ""}`}>
+                    <IdeasView ideas={chatPosts} onSave={handleSaveChat} onDelete={handleDeleteChat} onReorder={handleReorderChatPosts} currentUser={userName} columns={1} />
+                </div>
+                {/* AI Bot Chat */}
+                <div className={`flex flex-col min-h-0 ${mobileTab !== "bot" ? "hidden md:flex" : "flex"}`}>
                     <AiBotChat messages={aiBotChat} currentUser={userName}
                         onAddMessage={handleAddAiBotChat} onUpdateMessage={handleUpdateAiBotChat}
                         onDeleteMessage={handleDeleteAiBotChat} onClearChat={handleClearAiBotChat}
                         dashboardData={dashboardData}
-                        onCalendarToggle={handleCalendarToggle} />
+                        onCalendarToggle={handleCalendarToggle} readReceipts={readReceipts} />
                 </div>
             </div>
+            {/* Board add modal */}
+            {boardAdding && (
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setBoardAdding(false); boardImg.clear(); }}>
+                    <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-4 border-b border-slate-200">
+                            <h3 className="text-[15px] font-bold text-slate-800">새 글 작성</h3>
+                            <button onClick={() => { setBoardAdding(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            <input value={boardTitle} onChange={e => setBoardTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/40" style={{height:48}} onPaste={boardImg.onPaste} />
+                            <textarea value={boardContent} onChange={e => setBoardContent(e.target.value)} placeholder="내용을 입력하세요... (Ctrl+V로 이미지 붙여넣기)" className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
+                            {boardImg.preview}
+                            <ColorPicker color={boardColor} onColor={setBoardColor} />
+                        </div>
+                        <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
+                            <button onClick={() => { setBoardAdding(false); boardImg.clear(); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                            <button onClick={saveBoard} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">{boardImg.uploading ? "⏳" : "게시"}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Board detail modal */}
+            {selectedCard && !boardEditing && (
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setSelectedCard(null); setBoardComment(""); }}>
+                    <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-scroll" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-4 border-b border-slate-200">
+                            <h3 className="text-[15px] font-bold text-slate-800 break-words flex-1 pr-2">{selectedCard.title}</h3>
+                            <button onClick={() => { setSelectedCard(null); setBoardComment(""); }} className="text-slate-400 hover:text-slate-600 text-lg flex-shrink-0">✕</button>
+                        </div>
+                        <div className="p-4">
+                            <div className="text-[12px] text-slate-400 mb-3">{MCTX[selectedCard.author]?.emoji || "👤"} {selectedCard.author} · {selectedCard.updatedAt}</div>
+                            {selectedCard.content && <div className="text-[14px] text-slate-700 mb-4 whitespace-pre-wrap break-words">{selectedCard.content}</div>}
+                            {selectedCard.imageUrl && <img src={selectedCard.imageUrl} alt="" className="max-w-full max-h-[300px] rounded-md mb-4" />}
+                            <div className="border-t border-slate-200 pt-4">
+                                <div className="text-[13px] font-semibold text-slate-600 mb-3">💬 댓글 ({(selectedCard.comments || []).length})</div>
+                                <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto">
+                                    {(selectedCard.comments || []).map(c => (
+                                        <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group/c relative">
+                                            <button onClick={() => confirmDel(() => { const updated = { ...selectedCard, comments: (selectedCard.comments || []).filter(x => x.id !== c.id) }; onSaveBoard(updated); setSelectedCard(updated); })}
+                                                className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
+                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                            <div className="text-[11px] text-slate-400 mt-1">{MCTX[c.author]?.emoji} {c.author} · {c.date}</div>
+                                        </div>
+                                    ))}
+                                    {(selectedCard.comments || []).length === 0 && <div className="text-[12px] text-slate-300 py-3 text-center">아직 댓글이 없습니다</div>}
+                                </div>
+                                {boardCmtImg.preview}
+                                <div className="flex gap-2 items-center">
+                                    <input value={boardComment} onChange={e => setBoardComment(e.target.value)} placeholder="댓글 작성... (Ctrl+V 이미지)"
+                                        className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                                        onPaste={boardCmtImg.onPaste}
+                                        onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!boardComment.trim() && !boardCmtImg.img) return; clearDraft(`comment_aibotboard_${selectedCard.id}`); const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: genId(), author: userName, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: boardCmtImg.img || undefined }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); boardCmtImg.clear(); } }} />
+                                    <button onClick={() => { if (!boardComment.trim() && !boardCmtImg.img) return; clearDraft(`comment_aibotboard_${selectedCard.id}`); const updated = { ...selectedCard, comments: [...(selectedCard.comments || []), { id: genId(), author: userName, text: boardComment.trim(), date: new Date().toLocaleDateString("ko-KR"), imageUrl: boardCmtImg.img || undefined }] }; onSaveBoard(updated); setSelectedCard(updated); setBoardComment(""); boardCmtImg.clear(); }}
+                                        className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">{boardCmtImg.uploading ? "⏳" : "전송"}</button>
+                                </div>
+                                {boardComment && hasDraft(`comment_aibotboard_${selectedCard.id}`) && <div className="text-[11px] text-amber-500 mt-1">(임시저장)</div>}
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-between p-4 border-t border-slate-200">
+                            {(userName === selectedCard.author || userName === "박일웅") && (
+                                <button onClick={() => { setBoardTitle(selectedCard.title); setBoardContent(selectedCard.content); setBoardColor(selectedCard.color); setBoardEditing(true); }} className="px-3 py-1.5 text-[13px] text-blue-600 hover:bg-blue-50 rounded-lg font-medium">수정</button>
+                            )}
+                            <div className="flex items-center gap-3">
+                                {(userName === selectedCard.author || userName === "박일웅") && (
+                                    <button onClick={() => confirmDel(() => { onDeleteBoard(selectedCard.id); setSelectedCard(null); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                                )}
+                                <button onClick={() => { setSelectedCard(null); setBoardComment(""); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Board edit modal */}
+            {selectedCard && boardEditing && (
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => { setBoardEditing(false); boardImg.clear(); }}>
+                    <div className="bg-white rounded-xl w-full shadow-2xl" style={{maxWidth:560}} onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-4 border-b border-slate-200">
+                            <h3 className="text-[15px] font-bold text-slate-800">글 수정</h3>
+                            <button onClick={() => { setBoardEditing(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            <div>
+                                <label className="text-[12px] font-semibold text-slate-500 block mb-1">제목 *</label>
+                                <input value={boardTitle} onChange={e => setBoardTitle(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" style={{height:48}} onPaste={boardImg.onPaste} />
+                            </div>
+                            <div>
+                                <label className="text-[12px] font-semibold text-slate-500 block mb-1">내용</label>
+                                <textarea value={boardContent} onChange={e => setBoardContent(e.target.value)}
+                                    className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
+                            </div>
+                            {boardImg.preview}
+                            <ColorPicker color={boardColor} onColor={setBoardColor} />
+                        </div>
+                        <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
+                            <button onClick={() => { setBoardEditing(false); boardImg.clear(); }} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
+                            <button onClick={() => { const updated = { ...selectedCard, title: boardTitle.trim() || "제목 없음", content: boardContent, color: boardColor, updatedAt: new Date().toISOString().split("T")[0], imageUrl: boardImg.img || undefined }; onSaveBoard(updated); setSelectedCard(updated); setBoardEditing(false); boardImg.clear(); }} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">{boardImg.uploading ? "⏳" : "저장"}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -129,7 +297,6 @@ export default function DashboardPage() {
     const [resources, setResources] = useState<Resource[]>([]);
     const [conferenceTrips, setConferenceTrips] = useState<ConferenceTrip[]>([]);
     const [meetings, setMeetings] = useState<Meeting[]>([]);
-    const [meetingTemplateItems, setMeetingTemplateItems] = useState<string[]>([]);
     const [philosophy, setPhilosophy] = useState<Announcement[]>([]);
     const [ideas, setIdeas] = useState<IdeaPost[]>([]);
     const [analyses, setAnalyses] = useState<Analysis[]>([]);
@@ -154,6 +321,7 @@ export default function DashboardPage() {
     const [labChat, setLabChat] = useState<TeamChatMsg[]>([]);
     const [casualChat, setCasualChat] = useState<TeamChatMsg[]>([]);
     const [aiBotChat, setAiBotChat] = useState<TeamChatMsg[]>([]);
+    const [aiBotBoard, setAiBotBoard] = useState<TeamMemoCard[]>([]);
     const [labFiles, setLabFiles] = useState<LabFile[]>([]);
     const [labBoard, setLabBoard] = useState<TeamMemoCard[]>([]);
     const [chatReadTs, setChatReadTs] = useState<Record<string, number>>({});
@@ -286,6 +454,7 @@ export default function DashboardPage() {
         ideas.filter(p => p.title.toLowerCase().includes(q) || p.body?.toLowerCase().includes(q) || p.author.includes(q)).slice(0, M).forEach(p => r.push({ type: "아이디어", icon: "💡", title: p.title, subtitle: p.author, tabId: "ideas" }));
         // Lab board
         labBoard.filter(b => b.title.toLowerCase().includes(q) || b.content?.toLowerCase().includes(q) || b.author.includes(q)).slice(0, M).forEach(b => r.push({ type: "게시판", icon: "📌", title: b.title, subtitle: b.author, tabId: "labChat" }));
+        aiBotBoard.filter(b => b.title.toLowerCase().includes(q) || b.content?.toLowerCase().includes(q) || b.author.includes(q)).slice(0, M).forEach(b => r.push({ type: "잡담 보드", icon: "📌", title: b.title, subtitle: b.author, tabId: "chat" }));
         // Team memo boards
         Object.entries(teamMemos).forEach(([tName, data]) => {
             data.kanban?.filter(c => c.title.toLowerCase().includes(q) || c.content?.toLowerCase().includes(q) || c.author?.includes(q)).slice(0, M).forEach(c => r.push({ type: `${tName}`, icon: "📌", title: c.title, subtitle: c.author || "", tabId: `teamMemo_${tName}` }));
@@ -293,7 +462,7 @@ export default function DashboardPage() {
         // Daily targets
         dailyTargets.filter(d => d.text.toLowerCase().includes(q) || d.name.includes(q)).slice(0, M).forEach(d => r.push({ type: "목표", icon: "🎯", title: `${d.name}: ${d.text.slice(0, 60)}`, subtitle: d.date, tabId: "daily" }));
         return r;
-    }, [cmdKOpen, debouncedCmdKQuery, tabs, papers, reports, experiments, analyses, todos, ipPatents, announcements, conferenceTrips, meetings, resources, ideas, labBoard, teamMemos, dailyTargets]);
+    }, [cmdKOpen, debouncedCmdKQuery, tabs, papers, reports, experiments, analyses, todos, ipPatents, announcements, conferenceTrips, meetings, resources, ideas, labBoard, aiBotBoard, teamMemos, dailyTargets]);
 
     const handleCmdKSelect = useCallback((tabId: string) => { setActiveTab(tabId); setCmdKOpen(false); }, []);
 
@@ -339,7 +508,6 @@ export default function DashboardPage() {
             if (arr(d.resources)) setResources(d.resources);
             if (arr(d.conferences)) setConferenceTrips(d.conferences);
             if (arr(d.meetings)) setMeetings(d.meetings);
-            if (arr(d.meetingTemplateItems)) setMeetingTemplateItems(d.meetingTemplateItems);
             if (arr(d.ideas)) setIdeas(d.ideas);
             if (arr(d.analyses)) setAnalyses(d.analyses);
             if (arr(d.chatPosts)) setChatPosts(d.chatPosts);
@@ -353,6 +521,7 @@ export default function DashboardPage() {
             if (arr(d.labChat)) setLabChat(d.labChat);
             if (arr(d.casualChat)) setCasualChat(d.casualChat);
             if (arr(d.aiBotChat)) setAiBotChat(d.aiBotChat);
+            if (arr(d.aiBotBoard)) setAiBotBoard(d.aiBotBoard);
             if (arr(d.labFiles)) setLabFiles(d.labFiles);
             if (arr(d.labBoard)) setLabBoard(d.labBoard);
             if (obj(d.readReceipts) && !pendingReadReceiptRef.current) setReadReceipts(d.readReceipts);
@@ -643,7 +812,7 @@ export default function DashboardPage() {
 
     // chatReadTs: mark current tab as read (on tab switch + when new msgs arrive while viewing)
     const activeChatLen = activeTab === "labChat" ? (labChat.length + labBoard.length)
-        : activeTab === "chat" ? (aiBotChat.length + chatPosts.length)
+        : activeTab === "chat" ? (aiBotChat.length + chatPosts.length + aiBotBoard.length)
         : activeTab.startsWith("teamMemo_") ? ((teamMemos[activeTab.replace("teamMemo_", "")]?.chat || []).length + (teamMemos[activeTab.replace("teamMemo_", "")]?.kanban || []).length)
         : activeTab.startsWith("memo_") ? (piChat[activeTab.replace("memo_", "")] || []).length
         : activeTab === "announcements" ? announcements.length : -1;
@@ -826,7 +995,6 @@ export default function DashboardPage() {
         });
     }, [saveSection, trackSave]);
     const handleDeleteMeeting = useCallback((id: number) => { pendingSavesRef.current++; setMeetings(prev => { const u = prev.filter(m => m.id !== id); saveSection("meetings", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleSaveMeetingTemplate = useCallback((items: string[]) => { setMeetingTemplateItems(items); pendingSavesRef.current++; saveSection("meetingTemplateItems", items).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleSaveDailyTargets = useCallback((t: DailyTarget[]) => { setDailyTargets(t); pendingSavesRef.current++; saveSection("dailyTargets", t).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleSaveIdea = useCallback((idea: IdeaPost) => {
         setIdeas(prev => {
@@ -1273,6 +1441,29 @@ export default function DashboardPage() {
         setAiBotChat([]);
         saveSection("aiBotChat", []).then(() => { pendingSavesRef.current--; });
     }, [saveSection]);
+    // ─── AI Bot Board Handlers ──────────────────────────────────────────────
+    const handleSaveAiBotBoard = useCallback((card: TeamMemoCard) => {
+        pendingSavesRef.current++;
+        setAiBotBoard(prev => {
+            const exists = prev.some(c => c.id === card.id);
+            const u = exists ? prev.map(c => c.id === card.id ? card : c) : [...prev, card];
+            if (exists) {
+                saveSection("aiBotBoard", u).then(() => { pendingSavesRef.current--; });
+            } else {
+                trackSave(card.id, "aiBotBoard", u, () => setAiBotBoard(p => p.filter(c => c.id !== card.id)));
+                pendingSavesRef.current--;
+            }
+            return u;
+        });
+    }, [saveSection, trackSave]);
+    const handleDeleteAiBotBoard = useCallback((id: number) => {
+        pendingSavesRef.current++;
+        setAiBotBoard(prev => {
+            const u = prev.filter(c => c.id !== id);
+            saveSection("aiBotBoard", u).then(() => { pendingSavesRef.current--; });
+            return u;
+        });
+    }, [saveSection]);
     const handleSaveLabBoard = useCallback((card: TeamMemoCard) => {
         pendingSavesRef.current++;
         setLabBoard(prev => {
@@ -1338,6 +1529,7 @@ export default function DashboardPage() {
         ideas: { label: "아이디어", icon: "💡", tabId: "ideas" },
         chatPosts: { label: "잡담 with AI", icon: "💡", tabId: "chat" },
         aiBotChat: { label: "AI 봇", icon: "🤖", tabId: "chat" },
+        aiBotBoard: { label: "잡담 보드", icon: "📌", tabId: "chat" },
         teams: { label: "팀", icon: "👥", tabId: "teams" },
         dailyTargets: { label: "오늘 목표", icon: "🎯", tabId: "daily" },
         schedule: { label: "일정", icon: "📅", tabId: "calendar" },
@@ -1401,6 +1593,10 @@ export default function DashboardPage() {
         labBoard.filter(b => b.author !== userName)
             .forEach(b => items.push({ author: b.author, text: b.title, section: "게시판", tabId: "labChat", timestamp: b.id, type: "board" }));
 
+        // 6b) AI bot board new posts
+        aiBotBoard.filter(b => b.author !== userName)
+            .forEach(b => items.push({ author: b.author, text: b.title, section: "잡담 보드", tabId: "chat", timestamp: b.id, type: "board" }));
+
         // 7) Team board new posts (user's teams)
         myTeams.forEach(tName => {
             (teamMemos[tName]?.kanban || []).filter(c => c.author !== userName)
@@ -1408,7 +1604,7 @@ export default function DashboardPage() {
         });
 
         // 8) Modification logs as "update" alerts (non-chat sections only)
-        const chatSections = new Set(["labChat", "teamMemos", "piChat", "labBoard", "announcements"]);
+        const chatSections = new Set(["labChat", "teamMemos", "piChat", "labBoard", "aiBotBoard", "announcements"]);
         notiLogs.filter(l => l.userName !== userName && !chatSections.has(l.section)).slice(0, 100)
             .forEach(l => {
                 const sec = NOTI_SECTION_MAP[l.section] || { label: l.section, icon: "📋", tabId: "overview" };
@@ -1418,7 +1614,7 @@ export default function DashboardPage() {
             });
 
         return items.sort((a, b) => b.timestamp - a.timestamp);
-    }, [labChat, aiBotChat, teamMemos, piChat, userName, announcements, labBoard, teams, teamNames, notiLogs]);
+    }, [labChat, aiBotChat, teamMemos, piChat, userName, announcements, labBoard, aiBotBoard, teams, teamNames, notiLogs]);
 
     const notiUnreadCount = useMemo(() => alerts.filter(a => a.timestamp > notiLastSeen).length, [alerts, notiLastSeen]);
     const [notiFilter, setNotiFilter] = useState<"all" | "mention" | "chat" | "announcement" | "board" | "update">("all");
@@ -1435,6 +1631,7 @@ export default function DashboardPage() {
     };
     const PUSH_CATEGORIES = [
         { key: "chat", label: "채팅", desc: "연구실 채팅, 팀 메모, PI 채팅" },
+        { key: "aibot", label: "AI 봇", desc: "잡담 with AI 봇 응답" },
         { key: "announcement", label: "공지", desc: "공지사항" },
         { key: "board", label: "게시판", desc: "게시판, 파일" },
         { key: "research", label: "연구", desc: "논문, 보고서, 실험, 해석, 특허" },
@@ -1461,14 +1658,15 @@ export default function DashboardPage() {
     const totalUnread = useMemo(() => {
         const labNew = labChat.filter(m => m.author !== userName && m.id > (chatReadTs.labChat || 0)).length;
         const annNew = announcements.filter(a => a.author !== userName && a.id > (chatReadTs.announcements || 0)).length;
+        const aiNew = aiBotChat.filter(m => m.author !== userName && m.id > (chatReadTs.chat || 0)).length + aiBotBoard.filter(c => c.author !== userName && c.id > (chatReadTs.chat || 0)).length;
         const teamNew = teamNames.reduce((sum, t) => {
             const ts = chatReadTs[`teamMemo_${t}`] || 0;
             return sum + (teamMemos[t]?.chat || []).filter(m => m.author !== userName && m.id > ts).length;
         }, 0);
         const piNew = memberNames.reduce((sum, n) => sum + (piChat[n] || []).filter(m => m.author !== userName && m.id > (chatReadTs[`memo_${n}`] || 0)).length, 0);
-        const total = labNew + annNew + teamNew + piNew;
+        const total = labNew + annNew + aiNew + teamNew + piNew;
         return total;
-    }, [labChat, announcements, teamMemos, piChat, chatReadTs, userName, teamNames, memberNames]);
+    }, [labChat, announcements, aiBotChat, aiBotBoard, teamMemos, piChat, chatReadTs, userName, teamNames, memberNames]);
 
     const lastBadgeCountRef = useRef(-1);
     useEffect(() => {
@@ -1535,7 +1733,7 @@ export default function DashboardPage() {
 
     const unreadCounts = useMemo<Record<string, number>>(() => ({
         labChat: labChat.filter(m => m.author !== userName && m.id > (chatReadTs.labChat || 0)).length + labBoard.filter(c => c.author !== userName && c.id > (chatReadTs.labChat || 0)).length,
-        chat: casualChat.filter(m => m.author !== userName && m.id > (chatReadTs.chat || 0)).length,
+        chat: aiBotChat.filter(m => m.author !== userName && m.id > (chatReadTs.chat || 0)).length + aiBotBoard.filter(c => c.author !== userName && c.id > (chatReadTs.chat || 0)).length,
         announcements: announcements.filter(a => a.author !== userName && a.id > (chatReadTs.announcements || 0)).length,
         ...Object.fromEntries(teamNames.map(t => {
             const ts = chatReadTs[`teamMemo_${t}`] || 0;
@@ -1544,7 +1742,7 @@ export default function DashboardPage() {
             return [`teamMemo_${t}`, chatNew + boardNew];
         })),
         ...Object.fromEntries(memberNames.map(name => [`memo_${name}`, (piChat[name] || []).filter(m => m.author !== userName && m.id > (chatReadTs[`memo_${name}`] || 0)).length])),
-    }), [labChat, casualChat, labBoard, announcements, teamNames, teamMemos, memberNames, piChat, chatReadTs, userName]);
+    }), [labChat, aiBotChat, aiBotBoard, labBoard, announcements, teamNames, teamMemos, memberNames, piChat, chatReadTs, userName]);
 
     if (!authChecked) return (
         <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -2049,10 +2247,10 @@ export default function DashboardPage() {
                     {activeTab === "lectures" && <TimetableView blocks={timetable} onSave={handleTimetableSave} onDelete={handleTimetableDelete} />}
                     {activeTab === "ip" && <IPView patents={ipPatents} onSave={handleSavePatent} onDelete={handleDeletePatent} currentUser={userName} onToggleDiscussion={p => handleSavePatent({ ...p, needsDiscussion: !p.needsDiscussion })} onReorder={handleReorderPatents} teamNames={teamNames} />}
                     {activeTab === "conferenceTrips" && <ConferenceTripView items={conferenceTrips} onSave={handleSaveConference} onDelete={handleDeleteConference} onReorder={handleReorderConferences} currentUser={userName} />}
-                    {activeTab === "meetings" && <MeetingView meetings={meetings} onSave={handleSaveMeeting} onDelete={handleDeleteMeeting} currentUser={userName} teamNames={teamNames} templateItems={meetingTemplateItems} onSaveTemplate={handleSaveMeetingTemplate} />}
+                    {activeTab === "meetings" && <MeetingView meetings={meetings} onSave={handleSaveMeeting} onDelete={handleDeleteMeeting} currentUser={userName} teamNames={teamNames} />}
                     {activeTab === "resources" && <ResourceView resources={resources} onSave={handleSaveResource} onDelete={handleDeleteResource} onReorder={handleReorderResources} currentUser={userName} />}
                     {activeTab === "ideas" && <IdeasView ideas={ideas} onSave={handleSaveIdea} onDelete={handleDeleteIdea} onReorder={handleReorderIdeas} currentUser={userName} />}
-                    {activeTab === "chat" && <ChatWithAiTab chatPosts={chatPosts} handleSaveChat={handleSaveChat} handleDeleteChat={handleDeleteChat} handleReorderChatPosts={handleReorderChatPosts} userName={userName} aiBotChat={aiBotChat} handleAddAiBotChat={handleAddAiBotChat} handleUpdateAiBotChat={handleUpdateAiBotChat} handleDeleteAiBotChat={handleDeleteAiBotChat} handleClearAiBotChat={handleClearAiBotChat} dashboardData={dashboardData} handleCalendarToggle={handleCalendarToggle} />}
+                    {activeTab === "chat" && <ChatWithAiTab chatPosts={chatPosts} handleSaveChat={handleSaveChat} handleDeleteChat={handleDeleteChat} handleReorderChatPosts={handleReorderChatPosts} userName={userName} aiBotChat={aiBotChat} handleAddAiBotChat={handleAddAiBotChat} handleUpdateAiBotChat={handleUpdateAiBotChat} handleDeleteAiBotChat={handleDeleteAiBotChat} handleClearAiBotChat={handleClearAiBotChat} dashboardData={dashboardData} handleCalendarToggle={handleCalendarToggle} readReceipts={readReceipts["chat"]} board={aiBotBoard} onSaveBoard={handleSaveAiBotBoard} onDeleteBoard={handleDeleteAiBotBoard} />}
                     {activeTab === "settings" && <SettingsView currentUser={userName} customEmojis={customEmojis} onSaveEmoji={handleSaveEmoji} statusMessages={statusMessages} onSaveStatusMsg={handleSaveStatusMsg} />}
                     {activeTab === "admin_members" && userName === "박일웅" && <AdminMemberView />}
                     {activeTab === "admin_backups" && userName === "박일웅" && <AdminBackupView />}
