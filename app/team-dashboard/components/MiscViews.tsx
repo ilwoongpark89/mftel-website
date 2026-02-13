@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useContext, memo } from "react";
-import type { Comment, ConferenceTrip, DailyTarget, IdeaPost, Resource, Announcement } from "../lib/types";
+import type { Comment, ConferenceTrip, DailyTarget, IdeaPost, Resource, Announcement, LabFile } from "../lib/types";
 import { MEMBERS, MEMBER_NAMES, DEFAULT_TEAMS, MEMO_COLORS } from "../lib/constants";
 import { genId, chatKeyDown, renderWithMentions, saveDraft, loadDraft, clearDraft, hasDraft } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useCommentImg } from "../lib/hooks";
-import { ColorPicker, SavingBadge } from "./shared";
+import { ColorPicker, SavingBadge, DetailModal3Col } from "./shared";
+import type { ChatMessage } from "./shared";
 
 const DailyTargetView = memo(function DailyTargetView({ targets, onSave, currentUser }: { targets: DailyTarget[]; onSave: (t: DailyTarget[]) => void; currentUser: string }) {
     const MEMBERS = useContext(MembersContext);
@@ -327,6 +328,12 @@ const ConferenceTripView = memo(function ConferenceTripView({ items, onSave, onD
     const [participants, setParticipants] = useState<string[]>([]);
     const [formStatus, setFormStatus] = useState<string>("관심");
     const [draggedId, setDraggedId] = useState<number | null>(null);
+    const [selected, setSelected] = useState<ConferenceTrip | null>(null);
+
+    const handleChatAdd = (msg: ChatMessage) => { if (!selected) return; const u = { ...selected, comments: [...(selected.comments || []), msg] }; onSave(u); setSelected(u); };
+    const handleChatDelete = (id: number) => { if (!selected) return; const u = { ...selected, comments: (selected.comments || []).filter(c => c.id !== id) }; onSave(u); setSelected(u); };
+    const handleFileAdd = (f: LabFile) => { if (!selected) return; const u = { ...selected, files: [...(selected.files || []), f] }; onSave(u); setSelected(u); };
+    const handleFileDelete = async (id: number) => { if (!selected) return; const fl = (selected.files || []).find(x => x.id === id); if (fl?.url?.startsWith("https://")) { try { const tk = typeof window !== "undefined" ? localStorage.getItem("dashToken") || "" : ""; await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: fl.url }), headers: { "Content-Type": "application/json", ...(tk ? { Authorization: `Bearer ${tk}` } : {} as Record<string, string>) } }); } catch (e) { console.warn("파일 삭제 실패:", e); } } const u = { ...selected, files: (selected.files || []).filter(x => x.id !== id) }; onSave(u); setSelected(u); };
 
     const modal = adding || editing !== null;
     const isEdit = !!editing;
@@ -413,7 +420,7 @@ const ConferenceTripView = memo(function ConferenceTripView({ items, onSave, onD
                         {group.items.map(c => {
                             const cmt = c.comments || [];
                             return (
-                            <div key={c.id} onClick={() => openEdit(c)}
+                            <div key={c.id} onClick={() => setSelected(c)}
                                 className={`bg-white rounded-xl p-4 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${c.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}>
                                 <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
                                     <input type="checkbox" checked={!!c.needsDiscussion} onChange={() => onSave({ ...c, needsDiscussion: !c.needsDiscussion })} className="w-3 h-3 accent-red-500" />
@@ -526,6 +533,60 @@ const ConferenceTripView = memo(function ConferenceTripView({ items, onSave, onD
                     </div>
                 </div>
             )}
+            {selected && !modal && (
+                <DetailModal3Col
+                    onClose={() => setSelected(null)}
+                    onEdit={() => { openEdit(selected); setSelected(null); }}
+                    onDelete={(currentUser === selected.creator || currentUser === "박일웅") ? () => { onDelete(selected.id); setSelected(null); } : undefined}
+                    files={selected.files || []}
+                    currentUser={currentUser}
+                    onAddFile={handleFileAdd}
+                    onDeleteFile={handleFileDelete}
+                    chatMessages={selected.comments || []}
+                    onAddChat={handleChatAdd}
+                    onDeleteChat={handleChatDelete}
+                    chatDraftKey={`comment_conf_${selected.id}`}
+                >
+                    <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selected.title}</h2>
+                    {(selected.startDate || selected.endDate) && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-[12px] font-semibold text-slate-500">기간</span>
+                            <span className="text-[13px] text-slate-700">{formatPeriod(selected.startDate, selected.endDate)}</span>
+                        </div>
+                    )}
+                    {selected.homepage && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-[12px] font-semibold text-slate-500">홈페이지</span>
+                            <a href={selected.homepage} target="_blank" rel="noopener noreferrer" className="text-[13px] text-blue-500 hover:underline truncate" onClick={e => { try { const u = new URL(selected.homepage); if (!["http:", "https:"].includes(u.protocol)) { e.preventDefault(); alert("유효하지 않은 URL입니다."); } } catch { e.preventDefault(); alert("유효하지 않은 URL입니다."); } }}>{selected.homepage}</a>
+                        </div>
+                    )}
+                    {selected.fee && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-[12px] font-semibold text-slate-500">등록비</span>
+                            <span className="text-[13px] text-slate-700">{selected.fee}</span>
+                        </div>
+                    )}
+                    {selected.status && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-[12px] font-semibold text-slate-500">상태</span>
+                            <span className="text-[12px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">{selected.status}</span>
+                        </div>
+                    )}
+                    {selected.participants.length > 0 && (
+                        <div>
+                            <span className="text-[12px] font-semibold text-slate-500 block mb-1.5">참가자</span>
+                            <div className="flex flex-wrap gap-1.5">
+                                {selected.participants.map(p => <span key={p} className="text-[12px] px-2 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[p]?.emoji || "👤"} {p}</span>)}
+                            </div>
+                        </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                        <span className="text-[12px] font-semibold text-slate-500">논의 필요</span>
+                        <span className={`text-[12px] font-medium ${selected.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>{selected.needsDiscussion ? "예" : "—"}</span>
+                    </div>
+                    {selected.creator && <div className="text-[11px] text-slate-400">작성: {MEMBERS[selected.creator]?.emoji || ""}{selected.creator}{selected.createdAt ? ` · ${new Date(selected.createdAt).toLocaleDateString("ko-KR")}` : ""}</div>}
+                </DetailModal3Col>
+            )}
         </div>
     );
 });
@@ -538,6 +599,7 @@ const ResourceView = memo(function ResourceView({ resources, onSave, onDelete, o
     const confirmDel = useContext(ConfirmDeleteContext);
     const [editing, setEditing] = useState<Resource | null>(null);
     const [adding, setAdding] = useState(false);
+    const [selectedRes, setSelectedRes] = useState<Resource | null>(null);
     const [title, setTitle] = useState("");
     const [link, setLink] = useState("");
     const [nasPath, setNasPath] = useState("");
@@ -545,6 +607,11 @@ const ResourceView = memo(function ResourceView({ resources, onSave, onDelete, o
     const [newComment, setNewComment] = useState("");
     const cImg = useCommentImg();
     const [resDraftLoaded, setResDraftLoaded] = useState(false);
+
+    const handleResChatAdd = (msg: ChatMessage) => { if (!selectedRes) return; const u = { ...selectedRes, comments: [...(selectedRes.comments || []), msg] }; onSave(u); setSelectedRes(u); };
+    const handleResChatDelete = (id: number) => { if (!selectedRes) return; const u = { ...selectedRes, comments: (selectedRes.comments || []).filter(c => c.id !== id) }; onSave(u); setSelectedRes(u); };
+    const handleResFileAdd = (f: LabFile) => { if (!selectedRes) return; const u = { ...selectedRes, files: [...(selectedRes.files || []), f] }; onSave(u); setSelectedRes(u); };
+    const handleResFileDelete = async (id: number) => { if (!selectedRes) return; const fl = (selectedRes.files || []).find(x => x.id === id); if (fl?.url?.startsWith("https://")) { try { const tk = typeof window !== "undefined" ? localStorage.getItem("dashToken") || "" : ""; await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: fl.url }), headers: { "Content-Type": "application/json", ...(tk ? { Authorization: `Bearer ${tk}` } : {} as Record<string, string>) } }); } catch (e) { console.warn("파일 삭제 실패:", e); } } const u = { ...selectedRes, files: (selectedRes.files || []).filter(x => x.id !== id) }; onSave(u); setSelectedRes(u); };
 
     const dragRes = useRef<number | null>(null);
     const [dragOverRes, setDragOverRes] = useState<number | null>(null);
@@ -593,7 +660,7 @@ const ResourceView = memo(function ResourceView({ resources, onSave, onDelete, o
                             onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDragOverRes(idx); }}
                             onDragEnd={() => { dragRes.current = null; setDragOverRes(null); }}
                             onDrop={e => { e.stopPropagation(); if (dragRes.current !== null && dragRes.current !== idx) { const reordered = [...resources]; const [moved] = reordered.splice(dragRes.current, 1); reordered.splice(idx, 0, moved); onReorder(reordered); } dragRes.current = null; setDragOverRes(null); }}
-                            onClick={() => openEdit(r)} className={`bg-white rounded-xl p-4 cursor-grab transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${dragOverRes === idx ? "ring-2 ring-blue-300" : ""} ${r.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}>
+                            onClick={() => setSelectedRes(r)} className={`bg-white rounded-xl p-4 cursor-grab transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${dragOverRes === idx ? "ring-2 ring-blue-300" : ""} ${r.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}>
                             <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
                                 <input type="checkbox" checked={!!r.needsDiscussion} onChange={() => onSave({ ...r, needsDiscussion: !r.needsDiscussion })} className="w-3 h-3 accent-red-500" />
                                 <span className={`text-[11px] font-medium ${r.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
@@ -684,6 +751,40 @@ const ResourceView = memo(function ResourceView({ resources, onSave, onDelete, o
                         </div>
                     </div>
                 </div>
+            )}
+            {selectedRes && !modal && (
+                <DetailModal3Col
+                    onClose={() => setSelectedRes(null)}
+                    onEdit={() => { openEdit(selectedRes); setSelectedRes(null); }}
+                    onDelete={(currentUser === selectedRes.author || currentUser === "박일웅") ? () => { onDelete(selectedRes.id); setSelectedRes(null); } : undefined}
+                    files={selectedRes.files || []}
+                    currentUser={currentUser}
+                    onAddFile={handleResFileAdd}
+                    onDeleteFile={handleResFileDelete}
+                    chatMessages={selectedRes.comments || []}
+                    onAddChat={handleResChatAdd}
+                    onDeleteChat={handleResChatDelete}
+                    chatDraftKey={`comment_resource_${selectedRes.id}`}
+                >
+                    <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selectedRes.title}</h2>
+                    {selectedRes.link && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-[12px] font-semibold text-slate-500">링크</span>
+                            <a href={selectedRes.link} target="_blank" rel="noopener noreferrer" className="text-[13px] text-blue-500 hover:underline truncate" onClick={e => { try { const u = new URL(selectedRes.link); if (!["http:", "https:"].includes(u.protocol)) { e.preventDefault(); alert("유효하지 않은 URL입니다."); } } catch { e.preventDefault(); alert("유효하지 않은 URL입니다."); } }}>{selectedRes.link}</a>
+                        </div>
+                    )}
+                    {selectedRes.nasPath && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-[12px] font-semibold text-slate-500">NAS 경로</span>
+                            <span className="text-[13px] text-slate-700 font-mono">{selectedRes.nasPath}</span>
+                        </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                        <span className="text-[12px] font-semibold text-slate-500">논의 필요</span>
+                        <span className={`text-[12px] font-medium ${selectedRes.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>{selectedRes.needsDiscussion ? "예" : "—"}</span>
+                    </div>
+                    {selectedRes.author && <div className="text-[11px] text-slate-400">작성: {MEMBERS[selectedRes.author]?.emoji || ""}{selectedRes.author}{selectedRes.date ? ` · ${selectedRes.date}` : ""}</div>}
+                </DetailModal3Col>
             )}
         </div>
     );
@@ -926,8 +1027,8 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
 });
 
 const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, onDelete, onUpdate, onReorder, philosophy, onAddPhilosophy, onDeletePhilosophy, onUpdatePhilosophy, onReorderPhilosophy, currentUser }: {
-    announcements: Announcement[]; onAdd: (text: string, pinned?: boolean) => void; onDelete: (id: number) => void; onUpdate: (ann: Announcement) => void; onReorder: (list: Announcement[]) => void;
-    philosophy: Announcement[]; onAddPhilosophy: (text: string) => void; onDeletePhilosophy: (id: number) => void; onUpdatePhilosophy: (p: Announcement) => void; onReorderPhilosophy: (list: Announcement[]) => void;
+    announcements: Announcement[]; onAdd: (text: string, pinned?: boolean, imageUrl?: string) => void; onDelete: (id: number) => void; onUpdate: (ann: Announcement) => void; onReorder: (list: Announcement[]) => void;
+    philosophy: Announcement[]; onAddPhilosophy: (text: string, imageUrl?: string) => void; onDeletePhilosophy: (id: number) => void; onUpdatePhilosophy: (p: Announcement) => void; onReorderPhilosophy: (list: Announcement[]) => void;
     currentUser: string;
 }) {
     const confirmDel = useContext(ConfirmDeleteContext);
@@ -942,9 +1043,13 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
     const [newText, setNewText] = useState("");
     const [editing, setEditing] = useState<(Announcement & { _col: ColKey }) | null>(null);
     const [editText, setEditText] = useState("");
+    const [editImgUrl, setEditImgUrl] = useState<string>("");
     const [draggedItem, setDraggedItem] = useState<{ id: number; col: ColKey } | null>(null);
     const [dropCol, setDropCol] = useState<ColKey | null>(null);
     const [dropIdx, setDropIdx] = useState<number>(-1);
+
+    const annImg = useCommentImg();
+    const editImg = useCommentImg();
 
     const isLeader = currentUser === "박일웅" || Object.values(DEFAULT_TEAMS).some(t => t.lead === currentUser);
     const isPI = currentUser === "박일웅";
@@ -960,20 +1065,24 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
         culture: philosophy.map(p => ({ ...p, _col: "culture" as ColKey })),
     };
 
-    const openAdd = (col: ColKey) => { setAddingCol(col); setNewText(""); };
+    const openAdd = (col: ColKey) => { setAddingCol(col); setNewText(""); annImg.clear(); };
     const submitAdd = () => {
         if (!newText.trim() || !addingCol) return;
-        if (addingCol === "urgent") onAdd(newText.trim(), true);
-        else if (addingCol === "general") onAdd(newText.trim(), false);
-        else onAddPhilosophy(newText.trim());
-        setNewText(""); setAddingCol(null); clearDraft("ann_board");
+        const imgUrl = annImg.img || undefined;
+        if (addingCol === "urgent") onAdd(newText.trim(), true, imgUrl);
+        else if (addingCol === "general") onAdd(newText.trim(), false, imgUrl);
+        else onAddPhilosophy(newText.trim(), imgUrl);
+        setNewText(""); setAddingCol(null); clearDraft("ann_board"); annImg.clear();
     };
-    const openEdit = (item: Announcement & { _col: ColKey }) => { setEditing(item); setEditText(item.text); };
+    const openEdit = (item: Announcement & { _col: ColKey }) => { setEditing(item); setEditText(item.text); setEditImgUrl(item.imageUrl || ""); editImg.clear(); };
     const saveEdit = () => {
         if (!editing || !editText.trim()) return;
-        if (editing._col === "culture") onUpdatePhilosophy({ ...editing, text: editText.trim() });
-        else onUpdate({ ...editing, text: editText.trim() });
-        setEditing(null);
+        const finalImg = editImg.img || editImgUrl || undefined;
+        const { _col, ...rest } = editing;
+        const updated = { ...rest, text: editText.trim(), imageUrl: finalImg };
+        if (_col === "culture") onUpdatePhilosophy(updated);
+        else onUpdate(updated);
+        setEditing(null); editImg.clear();
     };
     const deleteItem = (item: Announcement & { _col: ColKey }) => {
         if (item._col === "culture") onDeletePhilosophy(item.id);
@@ -1048,17 +1157,20 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
                                     <span className="text-[12px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: colCfg.accent, color: colCfg.color }}>{items.length}</span>
                                 </div>
                                 {isLeader && (
-                                    <button onClick={() => openAdd(col.key)} className="w-6 h-6 flex items-center justify-center rounded-md text-[14px] hover:bg-slate-100 transition-colors" style={{ color: colCfg.color }}>+</button>
+                                    <button onClick={() => openAdd(col.key)} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">+ {col.key === "urgent" ? "긴급 공지" : col.key === "general" ? "일반 공지" : "문화 추가"}</button>
                                 )}
                             </div>
                             {/* Add input */}
                             {addingCol === col.key && (
                                 <div className="mb-3 rounded-xl p-3" style={{ background: "#F8F9FA", border: `1px solid ${colCfg.accent}` }}>
-                                    <textarea value={newText} onChange={e => setNewText(e.target.value)} placeholder="내용 작성..."
+                                    <textarea value={newText} onChange={e => setNewText(e.target.value)} placeholder="내용 작성... (Ctrl+V로 이미지 첨부)"
                                         className="w-full bg-transparent text-[14px] focus:outline-none resize-none" rows={2} autoFocus
-                                        onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && newText.trim()) { e.preventDefault(); submitAdd(); } if (e.key === "Escape") { setAddingCol(null); setNewText(""); } }} />
+                                        onPaste={annImg.onPaste}
+                                        onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && newText.trim()) { e.preventDefault(); submitAdd(); } if (e.key === "Escape") { setAddingCol(null); setNewText(""); annImg.clear(); } }} />
+                                    {annImg.preview}
+                                    {annImg.uploading && <div className="text-[11px] text-slate-400 mb-1">업로드 중...</div>}
                                     <div className="flex justify-end gap-1.5 mt-1">
-                                        <button onClick={() => { setAddingCol(null); setNewText(""); }} className="px-2.5 py-1 text-[12px] text-slate-400 hover:text-slate-600">취소</button>
+                                        <button onClick={() => { setAddingCol(null); setNewText(""); annImg.clear(); }} className="px-2.5 py-1 text-[12px] text-slate-400 hover:text-slate-600">취소</button>
                                         <button onClick={submitAdd} className="px-3 py-1 rounded-lg text-[12px] font-medium text-white" style={{ background: colCfg.color }}>게시</button>
                                     </div>
                                 </div>
@@ -1075,6 +1187,7 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
                                         <div className="flex items-start justify-between">
                                             <span className="text-[14px] text-slate-800 whitespace-pre-wrap break-words line-clamp-4 flex-1" style={{ lineHeight: 1.6 }}>{item.text}<SavingBadge id={item.id} /></span>
                                         </div>
+                                        {item.imageUrl && <img src={item.imageUrl} alt="" className="max-w-full max-h-[80px] rounded-md mt-1.5" />}
                                         <div className="mt-auto pt-2 text-[11px] text-slate-400">{item.author} · {item.date}</div>
                                     </div>
                                 ))}
@@ -1096,7 +1209,15 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
                         </div>
                         <div className="p-4">
                             <textarea value={editText} onChange={e => setEditText(e.target.value)} rows={4}
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" autoFocus />
+                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" autoFocus
+                                onPaste={editImg.onPaste} placeholder="Ctrl+V로 이미지 첨부 가능" />
+                            {editImg.uploading && <div className="text-[11px] text-slate-400 mt-1">업로드 중...</div>}
+                            {editImg.img ? editImg.preview : editImgUrl ? (
+                                <div className="mt-2 relative inline-block">
+                                    <img src={editImgUrl} alt="" className="max-h-[80px] rounded-md" />
+                                    <button onClick={() => setEditImgUrl("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center">✕</button>
+                                </div>
+                            ) : null}
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-200">
                             <div className="flex gap-2">

@@ -46,8 +46,8 @@ const AiBotChat = dynamic(() => import("./components/AiBotChat").then(m => ({ de
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 
 // ─── Chat with AI Tab (board + ideas + AI bot) ──────────────────────────────
-function ChatWithAiTab({ chatPosts, handleSaveChat, handleDeleteChat, handleReorderChatPosts, userName, aiBotChat, handleAddAiBotChat, handleUpdateAiBotChat, handleDeleteAiBotChat, handleClearAiBotChat, dashboardData, handleCalendarToggle, readReceipts, board, onSaveBoard, onDeleteBoard }: {
-    chatPosts: IdeaPost[]; handleSaveChat: (p: IdeaPost) => void; handleDeleteChat: (id: number) => void; handleReorderChatPosts: (list: IdeaPost[]) => void; userName: string;
+function ChatWithAiTab({ userName, aiBotChat, handleAddAiBotChat, handleUpdateAiBotChat, handleDeleteAiBotChat, handleClearAiBotChat, dashboardData, handleCalendarToggle, readReceipts, board, onSaveBoard, onDeleteBoard }: {
+    userName: string;
     aiBotChat: TeamChatMsg[]; handleAddAiBotChat: (msg: TeamChatMsg) => void; handleUpdateAiBotChat: (msg: TeamChatMsg) => void; handleDeleteAiBotChat: (id: number) => void; handleClearAiBotChat: () => void;
     dashboardData: DashboardData; handleCalendarToggle: (name: string, date: string, type: string | null, desc?: string) => void;
     readReceipts?: Record<string, number>;
@@ -55,7 +55,7 @@ function ChatWithAiTab({ chatPosts, handleSaveChat, handleDeleteChat, handleReor
 }) {
     const MCTX = useContext(MembersContext);
     const confirmDel = useContext(ConfirmDeleteContext);
-    const [mobileTab, setMobileTab] = useState<"board" | "cards" | "bot">("bot");
+    const [mobileTab, setMobileTab] = useState<"board" | "bot">("bot");
     // Board state
     const [boardAdding, setBoardAdding] = useState(false);
     const [boardTitle, setBoardTitle] = useState("");
@@ -78,63 +78,61 @@ function ChatWithAiTab({ chatPosts, handleSaveChat, handleDeleteChat, handleReor
         <div className="flex flex-col flex-1 min-h-0">
             {/* Mobile tab toggle */}
             <div className="flex md:hidden border-b border-slate-200 mb-2">
-                {([["board", "📌", "보드"], ["cards", "💡", "잡담"], ["bot", "🤖", "AI 봇"]] as const).map(([id, icon, label]) => (
+                {([["board", "📌", "보드"], ["bot", "🤖", "AI 봇"]] as const).map(([id, icon, label]) => (
                     <button key={id} onClick={() => setMobileTab(id as typeof mobileTab)}
                         className={`flex-1 py-2 text-[13px] font-medium transition-colors ${mobileTab === id ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400"}`}>
                         {icon} {label}
                     </button>
                 ))}
             </div>
-            {/* Desktop: 1fr 1.5fr 2.5fr grid / Mobile: tab switching */}
-            <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{ gridTemplateColumns: "1fr 1.5fr 2.5fr" }}>
-                {/* Board */}
+            {/* Desktop: 2fr 3fr grid (board + AI chat) / Mobile: tab switching */}
+            <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{ gridTemplateColumns: "2fr 3fr" }}>
+                {/* Board - 2-column card grid */}
                 <div className={`flex-col min-w-0 ${mobileTab === "board" ? "flex flex-1 min-h-0" : "hidden"} md:flex`}>
                     <div className="flex items-center justify-between mb-2">
                         <h3 className="text-[14px] font-bold text-slate-700">📌 보드</h3>
-                        <button onClick={openBoardAdd} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
+                        <button onClick={openBoardAdd} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 새 글 작성</button>
                     </div>
-                    <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
-                        {board.map(card => {
-                            const cmts = card.comments || [];
-                            return (
-                                <div key={card.id} onClick={() => openBoardDetail(card)}
-                                    className="rounded-xl p-3 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col group relative"
-                                    style={{ background: card.color || "#fff", border: "1px solid #E2E8F0", borderLeft: card.needsDiscussion ? "3px solid #EF4444" : undefined }}>
-                                    <label className="flex items-center gap-1 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
-                                        <input type="checkbox" checked={!!card.needsDiscussion} onChange={() => onSaveBoard({ ...card, needsDiscussion: !card.needsDiscussion })} className="w-3 h-3 accent-red-500" />
-                                        <span className={`text-[11px] font-medium ${card.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
-                                    </label>
-                                    <div className="flex items-start justify-between mb-1">
-                                        <h4 className="text-[13px] font-semibold text-slate-800 break-words flex-1">{card.title}<SavingBadge id={card.id} /></h4>
-                                        <span className="text-[11px] text-slate-400 ml-1 whitespace-nowrap">{card.updatedAt}</span>
+                    <div className="flex-1 min-h-0 overflow-y-auto">
+                        <div className="grid grid-cols-2 gap-2">
+                            {board.map(card => {
+                                const cmts = card.comments || [];
+                                return (
+                                    <div key={card.id} onClick={() => openBoardDetail(card)}
+                                        className="rounded-xl p-3 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col group relative"
+                                        style={{ background: card.color || "#fff", border: "1px solid #E2E8F0", borderLeft: card.needsDiscussion ? "3px solid #EF4444" : undefined }}>
+                                        <label className="flex items-center gap-1 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
+                                            <input type="checkbox" checked={!!card.needsDiscussion} onChange={() => onSaveBoard({ ...card, needsDiscussion: !card.needsDiscussion })} className="w-3 h-3 accent-red-500" />
+                                            <span className={`text-[11px] font-medium ${card.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
+                                        </label>
+                                        <div className="flex items-start justify-between mb-1">
+                                            <h4 className="text-[13px] font-semibold text-slate-800 break-words flex-1">{card.title}<SavingBadge id={card.id} /></h4>
+                                            <span className="text-[11px] text-slate-400 ml-1 whitespace-nowrap">{card.updatedAt}</span>
+                                        </div>
+                                        {card.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-2 break-words">{card.content}</div>}
+                                        <div className="text-[11px] text-slate-400 mb-1">{MCTX[card.author]?.emoji || "👤"} {card.author}</div>
+                                        {cmts.length > 0 ? (
+                                            <div className="border-t border-slate-100 pt-1.5 mt-auto space-y-0.5">
+                                                <div className="text-[11px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
+                                                {cmts.slice(-2).map(c => (
+                                                    <div key={c.id} className="text-[11px] text-slate-500 truncate">
+                                                        <span className="font-medium text-slate-600">{MCTX[c.author]?.emoji}{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="border-t border-slate-100 pt-1.5 mt-auto">
+                                                <div className="text-[11px] text-slate-300">💬 댓글 없음</div>
+                                            </div>
+                                        )}
                                     </div>
-                                    {card.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-2 break-words">{card.content}</div>}
-                                    <div className="text-[11px] text-slate-400 mb-1">{MCTX[card.author]?.emoji || "👤"} {card.author}</div>
-                                    {cmts.length > 0 ? (
-                                        <div className="border-t border-slate-100 pt-1.5 mt-auto space-y-0.5">
-                                            <div className="text-[11px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
-                                            {cmts.slice(-2).map(c => (
-                                                <div key={c.id} className="text-[11px] text-slate-500 truncate">
-                                                    <span className="font-medium text-slate-600">{MCTX[c.author]?.emoji}{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="border-t border-slate-100 pt-1.5 mt-auto">
-                                            <div className="text-[11px] text-slate-300">💬 댓글 없음</div>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                        {board.length === 0 && (
-                            <button onClick={openBoardAdd} className="w-full py-6 text-[12px] text-slate-400 hover:text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">+ 추가</button>
-                        )}
+                                );
+                            })}
+                            {board.length === 0 && (
+                                <button onClick={openBoardAdd} className="col-span-2 w-full py-6 text-[12px] text-slate-400 hover:text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">+ 새 글 작성</button>
+                            )}
+                        </div>
                     </div>
-                </div>
-                {/* Ideas */}
-                <div className={`flex-1 min-h-0 overflow-y-auto ${mobileTab !== "cards" ? "hidden md:block" : ""}`}>
-                    <IdeasView ideas={chatPosts} onSave={handleSaveChat} onDelete={handleDeleteChat} onReorder={handleReorderChatPosts} currentUser={userName} columns={1} />
                 </div>
                 {/* AI Bot Chat */}
                 <div className={`flex flex-col min-h-0 ${mobileTab !== "bot" ? "hidden md:flex" : "flex"}`}>
@@ -851,11 +849,11 @@ export default function DashboardPage() {
     const handleDeleteTodo = useCallback((id: number) => { pendingSavesRef.current++; setTodos(prev => { const u = prev.filter(t => t.id !== id); saveSection("todos", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
     const handleUpdateTodo = useCallback((t: Todo) => { pendingSavesRef.current++; setTodos(prev => { const u = prev.map(x => x.id === t.id ? t : x); saveSection("todos", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
     const handleReorderTodos = useCallback((list: Todo[]) => { setTodos(list); pendingSavesRef.current++; saveSection("todos", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
-    const handleAddAnn = useCallback((text: string, pinned = false) => { const nid = genId(); setAnnouncements(prev => { const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned }, ...prev]; trackSave(nid, "announcements", u, () => setAnnouncements(pp => pp.filter(a => a.id !== nid))); return u; }); }, [userName, trackSave]);
+    const handleAddAnn = useCallback((text: string, pinned = false, imageUrl?: string) => { const nid = genId(); setAnnouncements(prev => { const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned, ...(imageUrl ? { imageUrl } : {}) }, ...prev]; trackSave(nid, "announcements", u, () => setAnnouncements(pp => pp.filter(a => a.id !== nid))); return u; }); }, [userName, trackSave]);
     const handleDelAnn = useCallback((id: number) => { pendingSavesRef.current++; setAnnouncements(prev => { const u = prev.filter(a => a.id !== id); saveSection("announcements", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
     const handleUpdateAnn = useCallback((ann: Announcement) => { pendingSavesRef.current++; setAnnouncements(prev => { const u = prev.map(a => a.id === ann.id ? ann : a); saveSection("announcements", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
     const handleReorderAnn = useCallback((list: Announcement[]) => { setAnnouncements(list); pendingSavesRef.current++; saveSection("announcements", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
-    const handleAddPhil = useCallback((text: string) => { const nid = genId(); setPhilosophy(prev => { const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned: false }, ...prev]; trackSave(nid, "philosophy", u, () => setPhilosophy(pp => pp.filter(p => p.id !== nid))); return u; }); }, [userName, trackSave]);
+    const handleAddPhil = useCallback((text: string, imageUrl?: string) => { const nid = genId(); setPhilosophy(prev => { const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned: false, ...(imageUrl ? { imageUrl } : {}) }, ...prev]; trackSave(nid, "philosophy", u, () => setPhilosophy(pp => pp.filter(p => p.id !== nid))); return u; }); }, [userName, trackSave]);
     const handleDelPhil = useCallback((id: number) => { pendingSavesRef.current++; setPhilosophy(prev => { const u = prev.filter(p => p.id !== id); saveSection("philosophy", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
     const handleUpdatePhil = useCallback((p: Announcement) => { pendingSavesRef.current++; setPhilosophy(prev => { const u = prev.map(x => x.id === p.id ? p : x); saveSection("philosophy", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
     const handleReorderPhil = useCallback((list: Announcement[]) => { setPhilosophy(list); pendingSavesRef.current++; saveSection("philosophy", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
@@ -1646,12 +1644,13 @@ export default function DashboardPage() {
         if (tk) fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tk}` }, body: JSON.stringify({ section: "pushPrefs", data: next, userName }) }).catch(e => console.warn("Background request failed:", e));
     };
     const notiTimeAgo = (ts: number) => {
-        const diff = Math.floor((Date.now() - ts) / 1000);
+        const ms = Math.floor(ts / 100); // convert genId-scale (Date.now()*100) back to ms
+        const diff = Math.floor((Date.now() - ms) / 1000);
         if (diff < 60) return "방금 전";
         if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
         if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
         if (diff < 604800) return `${Math.floor(diff / 86400)}일 전`;
-        return new Date(ts).toLocaleDateString("ko-KR");
+        return new Date(ms).toLocaleDateString("ko-KR");
     };
 
     // Tab notification: flash title + favicon badge when hidden & unread
@@ -2244,13 +2243,13 @@ export default function DashboardPage() {
                         conferenceTrips.forEach(c => calDl.push({ title: c.title, date: c.startDate, type: "학회", color: "#60A5FA", icon: "✈️", tab: "conferenceTrips" }));
                         return <CalendarGrid data={[...vacations.map(v => ({ ...v, description: undefined })), ...schedule]} currentUser={userName} types={CALENDAR_TYPES} onToggle={handleCalendarToggle} dispatches={dispatches} onDispatchSave={handleDispatchSave} onDispatchDelete={handleDispatchDelete} deadlines={calDl} onNavigate={setActiveTab} />;
                     })()}
-                    {activeTab === "lectures" && <TimetableView blocks={timetable} onSave={handleTimetableSave} onDelete={handleTimetableDelete} />}
+                    {activeTab === "lectures" && <TimetableView blocks={timetable} onSave={handleTimetableSave} onDelete={handleTimetableDelete} currentUser={userName} />}
                     {activeTab === "ip" && <IPView patents={ipPatents} onSave={handleSavePatent} onDelete={handleDeletePatent} currentUser={userName} onToggleDiscussion={p => handleSavePatent({ ...p, needsDiscussion: !p.needsDiscussion })} onReorder={handleReorderPatents} teamNames={teamNames} />}
                     {activeTab === "conferenceTrips" && <ConferenceTripView items={conferenceTrips} onSave={handleSaveConference} onDelete={handleDeleteConference} onReorder={handleReorderConferences} currentUser={userName} />}
                     {activeTab === "meetings" && <MeetingView meetings={meetings} onSave={handleSaveMeeting} onDelete={handleDeleteMeeting} currentUser={userName} teamNames={teamNames} />}
                     {activeTab === "resources" && <ResourceView resources={resources} onSave={handleSaveResource} onDelete={handleDeleteResource} onReorder={handleReorderResources} currentUser={userName} />}
                     {activeTab === "ideas" && <IdeasView ideas={ideas} onSave={handleSaveIdea} onDelete={handleDeleteIdea} onReorder={handleReorderIdeas} currentUser={userName} />}
-                    {activeTab === "chat" && <ChatWithAiTab chatPosts={chatPosts} handleSaveChat={handleSaveChat} handleDeleteChat={handleDeleteChat} handleReorderChatPosts={handleReorderChatPosts} userName={userName} aiBotChat={aiBotChat} handleAddAiBotChat={handleAddAiBotChat} handleUpdateAiBotChat={handleUpdateAiBotChat} handleDeleteAiBotChat={handleDeleteAiBotChat} handleClearAiBotChat={handleClearAiBotChat} dashboardData={dashboardData} handleCalendarToggle={handleCalendarToggle} readReceipts={readReceipts["chat"]} board={aiBotBoard} onSaveBoard={handleSaveAiBotBoard} onDeleteBoard={handleDeleteAiBotBoard} />}
+                    {activeTab === "chat" && <ChatWithAiTab userName={userName} aiBotChat={aiBotChat} handleAddAiBotChat={handleAddAiBotChat} handleUpdateAiBotChat={handleUpdateAiBotChat} handleDeleteAiBotChat={handleDeleteAiBotChat} handleClearAiBotChat={handleClearAiBotChat} dashboardData={dashboardData} handleCalendarToggle={handleCalendarToggle} readReceipts={readReceipts["chat"]} board={aiBotBoard} onSaveBoard={handleSaveAiBotBoard} onDeleteBoard={handleDeleteAiBotBoard} />}
                     {activeTab === "settings" && <SettingsView currentUser={userName} customEmojis={customEmojis} onSaveEmoji={handleSaveEmoji} statusMessages={statusMessages} onSaveStatusMsg={handleSaveStatusMsg} />}
                     {activeTab === "admin_members" && userName === "박일웅" && <AdminMemberView />}
                     {activeTab === "admin_backups" && userName === "박일웅" && <AdminBackupView />}
@@ -2485,8 +2484,8 @@ export default function DashboardPage() {
                         {!notiSettingsOpen && filteredAlerts.slice(0, 100).map((alert, i) => {
                             const isNew = alert.timestamp > notiLastSeen;
                             const prev = filteredAlerts[i - 1];
-                            const prevDate = prev ? new Date(prev.timestamp).toLocaleDateString("ko-KR") : "";
-                            const currDate = new Date(alert.timestamp).toLocaleDateString("ko-KR");
+                            const prevDate = prev ? new Date(Math.floor(prev.timestamp / 100)).toLocaleDateString("ko-KR") : "";
+                            const currDate = new Date(Math.floor(alert.timestamp / 100)).toLocaleDateString("ko-KR");
                             const showDate = currDate !== prevDate;
                             const typeIcon = alert.type === "mention" ? "💬" : alert.type === "announcement" ? "📢" : alert.type === "board" ? "📌" : alert.type === "update" ? "🔄" : "💬";
                             const typeLabel = alert.type === "mention" ? "에서 멘션했습니다"

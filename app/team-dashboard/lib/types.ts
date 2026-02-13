@@ -12,13 +12,13 @@ export type ExperimentLog = { id: number; date: string; author: string; text: st
 
 export type Experiment = { id: number; title: string; equipment: string; status: string; assignees: string[]; goal: string; startDate: string; endDate: string; logs: ExperimentLog[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string; files?: LabFile[] };
 
-export type Announcement = { id: number; text: string; author: string; date: string; pinned: boolean };
+export type Announcement = { id: number; text: string; author: string; date: string; pinned: boolean; imageUrl?: string };
 
 export type VacationEntry = { name: string; date: string; type: string };
 
 export type ScheduleEvent = { name: string; date: string; type: string; description: string };
 
-export type TimetableBlock = { id: number; day: number; startSlot: number; endSlot: number; name: string; students: string[]; color: string; semester?: string };
+export type TimetableBlock = { id: number; day: number; startSlot: number; endSlot: number; name: string; students: string[]; color: string; semester?: string; location?: string; creator?: string };
 
 export type ChecklistItem = { id: number; text: string; done: boolean };
 
@@ -26,7 +26,7 @@ export type Report = { id: number; title: string; assignees: string[]; creator: 
 
 export type DailyTarget = { name: string; date: string; text: string };
 
-export type Resource = { id: number; title: string; link: string; nasPath: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean };
+export type Resource = { id: number; title: string; link: string; nasPath: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean; files?: LabFile[] };
 
 export type IdeaPost = { id: number; title: string; body: string; author: string; date: string; comments: Comment[]; needsDiscussion?: boolean; color?: string; borderColor?: string; imageUrl?: string };
 
@@ -38,9 +38,9 @@ export type TeamChatMsg = { id: number; author: string; text: string; date: stri
 
 export type LabFile = { id: number; name: string; size: number; url: string; type: string; uploader: string; date: string };
 
-export type ConferenceTrip = { id: number; title: string; startDate: string; endDate: string; homepage: string; fee: string; participants: string[]; creator: string; createdAt: string; status?: string; comments?: Comment[]; needsDiscussion?: boolean };
+export type ConferenceTrip = { id: number; title: string; startDate: string; endDate: string; homepage: string; fee: string; participants: string[]; creator: string; createdAt: string; status?: string; comments?: Comment[]; needsDiscussion?: boolean; files?: LabFile[] };
 
-export type Meeting = { id: number; title: string; goal: string; summary: string; date: string; assignees: string[]; status: string; creator: string; createdAt: string; comments: Comment[]; team?: string; needsDiscussion?: boolean };
+export type Meeting = { id: number; title: string; goal: string; summary: string; date: string; assignees: string[]; status: string; creator: string; createdAt: string; comments: Comment[]; team?: string; needsDiscussion?: boolean; files?: LabFile[] };
 
 export type Patent = { id: number; title: string; deadline: string; status: string; assignees: string[]; progress?: number; creator?: string; createdAt?: string; needsDiscussion?: boolean; team?: string; files?: LabFile[]; comments?: Comment[] };
 

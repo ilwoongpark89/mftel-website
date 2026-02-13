@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef, useContext, useMemo, memo } from "react";
-import type { Comment, Meeting } from "../lib/types";
+import type { Comment, Meeting, LabFile } from "../lib/types";
 import { MEMBERS, MEMBER_NAMES } from "../lib/constants";
 import { genId, toggleArr, chatKeyDown, renderWithMentions, saveDraft, loadDraft, clearDraft } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useCommentImg } from "../lib/hooks";
-import { PillSelect, SavingBadge, TeamFilterBar, TeamSelect } from "./shared";
+import { PillSelect, SavingBadge, TeamFilterBar, TeamSelect, DetailModal3Col } from "./shared";
+import type { ChatMessage } from "./shared";
 
 function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, teamNames }: {
     meeting: Meeting | null; onSave: (m: Meeting) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; teamNames: string[];
@@ -128,7 +129,13 @@ const MeetingView = memo(function MeetingView({ meetings, onSave, onDelete, curr
     const MEMBERS = useContext(MembersContext);
     const [editing, setEditing] = useState<Meeting | null>(null);
     const [adding, setAdding] = useState(false);
+    const [selected, setSelected] = useState<Meeting | null>(null);
     const [filterTeam, setFilterTeam] = useState("전체");
+
+    const handleChatAdd = (msg: ChatMessage) => { if (!selected) return; const u = { ...selected, comments: [...selected.comments, msg] }; onSave(u); setSelected(u); };
+    const handleChatDelete = (id: number) => { if (!selected) return; const u = { ...selected, comments: selected.comments.filter(c => c.id !== id) }; onSave(u); setSelected(u); };
+    const handleFileAdd = (f: LabFile) => { if (!selected) return; const u = { ...selected, files: [...(selected.files || []), f] }; onSave(u); setSelected(u); };
+    const handleFileDelete = async (id: number) => { if (!selected) return; const f = (selected.files || []).find(x => x.id === id); if (f?.url?.startsWith("https://")) { try { const tk = typeof window !== "undefined" ? localStorage.getItem("dashToken") || "" : ""; await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: f.url }), headers: { "Content-Type": "application/json", ...(tk ? { Authorization: `Bearer ${tk}` } : {} as Record<string, string>) } }); } catch (e) { console.warn("파일 삭제 실패:", e); } } const u = { ...selected, files: (selected.files || []).filter(x => x.id !== id) }; onSave(u); setSelected(u); };
 
     const filtered = filterTeam === "전체" ? meetings : meetings.filter(m => m.team === filterTeam);
     const sorted = useMemo(() => [...filtered].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), [filtered]);
@@ -161,7 +168,7 @@ const MeetingView = memo(function MeetingView({ meetings, onSave, onDelete, curr
                     <h3 className="text-[15px] font-bold text-slate-700 mb-3 pb-2 border-b border-slate-200">{group.label} <span className="text-[12px] text-slate-400 font-normal ml-1">({group.items.length}건)</span></h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {group.items.map(m => (
-                    <div key={m.id} onClick={() => setEditing(m)}
+                    <div key={m.id} onClick={() => setSelected(m)}
                         className={`bg-white rounded-xl p-4 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col ${m.needsDiscussion ? "border border-slate-200 border-l-[3px] border-l-red-400" : "border border-slate-200 hover:border-slate-300"}`}>
                         <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
                             <input type="checkbox" checked={!!m.needsDiscussion} onChange={() => onSave({ ...m, needsDiscussion: !m.needsDiscussion })} className="w-3 h-3 accent-red-500" />
@@ -200,6 +207,56 @@ const MeetingView = memo(function MeetingView({ meetings, onSave, onDelete, curr
             ))}
             {adding && <MeetingFormModal meeting={null} onSave={m => { onSave(m); setAdding(false); }} onClose={() => setAdding(false)} currentUser={currentUser} teamNames={teamNames} />}
             {editing && <MeetingFormModal meeting={editing} onSave={m => { onSave(m); setEditing(null); }} onDelete={onDelete} onClose={() => setEditing(null)} currentUser={currentUser} teamNames={teamNames} />}
+            {selected && !editing && (
+                <DetailModal3Col
+                    onClose={() => setSelected(null)}
+                    onEdit={() => { setEditing(selected); setSelected(null); }}
+                    onDelete={(currentUser === selected.creator || currentUser === "박일웅") ? () => { onDelete(selected.id); setSelected(null); } : undefined}
+                    files={selected.files || []}
+                    currentUser={currentUser}
+                    onAddFile={handleFileAdd}
+                    onDeleteFile={handleFileDelete}
+                    chatMessages={selected.comments}
+                    onAddChat={handleChatAdd}
+                    onDeleteChat={handleChatDelete}
+                    chatDraftKey={`comment_meeting_${selected.id}`}
+                >
+                    <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selected.title}</h2>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[12px] font-semibold text-slate-500">날짜</span>
+                        <span className="text-[13px] text-slate-700">{selected.date}</span>
+                    </div>
+                    {selected.goal && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-[12px] font-semibold text-slate-500">목표</span>
+                            <span className="text-[13px] text-blue-600">{selected.goal}</span>
+                        </div>
+                    )}
+                    {selected.summary && (
+                        <div>
+                            <span className="text-[12px] font-semibold text-slate-500 block mb-1">내용 요약</span>
+                            <div className="text-[13px] text-slate-700 whitespace-pre-wrap break-words">{selected.summary}</div>
+                        </div>
+                    )}
+                    {selected.team && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-[12px] font-semibold text-slate-500">소속 팀</span>
+                            <span className="text-[12px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-600 font-medium">{selected.team}</span>
+                        </div>
+                    )}
+                    <div>
+                        <span className="text-[12px] font-semibold text-slate-500 block mb-1.5">참석자</span>
+                        <div className="flex flex-wrap gap-1.5">
+                            {selected.assignees.map(a => <span key={a} className="text-[12px] px-2 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-600">{MEMBERS[a]?.emoji || "👤"} {a}</span>)}
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[12px] font-semibold text-slate-500">논의 필요</span>
+                        <span className={`text-[12px] font-medium ${selected.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>{selected.needsDiscussion ? "예" : "—"}</span>
+                    </div>
+                    {selected.creator && <div className="text-[11px] text-slate-400">작성: {MEMBERS[selected.creator]?.emoji || ""}{selected.creator}{selected.createdAt ? ` · ${selected.createdAt}` : ""}</div>}
+                </DetailModal3Col>
+            )}
         </div>
     );
 });
