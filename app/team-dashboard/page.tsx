@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef, useContext, startTransition } from "react";
 
 // ─── Lib imports ────────────────────────────────────────────────────────────
-import type { TeamData, Paper, Todo, Experiment, Analysis, Patent, Report, Meeting, TeamMemoCard, TeamChatMsg, LabFile, ConferenceTrip, IdeaPost, Memo, Resource, DailyTarget, Announcement, VacationEntry, ScheduleEvent, TimetableBlock, ExpLogEntry, AnalysisLogEntry } from "./lib/types";
+import type { TeamData, Paper, Todo, Experiment, Analysis, Patent, Report, Meeting, TeamMemoCard, TeamChatMsg, LabFile, ConferenceTrip, IdeaPost, Memo, Resource, DailyTarget, Announcement, VacationEntry, ScheduleEvent, TimetableBlock, ExpLogEntry, AnalysisLogEntry, MenuConfig } from "./lib/types";
 import { DEFAULT_MEMBERS, MEMBERS, MEMBER_NAMES, STATUS_CONFIG, STATUS_KEYS, PAPER_TAGS, DEFAULT_EQUIPMENT, ANALYSIS_TOOLS, CALENDAR_TYPES, CATEGORY_COLORS, DEFAULT_TEAMS, DEFAULT_PAPERS, DEFAULT_TODOS, DEFAULT_EXPERIMENTS, DEFAULT_PATENTS, DEFAULT_TIMETABLE, MEMO_COLORS } from "./lib/constants";
 import { genId, stripMsgFlags, renderWithMentions, saveDraft, loadDraft, clearDraft, hasDraft, chatKeyDown } from "./lib/utils";
 import type { DashboardData } from "./lib/aiBot";
@@ -41,6 +41,7 @@ const SettingsView = dynamic(() => import("./components/SettingsView").then(m =>
 const AdminMemberView = dynamic(() => import("./components/AdminView").then(m => ({ default: m.AdminMemberView })), { ssr: false });
 const AdminBackupView = dynamic(() => import("./components/AdminView").then(m => ({ default: m.AdminBackupView })), { ssr: false });
 const AdminAccessLogView = dynamic(() => import("./components/AdminView").then(m => ({ default: m.AdminAccessLogView })), { ssr: false });
+const AdminMenuView = dynamic(() => import("./components/AdminView").then(m => ({ default: m.AdminMenuView })), { ssr: false });
 const AiBotChat = dynamic(() => import("./components/AiBotChat").then(m => ({ default: m.AiBotChat })), { ssr: false });
 
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
@@ -247,6 +248,59 @@ function ChatWithAiTab({ userName, aiBotChat, handleAddAiBotChat, handleUpdateAi
     );
 }
 
+// ─── Default Menu Config Generator ──────────────────────────────────────────
+const DEFAULT_MENU_ITEMS: Array<{ key: string; name: string; emoji: string; section: string }> = [
+    // 대시보드
+    { key: "overview", name: "연구실 현황", emoji: "🏠", section: "대시보드" },
+    { key: "overview_me", name: "개별 현황", emoji: "👤", section: "대시보드" },
+    { key: "labChat", name: "연구실 채팅", emoji: "💬", section: "대시보드" },
+    { key: "chat", name: "잡담 with AI", emoji: "💡", section: "대시보드" },
+    // 운영
+    { key: "announcements", name: "공지사항", emoji: "📢", section: "운영" },
+    { key: "calendar", name: "일정/휴가", emoji: "📅", section: "운영" },
+    { key: "daily", name: "오늘 목표", emoji: "🎯", section: "운영" },
+    // 내 노트
+    { key: "todos", name: "To-do", emoji: "✅", section: "내 노트" },
+    // 연구
+    { key: "papers", name: "논문", emoji: "📄", section: "연구" },
+    { key: "reports", name: "계획서/보고서", emoji: "📋", section: "연구" },
+    { key: "ip", name: "지식재산권", emoji: "💡", section: "연구" },
+    { key: "experiments", name: "실험", emoji: "🧪", section: "연구" },
+    { key: "analysis", name: "해석", emoji: "🖥️", section: "연구" },
+    // 커뮤니케이션
+    { key: "conferenceTrips", name: "학회/출장", emoji: "✈️", section: "커뮤니케이션" },
+    { key: "meetings", name: "회의록", emoji: "📝", section: "커뮤니케이션" },
+    { key: "resources", name: "자료", emoji: "📁", section: "커뮤니케이션" },
+    { key: "ideas", name: "아이디어", emoji: "💡", section: "커뮤니케이션" },
+    { key: "lectures", name: "수업", emoji: "📚", section: "커뮤니케이션" },
+];
+
+function buildDefaultMenuConfig(): MenuConfig[] {
+    return DEFAULT_MENU_ITEMS.map((item, i) => ({
+        key: item.key,
+        name: item.name,
+        emoji: item.emoji,
+        sortOrder: i,
+        isActive: true,
+        section: item.section,
+    }));
+}
+
+/** Merge saved config with defaults to ensure new menus appear */
+function mergeMenuConfig(saved: MenuConfig[]): MenuConfig[] {
+    const savedMap = new Map(saved.map(s => [s.key, s]));
+    const result: MenuConfig[] = [];
+    // Keep saved items (preserving order/settings)
+    for (const s of saved) result.push(s);
+    // Add any new defaults not in saved
+    for (const def of DEFAULT_MENU_ITEMS) {
+        if (!savedMap.has(def.key)) {
+            result.push({ key: def.key, name: def.name, emoji: def.emoji, sortOrder: result.length, isActive: true, section: def.section });
+        }
+    }
+    return result;
+}
+
 export default function DashboardPage() {
     const [loggedIn, setLoggedIn] = useState(false);
     const [userName, setUserName] = useState("");
@@ -339,36 +393,97 @@ export default function DashboardPage() {
     const [editingCat, setEditingCat] = useState<string | null>(null);
     const [editingCatVal, setEditingCatVal] = useState("");
     const [dataLoaded, setDataLoaded] = useState(false);
+    const [menuConfig, setMenuConfig] = useState<MenuConfig[]>(buildDefaultMenuConfig());
 
-    const tabs = useMemo(() => [
-        { id: "overview", label: "연구실 현황", icon: "🏠" },
-        { id: "overview_me", label: `개별 현황 (${userName})`, icon: "👤" },
-        { id: "labChat", label: "연구실 채팅", icon: "💬" },
-        { id: "chat", label: "잡담 with AI", icon: "💡" },
-        // 운영
-        { id: "announcements", label: "공지사항", icon: "📢" },
-        { id: "calendar", label: "일정/휴가", icon: "📅" },
-        { id: "daily", label: "오늘 목표", icon: "🎯" },
-        // 팀 워크
-        ...(userName === "박일웅" ? teamNames : teamNames.filter(t => teams[t]?.lead === userName || teams[t]?.members?.includes(userName))).map(t =>
+    // Build a lookup map from menuConfig for active/name/emoji overrides
+    const menuConfigMap = useMemo(() => {
+        const m = new Map<string, MenuConfig>();
+        for (const mc of menuConfig) m.set(mc.key, mc);
+        return m;
+    }, [menuConfig]);
+
+    const tabs = useMemo(() => {
+        // Helper: apply menuConfig overrides (name, emoji) and check visibility
+        const mc = (key: string, defaultLabel: string, defaultIcon: string) => {
+            const cfg = menuConfigMap.get(key);
+            if (cfg && !cfg.isActive) return null; // hidden
+            return { id: key, label: cfg?.name || defaultLabel, icon: cfg?.emoji || defaultIcon };
+        };
+
+        // Section builders - order within each section follows menuConfig sortOrder
+        const sectionItems = (sectionName: string, defaults: Array<{ key: string; label: string; icon: string; color?: string }>) => {
+            // Get menuConfig items for this section, sorted by sortOrder
+            const sectionConfig = menuConfig.filter(c => c.section === sectionName).sort((a, b) => a.sortOrder - b.sortOrder);
+            if (sectionConfig.length === 0) {
+                // No config for this section, use defaults
+                return defaults.map(d => mc(d.key, d.label, d.icon)).filter(Boolean) as Array<{ id: string; label: string; icon: string; color?: string }>;
+            }
+            const result: Array<{ id: string; label: string; icon: string; color?: string }> = [];
+            for (const cfg of sectionConfig) {
+                if (!cfg.isActive) continue;
+                const def = defaults.find(d => d.key === cfg.key);
+                if (def) {
+                    result.push({ id: cfg.key, label: cfg.name, icon: cfg.emoji, color: def.color });
+                } else if (cfg.isClone) {
+                    // Cloned item - use the clone source's default or just use config values
+                    result.push({ id: cfg.key, label: cfg.name, icon: cfg.emoji });
+                }
+            }
+            // Add any defaults not in config
+            for (const def of defaults) {
+                if (!sectionConfig.some(c => c.key === def.key) && !result.some(r => r.id === def.key)) {
+                    result.push({ id: def.key, label: def.label, icon: def.icon, color: def.color });
+                }
+            }
+            return result;
+        };
+
+        const dashboard = sectionItems("대시보드", [
+            { key: "overview", label: "연구실 현황", icon: "🏠" },
+            { key: "overview_me", label: `개별 현황 (${userName})`, icon: "👤" },
+            { key: "labChat", label: "연구실 채팅", icon: "💬" },
+            { key: "chat", label: "잡담 with AI", icon: "💡" },
+        ]);
+        // For overview_me, always append userName
+        for (const t of dashboard) {
+            if (t.id === "overview_me" && !t.label.includes(userName)) t.label = `${t.label} (${userName})`;
+        }
+
+        const ops = sectionItems("운영", [
+            { key: "announcements", label: "공지사항", icon: "📢" },
+            { key: "calendar", label: "일정/휴가", icon: "📅" },
+            { key: "daily", label: "오늘 목표", icon: "🎯" },
+        ]);
+
+        // 팀 워크 (dynamic - not in menuConfig)
+        const teamTabs = (userName === "박일웅" ? teamNames : teamNames.filter(t => teams[t]?.lead === userName || teams[t]?.members?.includes(userName))).map(t =>
             ({ id: `teamMemo_${t}`, label: t, icon: teams[t]?.emoji || "📌", color: teams[t]?.color })
-        ),
-        // 내 노트
-        { id: "todos", label: "To-do", icon: "✅" },
-        ...(userName === "박일웅" ? memberNames : memberNames.filter(n => n === userName)).map(name => ({ id: `memo_${name}`, label: name, icon: customEmojis[name] || members[name]?.emoji || "👤" })),
-        // 연구
-        { id: "papers", label: "논문", icon: "📄" },
-        { id: "reports", label: "계획서/보고서", icon: "📋" },
-        { id: "ip", label: "지식재산권", icon: "💡" },
-        { id: "experiments", label: "실험", icon: "🧪" },
-        { id: "analysis", label: "해석", icon: "🖥️" },
-        // 커뮤니케이션
-        { id: "conferenceTrips", label: "학회/출장", icon: "✈️" },
-        { id: "meetings", label: "회의록", icon: "📝" },
-        { id: "resources", label: "자료", icon: "📁" },
-        { id: "ideas", label: "아이디어", icon: "💡" },
-        { id: "lectures", label: "수업", icon: "📚" },
-    ], [userName, teamNames, teams, memberNames, customEmojis, members]);
+        );
+
+        const myNotes = sectionItems("내 노트", [
+            { key: "todos", label: "To-do", icon: "✅" },
+        ]);
+        // memo_ tabs (dynamic - not in menuConfig)
+        const memoTabs = (userName === "박일웅" ? memberNames : memberNames.filter(n => n === userName)).map(name => ({ id: `memo_${name}`, label: name, icon: customEmojis[name] || members[name]?.emoji || "👤" }));
+
+        const research = sectionItems("연구", [
+            { key: "papers", label: "논문", icon: "📄" },
+            { key: "reports", label: "계획서/보고서", icon: "📋" },
+            { key: "ip", label: "지식재산권", icon: "💡" },
+            { key: "experiments", label: "실험", icon: "🧪" },
+            { key: "analysis", label: "해석", icon: "🖥️" },
+        ]);
+
+        const comms = sectionItems("커뮤니케이션", [
+            { key: "conferenceTrips", label: "학회/출장", icon: "✈️" },
+            { key: "meetings", label: "회의록", icon: "📝" },
+            { key: "resources", label: "자료", icon: "📁" },
+            { key: "ideas", label: "아이디어", icon: "💡" },
+            { key: "lectures", label: "수업", icon: "📚" },
+        ]);
+
+        return [...dashboard, ...ops, ...teamTabs, ...myNotes, ...memoTabs, ...research, ...comms];
+    }, [userName, teamNames, teams, memberNames, customEmojis, members, menuConfig, menuConfigMap]);
 
     const allPeople = useMemo(() => ["전체", ...memberNames], [memberNames]);
 
@@ -425,7 +540,7 @@ export default function DashboardPage() {
         tabs.filter(t => t.label.toLowerCase().includes(q)).forEach(t => r.push({ type: "이동", icon: t.icon, title: t.label, subtitle: "탭 이동", tabId: t.id }));
         // Admin tabs (PI only)
         if (userName === "박일웅") {
-            [{ id: "admin_members", icon: "🔑", label: "멤버 관리" }, { id: "admin_backups", icon: "💾", label: "백업 관리" }, { id: "admin_access", icon: "🔐", label: "접속 로그" }]
+            [{ id: "admin_members", icon: "🔑", label: "멤버 관리" }, { id: "admin_backups", icon: "💾", label: "백업 관리" }, { id: "admin_access", icon: "🔐", label: "접속 로그" }, { id: "admin_menus", icon: "📋", label: "메뉴 관리" }]
                 .filter(t => t.label.toLowerCase().includes(q)).forEach(t => r.push({ type: "이동", icon: t.icon, title: t.label, subtitle: "관리", tabId: t.id }));
         }
         // Papers
@@ -590,6 +705,7 @@ export default function DashboardPage() {
             }
             if (arr(d.analysisToolList)) setAnalysisToolList(d.analysisToolList);
             if (arr(d.paperTagList)) setPaperTagList(d.paperTagList);
+            if (arr(d.menuConfig) && d.menuConfig.length > 0) setMenuConfig(mergeMenuConfig(d.menuConfig));
             setDataLoaded(true);
             if (obj(d.members) && Object.keys(d.members).length > 0) {
                 setMembers(d.members);
@@ -895,9 +1011,22 @@ export default function DashboardPage() {
     const handleDeleteReport = useCallback((id: number) => { pendingSavesRef.current++; setReports(prev => { const u = prev.filter(r => r.id !== id); saveSection("reports", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
     const handleReorderReports = useCallback((list: Report[]) => { setReports(list); pendingSavesRef.current++; saveSection("reports", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
 
+    // ─── Schedule → Daily Target auto-sync helpers ────────────────────────────
+    const SCHEDULE_TARGET_MARKER = "[일정]";
+    const formatScheduleTargetText = useCallback((type: string, desc?: string): string => {
+        const icons: Record<string, string> = { vacation: "\uD83C\uDFD6\uFE0F", trip: "\uD83D\uDE97", meeting: "\uD83E\uDD1D", seminar: "\uD83D\uDCE2", conference: "\uD83C\uDF93", wfh: "\uD83C\uDFE0", vendor: "\uD83D\uDCBC", other: "\uD83D\uDCCC" };
+        const labels: Record<string, string> = { vacation: "휴가", trip: "출장", meeting: "회의", seminar: "세미나", conference: "학회", wfh: "재택", vendor: "업체 미팅", other: "기타" };
+        const icon = icons[type] || "\uD83D\uDCCC";
+        const label = labels[type] || CALENDAR_TYPES[type]?.label || type;
+        const needsDesc = !["vacation", "wfh"].includes(type);
+        const descPart = needsDesc && desc ? `: ${desc}` : "";
+        return `${SCHEDULE_TARGET_MARKER} ${icon} ${label}${descPart}`;
+    }, []);
+
     const handleCalendarToggle = useCallback((name: string, date: string, type: string | null, desc?: string) => {
         const dates = date.includes(",") ? date.split(",") : [date];
         const isVacType = type === "vacation" || type === "wfh";
+
         setVacations(prevV => {
             let uv = [...prevV];
             for (const dt of dates) {
@@ -918,28 +1047,45 @@ export default function DashboardPage() {
             pendingSavesRef.current++; saveSection("schedule", us).then(() => { pendingSavesRef.current--; });
             return us;
         });
-        // Auto-insert into today's daily target
-        if (type && !isVacType && desc) {
-            const todayStr = new Date().toISOString().split("T")[0];
-            if (dates.includes(todayStr)) {
-                const typeLabel = CALENDAR_TYPES[type]?.label || type;
-                const prefix = `(${typeLabel}) ${desc}`;
-                pendingSavesRef.current++;
-                setDailyTargets(prev => {
-                    const existing = prev.find(t => t.name === name && t.date === todayStr);
-                    let updated: DailyTarget[];
-                    if (existing) {
-                        if (existing.text.includes(prefix)) { pendingSavesRef.current--; return prev; }
-                        updated = prev.map(t => t.name === name && t.date === todayStr ? { ...t, text: prefix + "\n" + t.text } : t);
+
+        // --- 2. Sync daily targets (skip non-member names like 중요일정/공통일정) ---
+        const isMember = MEMBER_NAMES.includes(name);
+        if (!isMember) return;
+
+        pendingSavesRef.current++;
+        setDailyTargets(prev => {
+            let updated = [...prev];
+
+            for (const dt of dates) {
+                // Remove ALL auto-generated schedule marker lines for this name+date
+                const existing = updated.find(t => t.name === name && t.date === dt);
+                if (existing) {
+                    const lines = existing.text.split("\n");
+                    const cleaned = lines.filter(line => !line.startsWith(SCHEDULE_TARGET_MARKER));
+                    if (cleaned.length === 0 || (cleaned.length === 1 && cleaned[0].trim() === "")) {
+                        updated = updated.filter(t => !(t.name === name && t.date === dt));
                     } else {
-                        updated = [...prev, { name, date: todayStr, text: prefix }];
+                        updated = updated.map(t => t.name === name && t.date === dt ? { ...t, text: cleaned.join("\n") } : t);
                     }
-                    saveSection("dailyTargets", updated).then(() => { pendingSavesRef.current--; });
-                    return updated;
-                });
+                }
+
+                // Add new auto-generated line if type is being set (not deleted)
+                if (type !== null) {
+                    const newLine = formatScheduleTargetText(type, desc);
+                    const cur = updated.find(t => t.name === name && t.date === dt);
+                    if (cur) {
+                        // Prepend the schedule line before existing user content
+                        updated = updated.map(t => t.name === name && t.date === dt ? { ...t, text: newLine + "\n" + t.text } : t);
+                    } else {
+                        updated = [...updated, { name, date: dt, text: newLine }];
+                    }
+                }
             }
-        }
-    }, [saveSection]);
+
+            saveSection("dailyTargets", updated).then(() => { pendingSavesRef.current--; });
+            return updated;
+        });
+    }, [saveSection, formatScheduleTargetText]);
     const handleTimetableSave = useCallback((b: TimetableBlock) => {
         setTimetable(prev => {
             const exists = prev.find(x => x.id === b.id);
@@ -1036,6 +1182,7 @@ export default function DashboardPage() {
     const handleSaveEquipment = useCallback((list: string[]) => { setEquipmentList(list); pendingSavesRef.current++; saveSection("equipmentList", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleSaveAnalysisTools = useCallback((list: string[]) => { setAnalysisToolList(list); pendingSavesRef.current++; saveSection("analysisToolList", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleSavePaperTags = useCallback((list: string[]) => { setPaperTagList(list); pendingSavesRef.current++; saveSection("paperTagList", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleSaveMenuConfig = useCallback((config: MenuConfig[]) => { setMenuConfig(config); pendingSavesRef.current++; saveSection("menuConfig", config).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleSaveMemo = useCallback((memberName: string, memo: Memo) => {
         setPersonalMemos(prev => {
             const existing = prev[memberName] || [];
@@ -1808,7 +1955,7 @@ export default function DashboardPage() {
             {/* Mobile top header */}
             <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-[56px] px-4" style={{background:"#0F172A", boxShadow:"0 1px 4px rgba(0,0,0,0.2)"}}>
                 <button onClick={() => setMobileMenuOpen(true)} className="text-[22px] text-white w-11 h-11 flex items-center justify-center rounded-lg hover:bg-white/10">☰</button>
-                <span className="text-[15px] font-bold text-white truncate">{(() => { const found = tabs.find(t => t.id === activeTab); const extra: Record<string, string> = { teams: "팀 관리", settings: "설정", admin_members: "🔑 멤버 관리", admin_backups: "💾 백업 관리", admin_access: "🔐 접속 로그" }; return found ? `${found.icon} ${found.label}` : extra[activeTab] || "대시보드"; })()}</span>
+                <span className="text-[15px] font-bold text-white truncate">{(() => { const found = tabs.find(t => t.id === activeTab); const extra: Record<string, string> = { teams: "팀 관리", settings: "설정", admin_members: "🔑 멤버 관리", admin_backups: "💾 백업 관리", admin_access: "🔐 접속 로그", admin_menus: "📋 메뉴 관리" }; return found ? `${found.icon} ${found.label}` : extra[activeTab] || "대시보드"; })()}</span>
                 <div className="flex items-center gap-2">
                     <button onClick={openNoti} className="relative w-11 h-11 flex items-center justify-center rounded-lg hover:bg-white/10">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -1831,13 +1978,15 @@ export default function DashboardPage() {
                         </button>
                         <div className="flex-1 min-h-0 overflow-y-auto pt-2 pb-2 dark-scrollbar">
                             {tabs.map((tab, i) => {
-                                const sectionBreaks: Record<string, string> = { announcements: "운영", todos: "내 노트", papers: "연구", conferenceTrips: "커뮤니케이션" };
-                                const showBreak = !tab.id.startsWith("memo_") && !tab.id.startsWith("teamMemo_") && sectionBreaks[tab.id];
+                                const tabSection = menuConfigMap.get(tab.id)?.section;
+                                const prevTabSection = i > 0 ? menuConfigMap.get(tabs[i - 1].id)?.section : undefined;
+                                const sectionLabels: Record<string, string> = { "운영": "운영", "내 노트": "내 노트", "연구": "연구", "커뮤니케이션": "커뮤니케이션" };
+                                const showBreak = !tab.id.startsWith("memo_") && !tab.id.startsWith("teamMemo_") && tabSection && sectionLabels[tabSection] && tabSection !== prevTabSection && tabSection !== "대시보드";
                                 const showTeamMemoBreak = tab.id.startsWith("teamMemo_") && i > 0 && !tabs[i - 1].id.startsWith("teamMemo_");
                                 const isActive = activeTab === tab.id;
                                 return (
                                     <div key={tab.id}>
-                                        {showBreak && <div className="mt-5 mb-1.5 px-4"><div className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>{sectionBreaks[tab.id]}</div></div>}
+                                        {showBreak && <div className="mt-5 mb-1.5 px-4"><div className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>{sectionLabels[tabSection!]}</div></div>}
                                         {showTeamMemoBreak && <div className="mt-5 mb-1.5 px-4"><div className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>팀 워크</div></div>}
                                         <button onClick={() => { setActiveTab(tab.id); setMobileMenuOpen(false); }}
                                             className="relative w-full flex items-center gap-2 px-3 py-2 rounded-[10px] text-[13px] whitespace-nowrap transition-all"
@@ -1860,6 +2009,9 @@ export default function DashboardPage() {
                             </button>}
                             {userName === "박일웅" && <button onClick={() => { setActiveTab("admin_access"); setMobileMenuOpen(false); }} className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13px] whitespace-nowrap" style={{ fontWeight: activeTab === "admin_access" ? 600 : 450, color: activeTab === "admin_access" ? "#FFFFFF" : "#94A3B8", background: activeTab === "admin_access" ? "rgba(59,130,246,0.15)" : "transparent" }}>
                                 <span className="text-[15px]">🔐</span><span>접속 로그</span>
+                            </button>}
+                            {userName === "박일웅" && <button onClick={() => { setActiveTab("admin_menus"); setMobileMenuOpen(false); }} className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13px] whitespace-nowrap" style={{ fontWeight: activeTab === "admin_menus" ? 600 : 450, color: activeTab === "admin_menus" ? "#FFFFFF" : "#94A3B8", background: activeTab === "admin_menus" ? "rgba(59,130,246,0.15)" : "transparent" }}>
+                                <span className="text-[15px]">📋</span><span>메뉴 관리</span>
                             </button>}
                             <button onClick={() => { setActiveTab("settings"); setMobileMenuOpen(false); }} className="relative w-full flex items-center gap-2.5 px-4 py-2 rounded-[10px] text-[13px] whitespace-nowrap" style={{ fontWeight: activeTab === "settings" ? 600 : 450, color: activeTab === "settings" ? "#FFFFFF" : "#94A3B8", background: activeTab === "settings" ? "rgba(59,130,246,0.15)" : "transparent" }}>
                                 <span className="text-[15px]">⚙️</span><span>설정</span>
@@ -1907,15 +2059,19 @@ export default function DashboardPage() {
                     {/* Sidebar nav */}
                     <div className="flex-1 min-h-0 flex flex-wrap md:flex-nowrap md:flex-col overflow-y-auto overflow-x-hidden md:overflow-x-visible p-3 md:p-0 md:pt-2 md:pb-2 md:px-1 gap-px dark-scrollbar">
                         {tabs.map((tab, i) => {
-                            const sectionBreaks: Record<string, string> = { announcements: "운영", todos: "내 노트", papers: "연구", conferenceTrips: "커뮤니케이션" };
-                            const showBreak = !tab.id.startsWith("memo_") && !tab.id.startsWith("teamMemo_") && sectionBreaks[tab.id];
+                            // Section break logic: check menuConfig section for this tab
+                            const tabSection = menuConfigMap.get(tab.id)?.section;
+                            const prevTabSection = i > 0 ? menuConfigMap.get(tabs[i - 1].id)?.section : undefined;
+                            // Show section break when this tab belongs to a different menuConfig section than the previous
+                            const sectionLabels: Record<string, string> = { "운영": "운영", "내 노트": "내 노트", "연구": "연구", "커뮤니케이션": "커뮤니케이션" };
+                            const showBreak = !tab.id.startsWith("memo_") && !tab.id.startsWith("teamMemo_") && tabSection && sectionLabels[tabSection] && tabSection !== prevTabSection && tabSection !== "대시보드";
                             const showTeamMemoBreak = tab.id.startsWith("teamMemo_") && i > 0 && !tabs[i - 1].id.startsWith("teamMemo_");
                             const isActive = activeTab === tab.id;
                             return (
                                 <div key={tab.id}>
                                     {showBreak && (
                                         <div className="hidden md:block mt-4 mb-1 px-3">
-                                            <div className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>{sectionBreaks[tab.id]}</div>
+                                            <div className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{color:"#475569"}}>{sectionLabels[tabSection!]}</div>
                                         </div>
                                     )}
                                     {showTeamMemoBreak && (
@@ -1993,6 +2149,7 @@ export default function DashboardPage() {
                             { id: "admin_members", icon: "🔑", label: "멤버 관리" },
                             { id: "admin_backups", icon: "💾", label: "백업 관리" },
                             { id: "admin_access", icon: "🔐", label: "접속 로그" },
+                            { id: "admin_menus", icon: "📋", label: "메뉴 관리" },
                         ].map(t => {
                             const isActive = activeTab === t.id;
                             return (
@@ -2039,7 +2196,7 @@ export default function DashboardPage() {
                 {/* Main Content */}
                 <div key={activeTab} ref={mainContentRef} onScroll={e => { scrollPositionsRef.current[activeTab] = (e.target as HTMLDivElement).scrollTop; }} className="flex-1 p-4 pb-20 md:py-7 md:px-9 md:pb-7 overflow-y-auto flex flex-col min-h-0" style={{ animation: "fadeIn 0.15s ease" }}>
                     {activeTab !== "overview" && activeTab !== "overview_me" && !activeTab.startsWith("expLog_") && !activeTab.startsWith("analysisLog_") && (() => {
-                        const extraTabs: Record<string, { icon: string; label: string }> = { teams: { icon: "👥", label: "팀 관리" }, settings: { icon: "⚙️", label: "설정" }, admin_members: { icon: "🔑", label: "멤버 관리" }, admin_backups: { icon: "💾", label: "백업 관리" }, admin_access: { icon: "🔐", label: "접속 로그" } };
+                        const extraTabs: Record<string, { icon: string; label: string }> = { teams: { icon: "👥", label: "팀 관리" }, settings: { icon: "⚙️", label: "설정" }, admin_members: { icon: "🔑", label: "멤버 관리" }, admin_backups: { icon: "💾", label: "백업 관리" }, admin_access: { icon: "🔐", label: "접속 로그" }, admin_menus: { icon: "📋", label: "메뉴 관리" } };
                         const found = tabs.find(t => t.id === activeTab) || extraTabs[activeTab];
                         const isTeamPage = activeTab.startsWith("teamMemo_");
                         const isMemoPage = activeTab.startsWith("memo_");
@@ -2254,6 +2411,7 @@ export default function DashboardPage() {
                     {activeTab === "admin_members" && userName === "박일웅" && <AdminMemberView />}
                     {activeTab === "admin_backups" && userName === "박일웅" && <AdminBackupView />}
                     {activeTab === "admin_access" && userName === "박일웅" && <AdminAccessLogView />}
+                    {activeTab === "admin_menus" && userName === "박일웅" && <AdminMenuView menuConfig={menuConfig} onSave={handleSaveMenuConfig} />}
                     {activeTab === "labChat" && <LabChatView chat={labChat} currentUser={userName} onAdd={handleAddLabChat} onUpdate={handleUpdateLabChat} onDelete={handleDeleteLabChat} onClear={handleClearLabChat} onRetry={handleRetryLabChat} files={labFiles} onAddFile={handleAddLabFile} onDeleteFile={handleDeleteLabFile} board={labBoard} onSaveBoard={handleSaveLabBoard} onDeleteBoard={handleDeleteLabBoard} readReceipts={readReceipts["labChat"]} />}
                     {activeTab.startsWith("teamMemo_") && (() => {
                         const tName = activeTab.replace("teamMemo_", "");

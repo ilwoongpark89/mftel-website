@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useContext, memo } from "react";
-import { MEMBERS, EMOJI_OPTIONS } from "../lib/constants";
+import { MEMBERS, EMOJI_OPTIONS_CATEGORIES } from "../lib/constants";
 import { MembersContext } from "../lib/contexts";
 
 function PasswordChangeSection({ currentUser }: { currentUser: string }) {
@@ -101,7 +101,9 @@ const SettingsView = memo(function SettingsView({ currentUser, customEmojis, onS
     const savedEmoji = customEmojis[currentUser] || MEMBERS[currentUser]?.emoji || "👤";
     const [selectedEmoji, setSelectedEmoji] = useState(savedEmoji);
     const [msg, setMsg] = useState(statusMessages[currentUser] || "");
+    const [emojiTab, setEmojiTab] = useState(0);
     const emojiChanged = selectedEmoji !== savedEmoji;
+    const currentCat = EMOJI_OPTIONS_CATEGORIES[emojiTab];
     return (
         <div className="space-y-4">
             {/* 비밀번호 변경 */}
@@ -122,10 +124,10 @@ const SettingsView = memo(function SettingsView({ currentUser, customEmojis, onS
             {/* 이모지 */}
             <div className="bg-white border border-slate-200 rounded-lg p-5">
                 <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500">내 이모지 설정</h3>
-                <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-3 mb-4">
                     <div>
                         <span className="text-[13px] text-slate-500">현재: </span>
-                        <span className="text-[20px]">{selectedEmoji}</span>
+                        <span className="text-[24px]">{selectedEmoji}</span>
                         <span className="text-[14px] text-slate-700 ml-2 font-medium">{currentUser}</span>
                     </div>
                     <button onClick={() => { onSaveEmoji(currentUser, selectedEmoji); }}
@@ -133,15 +135,30 @@ const SettingsView = memo(function SettingsView({ currentUser, customEmojis, onS
                         className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-all ${emojiChanged ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-slate-100 text-slate-300 cursor-not-allowed"}`}>
                         저장
                     </button>
-                    {emojiChanged && <span className="text-[12px] text-amber-500 font-medium">변경됨 — 저장을 눌러주세요</span>}
+                    {emojiChanged && <span className="text-[12px] text-amber-500 font-medium">변경됨 -- 저장을 눌러주세요</span>}
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                    {EMOJI_OPTIONS.map(e => (
-                        <button key={e} onClick={() => setSelectedEmoji(e)}
-                            className={`w-9 h-9 rounded-lg text-[18px] flex items-center justify-center transition-all ${selectedEmoji === e ? "bg-blue-100 ring-2 ring-blue-500 scale-110" : "bg-slate-50 hover:bg-slate-100 hover:scale-105"}`}>
-                            {e}
+                {/* Category tabs */}
+                <div className="flex gap-1 mb-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" as const }}>
+                    {EMOJI_OPTIONS_CATEGORIES.map((cat, i) => (
+                        <button key={i} onClick={() => setEmojiTab(i)}
+                            className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[14px] transition-all flex items-center gap-1 ${emojiTab === i ? "bg-blue-100 text-blue-700 font-semibold ring-1 ring-blue-300" : "bg-slate-50 text-slate-500 hover:bg-slate-100"}`}
+                            title={cat.name}>
+                            <span className="text-[16px]">{cat.label}</span>
+                            <span className="text-[11px] hidden sm:inline">{cat.name}</span>
                         </button>
                     ))}
+                </div>
+                {/* Emoji grid */}
+                <div className="border border-slate-100 rounded-lg p-2">
+                    <div className="text-[12px] text-slate-400 font-medium mb-1.5 px-1">{currentCat.name} ({currentCat.emojis.length})</div>
+                    <div className="flex flex-wrap gap-1 max-h-[280px] overflow-y-auto modal-scroll">
+                        {currentCat.emojis.map(e => (
+                            <button key={e} onClick={() => setSelectedEmoji(e)}
+                                className={`w-9 h-9 rounded-lg text-[18px] flex items-center justify-center transition-all ${selectedEmoji === e ? "bg-blue-100 ring-2 ring-blue-500 scale-110" : "bg-slate-50 hover:bg-slate-100 hover:scale-105"}`}>
+                                {e}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
             {/* 푸시 알림 설정 */}

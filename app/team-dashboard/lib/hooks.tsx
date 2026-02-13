@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useContext } from "react";
+import { useState, useMemo, useCallback, useContext, useRef } from "react";
 import { ALL_MEMBER_NAMES, DEFAULT_MEMBERS } from "./constants";
 import { uploadFile } from "./utils";
 import { MembersContext } from "./contexts";
@@ -92,6 +92,27 @@ export function MentionPopup({ m, onSelect }: { m: ReturnType<typeof useMention>
 export function useCommentImg() {
     const [img, setImg] = useState("");
     const [uploading, setUploading] = useState(false);
+    const [uploadError, setUploadError] = useState(false);
+    const [localPreview, setLocalPreview] = useState("");
+    const lastFileRef = useRef<File | null>(null);
+    const doUpload = async (file: File) => {
+        lastFileRef.current = file;
+        // Create local preview
+        const reader = new FileReader();
+        reader.onload = (ev) => setLocalPreview(ev.target?.result as string || "");
+        reader.readAsDataURL(file);
+        setUploading(true);
+        setUploadError(false);
+        try {
+            const url = await uploadFile(file);
+            setImg(url);
+            setLocalPreview("");
+        } catch {
+            setUploadError(true);
+        }
+        setUploading(false);
+    };
+    const retry = () => { if (lastFileRef.current) doUpload(lastFileRef.current); };
     const onPaste = async (e: React.ClipboardEvent) => {
         const items = e.clipboardData?.items;
         if (!items) return;
@@ -100,17 +121,31 @@ export function useCommentImg() {
                 e.preventDefault();
                 const file = item.getAsFile(); if (!file) return;
                 if (file.size > 10 * 1024 * 1024) { alert("10MB 이하 이미지만 첨부 가능합니다."); return; }
-                setUploading(true);
-                try { setImg(await uploadFile(file)); } catch { alert("이미지 업로드 실패"); }
-                setUploading(false); return;
+                doUpload(file); return;
             }
         }
     };
-    const clear = () => setImg("");
-    const preview = img ? (
+    const clear = () => { setImg(""); setLocalPreview(""); setUploadError(false); lastFileRef.current = null; };
+    const previewSrc = img || localPreview;
+    const preview = previewSrc || uploadError ? (
         <div className="mb-1.5 relative inline-block">
-            <img src={img} alt="" className="max-h-[80px] rounded-md" />
-            <button onClick={clear} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center">✕</button>
+            {previewSrc && (
+                <div className="relative">
+                    <img src={previewSrc} alt="" className={`max-h-[80px] rounded-md transition-all ${uploading ? "blur-sm opacity-60" : ""}`} />
+                    {uploading && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                        </div>
+                    )}
+                </div>
+            )}
+            {uploadError && (
+                <div className="flex items-center gap-1.5 mt-1">
+                    <span className="text-[11px] text-red-500">업로드 실패</span>
+                    <button onClick={retry} className="text-[11px] text-blue-500 hover:text-blue-600 font-medium">재시도</button>
+                </div>
+            )}
+            {!uploading && <button onClick={clear} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center">✕</button>}
         </div>
     ) : null;
     return { img, clear, onPaste, uploading, preview };

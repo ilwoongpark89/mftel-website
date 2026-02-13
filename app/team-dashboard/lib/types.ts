@@ -51,3 +51,14 @@ export type Analysis = { id: number; title: string; tool: string; status: string
 export type ExpLogEntry = { id: number; title: string; date: string; author: string; conditions: string; specimen: string; data: string; notes: string; imageUrl?: string; createdAt: string; category?: string };
 
 export type AnalysisLogEntry = { id: number; title: string; date: string; author: string; tool: string; meshInfo: string; boundaryConditions: string; results: string; notes: string; imageUrl?: string; createdAt: string; category?: string };
+
+export type MenuConfig = {
+    key: string;
+    name: string;
+    emoji: string;
+    sortOrder: number;
+    isActive: boolean;
+    section: string;
+    isClone?: boolean;
+    cloneSource?: string;
+};

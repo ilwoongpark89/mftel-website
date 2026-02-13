@@ -319,6 +319,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                                     <span className="text-[11px] text-slate-400 ml-1 whitespace-nowrap">{card.updatedAt}</span>
                                 </div>
                                 {card.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-2 break-words">{card.content}</div>}
+                                {card.imageUrl && <img src={card.imageUrl} alt="" className="w-full max-h-[150px] object-cover rounded-lg mt-2 mb-2" />}
                                 <div className="text-[11px] text-slate-400 mb-1">{MEMBERS[card.author]?.emoji || "👤"} {card.author}</div>
                                 {cmts.length > 0 ? (
                                     <div className="border-t border-slate-100 pt-1.5 mt-auto space-y-0.5">
@@ -543,7 +544,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                         <div className="p-4">
                             <div className="text-[12px] text-slate-400 mb-3">{MEMBERS[selectedCard.author]?.emoji || "👤"} {selectedCard.author} · {selectedCard.updatedAt}</div>
                             {selectedCard.content && <div className="text-[14px] text-slate-700 mb-4 whitespace-pre-wrap break-words">{selectedCard.content}</div>}
-                            {selectedCard.imageUrl && <img src={selectedCard.imageUrl} alt="" className="max-w-full max-h-[300px] rounded-md mb-4 cursor-pointer" onClick={() => setPreviewImg(selectedCard.imageUrl!)} />}
+                            {selectedCard.imageUrl && <img src={selectedCard.imageUrl} alt="" className="max-w-full rounded-lg mb-4 cursor-pointer" onClick={() => setPreviewImg(selectedCard.imageUrl!)} />}
                             <div className="border-t border-slate-200 pt-4">
                                 <div className="text-[13px] font-semibold text-slate-600 mb-3">💬 댓글 ({(selectedCard.comments || []).length})</div>
                                 <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto">

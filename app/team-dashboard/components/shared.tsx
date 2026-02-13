@@ -91,19 +91,58 @@ export function PillSelect({ options, selected, onToggle, emojis }: { options: s
 
 // ─── EmojiPickerPopup ────────────────────────────────────────────────────────
 
+const POPUP_WIDTH = 320;
+
 export function EmojiPickerPopup({ onSelect }: { onSelect: (emoji: string) => void }) {
     const [tab, setTab] = useState(0);
     const cat = EMOJI_CATEGORIES[tab];
+    const popupRef = useRef<HTMLDivElement>(null);
+    const [pos, setPos] = useState<{ top?: number | string; bottom?: number | string; left?: number | string; right?: number | string }>({ top: "100%", right: 0 });
+
+    useEffect(() => {
+        const el = popupRef.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const next: typeof pos = {};
+
+        // Vertical: if popup clips bottom, open above trigger instead
+        if (rect.bottom > vh - 8) {
+            next.bottom = "100%";
+        } else {
+            next.top = "100%";
+        }
+
+        // Horizontal: if popup clips right edge, align to right; if clips left, align to left
+        if (rect.right > vw - 8) {
+            next.right = 0;
+        } else if (rect.left < 8) {
+            next.left = 0;
+            next.right = undefined;
+        } else {
+            next.right = 0;
+        }
+
+        setPos(next);
+    }, []);
+
     return (
-        <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 z-20" style={{ width: 280 }} onClick={e => e.stopPropagation()}>
-            <div className="flex border-b border-slate-100 px-1 pt-1">
+        <div ref={popupRef}
+            className="absolute bg-white rounded-xl shadow-lg border border-slate-200 z-20"
+            style={{ width: POPUP_WIDTH, marginTop: pos.top !== undefined ? 4 : undefined, marginBottom: pos.bottom !== undefined ? 4 : undefined, ...pos }}
+            onClick={e => e.stopPropagation()}>
+            <div className="flex border-b border-slate-100 px-1 pt-1 overflow-x-auto" style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
                 {EMOJI_CATEGORIES.map((c, i) => (
                     <button key={i} onClick={() => setTab(i)}
-                        className={`flex-1 py-1.5 text-[15px] rounded-t-lg transition-colors ${tab === i ? "bg-slate-100" : "hover:bg-slate-50"}`}
+                        className={`shrink-0 px-2 py-1.5 text-[15px] rounded-t-lg transition-colors ${tab === i ? "bg-slate-100" : "hover:bg-slate-50"}`}
                         title={c.name}>{c.label}</button>
                 ))}
             </div>
-            <div className="p-2 grid grid-cols-7 gap-0.5 max-h-[240px] overflow-y-auto modal-scroll">
+            <div className="px-2 pt-1 pb-0.5">
+                <span className="text-[11px] text-slate-400 font-medium">{cat.name}</span>
+            </div>
+            <div className="p-2 grid grid-cols-8 gap-0.5 max-h-[260px] overflow-y-auto modal-scroll">
                 {cat.emojis.map(em => (
                     <button key={em} onClick={() => onSelect(em)}
                         className="w-[34px] h-[34px] flex items-center justify-center rounded-lg hover:bg-slate-100 text-[18px] transition-colors">{em}</button>

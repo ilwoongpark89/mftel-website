@@ -53,6 +53,18 @@ const DailyTargetView = memo(function DailyTargetView({ targets, onSave, current
     const isCenterToday = centerDate.getTime() === new Date(new Date().setHours(0, 0, 0, 0)).getTime();
 
     const getTarget = (name: string, dateStr: string) => targets.find(t => t.name === name && t.date === dateStr);
+    const SCHEDULE_MARKER = "[일정]";
+    const renderTargetText = (text: string) => {
+        const lines = text.split("\n");
+        return lines.map((line, i) => {
+            const isSchedule = line.startsWith(SCHEDULE_MARKER);
+            return (
+                <div key={i} className={isSchedule ? "px-1.5 py-0.5 rounded bg-blue-50/70 text-blue-700 text-[12px] italic inline-block mb-0.5" : ""}>
+                    {isSchedule ? line.replace(SCHEDULE_MARKER + " ", "") : line}
+                </div>
+            );
+        });
+    };
 
     const handleSave = () => {
         if (!editCell) return;
@@ -139,7 +151,7 @@ const DailyTargetView = memo(function DailyTargetView({ targets, onSave, current
                             <div key={name} className={`rounded-xl p-3 ${isMe ? "bg-blue-50 border border-blue-200" : "bg-white border border-slate-200"}`}
                                 onClick={() => { if (canEdit) { setEditCell({ name, date: mobileDateStr }); setEditText(target.text); } }}>
                                 <div className="text-[13px] font-bold text-slate-700 mb-1">{MEMBERS[name]?.emoji} {name}</div>
-                                <div className="text-[14px] text-slate-700 leading-relaxed whitespace-pre-wrap">{target.text}</div>
+                                <div className="text-[14px] text-slate-700 leading-relaxed whitespace-pre-wrap">{renderTargetText(target.text)}</div>
                             </div>
                         );
                     })}
@@ -199,7 +211,7 @@ const DailyTargetView = memo(function DailyTargetView({ targets, onSave, current
                                             <td key={d.str} className={`border-b border-l border-slate-200 px-2.5 py-2.5 align-top ${d.isToday ? "bg-[#EFF6FF]/50" : ""} ${canEdit ? "cursor-pointer hover:bg-slate-50" : ""}`}
                                                 onClick={() => { if (canEdit) { setEditCell({ name, date: d.str }); setEditText(target?.text || ""); } }}>
                                                 {target ? (
-                                                    <div className="text-[13px] text-slate-700 leading-relaxed whitespace-pre-wrap">{target.text}</div>
+                                                    <div className="text-[13px] text-slate-700 leading-relaxed whitespace-pre-wrap">{renderTargetText(target.text)}</div>
                                                 ) : canEdit ? (
                                                     <div className="text-[12px] text-slate-300 opacity-0 hover:opacity-100 transition-opacity">+ 작성</div>
                                                 ) : null}
@@ -883,6 +895,7 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
                             <span className="text-[11px] text-slate-400 ml-2 whitespace-nowrap">{idea.date}</span>
                         </div>
                         {idea.body && <div className="text-[13px] text-slate-600 mb-3 line-clamp-3 break-words">{idea.body}</div>}
+                        {idea.imageUrl && <img src={idea.imageUrl} alt="" className="w-full max-h-[150px] object-cover rounded-lg mt-2 mb-2" />}
                         <div className="text-[12px] text-slate-400 mb-2">{MEMBERS[idea.author]?.emoji || "👤"} {idea.author}</div>
                         {/* Comment preview */}
                         {idea.comments.length > 0 && (
@@ -951,7 +964,7 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
                         <div className="p-4">
                             <div className="text-[12px] text-slate-400 mb-3">{MEMBERS[selected.author]?.emoji || "👤"} {selected.author} · {selected.date}</div>
                             {selected.body && <div className="text-[14px] text-slate-700 mb-4 whitespace-pre-wrap break-words">{selected.body}</div>}
-                            {selected.imageUrl && <img src={selected.imageUrl} alt="" className="max-w-full max-h-[300px] rounded-md mb-4" />}
+                            {selected.imageUrl && <img src={selected.imageUrl} alt="" className="max-w-full rounded-lg mb-4 cursor-pointer" onClick={() => window.open(selected.imageUrl!, '_blank')} />}
 
                             {/* Comments section */}
                             <div className="border-t border-slate-200 pt-4">
@@ -1187,7 +1200,7 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
                                         <div className="flex items-start justify-between">
                                             <span className="text-[14px] text-slate-800 whitespace-pre-wrap break-words line-clamp-4 flex-1" style={{ lineHeight: 1.6 }}>{item.text}<SavingBadge id={item.id} /></span>
                                         </div>
-                                        {item.imageUrl && <img src={item.imageUrl} alt="" className="max-w-full max-h-[80px] rounded-md mt-1.5" />}
+                                        {item.imageUrl && <img src={item.imageUrl} alt="" className="w-full max-h-[150px] object-cover rounded-lg mt-2" />}
                                         <div className="mt-auto pt-2 text-[11px] text-slate-400">{item.author} · {item.date}</div>
                                     </div>
                                 ))}
@@ -1214,7 +1227,7 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
                             {editImg.uploading && <div className="text-[11px] text-slate-400 mt-1">업로드 중...</div>}
                             {editImg.img ? editImg.preview : editImgUrl ? (
                                 <div className="mt-2 relative inline-block">
-                                    <img src={editImgUrl} alt="" className="max-h-[80px] rounded-md" />
+                                    <img src={editImgUrl} alt="" className="max-w-full rounded-lg cursor-pointer" onClick={() => window.open(editImgUrl, '_blank')} />
                                     <button onClick={() => setEditImgUrl("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center">✕</button>
                                 </div>
                             ) : null}

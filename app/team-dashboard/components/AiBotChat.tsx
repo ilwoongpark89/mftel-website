@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useContext, memo } from "react";
+import { useState, useEffect, useRef, useCallback, useContext, memo, useMemo } from "react";
 import type { TeamChatMsg } from "../lib/types";
 import type { DashboardData, BotResponse } from "../lib/aiBot";
-import { parseCommand, generateResponse } from "../lib/aiBot";
+import { parseCommand, generateResponse, SLASH_COMMANDS } from "../lib/aiBot";
 import { ALL_MEMBER_NAMES } from "../lib/constants";
 import { genId, chatKeyDown, renderWithMentions } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
@@ -34,19 +34,47 @@ function renderBotText(text: string) {
     });
 }
 
-// ─── @AI Highlight ──────────────────────────────────────────────────────────
+// ─── /command Highlight ─────────────────────────────────────────────────────
 
 function renderUserText(text: string) {
-    // First highlight @AI, then run renderWithMentions on remaining parts
-    const aiRegex = /(@[Aa][Ii])\b/g;
-    const parts = text.split(aiRegex);
+    // Highlight /command at the start of messages, then run renderWithMentions on remaining parts
+    const slashRegex = /(^\/\S+)/;
+    const parts = text.split(slashRegex);
     if (parts.length === 1) return renderWithMentions(text);
     return parts.map((part, i) => {
-        if (/^@[Aa][Ii]$/i.test(part)) {
+        if (/^\/\S+/.test(part)) {
             return <span key={i} className="px-1 py-0.5 rounded text-blue-600 font-bold" style={{ background: "rgba(59,130,246,0.15)" }}>{part}</span>;
         }
         return <span key={i}>{renderWithMentions(part)}</span>;
     });
+}
+
+// ─── Slash Command Autocomplete ─────────────────────────────────────────────
+
+function SlashAutocomplete({ query, selectedIdx, onSelect }: { query: string; selectedIdx: number; onSelect: (cmd: string) => void }) {
+    // Filter commands based on query (the part after /)
+    const filtered = useMemo(() => {
+        const q = query.replace(/^\//, "");
+        if (!q) return SLASH_COMMANDS;
+        return SLASH_COMMANDS.filter(c => c.command.slice(1).includes(q));
+    }, [query]);
+
+    if (filtered.length === 0) return null;
+
+    return (
+        <div className="absolute bottom-full left-0 right-0 mb-1 bg-white rounded-lg shadow-lg border border-slate-200 z-50 max-h-[260px] overflow-y-auto">
+            {filtered.map((item, idx) => (
+                <button
+                    key={item.command}
+                    className={`w-full flex items-center gap-3 px-3 py-2 text-left text-[13px] transition-colors ${idx === selectedIdx ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50 text-slate-700"}`}
+                    onMouseDown={e => { e.preventDefault(); onSelect(item.command); }}
+                >
+                    <span className="font-mono font-semibold text-blue-600 min-w-[60px]">{item.command}</span>
+                    <span className="text-slate-500">{item.description}</span>
+                </button>
+            ))}
+        </div>
+    );
 }
 
 // ─── AiBotChat Component ────────────────────────────────────────────────────
@@ -77,6 +105,11 @@ export const AiBotChat = memo(function AiBotChat({
 
     // Pending confirms — Map<msgId, confirmAction>
     const [pendingConfirms, setPendingConfirms] = useState<Map<number, NonNullable<BotResponse["confirmAction"]>>>(new Map());
+
+    // Slash command autocomplete state
+    const [slashOpen, setSlashOpen] = useState(false);
+    const [slashIdx, setSlashIdx] = useState(0);
+    const [slashQuery, setSlashQuery] = useState("");
 
     const memberNames = ALL_MEMBER_NAMES;
 
@@ -118,10 +151,39 @@ export const AiBotChat = memo(function AiBotChat({
         return `${now.getFullYear()}. ${now.getMonth() + 1}. ${now.getDate()}. ${ampm} ${h12}:${String(now.getMinutes()).padStart(2, "0")}`;
     };
 
+    // ─── Slash autocomplete helpers ─────────────────────────────────────
+    const checkSlash = useCallback((val: string) => {
+        // Show autocomplete when text starts with / and is one "word" (the command being typed)
+        if (/^\/\S*$/.test(val) && val.length >= 1) {
+            setSlashOpen(true);
+            setSlashQuery(val);
+            setSlashIdx(0);
+        } else {
+            setSlashOpen(false);
+        }
+    }, []);
+
+    const getFilteredSlash = useCallback(() => {
+        const q = slashQuery.replace(/^\//, "");
+        if (!q) return SLASH_COMMANDS;
+        return SLASH_COMMANDS.filter(c => c.command.slice(1).includes(q));
+    }, [slashQuery]);
+
+    const insertSlashCommand = useCallback((cmd: string) => {
+        setText(cmd + " ");
+        setSlashOpen(false);
+        setTimeout(() => {
+            const el = inputRef.current;
+            if (el) { el.focus(); el.setSelectionRange(cmd.length + 1, cmd.length + 1); }
+        }, 10);
+    }, []);
+
     const sendMsg = () => {
         const msgText = text.trim();
         const imgUrl = commentImg.img;
         if (!msgText && !imgUrl) return;
+
+        setSlashOpen(false);
 
         const dateStr = makeDate();
         const userMsg: TeamChatMsg = { id: genId(), author: currentUser, text: msgText, date: dateStr, reactions: {}, imageUrl: imgUrl || undefined };
@@ -129,8 +191,8 @@ export const AiBotChat = memo(function AiBotChat({
         setText("");
         commentImg.clear();
 
-        // Check for @AI trigger
-        if (/^@[Aa][Ii]\b/.test(msgText)) {
+        // Check for / trigger (slash command)
+        if (/^\//.test(msgText)) {
             setTimeout(() => {
                 const cmd = parseCommand(msgText, currentUser, memberNames);
                 const resp = generateResponse(cmd, dashboardData, MEMBERS);
@@ -203,7 +265,7 @@ export const AiBotChat = memo(function AiBotChat({
             <div ref={containerRef} className="flex-1 overflow-y-auto px-3 py-2">
                 {messages.length === 0 && (
                     <div className="text-center py-16 text-slate-400 text-[13px]">
-                        @AI로 봇을 호출해보세요!
+                        / 로 봇을 호출해보세요!
                     </div>
                 )}
                 {messages.map((msg, idx) => {
@@ -314,32 +376,78 @@ export const AiBotChat = memo(function AiBotChat({
                 {mention.open && <MentionPopup m={mention} onSelect={selectMention} />}
             </div>
 
-            {/* Input */}
-            <div className="px-2 py-2 border-t border-slate-100 flex items-end gap-1.5">
-                <textarea
-                    ref={inputRef}
-                    value={text}
-                    onChange={e => { setText(e.target.value); mention.check(e.target.value, e.target.selectionStart || 0); }}
-                    onKeyDown={e => {
-                        const r = mention.handleKey(e);
-                        if (r === true) return;
-                        if (typeof r === "string") { selectMention(r); return; }
-                        chatKeyDown(e, sendMsg, composingRef);
-                    }}
-                    onCompositionStart={() => { composingRef.current = true; }}
-                    onCompositionEnd={() => { composingRef.current = false; }}
-                    onPaste={commentImg.onPaste}
-                    placeholder="메시지 입력... (@AI로 봇 호출)"
-                    className="flex-1 resize-none border border-slate-200 rounded-xl px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-blue-400 max-h-[80px]"
-                    rows={1}
-                />
-                <button
-                    onClick={sendMsg}
-                    disabled={!text.trim() && !commentImg.img}
-                    className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium disabled:opacity-30 hover:bg-blue-600 transition-colors"
-                >
-                    전송
-                </button>
+            {/* Input area with slash autocomplete */}
+            <div className="relative px-2 py-2 border-t border-slate-100">
+                {/* Slash command autocomplete dropdown */}
+                {slashOpen && (
+                    <SlashAutocomplete
+                        query={slashQuery}
+                        selectedIdx={slashIdx}
+                        onSelect={insertSlashCommand}
+                    />
+                )}
+
+                <div className="flex items-end gap-1.5">
+                    <textarea
+                        ref={inputRef}
+                        value={text}
+                        onChange={e => {
+                            setText(e.target.value);
+                            mention.check(e.target.value, e.target.selectionStart || 0);
+                            checkSlash(e.target.value);
+                        }}
+                        onKeyDown={e => {
+                            // Handle slash autocomplete navigation
+                            if (slashOpen) {
+                                const filtered = getFilteredSlash();
+                                if (e.key === "ArrowDown") {
+                                    e.preventDefault();
+                                    setSlashIdx(prev => (prev + 1) % filtered.length);
+                                    return;
+                                }
+                                if (e.key === "ArrowUp") {
+                                    e.preventDefault();
+                                    setSlashIdx(prev => (prev - 1 + filtered.length) % filtered.length);
+                                    return;
+                                }
+                                if (e.key === "Enter" && !e.shiftKey && filtered.length > 0) {
+                                    e.preventDefault();
+                                    insertSlashCommand(filtered[slashIdx].command);
+                                    return;
+                                }
+                                if (e.key === "Escape") {
+                                    e.preventDefault();
+                                    setSlashOpen(false);
+                                    return;
+                                }
+                                // Tab also selects
+                                if (e.key === "Tab" && filtered.length > 0) {
+                                    e.preventDefault();
+                                    insertSlashCommand(filtered[slashIdx].command);
+                                    return;
+                                }
+                            }
+
+                            const r = mention.handleKey(e);
+                            if (r === true) return;
+                            if (typeof r === "string") { selectMention(r); return; }
+                            chatKeyDown(e, sendMsg, composingRef);
+                        }}
+                        onCompositionStart={() => { composingRef.current = true; }}
+                        onCompositionEnd={() => { composingRef.current = false; }}
+                        onPaste={commentImg.onPaste}
+                        placeholder="메시지 입력... ( / 로 봇 호출)"
+                        className="flex-1 resize-none border border-slate-200 rounded-xl px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-blue-400 max-h-[80px]"
+                        rows={1}
+                    />
+                    <button
+                        onClick={sendMsg}
+                        disabled={!text.trim() && !commentImg.img}
+                        className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium disabled:opacity-30 hover:bg-blue-600 transition-colors"
+                    >
+                        전송
+                    </button>
+                </div>
             </div>
         </div>
     );

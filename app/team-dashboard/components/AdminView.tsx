@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import type { MenuConfig } from "../lib/types";
+import { EMOJI_OPTIONS_CATEGORIES } from "../lib/constants";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -504,6 +506,284 @@ export function AdminAccessLogView() {
                         {userStats.length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">접속 로그가 없습니다</div>}
                     </div>
                 </>
+            )}
+        </div>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 4) 메뉴 관리 — Sidebar menu order, visibility, clone, rename, emoji
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Non-hideable menu keys (always visible)
+const NON_HIDEABLE_KEYS = new Set(["overview", "overview_me"]);
+
+export function AdminMenuView({ menuConfig, onSave }: { menuConfig: MenuConfig[]; onSave: (config: MenuConfig[]) => void }) {
+    const [items, setItems] = useState<MenuConfig[]>(menuConfig);
+    const [editingKey, setEditingKey] = useState<string | null>(null);
+    const [editName, setEditName] = useState("");
+    const [cloneModal, setCloneModal] = useState<MenuConfig | null>(null);
+    const [cloneName, setCloneName] = useState("");
+    const [emojiPicker, setEmojiPicker] = useState<string | null>(null);
+    const [adminEmojiTab, setAdminEmojiTab] = useState(0);
+    const emojiRef = useRef<HTMLDivElement>(null);
+    const dragItemRef = useRef<string | null>(null);
+    const dragOverItemRef = useRef<string | null>(null);
+
+    useEffect(() => { setItems(menuConfig); }, [menuConfig]);
+
+    // Close emoji picker on outside click
+    useEffect(() => {
+        if (!emojiPicker) return;
+        const handler = (e: MouseEvent) => {
+            if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) setEmojiPicker(null);
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, [emojiPicker]);
+
+    const save = (updated: MenuConfig[]) => {
+        setItems(updated);
+        onSave(updated);
+    };
+
+    const toggleActive = (key: string) => {
+        if (NON_HIDEABLE_KEYS.has(key)) return;
+        save(items.map(it => it.key === key ? { ...it, isActive: !it.isActive } : it));
+    };
+
+    const startRename = (item: MenuConfig) => {
+        setEditingKey(item.key);
+        setEditName(item.name);
+    };
+
+    const confirmRename = () => {
+        if (!editingKey || !editName.trim()) { setEditingKey(null); return; }
+        save(items.map(it => it.key === editingKey ? { ...it, name: editName.trim() } : it));
+        setEditingKey(null);
+    };
+
+    const cancelRename = () => { setEditingKey(null); setEditName(""); };
+
+    const changeEmoji = (key: string, emoji: string) => {
+        save(items.map(it => it.key === key ? { ...it, emoji } : it));
+        setEmojiPicker(null);
+    };
+
+    const handleClone = () => {
+        if (!cloneModal || !cloneName.trim()) return;
+        const newKey = `clone_${cloneModal.key}_${Date.now()}`;
+        const sectionItems = items.filter(it => it.section === cloneModal.section);
+        const maxOrder = sectionItems.length > 0 ? Math.max(...sectionItems.map(it => it.sortOrder)) : 0;
+        const newItem: MenuConfig = {
+            key: newKey,
+            name: cloneName.trim(),
+            emoji: cloneModal.emoji,
+            sortOrder: maxOrder + 1,
+            isActive: true,
+            section: cloneModal.section,
+            isClone: true,
+            cloneSource: cloneModal.key,
+        };
+        save([...items, newItem]);
+        setCloneModal(null);
+        setCloneName("");
+    };
+
+    const handleDeleteClone = (key: string) => {
+        const item = items.find(it => it.key === key);
+        if (!item?.isClone) return;
+        if (!confirm(`"${item.name}" 복제 메뉴를 삭제하시겠습니까?`)) return;
+        save(items.filter(it => it.key !== key));
+    };
+
+    // Drag handlers (within section)
+    const handleDragStart = (key: string) => { dragItemRef.current = key; };
+    const handleDragEnter = (key: string) => { dragOverItemRef.current = key; };
+    const handleDragEnd = () => {
+        if (!dragItemRef.current || !dragOverItemRef.current || dragItemRef.current === dragOverItemRef.current) {
+            dragItemRef.current = null;
+            dragOverItemRef.current = null;
+            return;
+        }
+        const dragItem = items.find(it => it.key === dragItemRef.current);
+        const overItem = items.find(it => it.key === dragOverItemRef.current);
+        if (!dragItem || !overItem || dragItem.section !== overItem.section) {
+            dragItemRef.current = null;
+            dragOverItemRef.current = null;
+            return;
+        }
+        // Reorder within section
+        const sectionItems = items.filter(it => it.section === dragItem.section).sort((a, b) => a.sortOrder - b.sortOrder);
+        const dragIdx = sectionItems.findIndex(it => it.key === dragItemRef.current);
+        const overIdx = sectionItems.findIndex(it => it.key === dragOverItemRef.current);
+        const reordered = [...sectionItems];
+        const [removed] = reordered.splice(dragIdx, 1);
+        reordered.splice(overIdx, 0, removed);
+        // Assign new sortOrders
+        const orderMap: Record<string, number> = {};
+        reordered.forEach((it, i) => { orderMap[it.key] = i; });
+        save(items.map(it => orderMap[it.key] !== undefined ? { ...it, sortOrder: orderMap[it.key] } : it));
+        dragItemRef.current = null;
+        dragOverItemRef.current = null;
+    };
+
+    // Group by section
+    const sections: Record<string, MenuConfig[]> = {};
+    for (const it of items) {
+        if (!sections[it.section]) sections[it.section] = [];
+        sections[it.section].push(it);
+    }
+    // Sort within sections
+    for (const sec of Object.values(sections)) {
+        sec.sort((a, b) => a.sortOrder - b.sortOrder);
+    }
+    const sectionOrder = ["대시보드", "운영", "팀 워크", "내 노트", "연구", "커뮤니케이션"];
+    const orderedSections = sectionOrder.filter(s => sections[s]);
+
+    return (
+        <div className="space-y-6">
+            <div>
+                <div className="flex items-center justify-between mb-3">
+                    <div>
+                        <h3 className="text-[15px] font-bold text-slate-800">사이드바 메뉴 관리</h3>
+                        <p className="text-[12px] text-slate-400 mt-1">메뉴 순서 변경, 표시/숨김, 이름 변경, 이모지 변경, 복제가 가능합니다.</p>
+                    </div>
+                </div>
+
+                {orderedSections.map(secName => (
+                    <div key={secName} className="mb-5">
+                        <div className="text-[12px] font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">{secName}</div>
+                        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100">
+                            {sections[secName].map(item => {
+                                const isEditing = editingKey === item.key;
+                                const isNonHideable = NON_HIDEABLE_KEYS.has(item.key);
+                                return (
+                                    <div
+                                        key={item.key}
+                                        draggable
+                                        onDragStart={() => handleDragStart(item.key)}
+                                        onDragEnter={() => handleDragEnter(item.key)}
+                                        onDragEnd={handleDragEnd}
+                                        onDragOver={e => e.preventDefault()}
+                                        className={`flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 transition-colors group ${!item.isActive ? "opacity-50" : ""}`}
+                                    >
+                                        {/* Drag handle */}
+                                        <span className="cursor-grab text-[14px] text-slate-300 group-hover:text-slate-500 select-none flex-shrink-0" title="드래그하여 순서 변경">&#x2AF6;</span>
+
+                                        {/* Emoji button */}
+                                        <div className="relative flex-shrink-0">
+                                            <button
+                                                onClick={() => setEmojiPicker(emojiPicker === item.key ? null : item.key)}
+                                                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-[16px] transition-colors"
+                                                title="이모지 변경"
+                                            >
+                                                {item.emoji}
+                                            </button>
+                                            {emojiPicker === item.key && (
+                                                <div ref={emojiRef} className="absolute left-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-xl shadow-xl p-2 w-[320px]" onClick={e => e.stopPropagation()}>
+                                                    <div className="flex gap-0.5 mb-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" as const }}>
+                                                        {EMOJI_OPTIONS_CATEGORIES.map((cat, ci) => (
+                                                            <button key={ci} onClick={() => setAdminEmojiTab(ci)}
+                                                                className={`shrink-0 px-1.5 py-1 rounded-md text-[14px] transition-colors ${adminEmojiTab === ci ? "bg-blue-100" : "hover:bg-slate-50"}`}
+                                                                title={cat.name}>{cat.label}</button>
+                                                        ))}
+                                                    </div>
+                                                    <div className="text-[11px] text-slate-400 font-medium mb-1 px-0.5">{EMOJI_OPTIONS_CATEGORIES[adminEmojiTab].name}</div>
+                                                    <div className="grid grid-cols-8 gap-1 max-h-[200px] overflow-y-auto">
+                                                        {EMOJI_OPTIONS_CATEGORIES[adminEmojiTab].emojis.map(e => (
+                                                            <button key={e} onClick={() => changeEmoji(item.key, e)}
+                                                                className={`w-8 h-8 flex items-center justify-center rounded-lg text-[16px] hover:bg-blue-50 transition-colors ${item.emoji === e ? "bg-blue-100 ring-2 ring-blue-400" : ""}`}>
+                                                                {e}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Name (editable) */}
+                                        <div className="flex-1 min-w-0">
+                                            {isEditing ? (
+                                                <input
+                                                    value={editName}
+                                                    onChange={e => setEditName(e.target.value)}
+                                                    onKeyDown={e => { if (e.key === "Enter") confirmRename(); if (e.key === "Escape") cancelRename(); }}
+                                                    onBlur={confirmRename}
+                                                    className="w-full border border-blue-300 rounded px-2 py-1 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                                    autoFocus
+                                                />
+                                            ) : (
+                                                <button
+                                                    onClick={() => startRename(item)}
+                                                    className="text-[13px] font-medium text-slate-700 hover:text-blue-600 cursor-text text-left truncate block w-full"
+                                                    title="클릭하여 이름 수정"
+                                                >
+                                                    {item.name}
+                                                    {item.isClone && <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-medium bg-purple-100 text-purple-600">복제</span>}
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* Toggle switch */}
+                                        <button
+                                            onClick={() => toggleActive(item.key)}
+                                            disabled={isNonHideable}
+                                            className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${isNonHideable ? "opacity-40 cursor-not-allowed" : "cursor-pointer"} ${item.isActive ? "bg-blue-500" : "bg-slate-300"}`}
+                                            title={isNonHideable ? "기본 메뉴는 숨길 수 없습니다" : item.isActive ? "숨기기" : "표시하기"}
+                                        >
+                                            <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${item.isActive ? "left-[18px]" : "left-0.5"}`} />
+                                        </button>
+
+                                        {/* Clone button */}
+                                        <button
+                                            onClick={() => { setCloneModal(item); setCloneName(`${item.name} (복제)`); }}
+                                            className="px-2 py-1 text-[11px] text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors flex-shrink-0"
+                                            title="복제"
+                                        >
+                                            복제
+                                        </button>
+
+                                        {/* Delete clone button */}
+                                        {item.isClone && (
+                                            <button
+                                                onClick={() => handleDeleteClone(item.key)}
+                                                className="px-2 py-1 text-[11px] text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                                                title="삭제"
+                                            >
+                                                삭제
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Clone Modal */}
+            {cloneModal && (
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => { setCloneModal(null); setCloneName(""); }}>
+                    <div className="bg-white rounded-xl w-full max-w-[400px] shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="p-5">
+                            <h4 className="text-[15px] font-bold text-slate-800 mb-1">메뉴 복제</h4>
+                            <p className="text-[12px] text-slate-400 mb-4">"{cloneModal.name}" 메뉴를 복제합니다. 새 이름을 입력하세요.</p>
+                            <input
+                                value={cloneName}
+                                onChange={e => setCloneName(e.target.value)}
+                                onKeyDown={e => { if (e.key === "Enter") handleClone(); if (e.key === "Escape") { setCloneModal(null); setCloneName(""); } }}
+                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                placeholder="새 메뉴 이름"
+                                autoFocus
+                            />
+                            <div className="flex justify-end gap-2 mt-4">
+                                <button onClick={() => { setCloneModal(null); setCloneName(""); }} className="px-4 py-2 text-[12px] text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200">취소</button>
+                                <button onClick={handleClone} disabled={!cloneName.trim()} className="px-4 py-2 text-[12px] text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">복제</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

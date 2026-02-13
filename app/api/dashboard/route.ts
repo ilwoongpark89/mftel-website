@@ -40,6 +40,7 @@ const ALLOWED_SECTIONS = new Set([
     "ideas", "analyses", "chatPosts", "customEmojis", "statusMessages",
     "equipmentList", "personalMemos", "personalFiles", "piChat", "teamMemos", "labChat", "labBoard", "labFiles", "meetings", "analysisToolList", "paperTagList",
     "members", "online", "dispatches", "readReceipts", "pushPrefs", "experimentLogs", "analysisLogs", "experimentLogCategories", "analysisLogCategories",
+    "aiBotChat", "aiBotBoard", "casualChat", "menuConfig",
 ]);
 
 async function appendLog(logKey: string, entry: Record<string, unknown>) {
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
 
         if (section === 'all') {
             // Return all dashboard data at once
-            const keys = ["announcements","papers","experiments","todos","conferences","lectures","patents","vacations","schedule","timetable","reports","teams","dailyTargets","philosophy","resources","ideas","analyses","chatPosts","customEmojis","statusMessages","equipmentList","personalMemos","personalFiles","piChat","teamMemos","labChat","labBoard","labFiles","meetings","analysisToolList","paperTagList","members","dispatches","readReceipts","pushPrefs","experimentLogs","analysisLogs","experimentLogCategories","analysisLogCategories"];
+            const keys = ["announcements","papers","experiments","todos","conferences","lectures","patents","vacations","schedule","timetable","reports","teams","dailyTargets","philosophy","resources","ideas","analyses","chatPosts","customEmojis","statusMessages","equipmentList","personalMemos","personalFiles","piChat","teamMemos","labChat","labBoard","labFiles","meetings","analysisToolList","paperTagList","members","dispatches","readReceipts","pushPrefs","experimentLogs","analysisLogs","experimentLogCategories","analysisLogCategories","aiBotChat","aiBotBoard","casualChat","menuConfig"];
             const results = await Promise.all(keys.map(k => getKey(`${DASHBOARD_PREFIX}${k}`)));
             const out: Record<string, unknown> = {};
             keys.forEach((k, i) => { out[k] = results[i] ? JSON.parse(results[i] as string) : null; });
@@ -175,9 +176,9 @@ export async function POST(request: NextRequest) {
 
                 // Map section → push category
                 const PUSH_CATEGORY: Record<string, string> = {
-                    labChat: 'chat', teamMemos: 'chat', piChat: 'chat',
+                    labChat: 'chat', teamMemos: 'chat', piChat: 'chat', casualChat: 'chat', aiBotChat: 'chat',
                     announcements: 'announcement',
-                    labBoard: 'board', labFiles: 'board',
+                    labBoard: 'board', labFiles: 'board', aiBotBoard: 'board',
                     papers: 'research', reports: 'research', experiments: 'research', analyses: 'research', patents: 'research',
                 };
                 const category = PUSH_CATEGORY[section] || 'other';
@@ -221,6 +222,9 @@ export async function POST(request: NextRequest) {
                     chatPosts: '게시물을 업데이트했습니다',
                     analysisToolList: '해석 도구를 업데이트했습니다',
                     paperTagList: '논문 태그를 업데이트했습니다',
+                    aiBotChat: 'AI 봇 채팅에 새 메시지',
+                    aiBotBoard: 'AI 봇 보드에 새 글을 작성했습니다',
+                    casualChat: '잡담 채팅에 새 메시지',
                 };
 
                 if (section === 'piChat') {

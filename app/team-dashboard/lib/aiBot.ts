@@ -38,10 +38,39 @@ export interface ParsedCommand {
     action: "등록" | "조회" | "삭제" | "수정" | null;
     target: string | null;
     members: string[];
+    memberExplicit: boolean; // true when the user explicitly mentioned a member name or "내/나"
     dates: { start: string; end?: string } | null;
     rawText: string;
     description: string;
 }
+
+// ─── Slash Command Definitions (exported for autocomplete) ──────────────────
+
+export interface SlashCommand {
+    command: string;
+    description: string;
+}
+
+export const SLASH_COMMANDS: SlashCommand[] = [
+    { command: "/휴가", description: "오늘 휴가 등록" },
+    { command: "/재택", description: "오늘 재택 등록" },
+    { command: "/출장", description: "출장 등록" },
+    { command: "/회의", description: "회의 등록" },
+    { command: "/세미나", description: "세미나 등록" },
+    { command: "/논문", description: "논문 현황 조회" },
+    { command: "/실험", description: "실험 현황 조회" },
+    { command: "/해석", description: "해석 현황 조회" },
+    { command: "/계획서", description: "계획서 현황 조회" },
+    { command: "/보고서", description: "보고서 현황 조회" },
+    { command: "/특허", description: "특허 현황 조회" },
+    { command: "/마감", description: "이번주 마감 조회" },
+    { command: "/논의", description: "논의 필요 항목" },
+    { command: "/할일", description: "미완료 할일 조회" },
+    { command: "/요약", description: "전체 현황 요약" },
+    { command: "/일정", description: "일정 조회" },
+    { command: "/접속중", description: "온라인 사용자" },
+    { command: "/도움말", description: "명령어 안내" },
+];
 
 // ─── Keyword Dictionaries ───────────────────────────────────────────────────
 
@@ -166,29 +195,34 @@ export function parseDate(text: string): { start: string; end?: string } | null 
 
 // ─── Member Parsing ─────────────────────────────────────────────────────────
 
-export function parseMember(text: string, currentUser: string, memberNames: string[]): string[] {
+export function parseMember(text: string, currentUser: string, memberNames: string[]): { members: string[]; explicit: boolean } {
     const found: string[] = [];
+    let explicit = false;
 
-    // "내"/"나"/"제" → currentUser
+    // "내"/"나"/"제" → currentUser (explicit mention)
     if (/\b(내|나의|나|제)\b/.test(text) || /^(내|나)/.test(text)) {
         found.push(currentUser);
+        explicit = true;
     }
 
     // 멤버 이름 매칭
     for (const name of memberNames) {
-        if (text.includes(name)) found.push(name);
+        if (text.includes(name)) {
+            found.push(name);
+            explicit = true;
+        }
     }
 
     // 중복 제거
     const unique = [...new Set(found)];
-    return unique.length > 0 ? unique : [currentUser];
+    return { members: unique.length > 0 ? unique : [currentUser], explicit };
 }
 
 // ─── Main Parser ────────────────────────────────────────────────────────────
 
 export function parseCommand(text: string, currentUser: string, memberNames: string[]): ParsedCommand {
-    // Strip @AI prefix
-    const cleaned = text.replace(/^@[Aa][Ii]\s*/, "").trim();
+    // Strip / prefix (slash command)
+    const cleaned = text.replace(/^\/\s*/, "").trim();
 
     let action: ParsedCommand["action"] = null;
     let target: string | null = null;
@@ -215,7 +249,7 @@ export function parseCommand(text: string, currentUser: string, memberNames: str
     }
 
     // Parse members and dates
-    const members = parseMember(cleaned, currentUser, memberNames);
+    const { members, explicit: memberExplicit } = parseMember(cleaned, currentUser, memberNames);
     const dates = parseDate(cleaned);
 
     // Build description (remaining text after removing known keywords)
@@ -230,7 +264,7 @@ export function parseCommand(text: string, currentUser: string, memberNames: str
     description = description.replace(/[오늘내일모레]|이번\s*주|다음\s*주\s*[월화수목금토일]?|\d+\/\d+[~\-]?\d*\/?~?\d*|\d+월\s*\d+일/g, "").trim();
     description = description.replace(/\s+/g, " ").trim();
 
-    return { action, target, members, dates, rawText: cleaned, description };
+    return { action, target, members, memberExplicit, dates, rawText: cleaned, description };
 }
 
 // ─── Calendar Type Mapping ──────────────────────────────────────────────────
@@ -284,30 +318,26 @@ export function generateResponse(
     data: DashboardData,
     members: Record<string, { team: string; role: string; emoji: string }>
 ): BotResponse {
-    const { action, target, members: cmdMembers, dates } = cmd;
+    const { action, target, members: cmdMembers, memberExplicit, dates } = cmd;
 
     // ─── 도움말 ─────────────────────────────────────────────────────────
     if (target === "도움말" || target === "help" || (!target && !action)) {
         return {
-            text: `📋 **사용 가능한 명령어**\n\n` +
-                `**일정 등록** (확인 후 등록)\n` +
-                `• \`@AI 오늘 휴가\` — 오늘 휴가 등록\n` +
-                `• \`@AI 내일 재택\` — 내일 재택 등록\n` +
-                `• \`@AI 송준범 2/26~28 출장\` — 날짜 범위 등록\n` +
-                `• \`@AI 다음주 월 세미나\` — 다음주 월요일 세미나\n` +
-                `• \`@AI 휴가 삭제 오늘\` — 일정 삭제\n\n` +
-                `**데이터 조회** (즉시 결과)\n` +
-                `• \`@AI 논문\` — 진행중 논문 목록\n` +
-                `• \`@AI 실험\` / \`@AI 해석\` — 실험/해석 현황\n` +
-                `• \`@AI 보고서\` / \`@AI 특허\` — 보고서/특허 현황\n` +
-                `• \`@AI 할일\` — 미완료 할일 목록\n` +
-                `• \`@AI 마감\` — 이번주 마감 항목\n` +
-                `• \`@AI 논의\` — 논의 필요 항목\n\n` +
-                `**기타**\n` +
-                `• \`@AI 요약\` — 전체 대시보드 현황\n` +
-                `• \`@AI 접속중\` — 온라인 사용자 목록\n` +
-                `• \`@AI 일정 송준범\` — 멤버 일정 조회\n` +
-                `• \`@AI 도움말\` — 이 안내 표시`,
+            text: `🤖 **사용 가능한 명령어**\n\n` +
+                `📅 **일정:** \`/휴가\`, \`/재택\`, \`/출장\`, \`/회의\`, \`/세미나\`\n` +
+                `📌 **마감:** \`/마감\`\n` +
+                `📄 **논문:** \`/논문\`, \`/신현근 논문\`\n` +
+                `🧪 **실험:** \`/실험\`, \`/해석\`\n` +
+                `📋 **계획서:** \`/계획서\`, \`/보고서\`\n` +
+                `💬 **논의:** \`/논의\`\n` +
+                `👤 **현황:** \`/신현근 현황\`, \`/요약\`\n` +
+                `🗑 **삭제:** \`/삭제 휴가 오늘\`\n\n` +
+                `**일정 등록 예시:**\n` +
+                `• \`/오늘 휴가\` — 오늘 휴가 등록\n` +
+                `• \`/내일 재택\` — 내일 재택 등록\n` +
+                `• \`/송준범 2/26~28 출장\` — 날짜 범위 등록\n` +
+                `• \`/다음주 월 세미나\` — 다음주 월요일 세미나\n` +
+                `• \`/휴가 삭제 오늘\` — 일정 삭제`,
         };
     }
 
@@ -322,7 +352,7 @@ export function generateResponse(
     }
 
     // ─── 요약 / 현황 ───────────────────────────────────────────────────
-    if (target === "요약" || target === "현황") {
+    if (target === "요약" || (target === "현황" && !memberExplicit)) {
         const activePapers = data.papers.filter(p => p.status !== "completed");
         const activeExps = data.experiments.filter(e => e.status !== "completed");
         const activeAnalyses = data.analyses.filter(a => a.status !== "completed");
@@ -342,6 +372,29 @@ export function generateResponse(
                 `✅ 할일: ${pendingTodos.length}건 미완료\n` +
                 `🟢 접속: ${online.length}명 온라인`,
         };
+    }
+
+    // ─── 멤버 현황 (e.g., /신현근 현황) ────────────────────────────────
+    if (target === "현황" && memberExplicit) {
+        const name = cmdMembers[0];
+        const emoji = members[name]?.emoji || "👤";
+        const myPapers = data.papers.filter(p => p.status !== "completed" && p.assignees.includes(name));
+        const myExps = data.experiments.filter(e => e.status !== "completed" && e.assignees.includes(name));
+        const myAnalyses = data.analyses.filter(a => a.status !== "completed" && a.assignees.includes(name));
+        const myReports = data.reports.filter(r => r.status !== "done" && r.assignees.includes(name));
+        const myPatents = data.patents.filter(p => p.status !== "completed" && p.assignees.includes(name));
+        const myTodos = data.todos.filter(t => !t.done && t.assignees.includes(name));
+
+        const lines: string[] = [];
+        if (myPapers.length > 0) lines.push(`📄 논문: ${myPapers.map(p => p.title).join(", ")}`);
+        if (myExps.length > 0) lines.push(`🧪 실험: ${myExps.map(e => e.title).join(", ")}`);
+        if (myAnalyses.length > 0) lines.push(`🖥️ 해석: ${myAnalyses.map(a => a.title).join(", ")}`);
+        if (myReports.length > 0) lines.push(`📋 보고서: ${myReports.map(r => r.title).join(", ")}`);
+        if (myPatents.length > 0) lines.push(`💡 특허: ${myPatents.map(p => p.title).join(", ")}`);
+        if (myTodos.length > 0) lines.push(`✅ 할일: ${myTodos.length}건 미완료`);
+
+        if (lines.length === 0) return { text: `${emoji} ${name}의 진행중인 항목이 없습니다.` };
+        return { text: `${emoji} **${name} 현황**\n\n${lines.join("\n")}` };
     }
 
     // ─── 마감 ───────────────────────────────────────────────────────────
@@ -414,7 +467,7 @@ export function generateResponse(
         const typeLabel = CALENDAR_TYPES[calType]?.label || target;
 
         if (action === "삭제") {
-            if (!dates) return { text: `❓ 날짜를 지정해주세요.\n예: \`@AI ${target} 삭제 오늘\`` };
+            if (!dates) return { text: `❓ 날짜를 지정해주세요.\n예: \`/${target} 삭제 오늘\`` };
             const dateList = expandDateRange(dates.start, dates.end);
             const name = cmdMembers[0];
             const emoji = members[name]?.emoji || "👤";
@@ -450,10 +503,14 @@ export function generateResponse(
 
     // ─── 논문 조회 ──────────────────────────────────────────────────────
     if (target === "논문") {
-        const memberFilter = cmdMembers.length === 1 && cmdMembers[0] !== cmd.rawText ? cmdMembers : null;
+        // Only filter by member when user explicitly mentioned a name or "내/나"
+        const memberFilter = memberExplicit ? cmdMembers : null;
         let items = data.papers.filter(p => p.status !== "completed");
         if (memberFilter) items = items.filter(p => p.assignees.some(a => memberFilter.includes(a)));
-        if (items.length === 0) return { text: "📄 진행중인 논문이 없습니다." };
+        if (items.length === 0) {
+            const label = memberFilter ? `${memberFilter.join(", ")}의 진행중인 논문이` : "진행중인 논문이";
+            return { text: `📄 ${label} 없습니다.` };
+        }
         const lines = items.map(p => {
             const assignees = p.assignees.join(", ");
             const progress = p.progress ? ` (${p.progress}%)` : "";
@@ -465,10 +522,13 @@ export function generateResponse(
 
     // ─── 실험 조회 ──────────────────────────────────────────────────────
     if (target === "실험") {
-        const memberFilter = cmdMembers.length === 1 && cmdMembers[0] !== cmd.rawText ? cmdMembers : null;
+        const memberFilter = memberExplicit ? cmdMembers : null;
         let items = data.experiments.filter(e => e.status !== "completed");
         if (memberFilter) items = items.filter(e => e.assignees.some(a => memberFilter.includes(a)));
-        if (items.length === 0) return { text: "🧪 진행중인 실험이 없습니다." };
+        if (items.length === 0) {
+            const label = memberFilter ? `${memberFilter.join(", ")}의 진행중인 실험이` : "진행중인 실험이";
+            return { text: `🧪 ${label} 없습니다.` };
+        }
         const lines = items.map(e => {
             const assignees = e.assignees.join(", ");
             const progress = e.progress ? ` (${e.progress}%)` : "";
@@ -480,10 +540,13 @@ export function generateResponse(
 
     // ─── 해석 조회 ──────────────────────────────────────────────────────
     if (target === "해석") {
-        const memberFilter = cmdMembers.length === 1 && cmdMembers[0] !== cmd.rawText ? cmdMembers : null;
+        const memberFilter = memberExplicit ? cmdMembers : null;
         let items = data.analyses.filter(a => a.status !== "completed");
         if (memberFilter) items = items.filter(a => a.assignees.some(n => memberFilter.includes(n)));
-        if (items.length === 0) return { text: "🖥️ 진행중인 해석이 없습니다." };
+        if (items.length === 0) {
+            const label = memberFilter ? `${memberFilter.join(", ")}의 진행중인 해석이` : "진행중인 해석이";
+            return { text: `🖥️ ${label} 없습니다.` };
+        }
         const lines = items.map(a => {
             const assignees = a.assignees.join(", ");
             const progress = a.progress ? ` (${a.progress}%)` : "";
@@ -495,10 +558,13 @@ export function generateResponse(
 
     // ─── 보고서/계획서 조회 ──────────────────────────────────────────────
     if (target === "보고서" || target === "계획서") {
-        const memberFilter = cmdMembers.length === 1 && cmdMembers[0] !== cmd.rawText ? cmdMembers : null;
+        const memberFilter = memberExplicit ? cmdMembers : null;
         let items = data.reports.filter(r => r.status !== "done");
         if (memberFilter) items = items.filter(r => r.assignees.some(a => memberFilter.includes(a)));
-        if (items.length === 0) return { text: "📋 진행중인 보고서가 없습니다." };
+        if (items.length === 0) {
+            const label = memberFilter ? `${memberFilter.join(", ")}의 진행중인 보고서가` : "진행중인 보고서가";
+            return { text: `📋 ${label} 없습니다.` };
+        }
         const lines = items.map(r => {
             const assignees = r.assignees.join(", ");
             return `• **${r.title}** (${r.progress}%) — ${assignees}`;
@@ -509,10 +575,13 @@ export function generateResponse(
 
     // ─── 특허 조회 ──────────────────────────────────────────────────────
     if (target === "특허") {
-        const memberFilter = cmdMembers.length === 1 && cmdMembers[0] !== cmd.rawText ? cmdMembers : null;
+        const memberFilter = memberExplicit ? cmdMembers : null;
         let items = data.patents.filter(p => p.status !== "completed");
         if (memberFilter) items = items.filter(p => p.assignees.some(a => memberFilter.includes(a)));
-        if (items.length === 0) return { text: "💡 진행중인 특허가 없습니다." };
+        if (items.length === 0) {
+            const label = memberFilter ? `${memberFilter.join(", ")}의 진행중인 특허가` : "진행중인 특허가";
+            return { text: `💡 ${label} 없습니다.` };
+        }
         const lines = items.map(p => {
             const assignees = p.assignees.join(", ");
             const progress = p.progress ? ` (${p.progress}%)` : "";
@@ -524,20 +593,21 @@ export function generateResponse(
 
     // ─── 할일 조회 ──────────────────────────────────────────────────────
     if (target === "할일") {
-        const memberFilter = cmdMembers;
+        const memberFilter = memberExplicit ? cmdMembers : null;
         let items = data.todos.filter(t => !t.done);
-        if (memberFilter.length > 0) items = items.filter(t => t.assignees.some(a => memberFilter.includes(a)));
+        if (memberFilter) items = items.filter(t => t.assignees.some(a => memberFilter.includes(a)));
         if (items.length === 0) return { text: "✅ 미완료 할일이 없습니다." };
         const lines = items.map(t => {
             const assignees = t.assignees.join(", ");
             const dl = t.deadline ? ` (마감: ${displayDate(t.deadline)})` : "";
             return `• ${t.text}${dl} — ${assignees}`;
         });
-        return { text: `✅ **미완료 할일** (${items.length}건)\n\n${lines.join("\n")}` };
+        const header = memberFilter ? `${memberFilter.join(", ")}의 미완료 할일` : "미완료 할일";
+        return { text: `✅ **${header}** (${items.length}건)\n\n${lines.join("\n")}` };
     }
 
     // ─── Fallback ───────────────────────────────────────────────────────
     return {
-        text: `🤔 명령을 이해하지 못했습니다.\n\`@AI 도움말\`을 입력하면 사용 가능한 명령어를 확인할 수 있습니다.`,
+        text: `🤔 명령을 이해하지 못했습니다.\n\`/도움말\`을 입력하면 사용 가능한 명령어를 확인할 수 있습니다.`,
     };
 }
