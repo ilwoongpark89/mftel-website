@@ -97,7 +97,7 @@ const IPView = memo(function IPView({ patents, onSave, onDelete, currentUser, on
         <div>
             <div className="mb-3 flex items-center justify-end">
                 <div className="flex items-center gap-2">
-                    <button onClick={() => setAdding(true)} className="hidden md:inline-flex px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 지식재산권 등록</button>
+                    <button onClick={() => setAdding(true)} className="hidden md:inline-flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors"><span className="text-[14px]">+</span> 지식재산권 등록</button>
                     <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedPatents.length})</button>
                 </div>
             </div>

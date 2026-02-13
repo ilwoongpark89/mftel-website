@@ -76,9 +76,9 @@ function ChatWithAiTab({ userName, aiBotChat, handleAddAiBotChat, handleUpdateAi
     };
 
     return (
-        <div className="flex flex-col flex-1 min-h-0">
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
             {/* Mobile tab toggle */}
-            <div className="flex md:hidden border-b border-slate-200 mb-2">
+            <div className="flex md:hidden border-b border-slate-200 mb-2 flex-shrink-0">
                 {([["board", "📌", "보드"], ["bot", "🤖", "AI 봇"]] as const).map(([id, icon, label]) => (
                     <button key={id} onClick={() => setMobileTab(id as typeof mobileTab)}
                         className={`flex-1 py-2 text-[13px] font-medium transition-colors ${mobileTab === id ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400"}`}>
@@ -87,12 +87,12 @@ function ChatWithAiTab({ userName, aiBotChat, handleAddAiBotChat, handleUpdateAi
                 ))}
             </div>
             {/* Desktop: 2fr 3fr grid (board + AI chat) / Mobile: tab switching */}
-            <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{ gridTemplateColumns: "2fr 3fr" }}>
+            <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0 overflow-hidden" style={{ gridTemplateColumns: "2fr 3fr" }}>
                 {/* Board - 2-column card grid */}
-                <div className={`flex-col min-w-0 ${mobileTab === "board" ? "flex flex-1 min-h-0" : "hidden"} md:flex`}>
-                    <div className="flex items-center justify-between mb-2">
+                <div className={`flex-col min-w-0 ${mobileTab === "board" ? "flex flex-1 min-h-0" : "hidden"} md:flex md:min-h-0`}>
+                    <div className="flex items-center justify-between mb-2 flex-shrink-0">
                         <h3 className="text-[14px] font-bold text-slate-700">📌 보드</h3>
-                        <button onClick={openBoardAdd} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 새 글 작성</button>
+                        <button onClick={openBoardAdd} className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors"><span className="text-[14px]">+</span> 새 글 작성</button>
                     </div>
                     <div className="flex-1 min-h-0 overflow-y-auto">
                         <div className="grid grid-cols-2 gap-2">
@@ -130,7 +130,7 @@ function ChatWithAiTab({ userName, aiBotChat, handleAddAiBotChat, handleUpdateAi
                                 );
                             })}
                             {board.length === 0 && (
-                                <button onClick={openBoardAdd} className="col-span-2 w-full py-6 text-[12px] text-slate-400 hover:text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">+ 새 글 작성</button>
+                                <button onClick={openBoardAdd} className="col-span-2 w-full py-6 flex items-center justify-center gap-1 text-[13px] text-slate-400 hover:text-slate-500 hover:bg-slate-100 rounded-lg transition-colors"><span className="text-[14px]">+</span> 새 글 작성</button>
                             )}
                         </div>
                     </div>
@@ -1945,6 +1945,8 @@ export default function DashboardPage() {
         </div>
     );
 
+    const isFullHeightTab = activeTab === "labChat" || activeTab === "chat" || activeTab.startsWith("teamMemo_") || activeTab.startsWith("memo_");
+
     return (
         <MembersContext.Provider value={displayMembers}>
         <SavingContext.Provider value={savingIds}>
@@ -2194,7 +2196,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Main Content */}
-                <div key={activeTab} ref={mainContentRef} onScroll={e => { scrollPositionsRef.current[activeTab] = (e.target as HTMLDivElement).scrollTop; }} className="flex-1 p-4 pb-20 md:py-7 md:px-9 md:pb-7 overflow-y-auto flex flex-col min-h-0" style={{ animation: "fadeIn 0.15s ease" }}>
+                <div key={activeTab} ref={mainContentRef} onScroll={e => { scrollPositionsRef.current[activeTab] = (e.target as HTMLDivElement).scrollTop; }} className={`flex-1 p-4 ${isFullHeightTab ? "pb-4 md:pb-5" : "pb-20 md:pb-7"} md:py-7 md:px-9 ${isFullHeightTab ? "overflow-hidden" : "overflow-y-auto"} flex flex-col min-h-0`} style={{ animation: "fadeIn 0.15s ease" }}>
                     {activeTab !== "overview" && activeTab !== "overview_me" && !activeTab.startsWith("expLog_") && !activeTab.startsWith("analysisLog_") && (() => {
                         const extraTabs: Record<string, { icon: string; label: string }> = { teams: { icon: "👥", label: "팀 관리" }, settings: { icon: "⚙️", label: "설정" }, admin_members: { icon: "🔑", label: "멤버 관리" }, admin_backups: { icon: "💾", label: "백업 관리" }, admin_access: { icon: "🔐", label: "접속 로그" }, admin_menus: { icon: "📋", label: "메뉴 관리" } };
                         const found = tabs.find(t => t.id === activeTab) || extraTabs[activeTab];

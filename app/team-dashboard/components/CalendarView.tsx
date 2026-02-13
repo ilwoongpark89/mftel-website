@@ -34,7 +34,7 @@ function DispatchPanel({ dispatches, currentUser, onSave, onDelete }: {
             <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100">
                 <span className="text-[13px] font-semibold text-slate-800">🟣 파견 현황 ({active.length})</span>
                 {currentUser === "박일웅" && !showForm && (
-                    <button onClick={() => setShowForm(true)} className="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-500 hover:bg-slate-200 font-medium">+ 추가</button>
+                    <button onClick={() => setShowForm(true)} className="flex items-center gap-0.5 text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-500 hover:bg-slate-200 font-medium"><span className="text-[12px]">+</span> 추가</button>
                 )}
             </div>
             <div className="p-2.5">
@@ -206,8 +206,8 @@ const CalendarGrid = memo(function CalendarGrid({ data, currentUser, types, onTo
                     <button onClick={() => { const n = new Date(); setMonth({ y: n.getFullYear(), m: n.getMonth() }); }} className="px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-[12px] font-medium hover:bg-slate-200 ml-1">오늘</button>
                 </div>
             </div>
-            <div className="flex gap-3 items-start">
-            <div className="shrink-0 relative" onMouseLeave={() => { if (isDragging.current) { isDragging.current = false; setDragName(null); setDragDates([]); setDragStart(null); } }}>
+            <div className="flex flex-col lg:flex-row gap-3 items-start">
+            <div className="flex-1 min-w-0 relative" onMouseLeave={() => { if (isDragging.current) { isDragging.current = false; setDragName(null); setDragDates([]); setDragStart(null); } }}>
                 <div className="absolute right-0 -top-5 flex gap-1.5 items-center z-10">
                     {Object.entries(types).filter(([k]) => scheduleTypeKeys.includes(k)).map(([k, vt]) => (
                         <div key={k} className="flex items-center gap-0.5">
@@ -392,7 +392,7 @@ const CalendarGrid = memo(function CalendarGrid({ data, currentUser, types, onTo
             </div>
             </div>
             {/* Right sidebar – week summary (based on selected or current date) */}
-            <div className="flex-1 min-w-[200px] hidden lg:block">
+            <div className="w-full lg:w-[380px] lg:max-w-[380px] shrink-0 hidden lg:block">
                 {(() => {
                     // 기준일: 선택한 날짜 또는 오늘
                     const baseDate = selectedDate ? new Date(selectedDate) : new Date();

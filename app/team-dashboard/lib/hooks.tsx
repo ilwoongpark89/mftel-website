@@ -51,6 +51,8 @@ export function useMention() {
     }, []);
     const handleKey = useCallback((e: React.KeyboardEvent): string | boolean => {
         if (!open || filtered.length === 0) return false;
+        // Skip during Korean IME composition to prevent duplicate characters
+        if (e.nativeEvent?.isComposing || e.keyCode === 229) return false;
         if (e.key === "ArrowDown") { e.preventDefault(); setIdx(i => Math.min(i + 1, filtered.length - 1)); return true; }
         if (e.key === "ArrowUp") { e.preventDefault(); setIdx(i => Math.max(i - 1, 0)); return true; }
         if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); e.stopPropagation(); return filtered[idx] || false; }

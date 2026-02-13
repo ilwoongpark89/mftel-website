@@ -41,6 +41,7 @@ const PersonalMemoView = memo(function PersonalMemoView({ memos, onSave, onDelet
     const piChatContainerRef = useRef<HTMLDivElement>(null);
     const piChatDidInit = useRef(false);
     const scrollPiChat = useCallback(() => { const el = piChatContainerRef.current; if (el) el.scrollTop = el.scrollHeight; }, []);
+    const [mobileTab, setMobileTab] = useState<"chat"|"board"|"files">("chat");
     const [chatReplyTo, setChatReplyTo] = useState<TeamChatMsg | null>(null);
     const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
     const [piMoreMenuMsgId, setPiMoreMenuMsgId] = useState<number | null>(null);
@@ -122,16 +123,25 @@ const PersonalMemoView = memo(function PersonalMemoView({ memos, onSave, onDelet
     }, [chat.length, scrollPiChat]);
 
     return (
-        <div className="grid gap-3 flex-1 min-h-0 relative" style={{gridTemplateColumns: gridTemplate}}>
+        <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0 overflow-hidden relative" style={{gridTemplateColumns: gridTemplate}}>
             {layoutOpen && (
                 <LayoutSettingsOverlay settings={layoutSettings} onUpdate={updateLayout} onReset={resetLayout}
                     onClose={closeLayout} showBoardColumns />
             )}
+            {/* Mobile tab bar */}
+            <div className="md:hidden flex border-b border-slate-200 bg-white flex-shrink-0 -mt-1">
+                {([["chat","💬","채팅"],["board","📝","노트"],["files","📎","파일"]] as const).map(([id,icon,label]) => (
+                    <button key={id} onClick={() => setMobileTab(id)}
+                        className={`flex-1 py-2.5 text-[12px] font-semibold transition-colors whitespace-nowrap ${mobileTab === id ? "text-blue-600 border-b-2 border-blue-500" : "text-slate-400 hover:text-slate-600"}`}>
+                        {icon} {label}
+                    </button>
+                ))}
+            </div>
             {/* Board */}
-            <div className="flex flex-col min-w-0">
-                <div className="flex items-center justify-between mb-2">
+            <div className={`flex-col min-w-0 ${mobileTab === "board" ? "flex flex-1 min-h-0" : "hidden"} md:flex md:min-h-0`}>
+                <div className="flex items-center justify-between mb-2 flex-shrink-0">
                     <h3 className="text-[14px] font-bold text-slate-700">📝 노트</h3>
-                    <button onClick={openAdd} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
+                    <button onClick={openAdd} className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors"><span className="text-[14px]">+</span> 추가</button>
                 </div>
                 <div className="flex-1 min-h-0 overflow-y-auto">
                     {memos.length === 0 && !adding && <div className="text-center py-12"><div className="text-3xl mb-2 opacity-40">📒</div><div className="text-slate-400 text-[13px]">노트가 없습니다</div></div>}
@@ -139,8 +149,8 @@ const PersonalMemoView = memo(function PersonalMemoView({ memos, onSave, onDelet
                         {[...memos].sort((a, b) => b.id - a.id).map(m => {
                             const cmts = m.comments || [];
                             return (
-                                <div key={m.id} className={`rounded-xl p-4 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col group relative`}
-                                    style={{ background: m.color || "#fff", border: m.borderColor ? `2px solid ${m.borderColor}` : m.needsDiscussion ? "1px solid #E2E8F0" : "1px solid #E2E8F0", borderLeft: m.needsDiscussion && !m.borderColor ? "3px solid #EF4444" : undefined }}
+                                <div key={m.id} className={`rounded-xl p-4 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col group relative overflow-hidden`}
+                                    style={{ background: m.color || "#fff", border: m.borderColor ? `2px solid ${m.borderColor}` : m.needsDiscussion ? "1px solid #E2E8F0" : "1px solid #E2E8F0", borderLeft: m.needsDiscussion && !m.borderColor ? "3px solid #EF4444" : undefined, maxWidth: '100%' }}
                                     onClick={() => openDetail(m)}>
                                     <button onClick={e => { e.stopPropagation(); onDelete(m.id); }}
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
@@ -148,11 +158,11 @@ const PersonalMemoView = memo(function PersonalMemoView({ memos, onSave, onDelet
                                         <input type="checkbox" checked={!!m.needsDiscussion} onChange={() => onSave({ ...m, needsDiscussion: !m.needsDiscussion })} className="w-3 h-3 accent-red-500" />
                                         <span className={`text-[11px] font-medium ${m.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                                     </label>
-                                    <div className="flex items-start justify-between mb-1">
-                                        <div className="text-[13px] font-semibold text-slate-800 break-words flex-1">{m.title}<SavingBadge id={m.id} /></div>
-                                        <span className="text-[11px] text-slate-400 ml-1 whitespace-nowrap">{m.updatedAt}</span>
+                                    <div className="flex items-start justify-between mb-1 min-w-0">
+                                        <div className="text-[13px] font-semibold text-slate-800 break-words flex-1 min-w-0" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{m.title}<SavingBadge id={m.id} /></div>
+                                        <span className="text-[11px] text-slate-400 ml-1 whitespace-nowrap flex-shrink-0">{m.updatedAt}</span>
                                     </div>
-                                    {m.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-3 break-words">{m.content}</div>}
+                                    {m.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-3" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{m.content}</div>}
                                     {cmts.length > 0 ? (
                                         <div className="border-t border-slate-100 pt-1.5 mt-auto space-y-0.5">
                                             <div className="text-[11px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
@@ -174,22 +184,22 @@ const PersonalMemoView = memo(function PersonalMemoView({ memos, onSave, onDelet
                 </div>
             </div>
             {/* Files */}
-            <div className="flex flex-col min-w-0 bg-white border border-slate-200 rounded-xl">
-                <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
+            <div className={`flex-col min-w-0 bg-white border border-slate-200 rounded-xl overflow-hidden ${mobileTab === "files" ? "flex flex-1 min-h-0" : "hidden"} md:flex md:min-h-0`}>
+                <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
                     <h3 className="text-[14px] font-bold text-slate-700">📎 파일</h3>
                     <span className="text-[12px] text-slate-400">{files.length}개</span>
                 </div>
                 <FileBox files={files} currentUser={currentUser} onAddFile={onAddFile} onDeleteFile={onDeleteFile} />
             </div>
             {/* PI Chat */}
-            <div className="flex flex-col min-w-0 border border-slate-200 rounded-xl min-h-0" style={{ background: "#FFFFFF" }}>
-                <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
+            <div className={`flex-col min-w-0 md:border md:border-slate-200 md:rounded-xl overflow-hidden ${mobileTab === "chat" ? "flex flex-1 min-h-0" : "hidden"} md:flex md:min-h-0`} style={{ background: "#FFFFFF" }}>
+                <div className="hidden md:flex px-3 py-2.5 border-b border-slate-100 items-center justify-between flex-shrink-0">
                     <h3 className="text-[14px] font-bold text-slate-700">💬 PI 채팅</h3>
                     {currentUser === "박일웅" && (
                         <button onClick={() => confirmDel(() => onClearChat())} className="text-[11px] text-slate-400 hover:text-red-500">초기화</button>
                     )}
                 </div>
-                <div ref={piChatContainerRef} className="flex-1 overflow-y-auto px-3 py-2">
+                <div ref={piChatContainerRef} className="flex-1 min-h-0 overflow-y-auto px-3 py-2">
                     {chat.length === 0 && <div className="text-center py-12 text-slate-400 text-[12px]">PI와 대화를 시작하세요</div>}
                     {chat.map((msg, idx) => {
                         const prev = idx > 0 ? chat[idx - 1] : null;
@@ -285,7 +295,7 @@ const PersonalMemoView = memo(function PersonalMemoView({ memos, onSave, onDelet
                                                         </div>
                                                     </div>
                                                 )}
-                                                <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "7px 14px", lineHeight: "1.5" }}
+                                                <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "7px 14px", lineHeight: "1.5", wordBreak: 'break-all', overflowWrap: 'break-word' }}
                                                     className="text-[13px] text-slate-800">
                                                     {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollPiChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                                     {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
@@ -316,7 +326,7 @@ const PersonalMemoView = memo(function PersonalMemoView({ memos, onSave, onDelet
                     <div ref={chatEndRef} />
                 </div>
                 {chatReplyTo && (
-                    <div className="px-3 pt-2 pb-1 border-t border-slate-100 bg-slate-50 flex items-center gap-2">
+                    <div className="px-3 pt-2 pb-1 border-t border-slate-100 bg-slate-50 flex items-center gap-2 flex-shrink-0">
                         <div className="flex-1 min-w-0 text-[12px] text-slate-500 truncate">
                             <span className="font-semibold text-slate-600">{chatReplyTo.author}</span>에게 답장: {chatReplyTo.text || "📷 이미지"}
                         </div>
@@ -375,16 +385,16 @@ const PersonalMemoView = memo(function PersonalMemoView({ memos, onSave, onDelet
                                 <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                             </div>
                         </div>
-                        <div className="p-4">
+                        <div className="p-4" style={{ overflow: 'hidden' }}>
                             <div className="text-[12px] text-slate-400 mb-3">{selected.updatedAt}</div>
-                            {selected.content && <div className="text-[14px] text-slate-700 mb-4 whitespace-pre-wrap break-words">{selected.content}</div>}
+                            {selected.content && <div className="text-[14px] text-slate-700 mb-4 whitespace-pre-wrap" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{selected.content}</div>}
                             <div className="border-t border-slate-200 pt-4">
                                 <div className="text-[13px] font-semibold text-slate-600 mb-3">💬 댓글 ({(selected.comments || []).length})</div>
                                 <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto">
                                     {(selected.comments || []).map(c => (
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group/c relative">
                                             <button onClick={() => deleteComment(c.id)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{c.date}</div>
                                         </div>
                                     ))}

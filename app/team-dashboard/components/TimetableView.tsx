@@ -553,7 +553,7 @@ const TimetableView = memo(function TimetableView({ blocks, onSave, onDelete, cu
                 </div>
                 <div className="flex-1 flex justify-end">
                     <button onClick={() => setShowAddModal(true)}
-                        className="px-3.5 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors flex items-center gap-1.5">
+                        className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors flex items-center gap-1">
                         <span className="text-[14px]">+</span> 시간표 추가
                     </button>
                 </div>

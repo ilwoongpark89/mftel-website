@@ -157,7 +157,7 @@ const MeetingView = memo(function MeetingView({ meetings, onSave, onDelete, curr
         <div>
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                    <button onClick={() => setAdding(true)} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">+ 회의록 작성</button>
+                    <button onClick={() => setAdding(true)} className="flex items-center gap-1 px-3 py-1.5 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium transition-colors"><span className="text-[14px]">+</span> 회의록 작성</button>
                 </div>
                 <span className="text-[13px] text-slate-400">총 {filtered.length}건</span>
             </div>

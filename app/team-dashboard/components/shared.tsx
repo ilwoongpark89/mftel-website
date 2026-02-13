@@ -520,7 +520,7 @@ export function DetailChatPanel({ messages, currentUser, onAdd, onDelete, title 
                                 <span className="text-[12px] font-semibold text-slate-700">{MEMBERS[c.author]?.emoji} {c.author}</span>
                                 <span className="text-[11px] text-slate-400">{c.date}</span>
                             </div>
-                            <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
+                            <div className="text-[13px] text-slate-600 whitespace-pre-wrap" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
                         </div>
                         {(c.author === currentUser || currentUser === "박일웅") && (
                             <button onClick={() => onDelete(c.id)} className="text-[11px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 self-start mt-2 flex-shrink-0">삭제</button>
@@ -582,15 +582,15 @@ export function DetailModal3Col({ onClose, onEdit, onDelete, files, currentUser,
                 {/* Desktop 3-col / Mobile single panel */}
                 <div className="flex-1 min-h-0 md:grid overflow-hidden" style={{ gridTemplateColumns: "1fr 1.8fr 1.2fr" }}>
                     {/* Left: Files */}
-                    <div className={`flex flex-col border-r border-slate-200 ${mobileTab === "files" ? "" : "hidden md:flex"}`}>
+                    <div className={`flex flex-col min-h-0 overflow-hidden border-r border-slate-200 ${mobileTab === "files" ? "" : "hidden md:flex"}`}>
                         <div className="px-4 py-3 border-b border-slate-100 flex-shrink-0">
                             <span className="text-[13px] font-bold text-slate-700">📎 파일 ({files.length})</span>
                         </div>
                         <FileBox files={files} currentUser={currentUser} onAddFile={onAddFile} onDeleteFile={onDeleteFile} />
                     </div>
                     {/* Center: Detail content */}
-                    <div className={`flex flex-col border-r border-slate-200 ${mobileTab === "detail" ? "" : "hidden md:flex"}`}>
-                        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4 modal-scroll">
+                    <div className={`flex flex-col min-h-0 min-w-0 overflow-hidden border-r border-slate-200 ${mobileTab === "detail" ? "" : "hidden md:flex"}`}>
+                        <div className="flex-1 min-h-0 min-w-0 overflow-y-auto px-5 py-4 space-y-4 modal-scroll" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>
                             {children}
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-100 flex-shrink-0">
@@ -604,7 +604,7 @@ export function DetailModal3Col({ onClose, onEdit, onDelete, files, currentUser,
                         </div>
                     </div>
                     {/* Right: Chat */}
-                    <div className={`flex flex-col ${mobileTab === "chat" ? "" : "hidden md:flex"}`}>
+                    <div className={`flex flex-col min-h-0 overflow-hidden ${mobileTab === "chat" ? "" : "hidden md:flex"}`}>
                         <DetailChatPanel messages={chatMessages} currentUser={currentUser} onAdd={onAddChat} onDelete={onDeleteChat}
                             title={chatTitle} placeholder={chatPlaceholder} draftKey={chatDraftKey} emptyText={chatEmptyText} />
                     </div>

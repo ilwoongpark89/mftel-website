@@ -70,6 +70,8 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     { command: "/일정", description: "일정 조회" },
     { command: "/접속중", description: "온라인 사용자" },
     { command: "/도움말", description: "명령어 안내" },
+    { command: "/도움", description: "명령어 안내" },
+    { command: "/help", description: "Show command help" },
 ];
 
 // ─── Keyword Dictionaries ───────────────────────────────────────────────────
@@ -110,6 +112,7 @@ const TARGET_KEYWORDS: Record<string, { defaultAction: ParsedCommand["action"]; 
     "접속중": { defaultAction: "조회", category: "special" },
     "누가있어": { defaultAction: "조회", category: "special" },
     "도움말": { defaultAction: "조회", category: "special" },
+    "도움": { defaultAction: "조회", category: "special" },
     "help": { defaultAction: "조회", category: "special" },
 };
 
@@ -183,11 +186,19 @@ export function parseDate(text: string): { start: string; end?: string } | null 
         return { start: `${y}-${pad(m1)}-${pad(d1)}`, end: `${y}-${pad(m2)}-${pad(d2)}` };
     }
 
-    // M월 D일 or M/D
+    // M월 D일 or M/D or M/D일
     const mdMatch = text.match(/(\d{1,2})\s*[월\/]\s*(\d{1,2})\s*일?/);
     if (mdMatch) {
         const y = today.getFullYear();
         return { start: `${y}-${pad(parseInt(mdMatch[1]))}-${pad(parseInt(mdMatch[2]))}` };
+    }
+
+    // D일 (day only, current month implied) — e.g., "15일"
+    const dayOnlyMatch = text.match(/(\d{1,2})일/);
+    if (dayOnlyMatch) {
+        const y = today.getFullYear();
+        const m = today.getMonth() + 1;
+        return { start: `${y}-${pad(m)}-${pad(parseInt(dayOnlyMatch[1]))}` };
     }
 
     return null;
@@ -199,15 +210,24 @@ export function parseMember(text: string, currentUser: string, memberNames: stri
     const found: string[] = [];
     let explicit = false;
 
+    // Strip Korean particles from member names for better matching
+    // e.g., "김성진을", "김성진에게", "김성진한테", "김성진이", "김성진의"
+    const stripped = text.replace(/([가-힣]{2,3})(을|를|에게|한테|이|의|은|는|과|와|도|님)/g, "$1");
+
     // "내"/"나"/"제" → currentUser (explicit mention)
-    if (/\b(내|나의|나|제)\b/.test(text) || /^(내|나)/.test(text)) {
+    if (/\b(내|나의|나|제)\b/.test(stripped) || /^(내|나)/.test(stripped)) {
         found.push(currentUser);
         explicit = true;
     }
 
-    // 멤버 이름 매칭
-    for (const name of memberNames) {
-        if (text.includes(name)) {
+    // Sort member names by length descending to match longer names first
+    // (prevents partial matches like "김성" matching before "김성진")
+    const sortedNames = [...memberNames].sort((a, b) => b.length - a.length);
+
+    // 멤버 이름 매칭 — handles comma-separated lists like "김성진, 송상민"
+    // Also handles "김성진이랑 송상민", "김성진하고 송상민"
+    for (const name of sortedNames) {
+        if (stripped.includes(name)) {
             found.push(name);
             explicit = true;
         }
@@ -224,20 +244,26 @@ export function parseCommand(text: string, currentUser: string, memberNames: str
     // Strip / prefix (slash command)
     const cleaned = text.replace(/^\/\s*/, "").trim();
 
+    // Normalize natural language: strip Korean particles and connectors for keyword matching
+    // e.g., "회의에" → "회의", "추가해줘" → "추가", "등록해줘" → "등록"
+    const normalized = cleaned
+        .replace(/(해줘|해주세요|해주셔|해줄래|해봐|할게|합니다|하자|하세요)/g, "")
+        .replace(/([가-힣]+)(에서|에|로|으로)/g, "$1");
+
     let action: ParsedCommand["action"] = null;
     let target: string | null = null;
 
-    // Find action keyword
+    // Find action keyword (search in both cleaned and normalized forms)
     for (const [keyword, act] of Object.entries(ACTION_KEYWORDS)) {
-        if (cleaned.includes(keyword)) {
+        if (cleaned.includes(keyword) || normalized.includes(keyword)) {
             action = act;
             break;
         }
     }
 
-    // Find target keyword
+    // Find target keyword (search in both cleaned and normalized forms)
     for (const keyword of Object.keys(TARGET_KEYWORDS)) {
-        if (cleaned.includes(keyword)) {
+        if (cleaned.includes(keyword) || normalized.includes(keyword)) {
             target = keyword;
             break;
         }
@@ -262,6 +288,8 @@ export function parseCommand(text: string, currentUser: string, memberNames: str
         description = description.replace(name, "");
     }
     description = description.replace(/[오늘내일모레]|이번\s*주|다음\s*주\s*[월화수목금토일]?|\d+\/\d+[~\-]?\d*\/?~?\d*|\d+월\s*\d+일/g, "").trim();
+    // Clean up particles and verb endings left over
+    description = description.replace(/(을|를|에게|한테|이|에서|에|로|으로|해줘|해주세요|해봐|합니다|하자|하세요|일)\b/g, "").trim();
     description = description.replace(/\s+/g, " ").trim();
 
     return { action, target, members, memberExplicit, dates, rawText: cleaned, description };
@@ -321,23 +349,35 @@ export function generateResponse(
     const { action, target, members: cmdMembers, memberExplicit, dates } = cmd;
 
     // ─── 도움말 ─────────────────────────────────────────────────────────
-    if (target === "도움말" || target === "help" || (!target && !action)) {
+    if (target === "도움말" || target === "도움" || target === "help" || (!target && !action)) {
         return {
-            text: `🤖 **사용 가능한 명령어**\n\n` +
-                `📅 **일정:** \`/휴가\`, \`/재택\`, \`/출장\`, \`/회의\`, \`/세미나\`\n` +
-                `📌 **마감:** \`/마감\`\n` +
-                `📄 **논문:** \`/논문\`, \`/신현근 논문\`\n` +
-                `🧪 **실험:** \`/실험\`, \`/해석\`\n` +
-                `📋 **계획서:** \`/계획서\`, \`/보고서\`\n` +
-                `💬 **논의:** \`/논의\`\n` +
-                `👤 **현황:** \`/신현근 현황\`, \`/요약\`\n` +
-                `🗑 **삭제:** \`/삭제 휴가 오늘\`\n\n` +
-                `**일정 등록 예시:**\n` +
+            text: `🤖 **AI 어시스턴트 명령어 안내**\n\n` +
+                `**[ 일정 등록 ]**\n` +
+                `\`/휴가\` \`/재택\` \`/출장\` \`/회의\` \`/세미나\`\n` +
                 `• \`/오늘 휴가\` — 오늘 휴가 등록\n` +
                 `• \`/내일 재택\` — 내일 재택 등록\n` +
                 `• \`/송준범 2/26~28 출장\` — 날짜 범위 등록\n` +
-                `• \`/다음주 월 세미나\` — 다음주 월요일 세미나\n` +
-                `• \`/휴가 삭제 오늘\` — 일정 삭제`,
+                `• \`/김성진, 송상민 다음주 월 회의\` — 복수 멤버\n` +
+                `• \`/다음주 월 세미나\` — 다음주 월요일 세미나\n\n` +
+                `**[ 일정 삭제 ]**\n` +
+                `• \`/휴가 삭제 오늘\` — 오늘 휴가 삭제\n` +
+                `• \`/삭제 재택 내일\` — 내일 재택 삭제\n\n` +
+                `**[ 현황 조회 ]**\n` +
+                `\`/논문\` \`/실험\` \`/해석\` \`/보고서\` \`/계획서\` \`/특허\`\n` +
+                `• \`/신현근 논문\` — 특정 멤버의 논문 조회\n` +
+                `• \`/내 할일\` — 나의 미완료 할일\n\n` +
+                `**[ 종합 ]**\n` +
+                `\`/요약\` — 전체 현황 요약\n` +
+                `\`/마감\` — 이번주 마감 항목\n` +
+                `\`/논의\` — 논의 필요 항목\n` +
+                `\`/할일\` — 미완료 할일\n` +
+                `\`/일정\` — 일정 조회\n` +
+                `\`/접속중\` — 현재 온라인 멤버\n\n` +
+                `**[ 멤버 현황 ]**\n` +
+                `• \`/신현근 현황\` — 특정 멤버 전체 현황\n\n` +
+                `**Tip:** 자연어도 지원합니다!\n` +
+                `• \`/2/15 회의 등록\`\n` +
+                `• \`/김성진 다음주 출장 등록\``,
         };
     }
 
@@ -606,8 +646,91 @@ export function generateResponse(
         return { text: `✅ **${header}** (${items.length}건)\n\n${lines.join("\n")}` };
     }
 
-    // ─── Fallback ───────────────────────────────────────────────────────
+    // ─── Fallback — smart error messages ────────────────────────────────
+    return generateFallback(cmd, Object.keys(members));
+}
+
+// ─── Smart Fallback with Suggestions ────────────────────────────────────────
+
+function generateFallback(cmd: ParsedCommand, memberNames: string[]): BotResponse {
+    const raw = cmd.rawText;
+
+    // Check if the user typed something that looks like a command but misspelled
+    const allTargets = Object.keys(TARGET_KEYWORDS);
+    const similar = findSimilarKeywords(raw, allTargets);
+
+    if (similar.length > 0) {
+        const suggestions = similar.map(s => `\`/${s}\``).join(", ");
+        return {
+            text: `🤔 **"${raw}"**을(를) 이해하지 못했습니다.\n\n혹시 이 명령어를 찾으셨나요?\n${suggestions}\n\n\`/도움말\`을 입력하면 전체 명령어를 확인할 수 있습니다.`,
+        };
+    }
+
+    // Check if the user mentioned something that looks like a member name but doesn't match
+    const koreanWords = raw.match(/[가-힣]{2,4}/g) || [];
+    const unknownNames = koreanWords.filter(w =>
+        !allTargets.includes(w) &&
+        !Object.keys(ACTION_KEYWORDS).includes(w) &&
+        !memberNames.includes(w) &&
+        !["오늘", "내일", "모레", "이번", "다음", "등록", "조회", "삭제", "수정"].includes(w)
+    );
+
+    // If there are unknown Korean words that could be member names, suggest available members
+    if (unknownNames.length > 0) {
+        const closeMember = findSimilarKeywords(unknownNames[0], memberNames);
+        if (closeMember.length > 0) {
+            return {
+                text: `🤔 **"${unknownNames[0]}"**을(를) 찾을 수 없습니다.\n\n혹시 이 멤버를 찾으셨나요?\n${closeMember.map(n => `• ${n}`).join("\n")}\n\n**등록된 멤버:** ${memberNames.join(", ")}`,
+            };
+        }
+    }
+
+    // Generic fallback
     return {
-        text: `🤔 명령을 이해하지 못했습니다.\n\`/도움말\`을 입력하면 사용 가능한 명령어를 확인할 수 있습니다.`,
+        text: `🤔 **"${raw}"**을(를) 이해하지 못했습니다.\n\n` +
+            `사용 가능한 명령어 예시:\n` +
+            `• \`/휴가\` — 오늘 휴가 등록\n` +
+            `• \`/논문\` — 논문 현황 조회\n` +
+            `• \`/요약\` — 전체 현황 요약\n` +
+            `• \`/김성진 현황\` — 멤버 현황\n\n` +
+            `\`/도움말\`을 입력하면 전체 명령어를 확인할 수 있습니다.`,
     };
+}
+
+// ─── Fuzzy Match Helper ─────────────────────────────────────────────────────
+
+function levenshtein(a: string, b: string): number {
+    const m = a.length, n = b.length;
+    const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            dp[i][j] = Math.min(
+                dp[i - 1][j] + 1,
+                dp[i][j - 1] + 1,
+                dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+            );
+        }
+    }
+    return dp[m][n];
+}
+
+function findSimilarKeywords(input: string, candidates: string[], maxDistance = 2): string[] {
+    const results: Array<{ word: string; dist: number }> = [];
+    const lower = input.toLowerCase();
+    for (const candidate of candidates) {
+        const cLower = candidate.toLowerCase();
+        // Substring match (user typed part of the keyword)
+        if (cLower.includes(lower) || lower.includes(cLower)) {
+            results.push({ word: candidate, dist: 0 });
+            continue;
+        }
+        const dist = levenshtein(lower, cLower);
+        if (dist <= maxDistance) {
+            results.push({ word: candidate, dist });
+        }
+    }
+    results.sort((a, b) => a.dist - b.dist);
+    return results.slice(0, 3).map(r => r.word);
 }

@@ -86,7 +86,7 @@ const AnalysisLogView = memo(function AnalysisLogView({ bookName, entries, onSav
         <div>
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <h2 className="text-[20px] font-bold text-slate-900">💻 {bookName}</h2>
-                <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600 transition-colors shadow-sm">+ 기록 추가</button>
+                <button onClick={openAdd} className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors"><span className="text-[14px]">+</span> 기록 추가</button>
             </div>
             {mergedEntries.length > 3 && (
                 <div className="mb-4">
@@ -103,7 +103,7 @@ const AnalysisLogView = memo(function AnalysisLogView({ bookName, entries, onSav
                     <div className="text-3xl mb-2 opacity-40">🖥️</div>
                 <div className="text-[15px] text-slate-400 mb-1">아직 해석 기록이 없습니다</div>
                     <div className="text-[13px] text-slate-300 mb-4">해석을 진행하고 기록을 남겨보세요</div>
-                    <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">+ 첫 기록 추가</button>
+                    <button onClick={openAdd} className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors mx-auto"><span className="text-[14px]">+</span> 첫 기록 추가</button>
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -338,7 +338,7 @@ const ExpLogView = memo(function ExpLogView({ teamName, entries, onSave, onDelet
         <div>
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <h2 className="text-[20px] font-bold text-slate-900">✏️ {teamName}</h2>
-                <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600 transition-colors shadow-sm">+ 기록 추가</button>
+                <button onClick={openAdd} className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors"><span className="text-[14px]">+</span> 기록 추가</button>
             </div>
 
             {/* Search */}
@@ -361,7 +361,7 @@ const ExpLogView = memo(function ExpLogView({ teamName, entries, onSave, onDelet
                     <div className="text-3xl mb-2 opacity-40">🧪</div>
                 <div className="text-[15px] text-slate-400 mb-1">아직 실험 기록이 없습니다</div>
                     <div className="text-[13px] text-slate-300 mb-4">실험을 진행하고 기록을 남겨보세요</div>
-                    <button onClick={openAdd} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[14px] font-medium hover:bg-blue-600">+ 첫 기록 추가</button>
+                    <button onClick={openAdd} className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors mx-auto"><span className="text-[14px]">+</span> 첫 기록 추가</button>
                 </div>
             ) : (
                 <div className="space-y-4">

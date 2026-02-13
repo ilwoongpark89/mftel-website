@@ -109,7 +109,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
                     <ItemFiles files={files} onChange={setFiles} currentUser={currentUser} />
                     {/* Daily logs */}
                     <div>
-                        <label className="text-[12px] font-semibold text-slate-500 block mb-1">실험 일지 ({logs.length})</label>
+                        <label className="text-[12px] font-semibold text-slate-500 block mb-1">진행 기록 ({logs.length})</label>
                         <div className="flex gap-2 mb-2">
                             <input value={newLog} onChange={e => setNewLog(e.target.value)} placeholder="오늘의 실험 내용을 기록하세요..."
                                 className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
@@ -169,7 +169,7 @@ const ExperimentView = memo(function ExperimentView({ experiments, onSave, onDel
         <div>
             <div className="mb-3 flex items-center justify-end">
                 <div className="flex items-center gap-2">
-                    <button onClick={() => setAdding(true)} className="hidden md:inline-flex px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 실험 등록</button>
+                    <button onClick={() => setAdding(true)} className="hidden md:inline-flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors"><span className="text-[14px]">+</span> 실험 등록</button>
                     <button onClick={() => setShowEqMgr(!showEqMgr)} className="hidden md:inline-flex px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-medium hover:bg-slate-200">🔧 실험 장치 관리</button>
                     <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedExperiments.length})</button>
                 </div>
@@ -380,10 +380,10 @@ const ExperimentView = memo(function ExperimentView({ experiments, onSave, onDel
                     chatMessages={selected.logs}
                     onAddChat={handleChatAdd}
                     onDeleteChat={handleChatDelete}
-                    chatTitle="실험 일지"
-                    chatPlaceholder="실험 일지 작성... (Ctrl+V 이미지)"
+                    chatTitle="진행 기록"
+                    chatPlaceholder="진행 기록 작성... (Ctrl+V 이미지)"
                     chatDraftKey={`comment_exp_${selected.id}`}
-                    chatEmptyText="실험 일지가 없습니다"
+                    chatEmptyText="진행 기록이 없습니다"
                 >
                     <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selected.title}</h2>
                     <p className="text-[13px] text-slate-500 mt-1">🔧 {selected.equipment}</p>

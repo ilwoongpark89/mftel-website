@@ -38,7 +38,7 @@ export type TeamChatMsg = { id: number; author: string; text: string; date: stri
 
 export type LabFile = { id: number; name: string; size: number; url: string; type: string; uploader: string; date: string };
 
-export type ConferenceTrip = { id: number; title: string; startDate: string; endDate: string; homepage: string; fee: string; participants: string[]; creator: string; createdAt: string; status?: string; comments?: Comment[]; needsDiscussion?: boolean; files?: LabFile[] };
+export type ConferenceTrip = { id: number; title: string; startDate: string; endDate: string; homepage: string; fee: string; participants: string[]; creator: string; createdAt: string; status?: string; location?: string; comments?: Comment[]; needsDiscussion?: boolean; files?: LabFile[] };
 
 export type Meeting = { id: number; title: string; goal: string; summary: string; date: string; assignees: string[]; status: string; creator: string; createdAt: string; comments: Comment[]; team?: string; needsDiscussion?: boolean; files?: LabFile[] };
 

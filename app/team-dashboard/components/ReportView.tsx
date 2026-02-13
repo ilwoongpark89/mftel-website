@@ -189,8 +189,8 @@ const ReportView = memo(function ReportView({ reports, currentUser, onSave, onDe
         <div>
             <div className="mb-3 flex items-center justify-end">
                 <div className="flex items-center gap-2">
-                    <button onClick={() => setAddCategory("계획서")} className="hidden md:inline-flex px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 계획서 등록</button>
-                    <button onClick={() => setAddCategory("보고서")} className="hidden md:inline-flex px-3.5 py-1.5 bg-violet-500 text-white rounded-lg text-[13px] font-medium hover:bg-violet-600 transition-colors">+ 보고서 등록</button>
+                    <button onClick={() => setAddCategory("계획서")} className="hidden md:inline-flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors"><span className="text-[14px]">+</span> 계획서 등록</button>
+                    <button onClick={() => setAddCategory("보고서")} className="hidden md:inline-flex items-center gap-1 px-3 py-1.5 bg-violet-500 text-white rounded-lg text-[13px] font-medium hover:bg-violet-600 transition-colors"><span className="text-[14px]">+</span> 보고서 등록</button>
                     <button onClick={() => setShowCompleted(!showCompleted)} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${showCompleted ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>✅ 완료 ({completedReports.length})</button>
                 </div>
             </div>

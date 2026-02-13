@@ -337,8 +337,10 @@ const ConferenceTripView = memo(function ConferenceTripView({ items, onSave, onD
     const [endDate, setEndDate] = useState("");
     const [homepage, setHomepage] = useState("");
     const [fee, setFee] = useState("");
+    const [location, setLocation] = useState("");
     const [participants, setParticipants] = useState<string[]>([]);
     const [formStatus, setFormStatus] = useState<string>("관심");
+    const [dateError, setDateError] = useState("");
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const [selected, setSelected] = useState<ConferenceTrip | null>(null);
 
@@ -356,24 +358,25 @@ const ConferenceTripView = memo(function ConferenceTripView({ items, onSave, onD
     const [confDraftLoaded, setConfDraftLoaded] = useState(false);
 
     const openAdd = (status?: string) => {
-        setEditing(null); setParticipants([]); setFormStatus(status || "관심"); setComments([]); setNewComment("");
+        setEditing(null); setParticipants([]); setFormStatus(status || "관심"); setComments([]); setNewComment(""); setDateError("");
         const d = loadDraft("conf_add");
-        if (d) { try { const p = JSON.parse(d); setTitle(p.title || ""); setStartDate(p.startDate || ""); setEndDate(p.endDate || ""); setHomepage(p.homepage || ""); setFee(p.fee || ""); setConfDraftLoaded(true); } catch { setTitle(""); setStartDate(""); setEndDate(""); setHomepage(""); setFee(""); setConfDraftLoaded(false); } }
-        else { setTitle(""); setStartDate(""); setEndDate(""); setHomepage(""); setFee(""); setConfDraftLoaded(false); }
+        if (d) { try { const p = JSON.parse(d); setTitle(p.title || ""); setStartDate(p.startDate || ""); setEndDate(p.endDate || ""); setHomepage(p.homepage || ""); setFee(p.fee || ""); setLocation(p.location || ""); setConfDraftLoaded(true); } catch { setTitle(""); setStartDate(""); setEndDate(""); setHomepage(""); setFee(""); setLocation(""); setConfDraftLoaded(false); } }
+        else { setTitle(""); setStartDate(""); setEndDate(""); setHomepage(""); setFee(""); setLocation(""); setConfDraftLoaded(false); }
         setAdding(true);
     };
-    const openEdit = (c: ConferenceTrip) => { setEditing(c); setAdding(false); setTitle(c.title); setStartDate(c.startDate); setEndDate(c.endDate); setHomepage(c.homepage); setFee(c.fee); setParticipants(c.participants); setFormStatus(c.status || "관심"); setComments(c.comments || []); setNewComment(""); setConfDraftLoaded(false); };
-    const closeModal = () => { if (adding && (title.trim() || homepage.trim() || fee.trim())) saveDraft("conf_add", JSON.stringify({ title, startDate, endDate, homepage, fee })); setAdding(false); setEditing(null); setConfDraftLoaded(false); };
+    const openEdit = (c: ConferenceTrip) => { setEditing(c); setAdding(false); setTitle(c.title); setStartDate(c.startDate); setEndDate(c.endDate); setHomepage(c.homepage); setFee(c.fee); setLocation(c.location || ""); setParticipants(c.participants); setFormStatus(c.status || "관심"); setComments(c.comments || []); setNewComment(""); setConfDraftLoaded(false); setDateError(""); };
+    const closeModal = () => { if (adding && (title.trim() || homepage.trim() || fee.trim())) saveDraft("conf_add", JSON.stringify({ title, startDate, endDate, homepage, fee, location })); setAdding(false); setEditing(null); setConfDraftLoaded(false); };
 
     // Draft auto-save for add form
-    useEffect(() => { if (adding && !editing) saveDraft("conf_add", JSON.stringify({ title, startDate, endDate, homepage, fee })); }, [title, startDate, endDate, homepage, fee, adding, editing]);
+    useEffect(() => { if (adding && !editing) saveDraft("conf_add", JSON.stringify({ title, startDate, endDate, homepage, fee, location })); }, [title, startDate, endDate, homepage, fee, location, adding, editing]);
 
     const [tried, setTried] = useState(false);
     const handleSave = () => {
         setTried(true);
         if (!title.trim()) return false;
+        if (startDate && endDate && endDate < startDate) { setDateError("종료일은 시작일 이후여야 합니다"); return false; }
         clearDraft("conf_add");
-        onSave({ id: editing?.id ?? genId(), title: title.trim(), startDate, endDate, homepage: homepage.trim(), fee: fee.trim(), participants, creator: editing?.creator || currentUser, createdAt: editing?.createdAt || new Date().toISOString(), status: formStatus, comments, needsDiscussion: editing?.needsDiscussion });
+        onSave({ id: editing?.id ?? genId(), title: title.trim(), startDate, endDate, homepage: homepage.trim(), fee: fee.trim(), location: location.trim() || undefined, participants, creator: editing?.creator || currentUser, createdAt: editing?.createdAt || new Date().toISOString(), status: formStatus, comments, needsDiscussion: editing?.needsDiscussion });
         setConfDraftLoaded(false);
         return true;
     };
@@ -422,7 +425,7 @@ const ConferenceTripView = memo(function ConferenceTripView({ items, onSave, onD
     return (
         <div>
             <div className="flex items-center gap-2 mb-4">
-                <button onClick={() => openAdd()} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">+ 학회/출장 추가</button>
+                <button onClick={() => openAdd()} className="flex items-center gap-1 px-3 py-1.5 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium transition-colors"><span className="text-[14px]">+</span> 학회/출장 추가</button>
             </div>
             {items.length === 0 && <div className="text-center py-12"><div className="text-3xl mb-2 opacity-40">✈️</div><div className="text-slate-400 text-[14px]">등록된 학회/출장이 없습니다</div></div>}
             {monthGroups.map(group => (
@@ -441,6 +444,7 @@ const ConferenceTripView = memo(function ConferenceTripView({ items, onSave, onD
                                 <div className="text-[14px] font-semibold text-slate-800 mb-1">{c.title}<SavingBadge id={c.id} /></div>
                                 {(c.startDate || c.endDate) && <div className="text-[12px] text-slate-500 mb-0.5">📅 {formatPeriod(c.startDate, c.endDate)}</div>}
                                 {c.homepage && <div className="text-[11px] text-blue-500 mb-0.5 truncate" onClick={e => { e.stopPropagation(); try { const u = new URL(c.homepage); if (["http:", "https:"].includes(u.protocol)) window.open(c.homepage, "_blank", "noopener"); else alert("유효하지 않은 URL입니다."); } catch { alert("유효하지 않은 URL입니다."); } }}>🔗 {c.homepage}</div>}
+                                {c.location && <div className="text-[12px] text-slate-500 mb-0.5">📍 {c.location}</div>}
                                 {c.fee && <div className="text-[12px] text-slate-500 mb-0.5">💰 {c.fee}</div>}
                                 {c.participants.length > 0 && (
                                     <div className="flex flex-wrap gap-0.5 mt-1.5">
@@ -474,7 +478,7 @@ const ConferenceTripView = memo(function ConferenceTripView({ items, onSave, onD
                             {confDraftLoaded && !isEdit && (
                                 <div className="flex items-center justify-between px-3 py-2 rounded-lg text-[13px]" style={{background:"#FEF3C7", color:"#92400E", border:"1px solid #FDE68A"}}>
                                     <span>임시저장된 글이 있습니다</span>
-                                    <button onClick={() => { setTitle(""); setStartDate(""); setEndDate(""); setHomepage(""); setFee(""); clearDraft("conf_add"); setConfDraftLoaded(false); }} className="text-amber-600 hover:text-amber-800 font-medium ml-2">삭제</button>
+                                    <button onClick={() => { setTitle(""); setStartDate(""); setEndDate(""); setHomepage(""); setFee(""); setLocation(""); clearDraft("conf_add"); setConfDraftLoaded(false); }} className="text-amber-600 hover:text-amber-800 font-medium ml-2">삭제</button>
                                 </div>
                             )}
                             <div>
@@ -485,12 +489,17 @@ const ConferenceTripView = memo(function ConferenceTripView({ items, onSave, onD
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 block mb-1">시작일</label>
-                                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+                                    <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); setDateError(""); }} className={`w-full border rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 ${dateError ? "border-red-400" : "border-slate-200"}`} />
                                 </div>
                                 <div>
                                     <label className="text-[12px] font-semibold text-slate-500 block mb-1">종료일</label>
-                                    <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+                                    <input type="date" value={endDate} onChange={e => { setEndDate(e.target.value); setDateError(""); }} min={startDate || undefined} className={`w-full border rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 ${dateError ? "border-red-400" : "border-slate-200"}`} />
                                 </div>
+                            </div>
+                            {dateError && <p className="text-[11px] text-red-500 -mt-1.5">{dateError}</p>}
+                            <div>
+                                <label className="text-[12px] font-semibold text-slate-500 block mb-1">장소</label>
+                                <input value={location} onChange={e => setLocation(e.target.value)} placeholder="예: 부산 BEXCO, Orlando FL USA" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                             </div>
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">홈페이지</label>
@@ -519,7 +528,7 @@ const ConferenceTripView = memo(function ConferenceTripView({ items, onSave, onD
                                         <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
                                             <button onClick={() => { if (!confirm("댓글을 삭제하시겠습니까?")) return; setComments(comments.filter(x => x.id !== c.id)); }}
                                                 className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
                                             <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
@@ -567,9 +576,15 @@ const ConferenceTripView = memo(function ConferenceTripView({ items, onSave, onD
                         </div>
                     )}
                     {selected.homepage && (
+                        <div className="flex items-start gap-2 min-w-0">
+                            <span className="text-[12px] font-semibold text-slate-500 flex-shrink-0">홈페이지</span>
+                            <a href={selected.homepage} target="_blank" rel="noopener noreferrer" className="text-[13px] text-blue-500 hover:underline min-w-0" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }} onClick={e => { try { const u = new URL(selected.homepage); if (!["http:", "https:"].includes(u.protocol)) { e.preventDefault(); alert("유효하지 않은 URL입니다."); } } catch { e.preventDefault(); alert("유효하지 않은 URL입니다."); } }}>{selected.homepage}</a>
+                        </div>
+                    )}
+                    {selected.location && (
                         <div className="flex items-center gap-2">
-                            <span className="text-[12px] font-semibold text-slate-500">홈페이지</span>
-                            <a href={selected.homepage} target="_blank" rel="noopener noreferrer" className="text-[13px] text-blue-500 hover:underline truncate" onClick={e => { try { const u = new URL(selected.homepage); if (!["http:", "https:"].includes(u.protocol)) { e.preventDefault(); alert("유효하지 않은 URL입니다."); } } catch { e.preventDefault(); alert("유효하지 않은 URL입니다."); } }}>{selected.homepage}</a>
+                            <span className="text-[12px] font-semibold text-slate-500">장소</span>
+                            <span className="text-[13px] text-slate-700">📍 {selected.location}</span>
                         </div>
                     )}
                     {selected.fee && (
@@ -659,7 +674,7 @@ const ResourceView = memo(function ResourceView({ resources, onSave, onDelete, o
     return (
         <div>
             <div className="flex items-center gap-2 mb-3">
-                <button onClick={openAdd} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">+ 자료 추가</button>
+                <button onClick={openAdd} className="flex items-center gap-1 px-3 py-1.5 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium transition-colors"><span className="text-[14px]">+</span> 자료 추가</button>
             </div>
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-3"
                 onDragOver={e => e.preventDefault()}
@@ -739,7 +754,7 @@ const ResourceView = memo(function ResourceView({ resources, onSave, onDelete, o
                                         <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
                                             <button onClick={() => { if (!confirm("댓글을 삭제하시겠습니까?")) return; setComments(comments.filter(x => x.id !== c.id)); }}
                                                 className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
                                             <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
@@ -780,15 +795,15 @@ const ResourceView = memo(function ResourceView({ resources, onSave, onDelete, o
                 >
                     <h2 className="text-[17px] font-bold text-slate-800 leading-snug">{selectedRes.title}</h2>
                     {selectedRes.link && (
-                        <div className="flex items-center gap-2">
-                            <span className="text-[12px] font-semibold text-slate-500">링크</span>
-                            <a href={selectedRes.link} target="_blank" rel="noopener noreferrer" className="text-[13px] text-blue-500 hover:underline truncate" onClick={e => { try { const u = new URL(selectedRes.link); if (!["http:", "https:"].includes(u.protocol)) { e.preventDefault(); alert("유효하지 않은 URL입니다."); } } catch { e.preventDefault(); alert("유효하지 않은 URL입니다."); } }}>{selectedRes.link}</a>
+                        <div className="flex items-start gap-2 min-w-0">
+                            <span className="text-[12px] font-semibold text-slate-500 flex-shrink-0">링크</span>
+                            <a href={selectedRes.link} target="_blank" rel="noopener noreferrer" className="text-[13px] text-blue-500 hover:underline min-w-0" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }} onClick={e => { try { const u = new URL(selectedRes.link); if (!["http:", "https:"].includes(u.protocol)) { e.preventDefault(); alert("유효하지 않은 URL입니다."); } } catch { e.preventDefault(); alert("유효하지 않은 URL입니다."); } }}>{selectedRes.link}</a>
                         </div>
                     )}
                     {selectedRes.nasPath && (
-                        <div className="flex items-center gap-2">
-                            <span className="text-[12px] font-semibold text-slate-500">NAS 경로</span>
-                            <span className="text-[13px] text-slate-700 font-mono">{selectedRes.nasPath}</span>
+                        <div className="flex items-start gap-2 min-w-0">
+                            <span className="text-[12px] font-semibold text-slate-500 flex-shrink-0">NAS 경로</span>
+                            <span className="text-[13px] text-slate-700 font-mono min-w-0" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{selectedRes.nasPath}</span>
                         </div>
                     )}
                     <div className="flex items-center gap-2">
@@ -872,7 +887,7 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
     return (
         <div>
             <div className="flex items-center gap-2 mb-4">
-                <button onClick={openAdd} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">+ 새 글 작성</button>
+                <button onClick={openAdd} className="flex items-center gap-1 px-3 py-1.5 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium transition-colors"><span className="text-[14px]">+</span> 새 글 작성</button>
             </div>
             <div className={`grid gap-3 ${columns === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}
                 onDragOver={e => e.preventDefault()}
@@ -895,7 +910,7 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
                             <span className="text-[11px] text-slate-400 ml-2 whitespace-nowrap">{idea.date}</span>
                         </div>
                         {idea.body && <div className="text-[13px] text-slate-600 mb-3 line-clamp-3 break-words">{idea.body}</div>}
-                        {idea.imageUrl && <img src={idea.imageUrl} alt="" className="w-full rounded-lg mt-2 mb-2" style={{ maxHeight: 200, objectFit: 'contain', background: '#F1F5F9' }} />}
+                        {idea.imageUrl && <img src={idea.imageUrl} alt="" className="w-full rounded-lg mt-2 mb-2" style={{ maxHeight: 300, objectFit: 'cover' }} />}
                         <div className="text-[12px] text-slate-400 mb-2">{MEMBERS[idea.author]?.emoji || "👤"} {idea.author}</div>
                         {/* Comment preview */}
                         {idea.comments.length > 0 && (
@@ -963,7 +978,7 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
                         </div>
                         <div className="p-4">
                             <div className="text-[12px] text-slate-400 mb-3">{MEMBERS[selected.author]?.emoji || "👤"} {selected.author} · {selected.date}</div>
-                            {selected.body && <div className="text-[14px] text-slate-700 mb-4 whitespace-pre-wrap break-words">{selected.body}</div>}
+                            {selected.body && <div className="text-[14px] text-slate-700 mb-4 whitespace-pre-wrap" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{selected.body}</div>}
                             {selected.imageUrl && <img src={selected.imageUrl} alt="" className="rounded-lg mb-4 cursor-pointer" style={{ maxWidth: '100%', height: 'auto' }} onClick={() => window.open(selected.imageUrl!, '_blank')} />}
 
                             {/* Comments section */}
@@ -974,7 +989,7 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group relative">
                                             <button onClick={() => deleteComment(c.id)}
                                                 className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
@@ -1170,7 +1185,7 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
                                     <span className="text-[12px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: colCfg.accent, color: colCfg.color }}>{items.length}</span>
                                 </div>
                                 {isLeader && (
-                                    <button onClick={() => openAdd(col.key)} className="px-4 py-2 text-[14px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">+ {col.key === "urgent" ? "긴급 공지" : col.key === "general" ? "일반 공지" : "문화 추가"}</button>
+                                    <button onClick={() => openAdd(col.key)} className="flex items-center gap-1 px-3 py-1.5 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium transition-colors"><span className="text-[14px]">+</span> {col.key === "urgent" ? "긴급 공지" : col.key === "general" ? "일반 공지" : "문화 추가"}</button>
                                 )}
                             </div>
                             {/* Add input */}
@@ -1198,9 +1213,9 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
                                         className={`group/card bg-white rounded-xl p-3.5 cursor-grab transition-all flex flex-col ${draggedItem?.id === item.id ? "opacity-40" : ""}`}
                                         style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.08)", borderLeft: `2px solid ${colCfg.color}` }}>
                                         <div className="flex items-start justify-between">
-                                            <span className="text-[14px] text-slate-800 whitespace-pre-wrap break-words line-clamp-4 flex-1" style={{ lineHeight: 1.6 }}>{item.text}<SavingBadge id={item.id} /></span>
+                                            <span className="text-[14px] text-slate-800 whitespace-pre-wrap line-clamp-4 flex-1" style={{ lineHeight: 1.6, wordBreak: 'break-all', overflowWrap: 'break-word' }}>{item.text}<SavingBadge id={item.id} /></span>
                                         </div>
-                                        {item.imageUrl && <img src={item.imageUrl} alt="" className="w-full rounded-lg mt-2" style={{ maxHeight: 200, objectFit: 'contain', background: '#F1F5F9' }} />}
+                                        {item.imageUrl && <img src={item.imageUrl} alt="" className="w-full rounded-lg mt-2" style={{ maxHeight: 300, objectFit: 'cover' }} />}
                                         <div className="mt-auto pt-2 text-[11px] text-slate-400">{item.author} · {item.date}</div>
                                     </div>
                                 ))}

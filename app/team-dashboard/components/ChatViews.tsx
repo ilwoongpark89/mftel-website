@@ -49,14 +49,14 @@ const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd
     };
 
     return (
-        <div className="flex flex-col h-full border border-slate-200 rounded-xl bg-white">
-            <div className="flex px-3 py-2.5 border-b border-slate-100 items-center justify-between">
+        <div className="flex flex-col h-full min-h-0 border border-slate-200 rounded-xl bg-white overflow-hidden">
+            <div className="flex px-3 py-2.5 border-b border-slate-100 items-center justify-between flex-shrink-0">
                 <h3 className="text-[14px] font-bold text-slate-700">🗣️ 잡담 채팅</h3>
                 {currentUser === "박일웅" && (
                     <button onClick={() => confirmDel(() => onClear())} className="text-[11px] text-slate-400 hover:text-red-500 transition-colors">초기화</button>
                 )}
             </div>
-            <div ref={containerRef} className="flex-1 overflow-y-auto px-3 py-2">
+            <div ref={containerRef} className="flex-1 min-h-0 overflow-y-auto px-3 py-2">
                 {chat.length === 0 && <div className="text-center py-16 text-slate-400 text-[13px]">자유롭게 대화해 보세요!</div>}
                 {chat.map((msg, idx) => {
                     const prev = idx > 0 ? chat[idx - 1] : null;
@@ -145,9 +145,9 @@ const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd
                                                     </div>
                                                 </div>
                                             )}
-                                            <div className={`px-3 py-1.5 rounded-2xl text-[13px] leading-snug break-words whitespace-pre-wrap ${isMe ? "rounded-tr-md" : "rounded-tl-md"}`}
-                                                style={{ background: isMe ? "#3B82F6" : "#F1F5F9", color: isMe ? "#FFFFFF" : "#1E293B" }}>
-                                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="w-full rounded-lg mb-1 cursor-pointer" style={{ maxHeight: 200, objectFit: 'contain', background: '#F1F5F9' }} />}
+                                            <div className={`px-3 py-1.5 rounded-2xl text-[13px] leading-snug whitespace-pre-wrap ${isMe ? "rounded-tr-md" : "rounded-tl-md"}`}
+                                                style={{ background: isMe ? "#3B82F6" : "#F1F5F9", color: isMe ? "#FFFFFF" : "#1E293B", wordBreak: 'break-all', overflowWrap: 'break-word' }}>
+                                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="w-full rounded-lg mb-1 cursor-pointer" style={{ maxHeight: 300, objectFit: 'cover' }} />}
                                                 {msg.text && renderWithMentions(msg.text)}
                                             </div>
                                             {Object.keys(reactions).length > 0 && (
@@ -171,13 +171,13 @@ const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd
                 })}
             </div>
             {replyTo && (
-                <div className="px-3 py-1.5 bg-slate-50 border-t border-slate-100 flex items-center gap-2 text-[12px]">
+                <div className="px-3 py-1.5 bg-slate-50 border-t border-slate-100 flex items-center gap-2 text-[12px] flex-shrink-0">
                     <span className="text-slate-500 truncate flex-1">↩ <span className="font-medium">{replyTo.author}</span>: {replyTo.text?.slice(0, 40)}</span>
                     <button onClick={() => setReplyTo(null)} className="text-slate-400 hover:text-red-500">✕</button>
                 </div>
             )}
             {mention.open && <MentionPopup m={mention} onSelect={selectMention} />}
-            <div className="px-2 py-2 border-t border-slate-100 flex items-end gap-1.5">
+            <div className="px-2 py-2 border-t border-slate-100 flex items-end gap-1.5 flex-shrink-0">
                 <textarea ref={inputRef} value={text}
                     onChange={e => { setText(e.target.value); mention.check(e.target.value, e.target.selectionStart || 0); }}
                     onKeyDown={e => chatKeyDown(e, sendMsg, composingRef)}
@@ -287,7 +287,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
     }, [chat.length, scrollLabChat]);
 
     return (
-        <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0" style={{gridTemplateColumns:"1fr 1fr 2fr"}}>
+        <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0 overflow-hidden" style={{gridTemplateColumns:"1fr 1fr 2fr"}}>
             {/* Mobile tab bar */}
             <div className="md:hidden flex border-b border-slate-200 bg-white flex-shrink-0 -mt-1">
                 {([["chat","💬","채팅"],["board","📌","보드"],["files","📎","파일"]] as const).map(([id,icon,label]) => (
@@ -298,28 +298,28 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                 ))}
             </div>
             {/* Board */}
-            <div className={`flex-col min-w-0 ${mobileTab === "board" ? "flex flex-1 min-h-0" : "hidden"} md:flex`}>
-                <div className="flex items-center justify-between mb-2">
+            <div className={`flex-col min-w-0 ${mobileTab === "board" ? "flex flex-1 min-h-0" : "hidden"} md:flex md:min-h-0`}>
+                <div className="flex items-center justify-between mb-2 flex-shrink-0">
                     <h3 className="text-[14px] font-bold text-slate-700">📌 보드</h3>
-                    <button onClick={openBoardAdd} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600">+ 추가</button>
+                    <button onClick={openBoardAdd} className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors"><span className="text-[14px]">+</span> 추가</button>
                 </div>
                 <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
                     {board.map(card => {
                         const cmts = card.comments || [];
                         return (
                             <div key={card.id} onClick={() => openBoardDetail(card)}
-                                className={`rounded-xl p-3 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col group relative`}
-                                style={{ background: card.color || "#fff", border: "1px solid #E2E8F0", borderLeft: card.needsDiscussion ? "3px solid #EF4444" : undefined }}>
+                                className={`rounded-xl p-3 cursor-pointer transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col group relative overflow-hidden`}
+                                style={{ background: card.color || "#fff", border: "1px solid #E2E8F0", borderLeft: card.needsDiscussion ? "3px solid #EF4444" : undefined, maxWidth: '100%' }}>
                                 <label className="flex items-center gap-1 mb-1 cursor-pointer" onClick={e => e.stopPropagation()}>
                                     <input type="checkbox" checked={!!card.needsDiscussion} onChange={() => onSaveBoard({ ...card, needsDiscussion: !card.needsDiscussion })} className="w-3 h-3 accent-red-500" />
                                     <span className={`text-[11px] font-medium ${card.needsDiscussion ? "text-red-500" : "text-slate-400"}`}>논의 필요</span>
                                 </label>
-                                <div className="flex items-start justify-between mb-1">
-                                    <h4 className="text-[13px] font-semibold text-slate-800 break-words flex-1">{card.title}<SavingBadge id={card.id} /></h4>
-                                    <span className="text-[11px] text-slate-400 ml-1 whitespace-nowrap">{card.updatedAt}</span>
+                                <div className="flex items-start justify-between mb-1 min-w-0">
+                                    <h4 className="text-[13px] font-semibold text-slate-800 flex-1 min-w-0" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{card.title}<SavingBadge id={card.id} /></h4>
+                                    <span className="text-[11px] text-slate-400 ml-1 whitespace-nowrap flex-shrink-0">{card.updatedAt}</span>
                                 </div>
-                                {card.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-2 break-words">{card.content}</div>}
-                                {card.imageUrl && <img src={card.imageUrl} alt="" className="w-full rounded-lg mt-2 mb-2" style={{ maxHeight: 200, objectFit: 'contain', background: '#F1F5F9' }} />}
+                                {card.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-2" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{card.content}</div>}
+                                {card.imageUrl && <img src={card.imageUrl} alt="" className="w-full rounded-lg mt-2 mb-2" style={{ maxHeight: 300, objectFit: 'cover' }} />}
                                 <div className="text-[11px] text-slate-400 mb-1">{MEMBERS[card.author]?.emoji || "👤"} {card.author}</div>
                                 {cmts.length > 0 ? (
                                     <div className="border-t border-slate-100 pt-1.5 mt-auto space-y-0.5">
@@ -339,27 +339,27 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                         );
                     })}
                     {board.length === 0 && (
-                        <button onClick={openBoardAdd} className="w-full py-6 text-[12px] text-slate-400 hover:text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">+ 추가</button>
+                        <button onClick={openBoardAdd} className="w-full py-6 flex items-center justify-center gap-1 text-[13px] text-slate-400 hover:text-slate-500 hover:bg-slate-100 rounded-lg transition-colors"><span className="text-[14px]">+</span> 추가</button>
                     )}
                 </div>
             </div>
             {/* Files */}
-            <div className={`flex-col min-w-0 bg-white border border-slate-200 rounded-xl ${mobileTab === "files" ? "flex flex-1 min-h-0" : "hidden"} md:flex`}>
-                <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
+            <div className={`flex-col min-w-0 bg-white border border-slate-200 rounded-xl overflow-hidden ${mobileTab === "files" ? "flex flex-1 min-h-0" : "hidden"} md:flex md:min-h-0`}>
+                <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
                     <h3 className="text-[14px] font-bold text-slate-700">📎 파일</h3>
                     <span className="text-[12px] text-slate-400">{files.length}개</span>
                 </div>
                 <FileBox files={files} currentUser={currentUser} onAddFile={onAddFile} onDeleteFile={onDeleteFile} />
             </div>
             {/* Chat */}
-            <div className={`flex-col min-w-0 md:border md:border-slate-200 md:rounded-xl ${mobileTab === "chat" ? "flex flex-1 min-h-0" : "hidden"} md:flex`} style={{ background: "#FFFFFF" }}>
-                <div className="hidden md:flex px-3 py-2.5 border-b border-slate-100 items-center justify-between">
+            <div className={`flex-col min-w-0 md:border md:border-slate-200 md:rounded-xl overflow-hidden ${mobileTab === "chat" ? "flex flex-1 min-h-0" : "hidden"} md:flex md:min-h-0`} style={{ background: "#FFFFFF" }}>
+                <div className="hidden md:flex px-3 py-2.5 border-b border-slate-100 items-center justify-between flex-shrink-0">
                     <h3 className="text-[14px] font-bold text-slate-700">💬 연구실 채팅</h3>
                     {currentUser === "박일웅" && (
                         <button onClick={() => confirmDel(() => onClear())} className="text-[11px] text-slate-400 hover:text-red-500 transition-colors">초기화</button>
                     )}
                 </div>
-                <div ref={labChatContainerRef} className="flex-1 overflow-y-auto px-3 py-2">
+                <div ref={labChatContainerRef} className="flex-1 min-h-0 overflow-y-auto px-3 py-2">
                     {chat.length === 0 && <div className="text-center py-16 text-slate-400 text-[13px]">메시지가 없습니다. 자유롭게 대화해 보세요!</div>}
                     {chat.map((msg, idx) => {
                         const prev = idx > 0 ? chat[idx - 1] : null;
@@ -455,9 +455,9 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                                                         </div>
                                                     </div>
                                                 )}
-                                                <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "7px 14px", lineHeight: "1.5" }}
+                                                <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "7px 14px", lineHeight: "1.5", wordBreak: 'break-all', overflowWrap: 'break-word' }}
                                                     className="text-[13px] text-slate-800">
-                                                    {msg.imageUrl && <img src={msg.imageUrl} alt="" className="w-full rounded-md mb-1.5 cursor-pointer" style={{ maxHeight: 200, objectFit: 'contain', background: '#F1F5F9' }} onLoad={scrollLabChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
+                                                    {msg.imageUrl && <img src={msg.imageUrl} alt="" className="w-full rounded-md mb-1.5 cursor-pointer" style={{ maxHeight: 300, objectFit: 'cover' }} onLoad={scrollLabChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                                     {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
                                                 </div>
                                                 {Object.keys(reactions).length > 0 && (
@@ -486,7 +486,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                     <div ref={endRef} />
                 </div>
                 {replyTo && (
-                    <div className="px-3 pt-2 pb-1 border-t border-slate-100 bg-slate-50 flex items-center gap-2">
+                    <div className="px-3 pt-2 pb-1 border-t border-slate-100 bg-slate-50 flex items-center gap-2 flex-shrink-0">
                         <div className="flex-1 min-w-0 text-[12px] text-slate-500 truncate">
                             <span className="font-semibold text-slate-600">{replyTo.author}</span>에게 답장: {replyTo.text || "📷 이미지"}
                         </div>
@@ -541,9 +541,9 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                             <h3 className="text-[15px] font-bold text-slate-800 break-words flex-1 pr-2">{selectedCard.title}</h3>
                             <button onClick={() => { setSelectedCard(null); setBoardComment(""); }} className="text-slate-400 hover:text-slate-600 text-lg flex-shrink-0">✕</button>
                         </div>
-                        <div className="p-4">
+                        <div className="p-4" style={{ overflow: 'hidden' }}>
                             <div className="text-[12px] text-slate-400 mb-3">{MEMBERS[selectedCard.author]?.emoji || "👤"} {selectedCard.author} · {selectedCard.updatedAt}</div>
-                            {selectedCard.content && <div className="text-[14px] text-slate-700 mb-4 whitespace-pre-wrap break-words">{selectedCard.content}</div>}
+                            {selectedCard.content && <div className="text-[14px] text-slate-700 mb-4 whitespace-pre-wrap" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{selectedCard.content}</div>}
                             {selectedCard.imageUrl && <img src={selectedCard.imageUrl} alt="" className="rounded-lg mb-4 cursor-pointer" style={{ maxWidth: '100%', height: 'auto' }} onClick={() => setPreviewImg(selectedCard.imageUrl!)} />}
                             <div className="border-t border-slate-200 pt-4">
                                 <div className="text-[13px] font-semibold text-slate-600 mb-3">💬 댓글 ({(selectedCard.comments || []).length})</div>
@@ -552,7 +552,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group/c relative">
                                             <button onClick={() => confirmDel(() => { const updated = { ...selectedCard, comments: (selectedCard.comments || []).filter(x => x.id !== c.id) }; onSaveBoard(updated); setSelectedCard(updated); })}
                                                 className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}

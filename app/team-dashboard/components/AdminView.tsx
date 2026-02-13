@@ -143,7 +143,7 @@ export function AdminMemberView() {
             <div>
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-[15px] font-bold text-slate-800">멤버 목록</h3>
-                    <button onClick={() => { setEditMode("add"); resetEdit(); }} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[12px] font-medium hover:bg-blue-700">+ 멤버 추가</button>
+                    <button onClick={() => { setEditMode("add"); resetEdit(); }} className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[13px] font-medium hover:bg-blue-700 transition-colors"><span className="text-[14px]">+</span> 멤버 추가</button>
                 </div>
                 {editMode && (
                     <div className="bg-white border border-slate-200 rounded-lg p-4 mb-4">

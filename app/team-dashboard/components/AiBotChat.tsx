@@ -53,10 +53,11 @@ function renderUserText(text: string) {
 
 function SlashAutocomplete({ query, selectedIdx, onSelect }: { query: string; selectedIdx: number; onSelect: (cmd: string) => void }) {
     // Filter commands based on query (the part after /)
+    // Search both command name and description for broader matching
     const filtered = useMemo(() => {
         const q = query.replace(/^\//, "");
         if (!q) return SLASH_COMMANDS;
-        return SLASH_COMMANDS.filter(c => c.command.slice(1).includes(q));
+        return SLASH_COMMANDS.filter(c => c.command.slice(1).includes(q) || c.description.includes(q));
     }, [query]);
 
     if (filtered.length === 0) return null;
@@ -166,7 +167,7 @@ export const AiBotChat = memo(function AiBotChat({
     const getFilteredSlash = useCallback(() => {
         const q = slashQuery.replace(/^\//, "");
         if (!q) return SLASH_COMMANDS;
-        return SLASH_COMMANDS.filter(c => c.command.slice(1).includes(q));
+        return SLASH_COMMANDS.filter(c => c.command.slice(1).includes(q) || c.description.includes(q));
     }, [slashQuery]);
 
     const insertSlashCommand = useCallback((cmd: string) => {
@@ -252,9 +253,9 @@ export const AiBotChat = memo(function AiBotChat({
     };
 
     return (
-        <div className="flex flex-col h-full border border-slate-200 rounded-xl bg-white">
+        <div className="flex flex-col h-full min-h-0 border border-slate-200 rounded-xl bg-white overflow-hidden">
             {/* Header */}
-            <div className="flex px-3 py-2.5 border-b border-slate-100 items-center justify-between">
+            <div className="flex px-3 py-2.5 border-b border-slate-100 items-center justify-between flex-shrink-0">
                 <h3 className="text-[14px] font-bold text-slate-700">🤖 AI 어시스턴트</h3>
                 {currentUser === "박일웅" && (
                     <button onClick={() => confirmDel(() => onClearChat())} className="text-[11px] text-slate-400 hover:text-red-500 transition-colors">초기화</button>
@@ -262,7 +263,7 @@ export const AiBotChat = memo(function AiBotChat({
             </div>
 
             {/* Messages */}
-            <div ref={containerRef} className="flex-1 overflow-y-auto px-3 py-2">
+            <div ref={containerRef} className="flex-1 min-h-0 overflow-y-auto px-3 py-2">
                 {messages.length === 0 && (
                     <div className="text-center py-16 text-slate-400 text-[13px]">
                         / 로 봇을 호출해보세요!
@@ -329,7 +330,7 @@ export const AiBotChat = memo(function AiBotChat({
                                                 color: isMe ? "#FFFFFF" : "#1E293B",
                                                 borderLeft: isBot ? "3px solid #8B5CF6" : "none",
                                             }}>
-                                            {msg.imageUrl && <img src={msg.imageUrl} alt="" className="w-full rounded-lg mb-1" style={{ maxHeight: 200, objectFit: 'contain', background: '#F1F5F9' }} />}
+                                            {msg.imageUrl && <img src={msg.imageUrl} alt="" className="w-full rounded-lg mb-1" style={{ maxHeight: 300, objectFit: 'cover' }} />}
                                             {isBot ? renderBotText(msg.text) : renderUserText(msg.text)}
                                         </div>
                                         {!isMe && !isBot && !msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} showZero={true} />}
@@ -377,7 +378,7 @@ export const AiBotChat = memo(function AiBotChat({
             </div>
 
             {/* Input area with slash autocomplete */}
-            <div className="relative px-2 py-2 border-t border-slate-100">
+            <div className="relative px-2 py-2 border-t border-slate-100 flex-shrink-0">
                 {/* Slash command autocomplete dropdown */}
                 {slashOpen && (
                     <SlashAutocomplete
@@ -397,6 +398,11 @@ export const AiBotChat = memo(function AiBotChat({
                             checkSlash(e.target.value);
                         }}
                         onKeyDown={e => {
+                            // Skip during Korean IME composition to prevent duplicate characters
+                            if (e.nativeEvent?.isComposing || e.keyCode === 229) {
+                                return;
+                            }
+
                             // Handle slash autocomplete navigation
                             if (slashOpen) {
                                 const filtered = getFilteredSlash();

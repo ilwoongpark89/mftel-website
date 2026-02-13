@@ -53,7 +53,7 @@ const TodoList = memo(function TodoList({ todos, onToggle, onAdd, onUpdate, onDe
             {/* Action buttons */}
             <div className="mb-3 flex items-center justify-end">
                 <div className="flex items-center gap-2">
-                    <button onClick={() => setShowForm(!showForm)} className="hidden md:inline-flex px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">+ 할 일 추가</button>
+                    <button onClick={() => setShowForm(!showForm)} className="hidden md:inline-flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors"><span className="text-[14px]">+</span> 할 일 추가</button>
                     <span className="text-[13px] text-slate-400">{doneCount}/{totalCount} 완료</span>
                 </div>
             </div>
