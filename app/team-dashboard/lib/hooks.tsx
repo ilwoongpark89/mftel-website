@@ -120,7 +120,7 @@ export function useCommentImg() {
             if (item.type.startsWith("image/")) {
                 e.preventDefault();
                 const file = item.getAsFile(); if (!file) return;
-                if (file.size > 10 * 1024 * 1024) { alert("10MB 이하 이미지만 첨부 가능합니다."); return; }
+                if (file.size > 50 * 1024 * 1024) { alert("50MB 이하 이미지만 첨부 가능합니다."); return; }
                 doUpload(file); return;
             }
         }

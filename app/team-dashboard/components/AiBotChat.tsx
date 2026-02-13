@@ -329,7 +329,7 @@ export const AiBotChat = memo(function AiBotChat({
                                                 color: isMe ? "#FFFFFF" : "#1E293B",
                                                 borderLeft: isBot ? "3px solid #8B5CF6" : "none",
                                             }}>
-                                            {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full rounded-lg mb-1 max-h-[200px] object-contain" />}
+                                            {msg.imageUrl && <img src={msg.imageUrl} alt="" className="w-full rounded-lg mb-1" style={{ maxHeight: 200, objectFit: 'contain', background: '#F1F5F9' }} />}
                                             {isBot ? renderBotText(msg.text) : renderUserText(msg.text)}
                                         </div>
                                         {!isMe && !isBot && !msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} showZero={true} />}

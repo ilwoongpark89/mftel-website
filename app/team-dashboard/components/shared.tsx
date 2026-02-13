@@ -210,7 +210,7 @@ export function FilePreviewModal({ file, onClose }: { file: LabFile; onClose: ()
                     </div>
                 </div>
                 <div className="overflow-auto" style={{ maxHeight: "calc(90vh - 60px)" }}>
-                    {img && <img src={file.url} alt={file.name} className="max-w-full mx-auto p-4" />}
+                    {img && <img src={file.url} alt={file.name} className="rounded-lg mx-auto p-4" style={{ maxWidth: '100%', height: 'auto' }} />}
                     {pdf && <iframe src={file.url} className="w-full border-0" style={{ height: "75vh" }} />}
                     {!img && !pdf && (
                         <div className="text-center py-20">
@@ -237,7 +237,7 @@ export function ItemFiles({ files, onChange, currentUser }: { files: LabFile[]; 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        if (file.size > FILE_MAX) { alert("10MB 이하 파일만 업로드 가능합니다."); return; }
+        if (file.size > FILE_MAX) { alert("50MB 이하 파일만 업로드 가능합니다."); return; }
         setUploading(true);
         try {
             const url = await uploadFile(file);
@@ -297,7 +297,7 @@ export function FileBox({ files, currentUser, onAddFile, onDeleteFile, compact }
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        if (file.size > FILE_MAX) { alert("10MB 이하 파일만 업로드 가능합니다."); return; }
+        if (file.size > FILE_MAX) { alert("50MB 이하 파일만 업로드 가능합니다."); return; }
         setUploading(true);
         try {
             const url = await uploadFile(file);
@@ -312,7 +312,7 @@ export function FileBox({ files, currentUser, onAddFile, onDeleteFile, compact }
     return (
         <>
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                {sorted.length === 0 && <div className={`text-center ${compact ? "py-6" : "py-12"}`}><div className="text-3xl mb-2">📁</div><div className="text-[13px]" style={{color:"#94A3B8"}}>파일을 업로드하세요 (10MB 이하)</div></div>}
+                {sorted.length === 0 && <div className={`text-center ${compact ? "py-6" : "py-12"}`}><div className="text-3xl mb-2">📁</div><div className="text-[13px]" style={{color:"#94A3B8"}}>파일을 업로드하세요 (50MB 이하)</div></div>}
                 {sorted.map(f => (
                     <div key={f.id} className="group bg-slate-50 rounded-lg p-2.5 hover:bg-slate-100 transition-colors">
                         <div className="flex items-start gap-2">
@@ -520,7 +520,7 @@ export function DetailChatPanel({ messages, currentUser, onAdd, onDelete, title 
                                 <span className="text-[12px] font-semibold text-slate-700">{MEMBERS[c.author]?.emoji} {c.author}</span>
                                 <span className="text-[11px] text-slate-400">{c.date}</span>
                             </div>
-                            <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                            <div className="text-[13px] text-slate-600 whitespace-pre-wrap">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
                         </div>
                         {(c.author === currentUser || currentUser === "박일웅") && (
                             <button onClick={() => onDelete(c.id)} className="text-[11px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 self-start mt-2 flex-shrink-0">삭제</button>

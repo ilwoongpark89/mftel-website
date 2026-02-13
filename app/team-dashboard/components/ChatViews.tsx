@@ -147,7 +147,7 @@ const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd
                                             )}
                                             <div className={`px-3 py-1.5 rounded-2xl text-[13px] leading-snug break-words whitespace-pre-wrap ${isMe ? "rounded-tr-md" : "rounded-tl-md"}`}
                                                 style={{ background: isMe ? "#3B82F6" : "#F1F5F9", color: isMe ? "#FFFFFF" : "#1E293B" }}>
-                                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-w-full rounded-lg mb-1 max-h-[200px] object-contain cursor-pointer" />}
+                                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="w-full rounded-lg mb-1 cursor-pointer" style={{ maxHeight: 200, objectFit: 'contain', background: '#F1F5F9' }} />}
                                                 {msg.text && renderWithMentions(msg.text)}
                                             </div>
                                             {Object.keys(reactions).length > 0 && (
@@ -319,7 +319,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                                     <span className="text-[11px] text-slate-400 ml-1 whitespace-nowrap">{card.updatedAt}</span>
                                 </div>
                                 {card.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-2 break-words">{card.content}</div>}
-                                {card.imageUrl && <img src={card.imageUrl} alt="" className="w-full max-h-[150px] object-cover rounded-lg mt-2 mb-2" />}
+                                {card.imageUrl && <img src={card.imageUrl} alt="" className="w-full rounded-lg mt-2 mb-2" style={{ maxHeight: 200, objectFit: 'contain', background: '#F1F5F9' }} />}
                                 <div className="text-[11px] text-slate-400 mb-1">{MEMBERS[card.author]?.emoji || "👤"} {card.author}</div>
                                 {cmts.length > 0 ? (
                                     <div className="border-t border-slate-100 pt-1.5 mt-auto space-y-0.5">
@@ -457,7 +457,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                                                 )}
                                                 <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "7px 14px", lineHeight: "1.5" }}
                                                     className="text-[13px] text-slate-800">
-                                                    {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1.5 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollLabChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
+                                                    {msg.imageUrl && <img src={msg.imageUrl} alt="" className="w-full rounded-md mb-1.5 cursor-pointer" style={{ maxHeight: 200, objectFit: 'contain', background: '#F1F5F9' }} onLoad={scrollLabChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
                                                     {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
                                                 </div>
                                                 {Object.keys(reactions).length > 0 && (
@@ -544,7 +544,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                         <div className="p-4">
                             <div className="text-[12px] text-slate-400 mb-3">{MEMBERS[selectedCard.author]?.emoji || "👤"} {selectedCard.author} · {selectedCard.updatedAt}</div>
                             {selectedCard.content && <div className="text-[14px] text-slate-700 mb-4 whitespace-pre-wrap break-words">{selectedCard.content}</div>}
-                            {selectedCard.imageUrl && <img src={selectedCard.imageUrl} alt="" className="max-w-full rounded-lg mb-4 cursor-pointer" onClick={() => setPreviewImg(selectedCard.imageUrl!)} />}
+                            {selectedCard.imageUrl && <img src={selectedCard.imageUrl} alt="" className="rounded-lg mb-4 cursor-pointer" style={{ maxWidth: '100%', height: 'auto' }} onClick={() => setPreviewImg(selectedCard.imageUrl!)} />}
                             <div className="border-t border-slate-200 pt-4">
                                 <div className="text-[13px] font-semibold text-slate-600 mb-3">💬 댓글 ({(selectedCard.comments || []).length})</div>
                                 <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto">
@@ -552,7 +552,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group/c relative">
                                             <button onClick={() => confirmDel(() => { const updated = { ...selectedCard, comments: (selectedCard.comments || []).filter(x => x.id !== c.id) }; onSaveBoard(updated); setSelectedCard(updated); })}
                                                 className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}

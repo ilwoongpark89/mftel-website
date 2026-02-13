@@ -35,6 +35,14 @@ const fmtSize = (bytes: number) => {
     return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 };
 
+const fmtBytes = (bytes: number) => {
+    if (bytes <= 0) return "0B";
+    if (bytes < 1024) return `${bytes}B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(0)}MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)}GB`;
+};
+
 // ═══════════════════════════════════════════════════════════════════════════
 // 1) 멤버 관리 — Member + Password merged
 // ═══════════════════════════════════════════════════════════════════════════
@@ -199,6 +207,117 @@ export function AdminMemberView() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Storage Usage Card
+// ═══════════════════════════════════════════════════════════════════════════
+
+type StorageUsageData = {
+    storage: number;
+    database: number;
+    storageLimit: number;
+    databaseLimit: number;
+    error?: string;
+};
+
+function StorageUsageCard() {
+    const [data, setData] = useState<StorageUsageData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchUsage = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const r = await fetch("/api/admin/storage-usage", { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok && d.error) {
+                setError(d.error);
+                // Still set data if available (for fallback display)
+                if (d.storageLimit) setData(d);
+            } else {
+                setData(d);
+            }
+        } catch {
+            setError("네트워크 오류로 저장 용량을 확인할 수 없습니다");
+        }
+        setLoading(false);
+    }, []);
+
+    useEffect(() => { fetchUsage(); }, [fetchUsage]);
+
+    const totalUsed = (data?.storage || 0) + (data?.database || 0);
+    const totalLimit = data?.storageLimit || 1073741824; // 1GB default
+    const pct = totalLimit > 0 ? Math.min((totalUsed / totalLimit) * 100, 100) : 0;
+
+    const barColor = pct >= 90 ? "bg-red-500" : pct >= 80 ? "bg-orange-500" : "bg-emerald-500";
+    const barBg = pct >= 90 ? "bg-red-100" : pct >= 80 ? "bg-orange-100" : "bg-emerald-100";
+
+    return (
+        <div className="bg-white border border-slate-200 rounded-xl p-5 mb-5">
+            <div className="flex items-center justify-between mb-3">
+                <h4 className="text-[14px] font-bold text-slate-800 flex items-center gap-1.5">
+                    <span className="text-[16px]">{"💾"}</span> 저장 용량
+                </h4>
+                <button
+                    onClick={fetchUsage}
+                    disabled={loading}
+                    className="px-2.5 py-1 text-[12px] text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+                    title="새로고침"
+                >
+                    {loading ? "..." : "🔄"}
+                </button>
+            </div>
+
+            {loading && !data ? (
+                <div className="text-center py-4 text-slate-400 text-[12px]">저장 용량 조회 중...</div>
+            ) : error && !data ? (
+                <div className="text-center py-4 text-amber-600 text-[12px]">{error}</div>
+            ) : (
+                <>
+                    {/* Progress bar */}
+                    <div className="mb-3">
+                        <div className={`w-full h-4 rounded-full ${barBg} overflow-hidden`}>
+                            <div
+                                className={`h-full rounded-full ${barColor} transition-all duration-500`}
+                                style={{ width: `${Math.max(pct, 1)}%` }}
+                            />
+                        </div>
+                        <div className="flex items-center justify-between mt-1.5">
+                            <span className="text-[12px] font-semibold text-slate-700">
+                                {fmtBytes(totalUsed)} / {fmtBytes(totalLimit)}
+                            </span>
+                            <span className={`text-[12px] font-bold ${pct >= 90 ? "text-red-600" : pct >= 80 ? "text-orange-600" : "text-emerald-600"}`}>
+                                {pct.toFixed(1)}%
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Breakdown */}
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div className="bg-slate-50 rounded-lg px-3 py-2">
+                            <div className="text-[11px] text-slate-400 mb-0.5">{"📁"} Storage (파일)</div>
+                            <div className="text-[14px] font-bold text-slate-700">{fmtBytes(data?.storage || 0)}</div>
+                        </div>
+                        <div className="bg-slate-50 rounded-lg px-3 py-2">
+                            <div className="text-[11px] text-slate-400 mb-0.5">{"🗄️"} Database</div>
+                            <div className="text-[14px] font-bold text-slate-700">{fmtBytes(data?.database || 0)}</div>
+                        </div>
+                    </div>
+
+                    {/* Warning */}
+                    <p className="text-[11px] text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                        {"⚠️"} 1GB 초과 시 Supabase Pro 플랜($25/월) 필요
+                    </p>
+
+                    {error && (
+                        <p className="text-[11px] text-amber-500 mt-2">{"⚠️"} {error}</p>
+                    )}
+                </>
+            )}
+        </div>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // 2) 백업 관리
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -248,10 +367,14 @@ export function AdminBackupView() {
         setLoading(false);
     };
 
-    if (loading) return <div className="text-center py-12 text-slate-400 text-[13px]">로딩 중...</div>;
-
     return (
         <div>
+            {/* Storage Usage Card */}
+            <StorageUsageCard />
+
+            {loading ? (
+                <div className="text-center py-12 text-slate-400 text-[13px]">백업 목록 로딩 중...</div>
+            ) : (<>
             <div className="flex items-center justify-between mb-4">
                 <div>
                     <h3 className="text-[15px] font-bold text-slate-800">백업 목록</h3>
@@ -283,6 +406,7 @@ export function AdminBackupView() {
                 </table>
                 {backups.length === 0 && <div className="text-center py-8 text-slate-300 text-[13px]">백업이 없습니다</div>}
             </div>
+            </>)}
         </div>
     );
 }

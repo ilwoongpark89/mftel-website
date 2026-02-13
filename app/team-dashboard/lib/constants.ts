@@ -166,4 +166,4 @@ export const DEFAULT_TIMETABLE: TimetableBlock[] = [];
 // ─── Draft & File ───────────────────────────────────────────────────────────
 
 export const DRAFT_PFX = "mftel_draft_";
-export const FILE_MAX = 10 * 1024 * 1024;
+export const FILE_MAX = 50 * 1024 * 1024;

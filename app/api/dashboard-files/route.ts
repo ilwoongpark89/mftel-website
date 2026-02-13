@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
                     throw new Error('허용되지 않는 파일 형식입니다.');
                 }
                 return {
-                    maximumSizeInBytes: 10 * 1024 * 1024,
+                    maximumSizeInBytes: 50 * 1024 * 1024,
                     allowedContentTypes: [...ALLOWED_CONTENT_TYPES],
                 };
             },

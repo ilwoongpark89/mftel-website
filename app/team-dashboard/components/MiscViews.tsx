@@ -519,7 +519,7 @@ const ConferenceTripView = memo(function ConferenceTripView({ items, onSave, onD
                                         <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
                                             <button onClick={() => { if (!confirm("댓글을 삭제하시겠습니까?")) return; setComments(comments.filter(x => x.id !== c.id)); }}
                                                 className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
                                             <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
@@ -739,7 +739,7 @@ const ResourceView = memo(function ResourceView({ resources, onSave, onDelete, o
                                         <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
                                             <button onClick={() => { if (!confirm("댓글을 삭제하시겠습니까?")) return; setComments(comments.filter(x => x.id !== c.id)); }}
                                                 className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
                                             <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
@@ -895,7 +895,7 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
                             <span className="text-[11px] text-slate-400 ml-2 whitespace-nowrap">{idea.date}</span>
                         </div>
                         {idea.body && <div className="text-[13px] text-slate-600 mb-3 line-clamp-3 break-words">{idea.body}</div>}
-                        {idea.imageUrl && <img src={idea.imageUrl} alt="" className="w-full max-h-[150px] object-cover rounded-lg mt-2 mb-2" />}
+                        {idea.imageUrl && <img src={idea.imageUrl} alt="" className="w-full rounded-lg mt-2 mb-2" style={{ maxHeight: 200, objectFit: 'contain', background: '#F1F5F9' }} />}
                         <div className="text-[12px] text-slate-400 mb-2">{MEMBERS[idea.author]?.emoji || "👤"} {idea.author}</div>
                         {/* Comment preview */}
                         {idea.comments.length > 0 && (
@@ -964,7 +964,7 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
                         <div className="p-4">
                             <div className="text-[12px] text-slate-400 mb-3">{MEMBERS[selected.author]?.emoji || "👤"} {selected.author} · {selected.date}</div>
                             {selected.body && <div className="text-[14px] text-slate-700 mb-4 whitespace-pre-wrap break-words">{selected.body}</div>}
-                            {selected.imageUrl && <img src={selected.imageUrl} alt="" className="max-w-full rounded-lg mb-4 cursor-pointer" onClick={() => window.open(selected.imageUrl!, '_blank')} />}
+                            {selected.imageUrl && <img src={selected.imageUrl} alt="" className="rounded-lg mb-4 cursor-pointer" style={{ maxWidth: '100%', height: 'auto' }} onClick={() => window.open(selected.imageUrl!, '_blank')} />}
 
                             {/* Comments section */}
                             <div className="border-t border-slate-200 pt-4">
@@ -974,7 +974,7 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group relative">
                                             <button onClick={() => deleteComment(c.id)}
                                                 className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
@@ -1143,10 +1143,10 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
                 if (ann) onUpdate({ ...ann, pinned: true });
             } else if ((srcCol === "urgent" || srcCol === "general") && targetCol === "culture") {
                 const ann = announcements.find(a => a.id === draggedItem.id);
-                if (ann) { onDelete(ann.id); onAddPhilosophy(ann.text); }
+                if (ann) { onDelete(ann.id); onAddPhilosophy(ann.text, ann.imageUrl); }
             } else if (srcCol === "culture" && (targetCol === "urgent" || targetCol === "general")) {
                 const phil = philosophy.find(p => p.id === draggedItem.id);
-                if (phil) { onDeletePhilosophy(phil.id); onAdd(phil.text, targetCol === "urgent"); }
+                if (phil) { onDeletePhilosophy(phil.id); onAdd(phil.text, targetCol === "urgent", phil.imageUrl); }
             }
         }
         setDraggedItem(null); setDropCol(null); setDropIdx(-1);
@@ -1200,7 +1200,7 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
                                         <div className="flex items-start justify-between">
                                             <span className="text-[14px] text-slate-800 whitespace-pre-wrap break-words line-clamp-4 flex-1" style={{ lineHeight: 1.6 }}>{item.text}<SavingBadge id={item.id} /></span>
                                         </div>
-                                        {item.imageUrl && <img src={item.imageUrl} alt="" className="w-full max-h-[150px] object-cover rounded-lg mt-2" />}
+                                        {item.imageUrl && <img src={item.imageUrl} alt="" className="w-full rounded-lg mt-2" style={{ maxHeight: 200, objectFit: 'contain', background: '#F1F5F9' }} />}
                                         <div className="mt-auto pt-2 text-[11px] text-slate-400">{item.author} · {item.date}</div>
                                     </div>
                                 ))}
@@ -1227,7 +1227,7 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
                             {editImg.uploading && <div className="text-[11px] text-slate-400 mt-1">업로드 중...</div>}
                             {editImg.img ? editImg.preview : editImgUrl ? (
                                 <div className="mt-2 relative inline-block">
-                                    <img src={editImgUrl} alt="" className="max-w-full rounded-lg cursor-pointer" onClick={() => window.open(editImgUrl, '_blank')} />
+                                    <img src={editImgUrl} alt="" className="rounded-lg cursor-pointer" style={{ maxWidth: '100%', height: 'auto' }} onClick={() => window.open(editImgUrl, '_blank')} />
                                     <button onClick={() => setEditImgUrl("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center">✕</button>
                                 </div>
                             ) : null}

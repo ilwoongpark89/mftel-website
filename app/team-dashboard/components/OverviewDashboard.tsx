@@ -90,9 +90,11 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
     // Todo summary
     const activeTodos = ft.filter(t => !t.done).length;
 
-    // Urgent & general announcements for overview
-    const urgentAnn = announcements.filter(a => a.pinned).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 12);
-    const generalAnn = announcements.filter(a => !a.pinned).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 12);
+    // Urgent & general announcements for overview (show max 2 per category)
+    const urgentAnnAll = announcements.filter(a => a.pinned).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const generalAnnAll = announcements.filter(a => !a.pinned).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const urgentAnn = urgentAnnAll.slice(0, 2);
+    const generalAnn = generalAnnAll.slice(0, 2);
 
     // My items (always filtered to currentUser)
     const myPapers = papers.filter(p => p.assignees.includes(currentUser));
@@ -232,19 +234,24 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
                     <button onClick={() => onNavigate("announcements")} className="w-full text-left">
                         <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500 flex items-center gap-2">
                             🚨 긴급 공지
-                            {urgentAnn.length > 0 && <span className="px-1.5 py-0.5 rounded-md bg-red-50 text-red-500 text-[11px] font-semibold">{urgentAnn.length}</span>}
+                            {urgentAnnAll.length > 0 && <span className="px-1.5 py-0.5 rounded-md bg-red-50 text-red-500 text-[11px] font-semibold">{urgentAnnAll.length}</span>}
                         </h3>
                     </button>
                     {urgentAnn.length === 0 ? (
                         <div className="text-[13px] text-slate-300 text-center py-6">긴급 공지 없음</div>
                     ) : (
-                        <div className="space-y-2 max-h-[260px] overflow-y-auto">
+                        <div className="space-y-2">
                             {urgentAnn.map(ann => (
                                 <div key={ann.id} className="p-3 rounded-xl cursor-pointer transition-colors" style={{background:"#FEF2F2", borderLeft:"2px solid #EF4444"}} onMouseEnter={e => (e.currentTarget.style.background = "#FEE2E2")} onMouseLeave={e => (e.currentTarget.style.background = "#FEF2F2")}>
                                     <div className="text-[13px] leading-relaxed" style={{color:"#334155", fontWeight:500}}>{ann.text.length > 50 ? ann.text.slice(0, 50) + "..." : ann.text}</div>
                                     <div className="text-[11px] mt-1" style={{color:"#94A3B8"}}>{members[ann.author]?.emoji} {ann.author} · {ann.date}</div>
                                 </div>
                             ))}
+                            {urgentAnnAll.length > 2 && (
+                                <button onClick={() => onNavigate("announcements")} className="w-full text-center text-[12px] font-medium py-1.5 rounded-lg transition-colors hover:bg-slate-50" style={{color:"#3B82F6"}}>
+                                    더보기 →
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
@@ -254,19 +261,24 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
                     <button onClick={() => onNavigate("announcements")} className="w-full text-left">
                         <h3 className="text-[16px] font-bold text-slate-900 mb-3 pl-2 border-l-[3px] border-blue-500 flex items-center gap-2">
                             📌 일반 공지
-                            {generalAnn.length > 0 && <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-500 text-[11px] font-semibold">{generalAnn.length}</span>}
+                            {generalAnnAll.length > 0 && <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-500 text-[11px] font-semibold">{generalAnnAll.length}</span>}
                         </h3>
                     </button>
                     {generalAnn.length === 0 ? (
                         <div className="text-[13px] text-slate-300 text-center py-6">일반 공지 없음</div>
                     ) : (
-                        <div className="space-y-2 max-h-[260px] overflow-y-auto">
+                        <div className="space-y-2">
                             {generalAnn.map(ann => (
                                 <div key={ann.id} className="p-3 rounded-xl cursor-pointer transition-colors" style={{background:"#EFF6FF", borderLeft:"2px solid #3B82F6"}} onMouseEnter={e => (e.currentTarget.style.background = "#DBEAFE")} onMouseLeave={e => (e.currentTarget.style.background = "#EFF6FF")}>
                                     <div className="text-[13px] leading-relaxed" style={{color:"#334155", fontWeight:500}}>{ann.text.length > 50 ? ann.text.slice(0, 50) + "..." : ann.text}</div>
                                     <div className="text-[11px] mt-1" style={{color:"#94A3B8"}}>{members[ann.author]?.emoji} {ann.author} · {ann.date}</div>
                                 </div>
                             ))}
+                            {generalAnnAll.length > 2 && (
+                                <button onClick={() => onNavigate("announcements")} className="w-full text-center text-[12px] font-medium py-1.5 rounded-lg transition-colors hover:bg-slate-50" style={{color:"#3B82F6"}}>
+                                    더보기 →
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
@@ -280,8 +292,8 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
                     {discussionItems.length === 0 ? (
                         <div className="text-[13px] text-slate-300 text-center py-6">논의 필요 항목 없음</div>
                     ) : (
-                        <div className="space-y-1.5 max-h-[260px] overflow-y-auto">
-                            {discussionItems.slice(0, 10).map((item, i) => (
+                        <div className="space-y-1.5">
+                            {discussionItems.slice(0, 2).map((item, i) => (
                                 <button key={i} onClick={() => onNavigate(item.tab)} className="w-full flex items-start gap-2.5 p-3 rounded-xl text-left transition-all group" style={{background:"#FEF2F2", borderLeft:"2px solid #EF4444"}}>
                                     <span className="text-[13px] mt-0.5">{item.icon}</span>
                                     <div className="flex-1 min-w-0">
@@ -290,7 +302,11 @@ export const OverviewDashboard = memo(function OverviewDashboard({ papers, repor
                                     </div>
                                 </button>
                             ))}
-                            {discussionItems.length > 10 && <div className="text-[12px] text-slate-400 text-center py-1">+{discussionItems.length - 10}개 더</div>}
+                            {discussionItems.length > 2 && (
+                                <button onClick={() => onNavigate("announcements")} className="w-full text-center text-[12px] font-medium py-1.5 rounded-lg transition-colors hover:bg-slate-50" style={{color:"#3B82F6"}}>
+                                    더보기 →
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
