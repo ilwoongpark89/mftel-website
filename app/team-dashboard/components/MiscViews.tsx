@@ -1069,6 +1069,7 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
 
     const [addingCol, setAddingCol] = useState<ColKey | null>(null);
     const [newText, setNewText] = useState("");
+    const [selected, setSelected] = useState<(Announcement & { _col: ColKey }) | null>(null);
     const [editing, setEditing] = useState<(Announcement & { _col: ColKey }) | null>(null);
     const [editText, setEditText] = useState("");
     const [editImgUrl, setEditImgUrl] = useState<string>("");
@@ -1209,7 +1210,7 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
                                     <div key={item.id} draggable data-ann-card
                                         onDragStart={() => setDraggedItem({ id: item.id, col: col.key })}
                                         onDragEnd={() => { setDraggedItem(null); setDropCol(null); setDropIdx(-1); }}
-                                        onClick={() => { if (isPI || currentUser === item.author) openEdit(item); }}
+                                        onClick={() => setSelected(item)}
                                         className={`group/card bg-white rounded-xl p-3.5 cursor-grab transition-all flex flex-col ${draggedItem?.id === item.id ? "opacity-40" : ""}`}
                                         style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.08)", borderLeft: `2px solid ${colCfg.color}` }}>
                                         <div className="flex items-start justify-between">
@@ -1227,6 +1228,30 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
                     );
                 })}
             </div>
+            {/* View modal (read-only) */}
+            {selected && !editing && (
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setSelected(null)}>
+                    <div className="bg-white rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-4 border-b border-slate-200">
+                            <h3 className="text-[15px] font-bold text-slate-800">{selected._col === "culture" ? "🎯 문화" : selected._col === "urgent" ? "🚨 긴급 공지" : "📌 일반 공지"}</h3>
+                            <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
+                        </div>
+                        <div className="p-4">
+                            <p className="text-[14px] text-slate-800 whitespace-pre-wrap leading-relaxed" style={{ wordBreak: "break-all", overflowWrap: "break-word" }}>{selected.text}</p>
+                            {selected.imageUrl && <img src={selected.imageUrl} alt="" className="w-full rounded-lg mt-3 cursor-pointer" style={{ maxHeight: 400, objectFit: "contain" }} onClick={() => window.open(selected.imageUrl, "_blank")} />}
+                        </div>
+                        <div className="flex items-center justify-between p-4 border-t border-slate-200">
+                            <span className="text-[12px] text-slate-400">{selected.author} · {selected.date}</span>
+                            {(isPI || currentUser === selected.author) && (
+                                <div className="flex gap-2">
+                                    <button onClick={() => confirmDel(() => { deleteItem(selected); setSelected(null); })} className="px-3 py-1.5 text-[13px] text-red-500 hover:bg-red-50 rounded-lg transition-colors">삭제</button>
+                                    <button onClick={() => { openEdit(selected); setSelected(null); }} className="px-4 py-1.5 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium transition-colors">수정</button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* Edit modal */}
             {editing && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setEditing(null)}>
