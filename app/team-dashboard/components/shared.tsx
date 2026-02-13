@@ -90,6 +90,94 @@ export function PillSelect({ options, selected, onToggle, emojis }: { options: s
     );
 }
 
+// ─── ReactionBadges (shared reaction display with tooltip / long-press) ──────
+
+function formatReactors(users: string[]): string {
+    if (!Array.isArray(users) || users.length === 0) return "";
+    if (users.length <= 3) return users.join(", ");
+    return `${users[0]}, ${users[1]} 외 ${users.length - 2}명`;
+}
+
+export function ReactionBadges({ reactions, currentUser, onToggle, align = "left" }: {
+    reactions: Record<string, string[] | number>;
+    currentUser: string;
+    onToggle: (emoji: string) => void;
+    align?: "left" | "right";
+}) {
+    const [longPressEmoji, setLongPressEmoji] = useState<string | null>(null);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const entries = Object.entries(reactions).filter(([, v]) => {
+        if (Array.isArray(v)) return v.length > 0;
+        return typeof v === "number" && v > 0;
+    });
+    if (entries.length === 0) return null;
+
+    const startLongPress = (emoji: string) => {
+        timerRef.current = setTimeout(() => setLongPressEmoji(emoji), 500);
+    };
+    const cancelLongPress = () => {
+        if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    };
+
+    return (
+        <>
+            <div className={`absolute -bottom-3 ${align === "right" ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
+                {entries.map(([emoji, val]) => {
+                    const users = Array.isArray(val) ? val : [];
+                    const count = Array.isArray(val) ? val.length : val;
+                    const isMine = users.includes(currentUser);
+                    const tooltip = users.length > 0 ? formatReactors(users) : `${count}명`;
+                    return (
+                        <button key={emoji}
+                            onClick={() => onToggle(emoji)}
+                            onTouchStart={() => startLongPress(emoji)}
+                            onTouchEnd={cancelLongPress}
+                            onTouchCancel={cancelLongPress}
+                            title={tooltip}
+                            className={`group/rb relative inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[11px] border shadow-sm transition-colors ${isMine ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                            {emoji}{count}
+                            {/* PC hover tooltip */}
+                            <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/rb:flex whitespace-nowrap bg-slate-800 text-white text-[11px] px-2 py-1 rounded-lg shadow-lg z-50 max-w-[200px] text-center leading-tight"
+                                style={{ wordBreak: "keep-all" }}>
+                                {tooltip}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+            {/* Mobile long-press bottom sheet */}
+            {longPressEmoji && (() => {
+                const val = reactions[longPressEmoji];
+                const users = Array.isArray(val) ? val : [];
+                const count = Array.isArray(val) ? val.length : (val as number);
+                return (
+                    <div className="fixed inset-0 z-[200] flex items-end justify-center" onClick={() => setLongPressEmoji(null)}>
+                        <div className="absolute inset-0 bg-black/30" />
+                        <div className="relative bg-white rounded-t-2xl w-full max-w-sm pb-6 pt-3 px-5 animate-slide-up" onClick={e => e.stopPropagation()}>
+                            <div className="w-10 h-1 bg-slate-300 rounded-full mx-auto mb-3" />
+                            <div className="text-center text-2xl mb-2">{longPressEmoji}</div>
+                            {users.length > 0 ? (
+                                <div className="space-y-1.5 max-h-[40vh] overflow-y-auto">
+                                    {users.map(u => (
+                                        <div key={u} className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-slate-50">
+                                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0">{u[0]}</div>
+                                            <span className="text-sm text-slate-700">{u}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-center text-sm text-slate-500">{count}명이 반응했습니다</p>
+                            )}
+                            <button onClick={() => setLongPressEmoji(null)} className="mt-4 w-full py-2.5 bg-slate-100 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-200 transition-colors">닫기</button>
+                        </div>
+                    </div>
+                );
+            })()}
+        </>
+    );
+}
+
 // ─── EmojiPickerPopup ────────────────────────────────────────────────────────
 
 const POPUP_WIDTH = 320;

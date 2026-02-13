@@ -6,7 +6,7 @@ import { MEMBERS, MEMO_COLORS } from "../lib/constants";
 import { genId, chatKeyDown, renderChatMessage, extractFirstUrl, sendMentionPush, saveDraft, loadDraft, clearDraft, hasDraft, uploadFile } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useMention, MentionPopup, useCommentImg, useTypingIndicator, TypingIndicator } from "../lib/hooks";
-import { ColorPicker, EmojiPickerPopup, FileBox, ReadReceiptBadge, SavingBadge } from "./shared";
+import { ColorPicker, EmojiPickerPopup, FileBox, ReadReceiptBadge, ReactionBadges, SavingBadge } from "./shared";
 import { OgPreviewCard } from "./OgPreviewCard";
 
 const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, onRetry, readReceipts }: {
@@ -161,16 +161,7 @@ const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd
                                                 {msg.edited && <span className="text-[10px] ml-1 opacity-60">(수정됨)</span>}
                                             </div>
                                             {msg.text && extractFirstUrl(msg.text) && <OgPreviewCard url={extractFirstUrl(msg.text)!} />}
-                                            {Object.keys(reactions).length > 0 && (
-                                                <div className="flex flex-wrap gap-0.5 mt-0.5 absolute -bottom-3 left-0">
-                                                    {Object.entries(reactions).filter(([, u]) => u.length > 0).map(([em, users]) => (
-                                                        <button key={em} onClick={() => toggleReaction(msg.id, em)}
-                                                            className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] border ${users.includes(currentUser) ? "bg-blue-50 border-blue-200" : "bg-white border-slate-200"}`}>
-                                                            {em} {users.length}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
+                                            <ReactionBadges reactions={reactions} currentUser={currentUser} onToggle={(em) => toggleReaction(msg.id, em)} align={isMe ? "right" : "left"} />
                                         </div>
                                         {!msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} showZero={!isMe} />}
                                     </div>
@@ -487,16 +478,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                                                     {msg.text && <div className="whitespace-pre-wrap break-words">{renderChatMessage(msg.text)}</div>}
                                                     {msg.edited && <span className="text-[10px] text-slate-400 ml-1">(수정됨)</span>}
                                                 </div>
-                                                {Object.keys(reactions).length > 0 && (
-                                                    <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
-                                                        {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
-                                                            <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
-                                                                className={`inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[11px] border shadow-sm transition-colors ${users.includes(currentUser) ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
-                                                                {emoji}{users.length}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
+                                                <ReactionBadges reactions={reactions} currentUser={currentUser} onToggle={(em) => toggleReaction(msg.id, em)} align={isMe ? "right" : "left"} />
                                             </div>
                                             {!msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} showZero={!isMe} />}
                                         </div>

@@ -253,3 +253,11 @@
   animation: chatSearchFlash 1.8s ease-out forwards;
   border-radius: 8px;
 }
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slideUp 0.25s ease-out;
+}

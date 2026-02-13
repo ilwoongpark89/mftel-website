@@ -6,7 +6,7 @@ import { MEMBERS, MEMO_COLORS } from "../lib/constants";
 import { genId, chatKeyDown, renderChatMessage, extractFirstUrl, sendMentionPush, uploadFile } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useMention, MentionPopup, useCommentImg, useTypingIndicator, TypingIndicator } from "../lib/hooks";
-import { ChatImageLightbox, ChatSearchBar, ColorPicker, EmojiPickerPopup, FileBox, ReadReceiptBadge, SavingBadge, useChatSearch, useLayoutSettings, LayoutSettingsOverlay } from "./shared";
+import { ChatImageLightbox, ChatSearchBar, ColorPicker, EmojiPickerPopup, FileBox, ReadReceiptBadge, ReactionBadges, SavingBadge, useChatSearch, useLayoutSettings, LayoutSettingsOverlay } from "./shared";
 import { OgPreviewCard } from "./OgPreviewCard";
 
 const NewMessagesDivider = memo(function NewMessagesDivider() {
@@ -361,16 +361,7 @@ const PersonalMemoView = memo(function PersonalMemoView({ memos, onSave, onDelet
                                                     {msg.text && <div className="whitespace-pre-wrap break-words">{renderChatMessage(msg.text)}{extractFirstUrl(msg.text) && <OgPreviewCard url={extractFirstUrl(msg.text)!} />}</div>}
                                                     {msg.edited && <span className="text-[10px] text-slate-400 ml-1">(수정됨)</span>}
                                                 </div>
-                                                {Object.keys(reactions).length > 0 && (
-                                                    <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
-                                                        {Object.entries(reactions).filter(([, users]) => users.length > 0).map(([emoji, users]) => (
-                                                            <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
-                                                                className={`inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[11px] border shadow-sm transition-colors ${users.includes(currentUser) ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
-                                                                {emoji}{users.length}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
+                                                <ReactionBadges reactions={reactions} currentUser={currentUser} onToggle={(em) => toggleReaction(msg.id, em)} align={isMe ? "right" : "left"} />
                                             </div>
                                             {!msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} showZero={!isMe} />}
                                         </div>
