@@ -8,7 +8,7 @@ import { ALL_MEMBER_NAMES } from "../lib/constants";
 import { genId, chatKeyDown, renderChatMessage, extractFirstUrl } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useMention, MentionPopup, useCommentImg } from "../lib/hooks";
-import { ReadReceiptBadge } from "./shared";
+import { ChatActionMenu, ReadReceiptBadge, EmojiPickerPopup, ReactionBadges } from "./shared";
 import { OgPreviewCard } from "./OgPreviewCard";
 
 // ─── Bot text renderer (uses renderChatMessage + bold handling) ──────────────
@@ -93,6 +93,11 @@ export const AiBotChat = memo(function AiBotChat({
     const didInit = useRef(false);
     const composingRef = useRef(false);
     const inputRef = useRef<HTMLTextAreaElement>(null);
+    const [replyTo, setReplyTo] = useState<TeamChatMsg | null>(null);
+    const [editingMsg, setEditingMsg] = useState<TeamChatMsg | null>(null);
+    const [activeMenuMsgId, setActiveMenuMsgId] = useState<number | null>(null);
+    const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
+    const botMenuBtnRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
     const mention = useMention();
     const commentImg = useCommentImg();
 
@@ -111,6 +116,15 @@ export const AiBotChat = memo(function AiBotChat({
         const pos = el?.selectionStart ?? text.length;
         const result = mention.apply(text, pos, name);
         if (result) { setText(result.newText); mention.close(); setTimeout(() => { el?.focus(); el?.setSelectionRange(result.cursorPos, result.cursorPos); }, 10); }
+    };
+
+    const toggleReaction = (msgId: number, emoji: string) => {
+        const msg = messages.find(m => m.id === msgId); if (!msg) return;
+        const reactions = { ...(msg.reactions || {}) };
+        const users = reactions[emoji] || [];
+        reactions[emoji] = users.includes(currentUser) ? users.filter(u => u !== currentUser) : [...users, currentUser];
+        if (reactions[emoji].length === 0) delete reactions[emoji];
+        onUpdateMessage({ ...msg, reactions });
     };
 
     const scrollBottom = useCallback(() => {
@@ -176,13 +190,20 @@ export const AiBotChat = memo(function AiBotChat({
         const imgUrl = commentImg.img;
         if (!msgText && !imgUrl) return;
 
+        // Handle edit mode
+        if (editingMsg) {
+            onUpdateMessage({ ...editingMsg, text: msgText, edited: true });
+            setEditingMsg(null); setText(""); return;
+        }
+
         setSlashOpen(false);
 
         const dateStr = makeDate();
-        const userMsg: TeamChatMsg = { id: genId(), author: currentUser, text: msgText, date: dateStr, reactions: {}, imageUrl: imgUrl || undefined };
+        const userMsg: TeamChatMsg = { id: genId(), author: currentUser, text: msgText, date: dateStr, reactions: {}, imageUrl: imgUrl || undefined, ...(replyTo ? { replyTo: { id: replyTo.id, author: replyTo.author, text: replyTo.text?.slice(0, 50) } } : {}) };
         onAddMessage(userMsg);
         setText("");
         commentImg.clear();
+        setReplyTo(null);
 
         // Check for / trigger (slash command)
         if (/^\//.test(msgText)) {
@@ -274,6 +295,7 @@ export const AiBotChat = memo(function AiBotChat({
                     const timeStr = tm ? `${tm[1] === "오전" ? "AM" : "PM"} ${tm[2]}` : "";
                     const showMyTime = isMe && (!sameAuthor || showDateSep);
                     const isPending = pendingConfirms.has(msg.id);
+                    const reactions = msg.reactions || {};
 
                     if (msg.deleted) return (
                         <div key={msg.id} className={`${sameAuthor && !showDateSep ? "mt-[5px]" : "mt-3"} text-center`}>
@@ -282,7 +304,7 @@ export const AiBotChat = memo(function AiBotChat({
                     );
 
                     return (
-                        <div key={msg.id}>
+                        <div key={msg.id} data-chat-id={msg.id}>
                             {showDateSep && (
                                 <div className="flex items-center gap-3 my-4">
                                     <div className="flex-1 h-px bg-slate-200" />
@@ -290,7 +312,8 @@ export const AiBotChat = memo(function AiBotChat({
                                     <div className="flex-1 h-px bg-slate-200" />
                                 </div>
                             )}
-                            <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-[3px]" : "mt-3"} group/msg`}>
+                            <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${sameAuthor && !showDateSep ? "mt-[3px]" : "mt-3"} group/msg`}
+                                style={{ opacity: msg._sending ? 0.7 : 1 }}>
                                 {/* Avatar for others/bot */}
                                 {!isMe && (
                                     <div className="w-8 flex-shrink-0 mr-1.5 self-start">
@@ -309,24 +332,63 @@ export const AiBotChat = memo(function AiBotChat({
                                             <span className="text-[11px]" style={{ color: "#94A3B8" }}>{timeStr}</span>
                                         </div>
                                     )}
-                                    {isMe && showMyTime && (
+                                    {isMe && showMyTime && !msg._sending && !msg._failed && (
                                         <div className="flex justify-end mb-0.5 px-1"><span className="text-[11px]" style={{ color: "#94A3B8" }}>{timeStr}</span></div>
                                     )}
-
-                                    {/* Message bubble */}
-                                    <div className="flex items-end gap-1">
-                                        {isMe && !msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} />}
-                                        <div className={`px-3 py-2 rounded-2xl text-[13px] leading-relaxed break-words whitespace-pre-wrap ${isMe ? "rounded-tr-md" : "rounded-tl-md"}`}
-                                            style={{
-                                                background: isBot ? "#F8F5FF" : isMe ? "#3B82F6" : "#EFF6FF",
-                                                color: isMe ? "#FFFFFF" : "#1E293B",
-                                                borderLeft: isBot ? "3px solid #8B5CF6" : "none",
-                                            }}>
-                                            {msg.imageUrl && <img src={msg.imageUrl} alt="" className="w-full rounded-lg mb-1" style={{ maxHeight: 300, objectFit: 'cover' }} />}
-                                            {isBot ? renderBotText(msg.text) : renderUserText(msg.text)}
-                                            {msg.text && extractFirstUrl(msg.text) && <OgPreviewCard url={extractFirstUrl(msg.text)!} />}
+                                    {/* Reply-to preview */}
+                                    {msg.replyTo && (
+                                        <div className="text-[11px] text-slate-400 mb-1 px-2 py-1 rounded-lg border-l-[3px] max-w-full truncate cursor-pointer hover:bg-slate-100 transition-colors" style={{background:"#F8F9FA", borderLeftColor:"#CBD5E1"}}
+                                            onClick={() => { const el = document.querySelector(`[data-chat-id="${msg.replyTo?.id}"]`); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("bg-blue-50"); setTimeout(() => el.classList.remove("bg-blue-50"), 1500); } }}>
+                                            <span className="font-semibold text-slate-500">{msg.replyTo.author}</span>: {msg.replyTo.text || "📷 이미지"}
                                         </div>
-                                        {!isMe && !isBot && !msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} showZero={true} />}
+                                    )}
+                                    {/* Message bubble + action menu */}
+                                    <div className={`flex items-end gap-1 ${isMe ? "flex-row-reverse" : ""}`}>
+                                        <div className="relative" style={{ marginBottom: Object.keys(reactions).length > 0 ? 12 : 0 }}>
+                                            {/* Action menu hover button */}
+                                            {!msg._sending && !msg._failed && (
+                                                <div className={`absolute -top-3 ${isMe ? "left-0" : "right-0"} ${activeMenuMsgId === msg.id || emojiPickerMsgId === msg.id ? "opacity-100" : "opacity-0 group-hover/msg:opacity-100"} transition-opacity z-10`}>
+                                                    <button ref={el => { if (el) botMenuBtnRefs.current.set(msg.id, el); else botMenuBtnRefs.current.delete(msg.id); }}
+                                                        onClick={() => { setActiveMenuMsgId(activeMenuMsgId === msg.id ? null : msg.id); setEmojiPickerMsgId(null); }}
+                                                        className="w-6 h-6 flex items-center justify-center rounded-full bg-white text-[12px] text-slate-400 hover:bg-slate-100 transition-colors" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>⋯</button>
+                                                </div>
+                                            )}
+                                            {activeMenuMsgId === msg.id && (
+                                                <ChatActionMenu anchorRef={{ current: botMenuBtnRefs.current.get(msg.id) || null }} isMe={isMe} onClose={() => setActiveMenuMsgId(null)}>
+                                                    <button onClick={() => { setReplyTo(msg); setActiveMenuMsgId(null); }}
+                                                        className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>↩</span> 답장</button>
+                                                    {isMe && (
+                                                        <button onClick={() => { setEditingMsg(msg); setText(msg.text); setActiveMenuMsgId(null); }}
+                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>✏️</span> 수정</button>
+                                                    )}
+                                                    <button onClick={() => { setEmojiPickerMsgId(msg.id); setActiveMenuMsgId(null); }}
+                                                        className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>😊</span> 이모지</button>
+                                                    {(isMe || currentUser === "박일웅") && !isBot && (<>
+                                                        <div className="h-px bg-slate-100 my-1" />
+                                                        <button onClick={() => { onDeleteMessage(msg.id); setActiveMenuMsgId(null); }}
+                                                            className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2"><span>🗑</span> 삭제</button>
+                                                    </>)}
+                                                </ChatActionMenu>
+                                            )}
+                                            {/* Emoji picker */}
+                                            {emojiPickerMsgId === msg.id && (
+                                                <EmojiPickerPopup anchorRef={{ current: botMenuBtnRefs.current.get(msg.id) || null }} onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
+                                            )}
+                                            <div className={`px-3 py-2 rounded-2xl text-[13px] leading-relaxed whitespace-pre-wrap ${isMe ? "rounded-tr-md" : "rounded-tl-md"}`}
+                                                style={{
+                                                    background: isBot ? "#F8F5FF" : isMe ? "#3B82F6" : "#EFF6FF",
+                                                    color: isMe ? "#FFFFFF" : "#1E293B",
+                                                    borderLeft: isBot ? "3px solid #8B5CF6" : "none",
+                                                    wordBreak: 'break-all', overflowWrap: 'break-word',
+                                                }}>
+                                                {msg.imageUrl && <img src={msg.imageUrl} alt="" className="w-full rounded-lg mb-1 cursor-pointer" style={{ maxHeight: 300, objectFit: 'cover' }} />}
+                                                {isBot ? renderBotText(msg.text) : renderUserText(msg.text)}
+                                                {msg.edited && <span className="text-[10px] ml-1 opacity-60">(수정됨)</span>}
+                                            </div>
+                                            {msg.text && extractFirstUrl(msg.text) && <OgPreviewCard url={extractFirstUrl(msg.text)!} />}
+                                            <ReactionBadges reactions={reactions} currentUser={currentUser} onToggle={(em) => toggleReaction(msg.id, em)} align={isMe ? "right" : "left"} />
+                                        </div>
+                                        {!msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} showZero={!isMe} />}
                                     </div>
 
                                     {/* Confirm/Cancel buttons */}
@@ -347,18 +409,31 @@ export const AiBotChat = memo(function AiBotChat({
                                         </div>
                                     )}
 
-                                    {/* Delete button for admin */}
-                                    {!isBot && (isMe || currentUser === "박일웅") && (
-                                        <div className="opacity-0 group-hover/msg:opacity-100 transition-opacity mt-0.5">
-                                            <button onClick={() => onDeleteMessage(msg.id)} className="text-[11px] text-slate-400 hover:text-red-500 px-1">삭제</button>
-                                        </div>
-                                    )}
+                                    {msg._failed && <button onClick={() => { /* retry handled by parent */ }} className="text-[11px] text-red-500 mt-1 px-1 hover:underline">전송 실패</button>}
                                 </div>
                             </div>
                         </div>
                     );
                 })}
             </div>
+
+            {/* Dismiss emoji picker on click outside */}
+            {emojiPickerMsgId && <div className="fixed inset-0 z-[5]" onClick={() => setEmojiPickerMsgId(null)} />}
+
+            {/* Reply banner */}
+            {replyTo && !editingMsg && (
+                <div className="px-3 py-1.5 bg-slate-50 border-t border-slate-100 flex items-center gap-2 text-[12px] flex-shrink-0">
+                    <span className="text-slate-500 truncate flex-1">↩ <span className="font-medium">{replyTo.author}</span>: {replyTo.text?.slice(0, 40)}</span>
+                    <button onClick={() => setReplyTo(null)} className="text-slate-400 hover:text-red-500">✕</button>
+                </div>
+            )}
+            {/* Edit banner */}
+            {editingMsg && (
+                <div className="px-3 py-1.5 bg-amber-50 border-t border-amber-200 flex items-center gap-2 text-[12px] flex-shrink-0">
+                    <span className="text-amber-700 truncate flex-1">✏️ 메시지 수정 중</span>
+                    <button onClick={() => { setEditingMsg(null); setText(""); }} className="text-slate-400 hover:text-red-500">✕</button>
+                </div>
+            )}
 
             {/* Image preview */}
             {commentImg.preview && (
@@ -435,16 +510,16 @@ export const AiBotChat = memo(function AiBotChat({
                         onCompositionStart={() => { composingRef.current = true; }}
                         onCompositionEnd={() => { composingRef.current = false; }}
                         onPaste={commentImg.onPaste}
-                        placeholder="메시지 입력... ( / 로 봇 호출)"
-                        className="flex-1 resize-none border border-slate-200 rounded-xl px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-blue-400 max-h-[80px]"
+                        placeholder={editingMsg ? "메시지 수정..." : "메시지 입력... ( / 로 봇 호출)"}
+                        className={`flex-1 resize-none border rounded-xl px-3 py-2 text-[13px] focus:outline-none focus:ring-1 max-h-[80px] ${editingMsg ? "border-amber-300 focus:ring-amber-400" : "border-slate-200 focus:ring-blue-400"}`}
                         rows={1}
                     />
                     <button
                         onClick={sendMsg}
                         disabled={!text.trim() && !commentImg.img}
-                        className="px-3 py-2 bg-blue-500 text-white rounded-lg text-[13px] font-medium disabled:opacity-30 hover:bg-blue-600 transition-colors"
+                        className={`px-3 py-2 text-white rounded-lg text-[13px] font-medium disabled:opacity-30 transition-colors ${editingMsg ? "bg-amber-500 hover:bg-amber-600" : "bg-blue-500 hover:bg-blue-600"}`}
                     >
-                        전송
+                        {editingMsg ? "수정" : "전송"}
                     </button>
                 </div>
             </div>

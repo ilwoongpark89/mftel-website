@@ -6,7 +6,7 @@ import { MEMBERS, MEMBER_NAMES, TEAM_COLORS, TEAM_EMOJIS, TEAM_MEMO_COLORS, MEMO
 import { genId, toggleArr, chatKeyDown, renderChatMessage, extractFirstUrl, sendMentionPush, saveDraft, loadDraft, clearDraft, hasDraft, calcDropIdx, reorderKanbanItems, uploadFile } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useMention, MentionPopup, useCommentImg, useTypingIndicator, TypingIndicator } from "../lib/hooks";
-import { ChatImageLightbox, ChatSearchBar, ColorPicker, DropLine, EmojiPickerPopup, FileBox, PillSelect, ReadReceiptBadge, ReactionBadges, SavingBadge, useChatSearch, useLayoutSettings, LayoutSettingsOverlay } from "./shared";
+import { ChatActionMenu, ChatImageLightbox, ChatSearchBar, ColorPicker, DropLine, EmojiPickerPopup, FileBox, PillSelect, ReadReceiptBadge, ReactionBadges, SavingBadge, useChatSearch, useLayoutSettings, LayoutSettingsOverlay } from "./shared";
 import { OgPreviewCard } from "./OgPreviewCard";
 
 const NewMessagesDivider = memo(function NewMessagesDivider() {
@@ -271,6 +271,7 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
     const [editingMsg, setEditingMsg] = useState<TeamChatMsg | null>(null);
     const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
     const [activeMenuMsgId, setActiveMenuMsgId] = useState<number | null>(null);
+    const teamMenuBtnRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
     const mention = useMention();
     const { typingUsers: teamTypingUsers, reportTyping: teamReportTyping } = useTypingIndicator(`teamMemo_${teamName}`, currentUser);
     const teamSearch = useChatSearch();
@@ -395,7 +396,7 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
         <div className="flex flex-col md:grid md:gap-3 flex-1 min-h-0 overflow-hidden relative" style={{gridTemplateColumns: gridTemplate}}>
             {layoutOpen && (
                 <LayoutSettingsOverlay settings={layoutSettings} onUpdate={updateLayout} onReset={resetLayout}
-                    onClose={closeLayout} />
+                    onClose={closeLayout} showBoardColumns />
             )}
             {/* Mobile tab bar — 3 tabs (mobile only) */}
             <div className="md:hidden flex border-b border-slate-200 bg-white flex-shrink-0 -mt-1">
@@ -438,7 +439,7 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
                         </div>
                     </div>
                 )}
-                <div className="flex-1 min-h-0 overflow-y-auto space-y-2"
+                <div className="flex-1 min-h-0 overflow-y-auto grid gap-2 auto-rows-max" style={{gridTemplateColumns: `repeat(${layoutSettings.boardColumns}, 1fr)`}}
                     onDragOver={e => { e.preventDefault(); setDropTarget(calcDropIdx(e, "left")); }}
                     onDragLeave={() => setDropTarget(null)}
                     onDrop={() => {
@@ -582,39 +583,33 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
                                             <div className="relative" style={{ marginBottom: (!msg._sending && !msg._failed && Object.keys(reactions).length > 0) ? 14 : 0 }}>
                                                 {/* Hover: show only ⋯ button */}
                                                 {!msg._sending && !msg._failed && (
-                                                    <div className={`absolute -top-3 ${isMe ? "left-0" : "right-0"} ${activeMenuMsgId === msg.id ? "opacity-100" : "opacity-0 group-hover/msg:opacity-100"} transition-opacity z-10`}>
-                                                        <div className="relative">
-                                                            <button onClick={() => { setActiveMenuMsgId(activeMenuMsgId === msg.id ? null : msg.id); setEmojiPickerMsgId(null); }}
-                                                                className="w-7 h-7 flex items-center justify-center rounded-full bg-white text-[14px] text-slate-400 hover:bg-slate-100 transition-colors" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>⋯</button>
-                                                            {activeMenuMsgId === msg.id && (
-                                                                <>
-                                                                    <div className="fixed inset-0 z-20" onClick={() => setActiveMenuMsgId(null)} />
-                                                                    <div className={`absolute ${isMe ? "left-0" : "right-0"} top-9 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 min-w-[160px] z-30`}>
-                                                                        <button onClick={() => { setReplyTo(msg); setActiveMenuMsgId(null); }}
-                                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>↩</span> 답장</button>
-                                                                        {isMe && (
-                                                                            <button onClick={() => { setEditingMsg(msg); setChatText(msg.text); setActiveMenuMsgId(null); }}
-                                                                                className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>✏️</span> 수정</button>
-                                                                        )}
-                                                                        <button onClick={() => { setEmojiPickerMsgId(msg.id); setActiveMenuMsgId(null); }}
-                                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>😊</span> 이모지</button>
-                                                                        <button onClick={() => { onSaveCard({ id: genId(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", status: "left", color: "#DBEAFE", author: msg.author, updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setActiveMenuMsgId(null); }}
-                                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 보드에 고정</button>
-                                                                        {(msg.author === currentUser || currentUser === "박일웅") && (<>
-                                                                            <div className="h-px bg-slate-100 my-1" />
-                                                                            <button onClick={() => confirmDel(() => { onUpdateChat({ ...msg, deleted: true, text: "", imageUrl: undefined }); setActiveMenuMsgId(null); })}
-                                                                                className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2"><span>🗑</span> 삭제</button>
-                                                                        </>)}
-                                                                    </div>
-                                                                </>
-                                                            )}
-                                                        </div>
+                                                    <div className={`absolute -top-3 ${isMe ? "left-0" : "right-0"} ${activeMenuMsgId === msg.id || emojiPickerMsgId === msg.id ? "opacity-100" : "opacity-0 group-hover/msg:opacity-100"} transition-opacity z-10`}>
+                                                        <button ref={el => { if (el) teamMenuBtnRefs.current.set(msg.id, el); else teamMenuBtnRefs.current.delete(msg.id); }}
+                                                            onClick={() => { setActiveMenuMsgId(activeMenuMsgId === msg.id ? null : msg.id); setEmojiPickerMsgId(null); }}
+                                                            className="w-7 h-7 flex items-center justify-center rounded-full bg-white text-[14px] text-slate-400 hover:bg-slate-100 transition-colors" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>⋯</button>
                                                     </div>
                                                 )}
+                                                {activeMenuMsgId === msg.id && (
+                                                    <ChatActionMenu anchorRef={{ current: teamMenuBtnRefs.current.get(msg.id) || null }} isMe={isMe} onClose={() => setActiveMenuMsgId(null)}>
+                                                        <button onClick={() => { setReplyTo(msg); setActiveMenuMsgId(null); }}
+                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>↩</span> 답장</button>
+                                                        {isMe && (
+                                                            <button onClick={() => { setEditingMsg(msg); setChatText(msg.text); setActiveMenuMsgId(null); }}
+                                                                className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>✏️</span> 수정</button>
+                                                        )}
+                                                        <button onClick={() => { setEmojiPickerMsgId(msg.id); setActiveMenuMsgId(null); }}
+                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>😊</span> 이모지</button>
+                                                        <button onClick={() => { onSaveCard({ id: genId(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", status: "left", color: "#DBEAFE", author: msg.author, updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setActiveMenuMsgId(null); }}
+                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 보드에 고정</button>
+                                                        {(msg.author === currentUser || currentUser === "박일웅") && (<>
+                                                            <div className="h-px bg-slate-100 my-1" />
+                                                            <button onClick={() => confirmDel(() => { onUpdateChat({ ...msg, deleted: true, text: "", imageUrl: undefined }); setActiveMenuMsgId(null); })}
+                                                                className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2"><span>🗑</span> 삭제</button>
+                                                        </>)}
+                                                    </ChatActionMenu>
+                                                )}
                                                 {emojiPickerMsgId === msg.id && (
-                                                    <div className={`absolute -top-3 ${isMe ? "left-0" : "right-0"} z-10`}>
-                                                        <EmojiPickerPopup onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
-                                                    </div>
+                                                    <EmojiPickerPopup anchorRef={{ current: teamMenuBtnRefs.current.get(msg.id) || null }} onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
                                                 )}
                                                 <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "7px 14px", lineHeight: "1.5", wordBreak: 'break-all', overflowWrap: 'break-word' }}
                                                     className="text-[13px] text-slate-800">

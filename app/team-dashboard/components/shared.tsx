@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useContext, useRef, useCallback } from "react";
+import { useState, useEffect, useContext, useRef, useCallback, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import type { LabFile } from "../lib/types";
 import { EMOJI_CATEGORIES, MEMO_COLORS, FILE_MAX } from "../lib/constants";
 import { genId, uploadFile, isImageFile, isPdfFile, renderChatMessage, extractFirstUrl, sendMentionPush, saveDraft, loadDraft, clearDraft, hasDraft } from "../lib/utils";
@@ -178,48 +179,45 @@ export function ReactionBadges({ reactions, currentUser, onToggle, align = "left
     );
 }
 
-// ─── EmojiPickerPopup ────────────────────────────────────────────────────────
+// ─── EmojiPickerPopup (Portal-based) ─────────────────────────────────────────
 
 const POPUP_WIDTH = 320;
+const POPUP_HEIGHT = 340; // approximate max height
 
-export function EmojiPickerPopup({ onSelect }: { onSelect: (emoji: string) => void }) {
+export function EmojiPickerPopup({ onSelect, anchorRef }: { onSelect: (emoji: string) => void; anchorRef?: RefObject<HTMLElement | null> }) {
     const [tab, setTab] = useState(0);
     const cat = EMOJI_CATEGORIES[tab];
-    const popupRef = useRef<HTMLDivElement>(null);
-    const [pos, setPos] = useState<{ top?: number | string; bottom?: number | string; left?: number | string; right?: number | string }>({ top: "100%", right: 0 });
+    const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+    const [ready, setReady] = useState(false);
 
     useEffect(() => {
-        const el = popupRef.current;
-        if (!el) return;
-        const rect = el.getBoundingClientRect();
+        const anchor = anchorRef?.current;
+        if (!anchor) { setReady(true); return; }
+        const rect = anchor.getBoundingClientRect();
         const vw = window.innerWidth;
         const vh = window.innerHeight;
-        const next: typeof pos = {};
 
-        // Vertical: if popup clips bottom, open above trigger instead
-        if (rect.bottom > vh - 8) {
-            next.bottom = "100%";
+        // Vertical: prefer above the anchor, fall back to below
+        let top: number;
+        if (rect.top - POPUP_HEIGHT - 8 > 0) {
+            top = rect.top - POPUP_HEIGHT - 4;
         } else {
-            next.top = "100%";
+            top = rect.bottom + 4;
         }
 
-        // Horizontal: if popup clips right edge, align to right; if clips left, align to left
-        if (rect.right > vw - 8) {
-            next.right = 0;
-        } else if (rect.left < 8) {
-            next.left = 0;
-            next.right = undefined;
-        } else {
-            next.right = 0;
-        }
+        // Horizontal: center on anchor, clamp to viewport
+        let left = rect.left + rect.width / 2 - POPUP_WIDTH / 2;
+        if (left + POPUP_WIDTH > vw - 8) left = vw - POPUP_WIDTH - 8;
+        if (left < 8) left = 8;
 
-        setPos(next);
-    }, []);
+        setPos({ top, left });
+        setReady(true);
+    }, [anchorRef]);
 
-    return (
-        <div ref={popupRef}
-            className="absolute bg-white rounded-xl shadow-lg border border-slate-200 z-20"
-            style={{ width: POPUP_WIDTH, marginTop: pos.top !== undefined ? 4 : undefined, marginBottom: pos.bottom !== undefined ? 4 : undefined, ...pos }}
+    const popup = (
+        <div
+            className="bg-white rounded-xl shadow-lg border border-slate-200"
+            style={{ position: "fixed", zIndex: 100, width: POPUP_WIDTH, top: pos.top, left: pos.left, opacity: ready ? 1 : 0, transition: "opacity 0.1s" }}
             onClick={e => e.stopPropagation()}>
             <div className="flex border-b border-slate-100 px-1 pt-1 overflow-x-auto" style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
                 {EMOJI_CATEGORIES.map((c, i) => (
@@ -238,6 +236,60 @@ export function EmojiPickerPopup({ onSelect }: { onSelect: (emoji: string) => vo
                 ))}
             </div>
         </div>
+    );
+
+    if (typeof document === "undefined") return null;
+    return createPortal(popup, document.body);
+}
+
+// ─── ChatActionMenu (Portal-based) ──────────────────────────────────────────
+
+export function ChatActionMenu({ anchorRef, isMe, children, onClose }: {
+    anchorRef: RefObject<HTMLElement | null>;
+    isMe: boolean;
+    children: React.ReactNode;
+    onClose: () => void;
+}) {
+    const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+
+    useEffect(() => {
+        const anchor = anchorRef.current;
+        if (!anchor) return;
+        const rect = anchor.getBoundingClientRect();
+        const menuWidth = 160;
+        const vh = window.innerHeight;
+        const vw = window.innerWidth;
+
+        // Position below the anchor button
+        let top = rect.bottom + 4;
+        // If not enough space below, go above
+        if (top + 200 > vh) top = rect.top - 200;
+        if (top < 8) top = 8;
+
+        // Horizontal: align to left edge of anchor for isMe, right edge for others
+        let left: number;
+        if (isMe) {
+            left = rect.left;
+        } else {
+            left = rect.right - menuWidth;
+        }
+        if (left + menuWidth > vw - 8) left = vw - menuWidth - 8;
+        if (left < 8) left = 8;
+
+        setPos({ top, left });
+    }, [anchorRef, isMe]);
+
+    if (typeof document === "undefined") return null;
+    return createPortal(
+        <>
+            <div className="fixed inset-0 z-[90]" onClick={onClose} />
+            <div className="fixed bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 min-w-[160px] z-[95]"
+                style={{ top: pos.top, left: pos.left }}
+                onClick={e => e.stopPropagation()}>
+                {children}
+            </div>
+        </>,
+        document.body
     );
 }
 
@@ -331,7 +383,7 @@ export function ItemFiles({ files, onChange, currentUser }: { files: LabFile[]; 
         try {
             const url = await uploadFile(file);
             onChange([...files, { id: genId(), name: file.name, size: file.size, url, type: file.type, uploader: currentUser, date: new Date().toLocaleString("ko-KR") }]);
-        } catch { alert("파일 업로드에 실패했습니다."); }
+        } catch (err) { alert(`파일 업로드에 실패했습니다: ${err instanceof Error ? err.message : String(err)}`); }
         setUploading(false);
         e.target.value = "";
     };
@@ -391,7 +443,7 @@ export function FileBox({ files, currentUser, onAddFile, onDeleteFile, compact }
         try {
             const url = await uploadFile(file);
             onAddFile({ id: genId(), name: file.name, size: file.size, url, type: file.type, uploader: currentUser, date: new Date().toLocaleString("ko-KR") });
-        } catch { alert("파일 업로드에 실패했습니다."); }
+        } catch (err) { alert(`파일 업로드에 실패했습니다: ${err instanceof Error ? err.message : String(err)}`); }
         setUploading(false);
         e.target.value = "";
     };

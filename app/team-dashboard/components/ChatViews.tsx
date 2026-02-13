@@ -6,7 +6,7 @@ import { MEMBERS, MEMO_COLORS } from "../lib/constants";
 import { genId, chatKeyDown, renderChatMessage, extractFirstUrl, sendMentionPush, saveDraft, loadDraft, clearDraft, hasDraft, uploadFile } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useMention, MentionPopup, useCommentImg, useTypingIndicator, TypingIndicator } from "../lib/hooks";
-import { ColorPicker, EmojiPickerPopup, FileBox, ReadReceiptBadge, ReactionBadges, SavingBadge } from "./shared";
+import { ChatActionMenu, ColorPicker, EmojiPickerPopup, FileBox, ReadReceiptBadge, ReactionBadges, SavingBadge } from "./shared";
 import { OgPreviewCard } from "./OgPreviewCard";
 
 const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, onRetry, readReceipts }: {
@@ -23,6 +23,7 @@ const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd
     const [editingMsg, setEditingMsg] = useState<TeamChatMsg | null>(null);
     const [activeMenuMsgId, setActiveMenuMsgId] = useState<number | null>(null);
     const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
+    const menuBtnRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
     const mention = useMention();
     const { typingUsers, reportTyping } = useTypingIndicator("casualChat", currentUser);
     const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -122,37 +123,31 @@ const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd
                                     <div className={`flex items-end gap-1 ${isMe ? "flex-row-reverse" : ""}`}>
                                         <div className="relative" style={{ marginBottom: Object.keys(reactions).length > 0 ? 12 : 0 }}>
                                             {!msg._sending && !msg._failed && (
-                                                <div className={`absolute -top-3 ${isMe ? "left-0" : "right-0"} ${activeMenuMsgId === msg.id ? "opacity-100" : "opacity-0 group-hover/msg:opacity-100"} transition-opacity z-10`}>
-                                                    <div className="relative">
-                                                        <button onClick={() => { setActiveMenuMsgId(activeMenuMsgId === msg.id ? null : msg.id); setEmojiPickerMsgId(null); }}
-                                                            className="w-6 h-6 flex items-center justify-center rounded-full bg-white text-[12px] text-slate-400 hover:bg-slate-100 transition-colors" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>⋯</button>
-                                                        {activeMenuMsgId === msg.id && (
-                                                            <>
-                                                                <div className="fixed inset-0 z-20" onClick={() => setActiveMenuMsgId(null)} />
-                                                                <div className={`absolute ${isMe ? "left-0" : "right-0"} top-8 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 min-w-[140px] z-30`}>
-                                                                    <button onClick={() => { setReplyTo(msg); setActiveMenuMsgId(null); }}
-                                                                        className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>↩</span> 답장</button>
-                                                                    {isMe && (
-                                                                        <button onClick={() => { setEditingMsg(msg); setText(msg.text); setActiveMenuMsgId(null); }}
-                                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>✏️</span> 수정</button>
-                                                                    )}
-                                                                    <button onClick={() => { setEmojiPickerMsgId(msg.id); setActiveMenuMsgId(null); }}
-                                                                        className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>😊</span> 이모지</button>
-                                                                    {(isMe || currentUser === "박일웅") && (<>
-                                                                        <div className="h-px bg-slate-100 my-1" />
-                                                                        <button onClick={() => { onDelete(msg.id); setActiveMenuMsgId(null); }}
-                                                                            className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2"><span>🗑</span> 삭제</button>
-                                                                    </>)}
-                                                                </div>
-                                                            </>
-                                                        )}
-                                                    </div>
+                                                <div className={`absolute -top-3 ${isMe ? "left-0" : "right-0"} ${activeMenuMsgId === msg.id || emojiPickerMsgId === msg.id ? "opacity-100" : "opacity-0 group-hover/msg:opacity-100"} transition-opacity z-10`}>
+                                                    <button ref={el => { if (el) menuBtnRefs.current.set(msg.id, el); else menuBtnRefs.current.delete(msg.id); }}
+                                                        onClick={() => { setActiveMenuMsgId(activeMenuMsgId === msg.id ? null : msg.id); setEmojiPickerMsgId(null); }}
+                                                        className="w-6 h-6 flex items-center justify-center rounded-full bg-white text-[12px] text-slate-400 hover:bg-slate-100 transition-colors" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>⋯</button>
                                                 </div>
                                             )}
+                                            {activeMenuMsgId === msg.id && (
+                                                <ChatActionMenu anchorRef={{ current: menuBtnRefs.current.get(msg.id) || null }} isMe={isMe} onClose={() => setActiveMenuMsgId(null)}>
+                                                    <button onClick={() => { setReplyTo(msg); setActiveMenuMsgId(null); }}
+                                                        className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>↩</span> 답장</button>
+                                                    {isMe && (
+                                                        <button onClick={() => { setEditingMsg(msg); setText(msg.text); setActiveMenuMsgId(null); }}
+                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>✏️</span> 수정</button>
+                                                    )}
+                                                    <button onClick={() => { setEmojiPickerMsgId(msg.id); setActiveMenuMsgId(null); }}
+                                                        className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>😊</span> 이모지</button>
+                                                    {(isMe || currentUser === "박일웅") && (<>
+                                                        <div className="h-px bg-slate-100 my-1" />
+                                                        <button onClick={() => { onDelete(msg.id); setActiveMenuMsgId(null); }}
+                                                            className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2"><span>🗑</span> 삭제</button>
+                                                    </>)}
+                                                </ChatActionMenu>
+                                            )}
                                             {emojiPickerMsgId === msg.id && (
-                                                <div className={`absolute -top-3 ${isMe ? "left-0" : "right-0"} z-10`}>
-                                                    <EmojiPickerPopup onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
-                                                </div>
+                                                <EmojiPickerPopup anchorRef={{ current: menuBtnRefs.current.get(msg.id) || null }} onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
                                             )}
                                             <div className={`px-3 py-1.5 rounded-2xl text-[13px] leading-snug whitespace-pre-wrap ${isMe ? "rounded-tr-md" : "rounded-tl-md"}`}
                                                 style={{ background: isMe ? "#3B82F6" : "#F1F5F9", color: isMe ? "#FFFFFF" : "#1E293B", wordBreak: 'break-all', overflowWrap: 'break-word' }}>
@@ -238,6 +233,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
     const [editingMsg, setEditingMsg] = useState<TeamChatMsg | null>(null);
     const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
     const [activeMenuMsgId, setActiveMenuMsgId] = useState<number | null>(null);
+    const labMenuBtnRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
     const mention = useMention();
     const { typingUsers: labTypingUsers, reportTyping: labReportTyping } = useTypingIndicator("labChat", currentUser);
     const chatInputRef = useRef<HTMLTextAreaElement>(null);
@@ -438,39 +434,33 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                                             <div className="relative" style={{ marginBottom: Object.keys(reactions).length > 0 ? 14 : 0 }}>
                                                 {/* Hover: show only ⋯ button */}
                                                 {!msg._sending && !msg._failed && (
-                                                    <div className={`absolute -top-3 ${isMe ? "left-0" : "right-0"} ${activeMenuMsgId === msg.id ? "opacity-100" : "opacity-0 group-hover/msg:opacity-100"} transition-opacity z-10`}>
-                                                        <div className="relative">
-                                                            <button onClick={() => { setActiveMenuMsgId(activeMenuMsgId === msg.id ? null : msg.id); setEmojiPickerMsgId(null); }}
-                                                                className="w-7 h-7 flex items-center justify-center rounded-full bg-white text-[14px] text-slate-400 hover:bg-slate-100 transition-colors" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>⋯</button>
-                                                            {activeMenuMsgId === msg.id && (
-                                                                <>
-                                                                    <div className="fixed inset-0 z-20" onClick={() => setActiveMenuMsgId(null)} />
-                                                                    <div className={`absolute ${isMe ? "left-0" : "right-0"} top-9 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 min-w-[160px] z-30`}>
-                                                                        <button onClick={() => { setReplyTo(msg); setActiveMenuMsgId(null); }}
-                                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>↩</span> 답장</button>
-                                                                        {isMe && (
-                                                                            <button onClick={() => { setEditingMsg(msg); setText(msg.text); setActiveMenuMsgId(null); }}
-                                                                                className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>✏️</span> 수정</button>
-                                                                        )}
-                                                                        <button onClick={() => { setEmojiPickerMsgId(msg.id); setActiveMenuMsgId(null); }}
-                                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>😊</span> 이모지</button>
-                                                                        <button onClick={() => { onSaveBoard({ id: genId(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", status: "left", color: "#DBEAFE", author: msg.author, updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setActiveMenuMsgId(null); }}
-                                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 보드에 고정</button>
-                                                                        {(msg.author === currentUser || currentUser === "박일웅") && (<>
-                                                                            <div className="h-px bg-slate-100 my-1" />
-                                                                            <button onClick={() => confirmDel(() => { onUpdate({ ...msg, deleted: true, text: "", imageUrl: undefined }); setActiveMenuMsgId(null); })}
-                                                                                className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2"><span>🗑</span> 삭제</button>
-                                                                        </>)}
-                                                                    </div>
-                                                                </>
-                                                            )}
-                                                        </div>
+                                                    <div className={`absolute -top-3 ${isMe ? "left-0" : "right-0"} ${activeMenuMsgId === msg.id || emojiPickerMsgId === msg.id ? "opacity-100" : "opacity-0 group-hover/msg:opacity-100"} transition-opacity z-10`}>
+                                                        <button ref={el => { if (el) labMenuBtnRefs.current.set(msg.id, el); else labMenuBtnRefs.current.delete(msg.id); }}
+                                                            onClick={() => { setActiveMenuMsgId(activeMenuMsgId === msg.id ? null : msg.id); setEmojiPickerMsgId(null); }}
+                                                            className="w-7 h-7 flex items-center justify-center rounded-full bg-white text-[14px] text-slate-400 hover:bg-slate-100 transition-colors" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>⋯</button>
                                                     </div>
                                                 )}
+                                                {activeMenuMsgId === msg.id && (
+                                                    <ChatActionMenu anchorRef={{ current: labMenuBtnRefs.current.get(msg.id) || null }} isMe={isMe} onClose={() => setActiveMenuMsgId(null)}>
+                                                        <button onClick={() => { setReplyTo(msg); setActiveMenuMsgId(null); }}
+                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>↩</span> 답장</button>
+                                                        {isMe && (
+                                                            <button onClick={() => { setEditingMsg(msg); setText(msg.text); setActiveMenuMsgId(null); }}
+                                                                className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>✏️</span> 수정</button>
+                                                        )}
+                                                        <button onClick={() => { setEmojiPickerMsgId(msg.id); setActiveMenuMsgId(null); }}
+                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>😊</span> 이모지</button>
+                                                        <button onClick={() => { onSaveBoard({ id: genId(), title: `💬 ${msg.author}`, content: msg.text || "📷 이미지", status: "left", color: "#DBEAFE", author: msg.author, updatedAt: new Date().toISOString().split("T")[0], comments: [] }); setActiveMenuMsgId(null); }}
+                                                            className="w-full text-left px-3 py-2 text-[13px] text-slate-700 hover:bg-slate-50 flex items-center gap-2"><span>📌</span> 보드에 고정</button>
+                                                        {(msg.author === currentUser || currentUser === "박일웅") && (<>
+                                                            <div className="h-px bg-slate-100 my-1" />
+                                                            <button onClick={() => confirmDel(() => { onUpdate({ ...msg, deleted: true, text: "", imageUrl: undefined }); setActiveMenuMsgId(null); })}
+                                                                className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50 flex items-center gap-2"><span>🗑</span> 삭제</button>
+                                                        </>)}
+                                                    </ChatActionMenu>
+                                                )}
                                                 {emojiPickerMsgId === msg.id && (
-                                                    <div className={`absolute -top-3 ${isMe ? "left-0" : "right-0"} z-10`}>
-                                                        <EmojiPickerPopup onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
-                                                    </div>
+                                                    <EmojiPickerPopup anchorRef={{ current: labMenuBtnRefs.current.get(msg.id) || null }} onSelect={(em) => { toggleReaction(msg.id, em); setEmojiPickerMsgId(null); }} />
                                                 )}
                                                 <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "7px 14px", lineHeight: "1.5", wordBreak: 'break-all', overflowWrap: 'break-word' }}
                                                     className="text-[13px] text-slate-800">

@@ -19,9 +19,17 @@ const MAX_SIZE = 50 * 1024 * 1024;
 
 async function ensureBucket() {
     if (!supabaseAdmin) return;
-    const { data } = await supabaseAdmin.storage.getBucket(BUCKET);
+    const { data, error: getErr } = await supabaseAdmin.storage.getBucket(BUCKET);
+    if (getErr) {
+        console.warn('[ensureBucket] getBucket error (may be expected if bucket does not exist):', getErr.message);
+    }
     if (!data) {
-        await supabaseAdmin.storage.createBucket(BUCKET, { public: true, fileSizeLimit: MAX_SIZE });
+        const { error: createErr } = await supabaseAdmin.storage.createBucket(BUCKET, { public: true, fileSizeLimit: MAX_SIZE });
+        if (createErr) {
+            console.error('[ensureBucket] createBucket failed:', createErr.message);
+            throw new Error(`버킷 생성 실패: ${createErr.message}`);
+        }
+        console.log('[ensureBucket] Bucket created successfully:', BUCKET);
     }
 }
 
@@ -55,13 +63,22 @@ export async function POST(request: NextRequest) {
                 upsert: false,
             });
 
-        if (error) throw error;
+        if (error) {
+            console.error('[Upload] Supabase storage upload failed:', {
+                message: error.message,
+                name: error.name,
+                statusCode: (error as any).statusCode,
+                error: JSON.stringify(error),
+            });
+            throw new Error(`스토리지 업로드 실패: ${error.message}`);
+        }
 
         const { data: urlData } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(data.path);
         return NextResponse.json({ url: urlData.publicUrl });
     } catch (error) {
-        console.error('Upload error:', error);
-        return NextResponse.json({ error: (error as Error).message }, { status: 400 });
+        const errMsg = error instanceof Error ? error.message : String(error);
+        console.error('[Upload] Error:', errMsg, error);
+        return NextResponse.json({ error: errMsg || '파일 업로드 중 알 수 없는 오류가 발생했습니다.' }, { status: 400 });
     }
 }
 
