@@ -390,7 +390,7 @@ export function ItemFiles({ files, onChange, currentUser }: { files: LabFile[]; 
 
     const handleDelete = async (id: number) => {
         const f = files.find(x => x.id === id);
-        if (f?.url?.startsWith("https://")) { try { const tk = typeof window !== "undefined" ? localStorage.getItem("mftel-auth-token") || "" : ""; await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: f.url }), headers: { "Content-Type": "application/json", ...(tk ? { Authorization: `Bearer ${tk}` } : {}) } }); } catch (e) { console.warn("파일 삭제 실패:", e); } }
+        if (f?.url?.startsWith("https://")) { try { const tk = typeof window !== "undefined" ? localStorage.getItem("mftel-auth-token") || "" : ""; const res = await fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: f.url }), headers: { "Content-Type": "application/json", ...(tk ? { Authorization: `Bearer ${tk}` } : {}) } }); if (!res.ok) { alert("파일 삭제에 실패했습니다."); return; } } catch (e) { console.warn("파일 삭제 실패:", e); alert("파일 삭제에 실패했습니다."); return; } }
         onChange(files.filter(x => x.id !== id));
     };
 

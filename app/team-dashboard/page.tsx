@@ -1815,9 +1815,13 @@ export default function DashboardPage() {
     const togglePushPref = (cat: string) => {
         const current = myPushPrefs[cat] !== false; // default true
         const next = { ...pushPrefs, [userName]: { ...myPushPrefs, [cat]: !current } };
+        pendingSavesRef.current++;
         setPushPrefs(next);
         const tk = localStorage.getItem("mftel-auth-token");
-        if (tk) fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tk}` }, body: JSON.stringify({ section: "pushPrefs", data: next, userName }) }).catch(e => console.warn("Background request failed:", e));
+        if (tk) fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tk}` }, body: JSON.stringify({ section: "pushPrefs", data: next, userName }) })
+            .then(() => { pendingSavesRef.current--; })
+            .catch(e => { pendingSavesRef.current--; console.warn("Background request failed:", e); });
+        else pendingSavesRef.current--;
     };
     const notiTimeAgo = (ts: number) => {
         const ms = Math.floor(ts / 100); // convert genId-scale (Date.now()*100) back to ms
