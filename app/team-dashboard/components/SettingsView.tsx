@@ -50,7 +50,7 @@ function AdminLogSection() {
     useEffect(() => {
         (async () => {
             try {
-                const tk = typeof window !== "undefined" ? localStorage.getItem("dashToken") || "" : "";
+                const tk = typeof window !== "undefined" ? localStorage.getItem("mftel-auth-token") || "" : "";
                 const res = await fetch("/api/dashboard?section=logs", { headers: tk ? { Authorization: `Bearer ${tk}` } : {} });
                 const data = await res.json();
                 setLogs(data.data || []);
