@@ -51,7 +51,39 @@ const ALLOWED_SECTIONS = new Set([
 let cachedGV = 0;
 let cachedSV: Record<string, number> = {};
 let versionCacheTime = 0;
-const VERSION_CACHE_TTL = 10_000; // 10s — short enough to catch cross-instance writes
+const VERSION_CACHE_TTL = 2_000; // 2s — short enough to catch cross-instance writes
+
+// ─── In-memory caches for push notification reads ───────────────────────────
+// members and pushPrefs are read on every save for push filtering but rarely change.
+let cachedMembers: Record<string, unknown> | null = null;
+let membersCacheTime = 0;
+const MEMBERS_CACHE_TTL = 300_000; // 5 min
+
+let cachedPushPrefs: Record<string, Record<string, boolean>> | null = null;
+let pushPrefsCacheTime = 0;
+const PUSH_PREFS_CACHE_TTL = 300_000; // 5 min
+
+async function getCachedMembers(): Promise<Record<string, unknown>> {
+    const now = Date.now();
+    if (cachedMembers && now - membersCacheTime < MEMBERS_CACHE_TTL) {
+        return cachedMembers;
+    }
+    const raw = await getKey(`${DASHBOARD_PREFIX}members`);
+    cachedMembers = raw ? JSON.parse(raw) : {};
+    membersCacheTime = now;
+    return cachedMembers!;
+}
+
+async function getCachedPushPrefs(): Promise<Record<string, Record<string, boolean>>> {
+    const now = Date.now();
+    if (cachedPushPrefs && now - pushPrefsCacheTime < PUSH_PREFS_CACHE_TTL) {
+        return cachedPushPrefs;
+    }
+    const raw = await getKey(`${DASHBOARD_PREFIX}pushPrefs`);
+    cachedPushPrefs = raw ? JSON.parse(raw) : {};
+    pushPrefsCacheTime = now;
+    return cachedPushPrefs!;
+}
 
 async function getVersions(): Promise<{ gv: number; sv: Record<string, number> }> {
     const now = Date.now();
@@ -137,7 +169,12 @@ export async function GET(request: NextRequest) {
                     results = await Promise.all(changedKeys.map(k => getKey(`${DASHBOARD_PREFIX}${k}`)));
                 }
                 const out: Record<string, unknown> = { _v: gv, _partial: true };
-                changedKeys.forEach((k, i) => { out[k] = results[i] ? JSON.parse(results[i] as string) : null; });
+                changedKeys.forEach((k, i) => {
+                    if (results[i]) {
+                        try { out[k] = JSON.parse(results[i] as string); }
+                        catch (e) { console.error(`JSON.parse failed for section "${k}":`, e); out[k] = null; }
+                    } else { out[k] = null; }
+                });
                 return NextResponse.json(out);
             }
 
@@ -151,14 +188,23 @@ export async function GET(request: NextRequest) {
                 results = await Promise.all(keys.map(k => getKey(`${DASHBOARD_PREFIX}${k}`)));
             }
             const out: Record<string, unknown> = { _v: gv };
-            keys.forEach((k, i) => { out[k] = results[i] ? JSON.parse(results[i] as string) : null; });
+            keys.forEach((k, i) => {
+                if (results[i]) {
+                    try { out[k] = JSON.parse(results[i] as string); }
+                    catch (e) { console.error(`JSON.parse failed for section "${k}":`, e); out[k] = null; }
+                } else { out[k] = null; }
+            });
             return NextResponse.json(out);
         }
 
         if (section) {
             if (!ALLOWED_SECTIONS.has(section)) return NextResponse.json({ error: 'Invalid section' }, { status: 400 });
             const data = await getKey(`${DASHBOARD_PREFIX}${section}`);
-            return NextResponse.json({ data: data ? JSON.parse(data) : null });
+            if (data) {
+                try { return NextResponse.json({ data: JSON.parse(data) }); }
+                catch (e) { console.error(`JSON.parse failed for section "${section}":`, e); return NextResponse.json({ data: null }); }
+            }
+            return NextResponse.json({ data: null });
         }
 
         return NextResponse.json({ error: 'Section parameter required' }, { status: 400 });
@@ -228,6 +274,9 @@ export async function POST(request: NextRequest) {
         // Save section data + bump version for delta sync (persisted to Redis)
         await setKey(`${DASHBOARD_PREFIX}${section}`, JSON.stringify(data));
         await bumpVersion(section);
+        // Invalidate push-notification caches when their source data is written
+        if (section === 'members') { cachedMembers = null; membersCacheTime = 0; }
+        if (section === 'pushPrefs') { cachedPushPrefs = null; pushPrefsCacheTime = 0; }
         // Log modification (skip frequent/noisy sections)
         if (userName && !['online', 'readReceipts'].includes(section)) {
             await appendLog(`${LOG_PREFIX}modifications`, { userName, section, action: 'update', ...(detail ? { detail } : {}) });
@@ -238,13 +287,11 @@ export async function POST(request: NextRequest) {
         if (userName && !PUSH_SILENT.has(section)) {
             const pushUrl = new URL('/api/push/send', request.url);
             try {
-                const membersRaw = await getKey(`${DASHBOARD_PREFIX}members`);
-                const membersData = membersRaw ? JSON.parse(membersRaw) : {};
+                const membersData = await getCachedMembers();
                 const allMembers = Object.keys(membersData);
 
-                // Load per-user push preferences
-                const prefsRaw = await getKey(`${DASHBOARD_PREFIX}pushPrefs`);
-                const pushPrefs: Record<string, Record<string, boolean>> = prefsRaw ? JSON.parse(prefsRaw) : {};
+                // Load per-user push preferences (cached 5min)
+                const pushPrefs = await getCachedPushPrefs();
 
                 // Map section → push category
                 const PUSH_CATEGORY: Record<string, string> = {

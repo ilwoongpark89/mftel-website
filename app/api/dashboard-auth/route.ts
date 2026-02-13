@@ -80,7 +80,10 @@ export async function POST(request: NextRequest) {
             }
 
             const { userName, password } = body as { userName: string; password: string; action: string };
-            if (!userName || password === undefined) {
+            if (typeof userName !== 'string' || userName.trim().length === 0 || userName.length > 100) {
+                return NextResponse.json({ error: '이름과 비밀번호가 필요합니다' }, { status: 400 });
+            }
+            if (typeof password !== 'string' || password.length === 0) {
                 return NextResponse.json({ error: '이름과 비밀번호가 필요합니다' }, { status: 400 });
             }
             let passwords = await getPasswords();

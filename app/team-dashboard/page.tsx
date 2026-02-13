@@ -595,6 +595,10 @@ export default function DashboardPage() {
             pendingSavesRef.current--;
             setSavingIds(prev => { const s = new Set(prev); s.delete(itemId); return s; });
             if (!ok) { rollback(); showToast("저장에 실패했습니다. 다시 시도해주세요."); }
+        }).catch(() => {
+            pendingSavesRef.current--;
+            setSavingIds(prev => { const s = new Set(prev); s.delete(itemId); return s; });
+            rollback(); showToast("저장에 실패했습니다. 다시 시도해주세요.");
         });
     }, [saveSection, showToast]);
 
@@ -988,56 +992,56 @@ export default function DashboardPage() {
     }, [activeTab, userName, activeChatLen, saveReadReceipt]);
 
     // Handlers
-    const handleToggleTodo = useCallback((id: number) => { pendingSavesRef.current++; setTodos(prev => { const u = prev.map(t => t.id === id ? { ...t, done: !t.done } : t); saveSection("todos", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleToggleTodo = useCallback((id: number) => { pendingSavesRef.current++; setTodos(prev => { const u = prev.map(t => t.id === id ? { ...t, done: !t.done } : t); saveSection("todos", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
     const handleAddTodo = useCallback((t: Todo) => { setTodos(prev => { const u = [...prev, t]; trackSave(t.id, "todos", u, () => setTodos(pp => pp.filter(x => x.id !== t.id))); return u; }); }, [trackSave]);
-    const handleDeleteTodo = useCallback((id: number) => { pendingSavesRef.current++; setTodos(prev => { const u = prev.filter(t => t.id !== id); saveSection("todos", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleUpdateTodo = useCallback((t: Todo) => { pendingSavesRef.current++; setTodos(prev => { const u = prev.map(x => x.id === t.id ? t : x); saveSection("todos", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleReorderTodos = useCallback((list: Todo[]) => { setTodos(list); pendingSavesRef.current++; saveSection("todos", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleDeleteTodo = useCallback((id: number) => { pendingSavesRef.current++; setTodos(prev => { const u = prev.filter(t => t.id !== id); saveSection("todos", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleUpdateTodo = useCallback((t: Todo) => { pendingSavesRef.current++; setTodos(prev => { const u = prev.map(x => x.id === t.id ? t : x); saveSection("todos", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleReorderTodos = useCallback((list: Todo[]) => { setTodos(list); pendingSavesRef.current++; saveSection("todos", list).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleAddAnn = useCallback((text: string, pinned = false, imageUrl?: string) => { const nid = genId(); setAnnouncements(prev => { const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned, ...(imageUrl ? { imageUrl } : {}) }, ...prev]; trackSave(nid, "announcements", u, () => setAnnouncements(pp => pp.filter(a => a.id !== nid))); return u; }); }, [userName, trackSave]);
-    const handleDelAnn = useCallback((id: number) => { pendingSavesRef.current++; setAnnouncements(prev => { const u = prev.filter(a => a.id !== id); saveSection("announcements", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleUpdateAnn = useCallback((ann: Announcement) => { pendingSavesRef.current++; setAnnouncements(prev => { const u = prev.map(a => a.id === ann.id ? ann : a); saveSection("announcements", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleReorderAnn = useCallback((list: Announcement[]) => { setAnnouncements(list); pendingSavesRef.current++; saveSection("announcements", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleDelAnn = useCallback((id: number) => { pendingSavesRef.current++; setAnnouncements(prev => { const u = prev.filter(a => a.id !== id); saveSection("announcements", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleUpdateAnn = useCallback((ann: Announcement) => { pendingSavesRef.current++; setAnnouncements(prev => { const u = prev.map(a => a.id === ann.id ? ann : a); saveSection("announcements", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleReorderAnn = useCallback((list: Announcement[]) => { setAnnouncements(list); pendingSavesRef.current++; saveSection("announcements", list).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleAddPhil = useCallback((text: string, imageUrl?: string) => { const nid = genId(); setPhilosophy(prev => { const u = [{ id: nid, text, author: userName, date: new Date().toLocaleDateString("ko-KR"), pinned: false, ...(imageUrl ? { imageUrl } : {}) }, ...prev]; trackSave(nid, "philosophy", u, () => setPhilosophy(pp => pp.filter(p => p.id !== nid))); return u; }); }, [userName, trackSave]);
-    const handleDelPhil = useCallback((id: number) => { pendingSavesRef.current++; setPhilosophy(prev => { const u = prev.filter(p => p.id !== id); saveSection("philosophy", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleUpdatePhil = useCallback((p: Announcement) => { pendingSavesRef.current++; setPhilosophy(prev => { const u = prev.map(x => x.id === p.id ? p : x); saveSection("philosophy", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleReorderPhil = useCallback((list: Announcement[]) => { setPhilosophy(list); pendingSavesRef.current++; saveSection("philosophy", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleDelPhil = useCallback((id: number) => { pendingSavesRef.current++; setPhilosophy(prev => { const u = prev.filter(p => p.id !== id); saveSection("philosophy", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleUpdatePhil = useCallback((p: Announcement) => { pendingSavesRef.current++; setPhilosophy(prev => { const u = prev.map(x => x.id === p.id ? p : x); saveSection("philosophy", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleReorderPhil = useCallback((list: Announcement[]) => { setPhilosophy(list); pendingSavesRef.current++; saveSection("philosophy", list).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }, [saveSection]);
 
     const handleSavePaper = useCallback((p: Paper) => {
         setPaperModal(null);
         setPapers(prev => {
             const exists = prev.find(x => x.id === p.id);
             const u = exists ? prev.map(x => x.id === p.id ? p : x) : [...prev, p];
-            if (exists) { pendingSavesRef.current++; saveSection("papers", u).then(() => { pendingSavesRef.current--; }); }
+            if (exists) { pendingSavesRef.current++; saveSection("papers", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }
             else trackSave(p.id, "papers", u, () => setPapers(pp => pp.filter(x => x.id !== p.id)));
             return u;
         });
     }, [saveSection, trackSave]);
-    const handleDeletePaper = useCallback((id: number) => { pendingSavesRef.current++; setPapers(prev => { const u = prev.filter(p => p.id !== id); saveSection("papers", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleReorderPapers = useCallback((list: Paper[]) => { setPapers(list); pendingSavesRef.current++; saveSection("papers", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleDeletePaper = useCallback((id: number) => { pendingSavesRef.current++; setPapers(prev => { const u = prev.filter(p => p.id !== id); saveSection("papers", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleReorderPapers = useCallback((list: Paper[]) => { setPapers(list); pendingSavesRef.current++; saveSection("papers", list).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }, [saveSection]);
 
     const handleSaveExperiment = useCallback((e: Experiment) => {
         setExperiments(prev => {
             const exists = prev.find(x => x.id === e.id);
             const u = exists ? prev.map(x => x.id === e.id ? e : x) : [...prev, e];
-            if (exists) { pendingSavesRef.current++; saveSection("experiments", u).then(() => { pendingSavesRef.current--; }); }
+            if (exists) { pendingSavesRef.current++; saveSection("experiments", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }
             else trackSave(e.id, "experiments", u, () => setExperiments(pp => pp.filter(x => x.id !== e.id)));
             return u;
         });
     }, [saveSection, trackSave]);
-    const handleDeleteExperiment = useCallback((id: number) => { pendingSavesRef.current++; setExperiments(prev => { const u = prev.filter(e => e.id !== id); saveSection("experiments", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleReorderExperiments = useCallback((list: Experiment[]) => { setExperiments(list); pendingSavesRef.current++; saveSection("experiments", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleDeleteExperiment = useCallback((id: number) => { pendingSavesRef.current++; setExperiments(prev => { const u = prev.filter(e => e.id !== id); saveSection("experiments", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleReorderExperiments = useCallback((list: Experiment[]) => { setExperiments(list); pendingSavesRef.current++; saveSection("experiments", list).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }, [saveSection]);
 
     const handleSaveReport = useCallback((r: Report) => {
         setReports(prev => {
             const exists = prev.find(x => x.id === r.id);
             const u = exists ? prev.map(x => x.id === r.id ? r : x) : [...prev, r];
-            if (exists) { pendingSavesRef.current++; saveSection("reports", u).then(() => { pendingSavesRef.current--; }); }
+            if (exists) { pendingSavesRef.current++; saveSection("reports", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }
             else trackSave(r.id, "reports", u, () => setReports(pp => pp.filter(x => x.id !== r.id)));
             return u;
         });
     }, [saveSection, trackSave]);
-    const handleDeleteReport = useCallback((id: number) => { pendingSavesRef.current++; setReports(prev => { const u = prev.filter(r => r.id !== id); saveSection("reports", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleReorderReports = useCallback((list: Report[]) => { setReports(list); pendingSavesRef.current++; saveSection("reports", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleDeleteReport = useCallback((id: number) => { pendingSavesRef.current++; setReports(prev => { const u = prev.filter(r => r.id !== id); saveSection("reports", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleReorderReports = useCallback((list: Report[]) => { setReports(list); pendingSavesRef.current++; saveSection("reports", list).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }, [saveSection]);
 
     // ─── Schedule → Daily Target auto-sync helpers ────────────────────────────
     const SCHEDULE_TARGET_MARKER = "[일정]";
@@ -1062,7 +1066,7 @@ export default function DashboardPage() {
                 else if (isVacType) uv = [...uv.filter(v => !(v.name === name && v.date === dt)), { name, date: dt, type }];
                 else uv = uv.filter(v => !(v.name === name && v.date === dt));
             }
-            pendingSavesRef.current++; saveSection("vacations", uv).then(() => { pendingSavesRef.current--; });
+            pendingSavesRef.current++; saveSection("vacations", uv).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return uv;
         });
         setSchedule(prevS => {
@@ -1072,7 +1076,7 @@ export default function DashboardPage() {
                 else if (isVacType) us = us.filter(v => !(v.name === name && v.date === dt));
                 else us = [...us.filter(v => !(v.name === name && v.date === dt)), { name, date: dt, type, description: desc || "" }];
             }
-            pendingSavesRef.current++; saveSection("schedule", us).then(() => { pendingSavesRef.current--; });
+            pendingSavesRef.current++; saveSection("schedule", us).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return us;
         });
 
@@ -1110,7 +1114,7 @@ export default function DashboardPage() {
                 }
             }
 
-            saveSection("dailyTargets", updated).then(() => { pendingSavesRef.current--; });
+            saveSection("dailyTargets", updated).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return updated;
         });
     }, [saveSection, formatScheduleTargetText]);
@@ -1118,106 +1122,106 @@ export default function DashboardPage() {
         setTimetable(prev => {
             const exists = prev.find(x => x.id === b.id);
             const u = exists ? prev.map(x => x.id === b.id ? b : x) : [...prev, b];
-            pendingSavesRef.current++; saveSection("timetable", u).then(() => { pendingSavesRef.current--; });
+            pendingSavesRef.current++; saveSection("timetable", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
-    const handleTimetableDelete = useCallback((id: number) => { pendingSavesRef.current++; setTimetable(prev => { const u = prev.filter(b => b.id !== id); saveSection("timetable", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleSaveTeams = useCallback((t: Record<string, TeamData>) => { setTeams(t); pendingSavesRef.current++; saveSection("teams", t).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleTimetableDelete = useCallback((id: number) => { pendingSavesRef.current++; setTimetable(prev => { const u = prev.filter(b => b.id !== id); saveSection("timetable", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleSaveTeams = useCallback((t: Record<string, TeamData>) => { setTeams(t); pendingSavesRef.current++; saveSection("teams", t).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleSavePatent = useCallback((p: Patent) => {
         setIpPatents(prev => {
             const exists = prev.find(x => x.id === p.id);
             const u = exists ? prev.map(x => x.id === p.id ? p : x) : [...prev, p];
-            if (exists) { pendingSavesRef.current++; saveSection("patents", u).then(() => { pendingSavesRef.current--; }); }
+            if (exists) { pendingSavesRef.current++; saveSection("patents", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }
             else trackSave(p.id, "patents", u, () => setIpPatents(pp => pp.filter(x => x.id !== p.id)));
             return u;
         });
     }, [saveSection, trackSave]);
-    const handleDeletePatent = useCallback((id: number) => { pendingSavesRef.current++; setIpPatents(prev => { const u = prev.filter(p => p.id !== id); saveSection("patents", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleReorderPatents = useCallback((list: Patent[]) => { setIpPatents(list); pendingSavesRef.current++; saveSection("patents", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleDeletePatent = useCallback((id: number) => { pendingSavesRef.current++; setIpPatents(prev => { const u = prev.filter(p => p.id !== id); saveSection("patents", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleReorderPatents = useCallback((list: Patent[]) => { setIpPatents(list); pendingSavesRef.current++; saveSection("patents", list).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleSaveResource = useCallback((r: Resource) => {
         setResources(prev => {
             const exists = prev.find(x => x.id === r.id);
             const u = exists ? prev.map(x => x.id === r.id ? r : x) : [...prev, r];
-            if (exists) { pendingSavesRef.current++; saveSection("resources", u).then(() => { pendingSavesRef.current--; }); }
+            if (exists) { pendingSavesRef.current++; saveSection("resources", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }
             else trackSave(r.id, "resources", u, () => setResources(pp => pp.filter(x => x.id !== r.id)));
             return u;
         });
     }, [saveSection, trackSave]);
-    const handleDeleteResource = useCallback((id: number) => { pendingSavesRef.current++; setResources(prev => { const u = prev.filter(r => r.id !== id); saveSection("resources", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleReorderResources = useCallback((list: Resource[]) => { setResources(list); pendingSavesRef.current++; saveSection("resources", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleDeleteResource = useCallback((id: number) => { pendingSavesRef.current++; setResources(prev => { const u = prev.filter(r => r.id !== id); saveSection("resources", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleReorderResources = useCallback((list: Resource[]) => { setResources(list); pendingSavesRef.current++; saveSection("resources", list).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleSaveConference = useCallback((c: ConferenceTrip) => {
         setConferenceTrips(prev => {
             const exists = prev.find(x => x.id === c.id);
             const u = exists ? prev.map(x => x.id === c.id ? c : x) : [...prev, c];
-            if (exists) { pendingSavesRef.current++; saveSection("conferences", u).then(() => { pendingSavesRef.current--; }); }
+            if (exists) { pendingSavesRef.current++; saveSection("conferences", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }
             else trackSave(c.id, "conferences", u, () => setConferenceTrips(pp => pp.filter(x => x.id !== c.id)));
             return u;
         });
     }, [saveSection, trackSave]);
-    const handleDeleteConference = useCallback((id: number) => { pendingSavesRef.current++; setConferenceTrips(prev => { const u = prev.filter(c => c.id !== id); saveSection("conferences", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleReorderConferences = useCallback((list: ConferenceTrip[]) => { setConferenceTrips(list); pendingSavesRef.current++; saveSection("conferences", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleDeleteConference = useCallback((id: number) => { pendingSavesRef.current++; setConferenceTrips(prev => { const u = prev.filter(c => c.id !== id); saveSection("conferences", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleReorderConferences = useCallback((list: ConferenceTrip[]) => { setConferenceTrips(list); pendingSavesRef.current++; saveSection("conferences", list).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleSaveMeeting = useCallback((m: Meeting) => {
         setMeetings(prev => {
             const exists = prev.find(x => x.id === m.id);
             const u = exists ? prev.map(x => x.id === m.id ? m : x) : [...prev, m];
-            if (exists) { pendingSavesRef.current++; saveSection("meetings", u).then(() => { pendingSavesRef.current--; }); }
+            if (exists) { pendingSavesRef.current++; saveSection("meetings", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }
             else trackSave(m.id, "meetings", u, () => setMeetings(pp => pp.filter(x => x.id !== m.id)));
             return u;
         });
     }, [saveSection, trackSave]);
-    const handleDeleteMeeting = useCallback((id: number) => { pendingSavesRef.current++; setMeetings(prev => { const u = prev.filter(m => m.id !== id); saveSection("meetings", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleSaveDailyTargets = useCallback((t: DailyTarget[]) => { setDailyTargets(t); pendingSavesRef.current++; saveSection("dailyTargets", t).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleDeleteMeeting = useCallback((id: number) => { pendingSavesRef.current++; setMeetings(prev => { const u = prev.filter(m => m.id !== id); saveSection("meetings", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleSaveDailyTargets = useCallback((t: DailyTarget[]) => { setDailyTargets(t); pendingSavesRef.current++; saveSection("dailyTargets", t).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleSaveIdea = useCallback((idea: IdeaPost) => {
         setIdeas(prev => {
             const exists = prev.find(x => x.id === idea.id);
             const u = exists ? prev.map(x => x.id === idea.id ? idea : x) : [idea, ...prev];
-            if (exists) { pendingSavesRef.current++; saveSection("ideas", u).then(() => { pendingSavesRef.current--; }); }
+            if (exists) { pendingSavesRef.current++; saveSection("ideas", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }
             else trackSave(idea.id, "ideas", u, () => setIdeas(pp => pp.filter(x => x.id !== idea.id)));
             return u;
         });
     }, [saveSection, trackSave]);
-    const handleDeleteIdea = useCallback((id: number) => { pendingSavesRef.current++; setIdeas(prev => { const u = prev.filter(i => i.id !== id); saveSection("ideas", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleReorderIdeas = useCallback((list: IdeaPost[]) => { setIdeas(list); pendingSavesRef.current++; saveSection("ideas", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleDeleteIdea = useCallback((id: number) => { pendingSavesRef.current++; setIdeas(prev => { const u = prev.filter(i => i.id !== id); saveSection("ideas", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleReorderIdeas = useCallback((list: IdeaPost[]) => { setIdeas(list); pendingSavesRef.current++; saveSection("ideas", list).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleSaveAnalysis = useCallback((a: Analysis) => {
         setAnalyses(prev => {
             const exists = prev.find(x => x.id === a.id);
             const u = exists ? prev.map(x => x.id === a.id ? a : x) : [...prev, a];
-            if (exists) { pendingSavesRef.current++; saveSection("analyses", u).then(() => { pendingSavesRef.current--; }); }
+            if (exists) { pendingSavesRef.current++; saveSection("analyses", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }
             else trackSave(a.id, "analyses", u, () => setAnalyses(pp => pp.filter(x => x.id !== a.id)));
             return u;
         });
     }, [saveSection, trackSave]);
-    const handleDeleteAnalysis = useCallback((id: number) => { pendingSavesRef.current++; setAnalyses(prev => { const u = prev.filter(a => a.id !== id); saveSection("analyses", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleReorderAnalyses = useCallback((list: Analysis[]) => { setAnalyses(list); pendingSavesRef.current++; saveSection("analyses", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleDeleteAnalysis = useCallback((id: number) => { pendingSavesRef.current++; setAnalyses(prev => { const u = prev.filter(a => a.id !== id); saveSection("analyses", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleReorderAnalyses = useCallback((list: Analysis[]) => { setAnalyses(list); pendingSavesRef.current++; saveSection("analyses", list).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleSaveChat = useCallback((post: IdeaPost) => {
         setChatPosts(prev => {
             const exists = prev.find(x => x.id === post.id);
             const u = exists ? prev.map(x => x.id === post.id ? post : x) : [post, ...prev];
-            if (exists) { pendingSavesRef.current++; saveSection("chatPosts", u).then(() => { pendingSavesRef.current--; }); }
+            if (exists) { pendingSavesRef.current++; saveSection("chatPosts", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }
             else trackSave(post.id, "chatPosts", u, () => setChatPosts(pp => pp.filter(x => x.id !== post.id)));
             return u;
         });
     }, [saveSection, trackSave]);
-    const handleDeleteChat = useCallback((id: number) => { pendingSavesRef.current++; setChatPosts(prev => { const u = prev.filter(p => p.id !== id); saveSection("chatPosts", u).then(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
-    const handleReorderChatPosts = useCallback((list: IdeaPost[]) => { setChatPosts(list); pendingSavesRef.current++; saveSection("chatPosts", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleDeleteChat = useCallback((id: number) => { pendingSavesRef.current++; setChatPosts(prev => { const u = prev.filter(p => p.id !== id); saveSection("chatPosts", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; }); }, [saveSection]);
+    const handleReorderChatPosts = useCallback((list: IdeaPost[]) => { setChatPosts(list); pendingSavesRef.current++; saveSection("chatPosts", list).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleSaveEmoji = useCallback((name: string, emoji: string) => {
-        pendingSavesRef.current++; setCustomEmojis(prev => { const u = { ...prev, [name]: emoji }; saveSection("customEmojis", u).then(() => { pendingSavesRef.current--; }); return u; });
+        pendingSavesRef.current++; setCustomEmojis(prev => { const u = { ...prev, [name]: emoji }; saveSection("customEmojis", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; });
     }, [saveSection]);
     const handleSaveStatusMsg = useCallback((name: string, msg: string) => {
-        pendingSavesRef.current++; setStatusMessages(prev => { const u = { ...prev, [name]: msg }; saveSection("statusMessages", u).then(() => { pendingSavesRef.current--; }); return u; });
+        pendingSavesRef.current++; setStatusMessages(prev => { const u = { ...prev, [name]: msg }; saveSection("statusMessages", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; });
     }, [saveSection]);
-    const handleSaveEquipment = useCallback((list: string[]) => { setEquipmentList(list); pendingSavesRef.current++; saveSection("equipmentList", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
-    const handleSaveAnalysisTools = useCallback((list: string[]) => { setAnalysisToolList(list); pendingSavesRef.current++; saveSection("analysisToolList", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
-    const handleSavePaperTags = useCallback((list: string[]) => { setPaperTagList(list); pendingSavesRef.current++; saveSection("paperTagList", list).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
-    const handleSaveMenuConfig = useCallback((config: MenuConfig[]) => { setMenuConfig(config); pendingSavesRef.current++; saveSection("menuConfig", config).then(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleSaveEquipment = useCallback((list: string[]) => { setEquipmentList(list); pendingSavesRef.current++; saveSection("equipmentList", list).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleSaveAnalysisTools = useCallback((list: string[]) => { setAnalysisToolList(list); pendingSavesRef.current++; saveSection("analysisToolList", list).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleSavePaperTags = useCallback((list: string[]) => { setPaperTagList(list); pendingSavesRef.current++; saveSection("paperTagList", list).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }, [saveSection]);
+    const handleSaveMenuConfig = useCallback((config: MenuConfig[]) => { setMenuConfig(config); pendingSavesRef.current++; saveSection("menuConfig", config).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }, [saveSection]);
     const handleSaveMemo = useCallback((memberName: string, memo: Memo) => {
         setPersonalMemos(prev => {
             const existing = prev[memberName] || [];
             const found = existing.find(m => m.id === memo.id);
             const updated = found ? existing.map(m => m.id === memo.id ? memo : m) : [...existing, memo];
             const u = { ...prev, [memberName]: updated };
-            if (found) { pendingSavesRef.current++; saveSection("personalMemos", u, memberName).then(() => { pendingSavesRef.current--; }); }
+            if (found) { pendingSavesRef.current++; saveSection("personalMemos", u, memberName).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); }
             else trackSave(memo.id, "personalMemos", u, () => setPersonalMemos(pp => { const arr = pp[memberName] || []; return { ...pp, [memberName]: arr.filter(m => m.id !== memo.id) }; }), memberName);
             return u;
         });
@@ -1227,7 +1231,7 @@ export default function DashboardPage() {
         setPersonalMemos(prev => {
             const updated = (prev[memberName] || []).filter(m => m.id !== id);
             const u = { ...prev, [memberName]: updated };
-            saveSection("personalMemos", u, memberName).then(() => { pendingSavesRef.current--; });
+            saveSection("personalMemos", u, memberName).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
@@ -1242,7 +1246,7 @@ export default function DashboardPage() {
         pendingSavesRef.current++;
         setPersonalFiles(prev => {
             const u = { ...prev, [name]: (prev[name] || []).filter(f => f.id !== id) };
-            saveSection("personalFiles", u).then(() => { pendingSavesRef.current--; });
+            saveSection("personalFiles", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
@@ -1254,6 +1258,9 @@ export default function DashboardPage() {
             saveSection("piChat", { ...next, [name]: stripMsgFlags(newMsgs) }).then(ok => {
                 pendingSavesRef.current--;
                 setPiChat(p => ({ ...p, [name]: (p[name] || []).map(m => m.id === msg.id ? { ...m, _sending: undefined, ...(ok ? {} : { _failed: true }) } : m) }));
+            }).catch(() => {
+                pendingSavesRef.current--;
+                setPiChat(p => ({ ...p, [name]: (p[name] || []).map(m => m.id === msg.id ? { ...m, _sending: undefined, _failed: true } : m) }));
             });
             return next;
         });
@@ -1265,21 +1272,24 @@ export default function DashboardPage() {
             saveSection("piChat", { ...updated, [name]: stripMsgFlags(updated[name]) }).then(ok => {
                 pendingSavesRef.current--;
                 setPiChat(p => ({ ...p, [name]: (p[name] || []).map(m => m.id === msgId ? { ...m, _sending: undefined, ...(ok ? {} : { _failed: true }) } : m) }));
+            }).catch(() => {
+                pendingSavesRef.current--;
+                setPiChat(p => ({ ...p, [name]: (p[name] || []).map(m => m.id === msgId ? { ...m, _sending: undefined, _failed: true } : m) }));
             });
             return updated;
         });
     }, [saveSection]);
     const handleDeletePiChat = useCallback((name: string, id: number) => {
-        pendingSavesRef.current++; setPiChat(prev => { const u = { ...prev, [name]: (prev[name] || []).filter(m => m.id !== id) }; saveSection("piChat", u).then(() => { pendingSavesRef.current--; }); return u; });
+        pendingSavesRef.current++; setPiChat(prev => { const u = { ...prev, [name]: (prev[name] || []).filter(m => m.id !== id) }; saveSection("piChat", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; });
     }, [saveSection]);
     const handleClearPiChat = useCallback((name: string) => {
-        pendingSavesRef.current++; setPiChat(prev => { const u = { ...prev, [name]: [] }; saveSection("piChat", u).then(() => { pendingSavesRef.current--; }); return u; });
+        pendingSavesRef.current++; setPiChat(prev => { const u = { ...prev, [name]: [] }; saveSection("piChat", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; });
     }, [saveSection]);
     const handleUpdatePiChat = useCallback((name: string, msg: TeamChatMsg) => {
         pendingSavesRef.current++;
         setPiChat(prev => {
             const u = { ...prev, [name]: (prev[name] || []).map(m => m.id === msg.id ? msg : m) };
-            saveSection("piChat", u).then(() => { pendingSavesRef.current--; });
+            saveSection("piChat", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
@@ -1300,7 +1310,7 @@ export default function DashboardPage() {
                 trackSave(card.id, "teamMemos", toSave, () => setTeamMemos(p => { const d = p[teamName] || { kanban: [], chat: [] }; return { ...p, [teamName]: { ...d, kanban: d.kanban.filter(c => c.id !== card.id) } }; }));
                 pendingSavesRef.current--; // trackSave manages its own ref
             } else {
-                saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; });
+                saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             }
             return toSave;
         });
@@ -1310,7 +1320,7 @@ export default function DashboardPage() {
         setTeamMemos(prev => {
             const data = prev[teamName] || { kanban: [], chat: [], files: [] };
             const toSave = { ...prev, [teamName]: { ...data, kanban: data.kanban.filter(c => c.id !== id) } };
-            saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; });
+            saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return toSave;
         });
     }, [saveSection]);
@@ -1319,7 +1329,7 @@ export default function DashboardPage() {
         setTeamMemos(prev => {
             const data = prev[teamName] || { kanban: [], chat: [], files: [] };
             const toSave = { ...prev, [teamName]: { ...data, kanban: cards } };
-            saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; });
+            saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return toSave;
         });
     }, [saveSection]);
@@ -1331,7 +1341,7 @@ export default function DashboardPage() {
             const found = entries.find(e => e.id === entry.id);
             const updated = found ? entries.map(e => e.id === entry.id ? entry : e) : [...entries, entry];
             const toSave = { ...prev, [teamName]: updated };
-            saveSection("experimentLogs", toSave).then(() => { pendingSavesRef.current--; });
+            saveSection("experimentLogs", toSave).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return toSave;
         });
     }, [saveSection]);
@@ -1339,7 +1349,7 @@ export default function DashboardPage() {
         pendingSavesRef.current++;
         setExperimentLogs(prev => {
             const toSave = { ...prev, [teamName]: (prev[teamName] || []).filter(e => e.id !== entryId) };
-            saveSection("experimentLogs", toSave).then(() => { pendingSavesRef.current--; });
+            saveSection("experimentLogs", toSave).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return toSave;
         });
     }, [saveSection]);
@@ -1347,7 +1357,7 @@ export default function DashboardPage() {
         pendingSavesRef.current++;
         setExpLogCategories(prev => {
             const toSave = { ...prev, [teamName]: cats };
-            saveSection("experimentLogCategories", toSave).then(() => { pendingSavesRef.current--; });
+            saveSection("experimentLogCategories", toSave).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return toSave;
         });
     }, [saveSection]);
@@ -1359,7 +1369,7 @@ export default function DashboardPage() {
             const found = entries.find(e => e.id === entry.id);
             const updated = found ? entries.map(e => e.id === entry.id ? entry : e) : [...entries, entry];
             const toSave = { ...prev, [teamName]: updated };
-            saveSection("analysisLogs", toSave).then(() => { pendingSavesRef.current--; });
+            saveSection("analysisLogs", toSave).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return toSave;
         });
     }, [saveSection]);
@@ -1367,7 +1377,7 @@ export default function DashboardPage() {
         pendingSavesRef.current++;
         setAnalysisLogs(prev => {
             const toSave = { ...prev, [teamName]: (prev[teamName] || []).filter(e => e.id !== entryId) };
-            saveSection("analysisLogs", toSave).then(() => { pendingSavesRef.current--; });
+            saveSection("analysisLogs", toSave).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return toSave;
         });
     }, [saveSection]);
@@ -1375,7 +1385,7 @@ export default function DashboardPage() {
         pendingSavesRef.current++;
         setAnalysisLogCategories(prev => {
             const toSave = { ...prev, [teamName]: cats };
-            saveSection("analysisLogCategories", toSave).then(() => { pendingSavesRef.current--; });
+            saveSection("analysisLogCategories", toSave).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return toSave;
         });
     }, [saveSection]);
@@ -1384,7 +1394,7 @@ export default function DashboardPage() {
         setExpLogCategories(prev => {
             const cats = (prev[teamName] || []).map(c => c.name === oldName ? { ...c, name: newName } : c);
             const toSave = { ...prev, [teamName]: cats };
-            pendingSavesRef.current++; saveSection("experimentLogCategories", toSave).then(() => { pendingSavesRef.current--; });
+            pendingSavesRef.current++; saveSection("experimentLogCategories", toSave).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return toSave;
         });
         // Update entries referencing old category
@@ -1392,7 +1402,7 @@ export default function DashboardPage() {
         setExperimentLogs(prev => {
             const entries = (prev[teamName] || []).map(e => e.category === oldName ? { ...e, category: newName } : e);
             const toSave = { ...prev, [teamName]: entries };
-            saveSection("experimentLogs", toSave).then(() => { pendingSavesRef.current--; });
+            saveSection("experimentLogs", toSave).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return toSave;
         });
         setActiveTab(prev => prev === `expLog_${teamName}_${oldName}` ? `expLog_${teamName}_${newName}` : prev);
@@ -1402,14 +1412,14 @@ export default function DashboardPage() {
         setAnalysisLogCategories(prev => {
             const cats = (prev[teamName] || []).map(c => c.name === oldName ? { ...c, name: newName } : c);
             const toSave = { ...prev, [teamName]: cats };
-            pendingSavesRef.current++; saveSection("analysisLogCategories", toSave).then(() => { pendingSavesRef.current--; });
+            pendingSavesRef.current++; saveSection("analysisLogCategories", toSave).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return toSave;
         });
         pendingSavesRef.current++;
         setAnalysisLogs(prev => {
             const entries = (prev[teamName] || []).map(e => e.category === oldName ? { ...e, category: newName } : e);
             const toSave = { ...prev, [teamName]: entries };
-            saveSection("analysisLogs", toSave).then(() => { pendingSavesRef.current--; });
+            saveSection("analysisLogs", toSave).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return toSave;
         });
         setActiveTab(prev => prev === `analysisLog_${teamName}_${oldName}` ? `analysisLog_${teamName}_${newName}` : prev);
@@ -1427,6 +1437,12 @@ export default function DashboardPage() {
                     const td = p[teamName] || { kanban: [], chat: [] };
                     return { ...p, [teamName]: { ...td, chat: td.chat.map(m => m.id === msg.id ? (ok ? { ...m, _sending: undefined } : { ...m, _sending: undefined, _failed: true }) : m) } };
                 });
+            }).catch(() => {
+                pendingSavesRef.current--;
+                setTeamMemos(p => {
+                    const td = p[teamName] || { kanban: [], chat: [] };
+                    return { ...p, [teamName]: { ...td, chat: td.chat.map(m => m.id === msg.id ? { ...m, _sending: undefined, _failed: true } : m) } };
+                });
             });
             return next;
         });
@@ -1442,6 +1458,12 @@ export default function DashboardPage() {
                     const d = p[teamName] || { kanban: [], chat: [] };
                     return { ...p, [teamName]: { ...d, chat: d.chat.map(m => m.id === msgId ? (ok ? { ...m, _sending: undefined } : { ...m, _sending: undefined, _failed: true }) : m) } };
                 });
+            }).catch(() => {
+                pendingSavesRef.current--;
+                setTeamMemos(p => {
+                    const d = p[teamName] || { kanban: [], chat: [] };
+                    return { ...p, [teamName]: { ...d, chat: d.chat.map(m => m.id === msgId ? { ...m, _sending: undefined, _failed: true } : m) } };
+                });
             });
             return updated;
         });
@@ -1451,7 +1473,7 @@ export default function DashboardPage() {
             const data = prev[teamName] || { kanban: [], chat: [], files: [] };
             const toSave = { ...prev, [teamName]: { ...data, chat: data.chat.map(c => c.id === msg.id ? msg : c) } };
             pendingSavesRef.current++;
-            saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; });
+            saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return toSave;
         });
     }, [saveSection]);
@@ -1460,7 +1482,7 @@ export default function DashboardPage() {
             const data = prev[teamName] || { kanban: [], chat: [], files: [] };
             const toSave = { ...prev, [teamName]: { ...data, chat: data.chat.filter(c => c.id !== id) } };
             pendingSavesRef.current++;
-            saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; });
+            saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return toSave;
         });
     }, [saveSection]);
@@ -1469,7 +1491,7 @@ export default function DashboardPage() {
             const data = prev[teamName] || { kanban: [], chat: [], files: [] };
             const toSave = { ...prev, [teamName]: { ...data, chat: [] } };
             pendingSavesRef.current++;
-            saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; });
+            saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return toSave;
         });
     }, [saveSection]);
@@ -1489,7 +1511,7 @@ export default function DashboardPage() {
             const fileToDelete = (data.files || []).find(f => f.id === id);
             if (fileToDelete?.url?.startsWith("https://")) { fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: fileToDelete.url }), headers: getAuthHeaders() }).catch(e => console.warn("Background request failed:", e)); }
             const toSave = { ...prev, [teamName]: { ...data, files: (data.files || []).filter(f => f.id !== id) } };
-            saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; });
+            saveSection("teamMemos", toSave).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return toSave;
         });
     }, [saveSection]);
@@ -1501,6 +1523,9 @@ export default function DashboardPage() {
             saveSection("labChat", stripMsgFlags(cur)).then(ok => {
                 pendingSavesRef.current--;
                 setLabChat(p => p.map(m => m.id === msg.id ? { ...m, _sending: undefined, ...(ok ? {} : { _failed: true }) } : m));
+            }).catch(() => {
+                pendingSavesRef.current--;
+                setLabChat(p => p.map(m => m.id === msg.id ? { ...m, _sending: undefined, _failed: true } : m));
             });
             return cur;
         });
@@ -1512,6 +1537,9 @@ export default function DashboardPage() {
             saveSection("labChat", stripMsgFlags(updated)).then(ok => {
                 pendingSavesRef.current--;
                 setLabChat(p => p.map(m => m.id === msgId ? { ...m, _sending: undefined, ...(ok ? {} : { _failed: true }) } : m));
+            }).catch(() => {
+                pendingSavesRef.current--;
+                setLabChat(p => p.map(m => m.id === msgId ? { ...m, _sending: undefined, _failed: true } : m));
             });
             return updated;
         });
@@ -1520,20 +1548,20 @@ export default function DashboardPage() {
         pendingSavesRef.current++;
         setLabChat(prev => {
             const u = prev.filter(c => c.id !== id);
-            saveSection("labChat", stripMsgFlags(u)).then(() => { pendingSavesRef.current--; });
+            saveSection("labChat", stripMsgFlags(u)).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
     const handleClearLabChat = useCallback(() => {
         pendingSavesRef.current++;
         setLabChat([]);
-        saveSection("labChat", []).then(() => { pendingSavesRef.current--; });
+        saveSection("labChat", []).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
     }, [saveSection]);
     const handleUpdateLabChat = useCallback((msg: TeamChatMsg) => {
         pendingSavesRef.current++;
         setLabChat(prev => {
             const u = prev.map(m => m.id === msg.id ? msg : m);
-            saveSection("labChat", stripMsgFlags(u)).then(() => { pendingSavesRef.current--; });
+            saveSection("labChat", stripMsgFlags(u)).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
@@ -1545,6 +1573,9 @@ export default function DashboardPage() {
             saveSection("casualChat", stripMsgFlags(cur)).then(ok => {
                 pendingSavesRef.current--;
                 setCasualChat(p => p.map(m => m.id === msg.id ? { ...m, _sending: undefined, ...(ok ? {} : { _failed: true }) } : m));
+            }).catch(() => {
+                pendingSavesRef.current--;
+                setCasualChat(p => p.map(m => m.id === msg.id ? { ...m, _sending: undefined, _failed: true } : m));
             });
             return cur;
         });
@@ -1556,6 +1587,9 @@ export default function DashboardPage() {
             saveSection("casualChat", stripMsgFlags(updated)).then(ok => {
                 pendingSavesRef.current--;
                 setCasualChat(p => p.map(m => m.id === msgId ? { ...m, _sending: undefined, ...(ok ? {} : { _failed: true }) } : m));
+            }).catch(() => {
+                pendingSavesRef.current--;
+                setCasualChat(p => p.map(m => m.id === msgId ? { ...m, _sending: undefined, _failed: true } : m));
             });
             return updated;
         });
@@ -1564,20 +1598,20 @@ export default function DashboardPage() {
         pendingSavesRef.current++;
         setCasualChat(prev => {
             const u = prev.filter(c => c.id !== id);
-            saveSection("casualChat", stripMsgFlags(u)).then(() => { pendingSavesRef.current--; });
+            saveSection("casualChat", stripMsgFlags(u)).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
     const handleClearCasualChat = useCallback(() => {
         pendingSavesRef.current++;
         setCasualChat([]);
-        saveSection("casualChat", []).then(() => { pendingSavesRef.current--; });
+        saveSection("casualChat", []).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
     }, [saveSection]);
     const handleUpdateCasualChat = useCallback((msg: TeamChatMsg) => {
         pendingSavesRef.current++;
         setCasualChat(prev => {
             const u = prev.map(m => m.id === msg.id ? msg : m);
-            saveSection("casualChat", stripMsgFlags(u)).then(() => { pendingSavesRef.current--; });
+            saveSection("casualChat", stripMsgFlags(u)).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
@@ -1589,6 +1623,9 @@ export default function DashboardPage() {
             saveSection("aiBotChat", stripMsgFlags(cur)).then(ok => {
                 pendingSavesRef.current--;
                 setAiBotChat(p => p.map(m => m.id === msg.id ? { ...m, _sending: undefined, ...(ok ? {} : { _failed: true }) } : m));
+            }).catch(() => {
+                pendingSavesRef.current--;
+                setAiBotChat(p => p.map(m => m.id === msg.id ? { ...m, _sending: undefined, _failed: true } : m));
             });
             return cur;
         });
@@ -1597,7 +1634,7 @@ export default function DashboardPage() {
         pendingSavesRef.current++;
         setAiBotChat(prev => {
             const u = prev.map(m => m.id === msg.id ? msg : m);
-            saveSection("aiBotChat", stripMsgFlags(u)).then(() => { pendingSavesRef.current--; });
+            saveSection("aiBotChat", stripMsgFlags(u)).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
@@ -1605,14 +1642,14 @@ export default function DashboardPage() {
         pendingSavesRef.current++;
         setAiBotChat(prev => {
             const u = prev.filter(c => c.id !== id);
-            saveSection("aiBotChat", stripMsgFlags(u)).then(() => { pendingSavesRef.current--; });
+            saveSection("aiBotChat", stripMsgFlags(u)).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
     const handleClearAiBotChat = useCallback(() => {
         pendingSavesRef.current++;
         setAiBotChat([]);
-        saveSection("aiBotChat", []).then(() => { pendingSavesRef.current--; });
+        saveSection("aiBotChat", []).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
     }, [saveSection]);
     // ─── AI Bot Board Handlers ──────────────────────────────────────────────
     const handleSaveAiBotBoard = useCallback((card: TeamMemoCard) => {
@@ -1621,7 +1658,7 @@ export default function DashboardPage() {
             const exists = prev.some(c => c.id === card.id);
             const u = exists ? prev.map(c => c.id === card.id ? card : c) : [...prev, card];
             if (exists) {
-                saveSection("aiBotBoard", u).then(() => { pendingSavesRef.current--; });
+                saveSection("aiBotBoard", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             } else {
                 trackSave(card.id, "aiBotBoard", u, () => setAiBotBoard(p => p.filter(c => c.id !== card.id)));
                 pendingSavesRef.current--;
@@ -1633,7 +1670,7 @@ export default function DashboardPage() {
         pendingSavesRef.current++;
         setAiBotBoard(prev => {
             const u = prev.filter(c => c.id !== id);
-            saveSection("aiBotBoard", u).then(() => { pendingSavesRef.current--; });
+            saveSection("aiBotBoard", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
@@ -1643,7 +1680,7 @@ export default function DashboardPage() {
             const exists = prev.some(c => c.id === card.id);
             const u = exists ? prev.map(c => c.id === card.id ? card : c) : [...prev, card];
             if (exists) {
-                saveSection("labBoard", u).then(() => { pendingSavesRef.current--; });
+                saveSection("labBoard", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             } else {
                 trackSave(card.id, "labBoard", u, () => setLabBoard(p => p.filter(c => c.id !== card.id)));
                 pendingSavesRef.current--; // trackSave manages its own ref
@@ -1655,7 +1692,7 @@ export default function DashboardPage() {
         pendingSavesRef.current++;
         setLabBoard(prev => {
             const u = prev.filter(c => c.id !== id);
-            saveSection("labBoard", u).then(() => { pendingSavesRef.current--; });
+            saveSection("labBoard", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
@@ -1672,7 +1709,7 @@ export default function DashboardPage() {
             const file = prev.find(f => f.id === id);
             if (file?.url?.startsWith("https://")) { fetch("/api/dashboard-files", { method: "DELETE", body: JSON.stringify({ url: file.url }), headers: getAuthHeaders() }).catch(e => console.warn("파일 삭제 실패:", e)); }
             const u = prev.filter(f => f.id !== id);
-            saveSection("labFiles", u).then(() => { pendingSavesRef.current--; });
+            saveSection("labFiles", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
@@ -1680,12 +1717,12 @@ export default function DashboardPage() {
         pendingSavesRef.current++;
         setDispatches(prev => {
             const u = d.id && prev.find(x => x.id === d.id) ? prev.map(x => x.id === d.id ? d : x) : [...prev, d];
-            saveSection("dispatches", u).then(() => { pendingSavesRef.current--; });
+            saveSection("dispatches", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; });
             return u;
         });
     }, [saveSection]);
     const handleDispatchDelete = useCallback((id: number) => {
-        pendingSavesRef.current++; setDispatches(prev => { const u = prev.filter(x => x.id !== id); saveSection("dispatches", u).then(() => { pendingSavesRef.current--; }); return u; });
+        pendingSavesRef.current++; setDispatches(prev => { const u = prev.filter(x => x.id !== id); saveSection("dispatches", u).then(() => { pendingSavesRef.current--; }).catch(() => { pendingSavesRef.current--; }); return u; });
     }, [saveSection]);
     // ─── Notification Center helpers ─────────────────────────────────────────
     const NOTI_SECTION_MAP: Record<string, { label: string; icon: string; tabId: string }> = {

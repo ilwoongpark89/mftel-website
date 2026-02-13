@@ -1,16 +1,26 @@
 import { Redis } from '@upstash/redis';
 import { NextRequest, NextResponse } from 'next/server';
 
-// In-memory storage for local development
-const localMessages: Array<{
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+interface MessageData {
     id: string;
     name: string;
     email: string;
     message: string;
     timestamp: string;
     read: boolean;
-}> = [];
+}
 
+// ---------------------------------------------------------------------------
+// In-memory storage for local development
+// ---------------------------------------------------------------------------
+const localMessages: MessageData[] = [];
+
+// ---------------------------------------------------------------------------
+// Redis setup
+// ---------------------------------------------------------------------------
 const isRedisConfigured = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 
 const redis = isRedisConfigured ? new Redis({
@@ -20,7 +30,96 @@ const redis = isRedisConfigured ? new Redis({
 
 const ADMIN_PASSWORD = process.env.ANALYTICS_PASSWORD || 'mftel2024admin';
 
+// Redis keys
+const HASH_KEY = 'mftel:messages';          // Hash: { [id]: JSON }
+const TOTAL_KEY = 'mftel:total_messages';
+const UNREAD_KEY = 'mftel:unread_messages';
+const MIGRATED_KEY = 'mftel:messages_migrated'; // flag: "1" after migration
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Parse a value that may already be an object (Upstash auto-deserializes). */
+function parseMessage(raw: string | object): MessageData {
+    if (typeof raw === 'string') {
+        return JSON.parse(raw);
+    }
+    return raw as MessageData;
+}
+
+/**
+ * One-time migration: if the old List key still exists, convert every entry
+ * into the new Hash layout and flip the migrated flag.
+ *
+ * Because the old List and the new Hash share the same Redis key name
+ * (`mftel:messages`), we need to:
+ *   1. Read all entries from the List.
+ *   2. Delete the List key.
+ *   3. Write them back as Hash fields.
+ */
+async function migrateIfNeeded(r: Redis): Promise<void> {
+    const alreadyMigrated = await r.get(MIGRATED_KEY);
+    if (alreadyMigrated === '1' || alreadyMigrated === 1) return;
+
+    // Check if the key is a list (TYPE returns "list" / "hash" / "none")
+    const keyType = await r.type(HASH_KEY);
+
+    if (keyType === 'list') {
+        // Read all entries from the old list
+        const entries: (string | object)[] = await r.lrange(HASH_KEY, 0, -1) || [];
+        // Delete the old list
+        await r.del(HASH_KEY);
+
+        if (entries.length > 0) {
+            // Upstash hset accepts an object: { field: value, ... }
+            const obj: Record<string, string> = {};
+            for (const entry of entries) {
+                const msg = parseMessage(entry);
+                obj[msg.id] = JSON.stringify(msg);
+            }
+            await r.hset(HASH_KEY, obj);
+        }
+
+        // Recompute counters from the actual data
+        const all = await r.hgetall(HASH_KEY) as Record<string, string | object> | null;
+        if (all) {
+            let total = 0;
+            let unread = 0;
+            for (const val of Object.values(all)) {
+                const msg = parseMessage(val);
+                total++;
+                if (!msg.read) unread++;
+            }
+            await r.set(TOTAL_KEY, total);
+            await r.set(UNREAD_KEY, unread);
+        }
+    }
+
+    // Mark migration complete (also covers the "none" / fresh-start case)
+    await r.set(MIGRATED_KEY, '1');
+}
+
+/** Get all messages from the Hash, sorted newest-first by timestamp. */
+async function getAllMessages(r: Redis): Promise<MessageData[]> {
+    await migrateIfNeeded(r);
+
+    const raw = await r.hgetall(HASH_KEY) as Record<string, string | object> | null;
+    if (!raw) return [];
+
+    const messages: MessageData[] = [];
+    for (const val of Object.values(raw)) {
+        messages.push(parseMessage(val));
+    }
+
+    // Sort newest first (descending timestamp)
+    messages.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return messages;
+}
+
+// ---------------------------------------------------------------------------
 // POST - Save new message
+// ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
     try {
         const { name, email, message } = await request.json();
@@ -29,7 +128,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Message is required' }, { status: 400 });
         }
 
-        const messageData = {
+        const messageData: MessageData = {
             id: Date.now().toString(),
             name: name || 'Anonymous',
             email: email || 'Not provided',
@@ -39,12 +138,11 @@ export async function POST(request: NextRequest) {
         };
 
         if (redis) {
-            // Production: Use Redis
-            await redis.lpush('mftel:messages', JSON.stringify(messageData));
-            await redis.incr('mftel:total_messages');
-            await redis.incr('mftel:unread_messages');
+            await migrateIfNeeded(redis);
+            await redis.hset(HASH_KEY, { [messageData.id]: JSON.stringify(messageData) });
+            await redis.incr(TOTAL_KEY);
+            await redis.incr(UNREAD_KEY);
         } else {
-            // Local development: Use in-memory storage
             localMessages.unshift(messageData);
         }
 
@@ -55,7 +153,9 @@ export async function POST(request: NextRequest) {
     }
 }
 
+// ---------------------------------------------------------------------------
 // GET - Retrieve messages (admin only)
+// ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
     const password = request.headers.get('x-admin-password');
     if (password !== ADMIN_PASSWORD) {
@@ -64,29 +164,17 @@ export async function GET(request: NextRequest) {
 
     try {
         if (redis) {
-            // Production: Use Redis
-            const messages = await redis.lrange('mftel:messages', 0, -1) || [];
-            const parsedMessages = messages.map((m: string | object) => {
-                if (typeof m === 'string') {
-                    try {
-                        return JSON.parse(m);
-                    } catch {
-                        return m;
-                    }
-                }
-                return m;
-            });
+            const messages = await getAllMessages(redis);
 
-            const totalMessages = await redis.get('mftel:total_messages') || 0;
-            const unreadMessages = await redis.get('mftel:unread_messages') || 0;
+            const totalMessages = await redis.get(TOTAL_KEY) || 0;
+            const unreadMessages = await redis.get(UNREAD_KEY) || 0;
 
             return NextResponse.json({
-                messages: parsedMessages,
+                messages,
                 totalMessages: Number(totalMessages),
                 unreadMessages: Number(unreadMessages)
             });
         } else {
-            // Local development: Use in-memory storage
             const unreadCount = localMessages.filter(m => !m.read).length;
 
             return NextResponse.json({
@@ -101,7 +189,9 @@ export async function GET(request: NextRequest) {
     }
 }
 
+// ---------------------------------------------------------------------------
 // PATCH - Mark message as read
+// ---------------------------------------------------------------------------
 export async function PATCH(request: NextRequest) {
     const password = request.headers.get('x-admin-password');
     if (password !== ADMIN_PASSWORD) {
@@ -112,28 +202,20 @@ export async function PATCH(request: NextRequest) {
         const { messageId } = await request.json();
 
         if (redis) {
-            // Production: Use Redis
-            const messages = await redis.lrange('mftel:messages', 0, -1) || [];
+            await migrateIfNeeded(redis);
 
-            let updated = false;
-            const updatedMessages = messages.map((m: string | object) => {
-                const msg = typeof m === 'string' ? JSON.parse(m) : m;
-                if (msg.id === messageId && !msg.read) {
+            // Read only the single message field from the hash
+            const raw = await redis.hget(HASH_KEY, messageId) as string | object | null;
+
+            if (raw) {
+                const msg = parseMessage(raw);
+                if (!msg.read) {
                     msg.read = true;
-                    updated = true;
+                    await redis.hset(HASH_KEY, { [messageId]: JSON.stringify(msg) });
+                    await redis.decr(UNREAD_KEY);
                 }
-                return JSON.stringify(msg);
-            });
-
-            if (updated) {
-                await redis.del('mftel:messages');
-                if (updatedMessages.length > 0) {
-                    await redis.rpush('mftel:messages', ...updatedMessages);
-                }
-                await redis.decr('mftel:unread_messages');
             }
         } else {
-            // Local development: Use in-memory storage
             const msg = localMessages.find(m => m.id === messageId);
             if (msg && !msg.read) {
                 msg.read = true;
@@ -144,5 +226,45 @@ export async function PATCH(request: NextRequest) {
     } catch (error) {
         console.error('Message update error:', error);
         return NextResponse.json({ error: 'Failed to update message' }, { status: 500 });
+    }
+}
+
+// ---------------------------------------------------------------------------
+// DELETE - Delete a single message
+// ---------------------------------------------------------------------------
+export async function DELETE(request: NextRequest) {
+    const password = request.headers.get('x-admin-password');
+    if (password !== ADMIN_PASSWORD) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    try {
+        const { messageId } = await request.json();
+
+        if (redis) {
+            await migrateIfNeeded(redis);
+
+            // Read the message first so we can adjust counters
+            const raw = await redis.hget(HASH_KEY, messageId) as string | object | null;
+
+            if (raw) {
+                const msg = parseMessage(raw);
+                await redis.hdel(HASH_KEY, messageId);
+                await redis.decr(TOTAL_KEY);
+                if (!msg.read) {
+                    await redis.decr(UNREAD_KEY);
+                }
+            }
+        } else {
+            const idx = localMessages.findIndex(m => m.id === messageId);
+            if (idx !== -1) {
+                localMessages.splice(idx, 1);
+            }
+        }
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error('Message delete error:', error);
+        return NextResponse.json({ error: 'Failed to delete message' }, { status: 500 });
     }
 }
