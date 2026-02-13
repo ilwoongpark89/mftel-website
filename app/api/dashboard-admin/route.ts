@@ -45,8 +45,11 @@ const ALL_SECTIONS = [
     "lectures", "patents", "vacations", "schedule", "timetable",
     "reports", "teams", "dailyTargets", "philosophy", "resources",
     "ideas", "analyses", "chatPosts", "customEmojis", "statusMessages",
-    "equipmentList", "personalMemos", "analysisToolList", "paperTagList", "members",
-    "dispatches"
+    "equipmentList", "personalMemos", "personalFiles", "piChat", "teamMemos",
+    "labChat", "labBoard", "labFiles", "meetings", "analysisToolList",
+    "paperTagList", "members", "dispatches", "experimentLogs", "analysisLogs",
+    "experimentLogCategories", "analysisLogCategories", "aiBotChat", "aiBotBoard",
+    "casualChat", "menuConfig"
 ];
 
 const MAX_LOG_ENTRIES = 5000;

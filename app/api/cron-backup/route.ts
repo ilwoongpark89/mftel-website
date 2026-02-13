@@ -27,7 +27,7 @@ async function delKey(key: string): Promise<void> {
 
 const PREFIX = 'mftel:dashboard:';
 const BACKUP_PREFIX = 'mftel:backup:';
-const ALL_KEYS = ["announcements","papers","experiments","todos","conferences","lectures","patents","vacations","schedule","timetable","reports","teams","dailyTargets","philosophy","resources","ideas","analyses","chatPosts","customEmojis","statusMessages","equipmentList","personalMemos","analysisToolList","paperTagList","members"];
+const ALL_KEYS = ["announcements","papers","experiments","todos","conferences","lectures","patents","vacations","schedule","timetable","reports","teams","dailyTargets","philosophy","resources","ideas","analyses","chatPosts","customEmojis","statusMessages","equipmentList","personalMemos","personalFiles","piChat","teamMemos","labChat","labBoard","labFiles","meetings","analysisToolList","paperTagList","members","dispatches","experimentLogs","analysisLogs","experimentLogCategories","analysisLogCategories","aiBotChat","aiBotBoard","casualChat","menuConfig"];
 
 export async function GET() {
     try {
