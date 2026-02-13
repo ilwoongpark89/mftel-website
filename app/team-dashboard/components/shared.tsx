@@ -3,9 +3,10 @@
 import { useState, useEffect, useContext, useRef, useCallback } from "react";
 import type { LabFile } from "../lib/types";
 import { EMOJI_CATEGORIES, MEMO_COLORS, FILE_MAX } from "../lib/constants";
-import { genId, uploadFile, isImageFile, isPdfFile, renderWithMentions, saveDraft, loadDraft, clearDraft, hasDraft } from "../lib/utils";
+import { genId, uploadFile, isImageFile, isPdfFile, renderChatMessage, extractFirstUrl, sendMentionPush, saveDraft, loadDraft, clearDraft, hasDraft } from "../lib/utils";
 import { MembersContext, SavingContext, ConfirmDeleteContext } from "../lib/contexts";
-import { useCommentImg } from "../lib/hooks";
+import { useCommentImg, useMention, MentionPopup } from "../lib/hooks";
+import { OgPreviewCard } from "./OgPreviewCard";
 
 // ─── Mobile Reorder Helper ────────────────────────────────────────────────────
 
@@ -476,6 +477,181 @@ function RatioSlider({ label, value, onChange }: { label: string; value: number;
     );
 }
 
+// ─── ChatImageLightbox ─────────────────────────────────────────────────────
+
+export function ChatImageLightbox({ images, currentIndex, onClose }: {
+    images: string[];
+    currentIndex: number;
+    onClose: () => void;
+}) {
+    const [idx, setIdx] = useState(currentIndex);
+    const total = images.length;
+
+    const goPrev = useCallback(() => setIdx(i => (i > 0 ? i - 1 : total - 1)), [total]);
+    const goNext = useCallback(() => setIdx(i => (i < total - 1 ? i + 1 : 0)), [total]);
+
+    useEffect(() => {
+        const handleKey = (e: KeyboardEvent) => {
+            if (e.key === "Escape") onClose();
+            else if (e.key === "ArrowLeft") goPrev();
+            else if (e.key === "ArrowRight") goNext();
+        };
+        window.addEventListener("keydown", handleKey);
+        return () => window.removeEventListener("keydown", handleKey);
+    }, [onClose, goPrev, goNext]);
+
+    // Sync when opened at a new index
+    useEffect(() => { setIdx(currentIndex); }, [currentIndex]);
+
+    if (total === 0) return null;
+
+    return (
+        <div className="fixed inset-0 z-[80] bg-black/90 flex items-center justify-center" role="dialog" aria-modal="true"
+            onClick={onClose}>
+            {/* Close button */}
+            <button onClick={onClose}
+                className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white text-[20px] transition-colors"
+                title="닫기 (ESC)">
+                ✕
+            </button>
+            {/* Counter */}
+            {total > 1 && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full bg-white/10 text-white text-[13px] font-medium">
+                    {idx + 1} / {total}
+                </div>
+            )}
+            {/* Previous arrow */}
+            {total > 1 && (
+                <button onClick={e => { e.stopPropagation(); goPrev(); }}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white text-[20px] transition-colors"
+                    title="이전 (←)">
+                    ‹
+                </button>
+            )}
+            {/* Next arrow */}
+            {total > 1 && (
+                <button onClick={e => { e.stopPropagation(); goNext(); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white text-[20px] transition-colors"
+                    title="다음 (→)">
+                    ›
+                </button>
+            )}
+            {/* Image */}
+            <img
+                src={images[idx]}
+                alt=""
+                className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl select-none"
+                style={{ transition: "opacity 0.15s ease" }}
+                onClick={e => e.stopPropagation()}
+                draggable={false}
+            />
+        </div>
+    );
+}
+
+// ─── ChatSearchBar ──────────────────────────────────────────────────────────
+
+export function ChatSearchBar({ messages, onClose, onScrollTo }: {
+    messages: { id: number; text: string; deleted?: boolean }[];
+    onClose: () => void;
+    onScrollTo: (id: number) => void;
+}) {
+    const [query, setQuery] = useState("");
+    const [matchIdx, setMatchIdx] = useState(0);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    const matches = query.trim()
+        ? messages.filter(m => !m.deleted && m.text && m.text.toLowerCase().includes(query.toLowerCase())).map(m => m.id)
+        : [];
+
+    const total = matches.length;
+
+    // Reset to first match when query changes
+    useEffect(() => { setMatchIdx(0); }, [query]);
+
+    // Scroll to current match when matchIdx or matches change
+    useEffect(() => {
+        if (total > 0 && matches[matchIdx] != null) {
+            onScrollTo(matches[matchIdx]);
+        }
+    }, [matchIdx, total, query]);
+
+    const goNext = () => { if (total > 0) { const next = (matchIdx + 1) % total; setMatchIdx(next); } };
+    const goPrev = () => { if (total > 0) { const prev = (matchIdx - 1 + total) % total; setMatchIdx(prev); } };
+
+    useEffect(() => { inputRef.current?.focus(); }, []);
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === "Escape") { e.preventDefault(); onClose(); }
+        else if (e.key === "Enter" && e.shiftKey) { e.preventDefault(); goPrev(); }
+        else if (e.key === "Enter") { e.preventDefault(); goNext(); }
+        else if (e.key === "ArrowDown") { e.preventDefault(); goNext(); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); goPrev(); }
+    };
+
+    return (
+        <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-slate-100 bg-slate-50 flex-shrink-0">
+            <input
+                ref={inputRef}
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="메시지 검색..."
+                className="flex-1 min-w-0 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[12px] focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
+            {query.trim() && (
+                <span className="text-[11px] text-slate-400 whitespace-nowrap flex-shrink-0">
+                    {total > 0 ? `${matchIdx + 1} / ${total}개` : "0개"}
+                </span>
+            )}
+            <button onClick={goPrev} disabled={total === 0} className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:bg-slate-200 disabled:opacity-30 text-[12px] flex-shrink-0" title="이전">▲</button>
+            <button onClick={goNext} disabled={total === 0} className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:bg-slate-200 disabled:opacity-30 text-[12px] flex-shrink-0" title="다음">▼</button>
+            <button onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-red-500 text-[14px] flex-shrink-0" title="닫기">✕</button>
+        </div>
+    );
+}
+
+/** Highlight search query within text for chat search results */
+export function highlightSearchText(text: string, query: string): React.ReactNode {
+    if (!query.trim() || !text) return null;
+    const lower = text.toLowerCase();
+    const q = query.toLowerCase();
+    const parts: React.ReactNode[] = [];
+    let lastIdx = 0;
+    let idx = lower.indexOf(q, lastIdx);
+    let key = 0;
+    while (idx !== -1) {
+        if (idx > lastIdx) parts.push(text.slice(lastIdx, idx));
+        parts.push(<mark key={key++} className="bg-amber-200 text-inherit rounded-sm px-px">{text.slice(idx, idx + query.length)}</mark>);
+        lastIdx = idx + query.length;
+        idx = lower.indexOf(q, lastIdx);
+    }
+    if (lastIdx < text.length) parts.push(text.slice(lastIdx));
+    return parts.length > 0 ? <>{parts}</> : null;
+}
+
+/** Hook to manage chat search state */
+export function useChatSearch() {
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [highlightedMsgId, setHighlightedMsgId] = useState<number | null>(null);
+
+    const openSearch = useCallback(() => { setSearchOpen(true); setSearchQuery(""); setHighlightedMsgId(null); }, []);
+    const closeSearch = useCallback(() => { setSearchOpen(false); setSearchQuery(""); setHighlightedMsgId(null); }, []);
+
+    const scrollToMsg = useCallback((id: number) => {
+        setHighlightedMsgId(id);
+        const el = document.getElementById(`msg-${id}`);
+        if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            el.classList.add("chat-search-highlight");
+            setTimeout(() => el.classList.remove("chat-search-highlight"), 1800);
+        }
+    }, []);
+
+    return { searchOpen, searchQuery, setSearchQuery, highlightedMsgId, openSearch, closeSearch, scrollToMsg };
+}
+
 // ─── DetailChatPanel ────────────────────────────────────────────────────────
 
 export type ChatMessage = { id: number; date: string; author: string; text: string; imageUrl?: string };
@@ -495,6 +671,14 @@ export function DetailChatPanel({ messages, currentUser, onAdd, onDelete, title 
     const cImg = useCommentImg();
     const composingRef = useRef(false);
     const bottomRef = useRef<HTMLDivElement>(null);
+    const mention = useMention();
+    const inputRef = useRef<HTMLInputElement>(null);
+    const selectMention = (name: string) => {
+        const el = inputRef.current;
+        const pos = el?.selectionStart ?? text.length;
+        const result = mention.apply(text, pos, name);
+        if (result) { setText(result.newText); mention.close(); setTimeout(() => { el?.focus(); el?.setSelectionRange(result.cursorPos, result.cursorPos); }, 10); }
+    };
 
     useEffect(() => { if (draftKey) { const d = loadDraft(draftKey); if (d) setText(d); } }, [draftKey]);
     useEffect(() => { if (draftKey) saveDraft(draftKey, text); }, [text, draftKey]);
@@ -503,6 +687,7 @@ export function DetailChatPanel({ messages, currentUser, onAdd, onDelete, title 
         if (!text.trim() && !cImg.img) return;
         if (draftKey) clearDraft(draftKey);
         onAdd({ id: genId(), date: new Date().toLocaleDateString("ko-KR"), author: currentUser, text: text.trim(), imageUrl: cImg.img || undefined });
+        if (text.trim()) sendMentionPush(text.trim(), currentUser, title);
         setText(""); cImg.clear();
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     };
@@ -520,7 +705,7 @@ export function DetailChatPanel({ messages, currentUser, onAdd, onDelete, title 
                                 <span className="text-[12px] font-semibold text-slate-700">{MEMBERS[c.author]?.emoji} {c.author}</span>
                                 <span className="text-[11px] text-slate-400">{c.date}</span>
                             </div>
-                            <div className="text-[13px] text-slate-600 whitespace-pre-wrap" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
+                            <div className="text-[13px] text-slate-600 whitespace-pre-wrap" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderChatMessage(c.text)}{c.text && extractFirstUrl(c.text) && <OgPreviewCard url={extractFirstUrl(c.text)!} />}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
                         </div>
                         {(c.author === currentUser || currentUser === "박일웅") && (
                             <button onClick={() => onDelete(c.id)} className="text-[11px] text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 self-start mt-2 flex-shrink-0">삭제</button>
@@ -532,10 +717,11 @@ export function DetailChatPanel({ messages, currentUser, onAdd, onDelete, title 
             </div>
             <div className="p-3 border-t border-slate-100 flex-shrink-0">
                 {cImg.preview}
-                <div className="flex gap-2 items-center">
-                    <input value={text} onChange={e => setText(e.target.value)}
+                <div className="flex gap-2 items-center relative">
+                    <MentionPopup m={mention} onSelect={selectMention} />
+                    <input ref={inputRef} value={text} onChange={e => { setText(e.target.value); mention.check(e.target.value, e.target.selectionStart ?? e.target.value.length); }}
                         onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={() => { composingRef.current = false; }}
-                        onPaste={cImg.onPaste} onKeyDown={e => { if (e.key === "Enter" && !composingRef.current) handleAdd(); }}
+                        onPaste={cImg.onPaste} onKeyDown={e => { const mr = mention.handleKey(e); if (typeof mr === "string") { selectMention(mr); return; } if (mr === true) return; if (e.key === "Enter" && !composingRef.current) handleAdd(); }}
                         placeholder={placeholder} className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
                     <button onClick={handleAdd} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 flex-shrink-0">{cImg.uploading ? "⏳" : "등록"}</button>
                 </div>

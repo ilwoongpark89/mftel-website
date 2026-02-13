@@ -34,7 +34,7 @@ export type Memo = { id: number; title: string; content: string; color: string; 
 
 export type TeamMemoCard = { id: number; title: string; content: string; status: string; color: string; borderColor?: string; author: string; updatedAt: string; comments?: Comment[]; needsDiscussion?: boolean; imageUrl?: string };
 
-export type TeamChatMsg = { id: number; author: string; text: string; date: string; imageUrl?: string; replyTo?: { id: number; author: string; text: string }; reactions?: Record<string, string[]>; deleted?: boolean; _sending?: boolean; _failed?: boolean };
+export type TeamChatMsg = { id: number; author: string; text: string; date: string; imageUrl?: string; replyTo?: { id: number; author: string; text: string }; reactions?: Record<string, string[]>; deleted?: boolean; edited?: boolean; _sending?: boolean; _failed?: boolean };
 
 export type LabFile = { id: number; name: string; size: number; url: string; type: string; uploader: string; date: string };
 

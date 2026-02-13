@@ -3,10 +3,11 @@
 import { useState, useEffect, useRef, useCallback, useContext, memo } from "react";
 import type { LabFile, Memo, TeamChatMsg, TeamMemoCard } from "../lib/types";
 import { MEMBERS, MEMO_COLORS } from "../lib/constants";
-import { genId, chatKeyDown, renderWithMentions, saveDraft, loadDraft, clearDraft, hasDraft, uploadFile } from "../lib/utils";
+import { genId, chatKeyDown, renderChatMessage, extractFirstUrl, sendMentionPush, saveDraft, loadDraft, clearDraft, hasDraft, uploadFile } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
-import { useMention, MentionPopup, useCommentImg } from "../lib/hooks";
+import { useMention, MentionPopup, useCommentImg, useTypingIndicator, TypingIndicator } from "../lib/hooks";
 import { ColorPicker, EmojiPickerPopup, FileBox, ReadReceiptBadge, SavingBadge } from "./shared";
+import { OgPreviewCard } from "./OgPreviewCard";
 
 const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, onRetry, readReceipts }: {
     chat: TeamChatMsg[]; currentUser: string; onAdd: (msg: TeamChatMsg) => void; onUpdate: (msg: TeamChatMsg) => void; onDelete: (id: number) => void; onClear: () => void; onRetry: (id: number) => void;
@@ -22,6 +23,7 @@ const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd
     const [moreMenuMsgId, setMoreMenuMsgId] = useState<number | null>(null);
     const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
     const mention = useMention();
+    const { typingUsers, reportTyping } = useTypingIndicator("casualChat", currentUser);
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const selectMention = (name: string) => {
         const el = inputRef.current;
@@ -37,6 +39,7 @@ const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd
         const h = now.getHours(); const ampm = h < 12 ? "오전" : "오후"; const h12 = h % 12 || 12;
         const dateStr = `${now.getFullYear()}. ${now.getMonth() + 1}. ${now.getDate()}. ${ampm} ${h12}:${String(now.getMinutes()).padStart(2, "0")}`;
         onAdd({ id: genId(), author: currentUser, text: text.trim(), date: dateStr, reactions: {}, ...(replyTo ? { replyTo: { id: replyTo.id, author: replyTo.author, text: replyTo.text?.slice(0, 50) } } : {}) });
+        sendMentionPush(text.trim(), currentUser, "잡담 채팅");
         setText(""); setReplyTo(null);
     };
     const toggleReaction = (msgId: number, emoji: string) => {
@@ -148,8 +151,9 @@ const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd
                                             <div className={`px-3 py-1.5 rounded-2xl text-[13px] leading-snug whitespace-pre-wrap ${isMe ? "rounded-tr-md" : "rounded-tl-md"}`}
                                                 style={{ background: isMe ? "#3B82F6" : "#F1F5F9", color: isMe ? "#FFFFFF" : "#1E293B", wordBreak: 'break-all', overflowWrap: 'break-word' }}>
                                                 {msg.imageUrl && <img src={msg.imageUrl} alt="" className="w-full rounded-lg mb-1 cursor-pointer" style={{ maxHeight: 300, objectFit: 'cover' }} />}
-                                                {msg.text && renderWithMentions(msg.text)}
+                                                {msg.text && renderChatMessage(msg.text)}
                                             </div>
+                                            {msg.text && extractFirstUrl(msg.text) && <OgPreviewCard url={extractFirstUrl(msg.text)!} />}
                                             {Object.keys(reactions).length > 0 && (
                                                 <div className="flex flex-wrap gap-0.5 mt-0.5 absolute -bottom-3 left-0">
                                                     {Object.entries(reactions).filter(([, u]) => u.length > 0).map(([em, users]) => (
@@ -177,10 +181,11 @@ const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd
                 </div>
             )}
             {mention.open && <MentionPopup m={mention} onSelect={selectMention} />}
+            <TypingIndicator typingUsers={typingUsers} />
             <div className="px-2 py-2 border-t border-slate-100 flex items-end gap-1.5 flex-shrink-0">
                 <textarea ref={inputRef} value={text}
-                    onChange={e => { setText(e.target.value); mention.check(e.target.value, e.target.selectionStart || 0); }}
-                    onKeyDown={e => chatKeyDown(e, sendMsg, composingRef)}
+                    onChange={e => { setText(e.target.value); mention.check(e.target.value, e.target.selectionStart || 0); reportTyping(); }}
+                    onKeyDown={e => { const mr = mention.handleKey(e); if (typeof mr === "string") { selectMention(mr); return; } if (mr === true) return; chatKeyDown(e, sendMsg, composingRef); }}
                     onCompositionStart={() => { composingRef.current = true; }}
                     onCompositionEnd={() => { composingRef.current = false; }}
                     placeholder="메시지 입력..."
@@ -229,6 +234,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
     const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<number | null>(null);
     const [moreMenuMsgId, setMoreMenuMsgId] = useState<number | null>(null);
     const mention = useMention();
+    const { typingUsers: labTypingUsers, reportTyping: labReportTyping } = useTypingIndicator("labChat", currentUser);
     const chatInputRef = useRef<HTMLTextAreaElement>(null);
     const selectMention = (name: string) => {
         const el = chatInputRef.current;
@@ -254,6 +260,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
     const send = () => {
         if (!text.trim() && !chatImg) return;
         onAdd({ id: genId(), author: currentUser, text: text.trim(), date: new Date().toLocaleString("ko-KR"), imageUrl: chatImg || undefined, replyTo: replyTo ? { id: replyTo.id, author: replyTo.author, text: replyTo.text } : undefined });
+        if (text.trim()) sendMentionPush(text.trim(), currentUser, "연구실 채팅");
         setText(""); setChatImg(""); setReplyTo(null);
     };
     const handleChatImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -326,7 +333,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                                         <div className="text-[11px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
                                         {cmts.slice(-2).map(c => (
                                             <div key={c.id} className="text-[11px] text-slate-500 truncate">
-                                                <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
+                                                <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {renderChatMessage(c.text)}{c.imageUrl && " 📷"}
                                             </div>
                                         ))}
                                     </div>
@@ -458,7 +465,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                                                 <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "7px 14px", lineHeight: "1.5", wordBreak: 'break-all', overflowWrap: 'break-word' }}
                                                     className="text-[13px] text-slate-800">
                                                     {msg.imageUrl && <img src={msg.imageUrl} alt="" className="w-full rounded-md mb-1.5 cursor-pointer" style={{ maxHeight: 300, objectFit: 'cover' }} onLoad={scrollLabChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
-                                                    {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
+                                                    {msg.text && <div className="whitespace-pre-wrap break-words">{renderChatMessage(msg.text)}</div>}
                                                 </div>
                                                 {Object.keys(reactions).length > 0 && (
                                                     <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
@@ -493,6 +500,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                         <button onClick={() => setReplyTo(null)} className="text-slate-400 hover:text-slate-600 text-[14px] flex-shrink-0">✕</button>
                     </div>
                 )}
+                <TypingIndicator typingUsers={labTypingUsers} />
                 <div className={`p-2.5 ${replyTo ? "" : "border-t border-slate-100"} flex-shrink-0 bg-white`}>
                     {chatImg && <div className="mb-2 relative inline-block"><img src={chatImg} alt="" className="max-h-[80px] rounded-md" /><button onClick={() => setChatImg("")} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[11px] flex items-center justify-center">✕</button></div>}
                     <div className="flex gap-1.5 items-center">
@@ -552,7 +560,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group/c relative">
                                             <button onClick={() => confirmDel(() => { const updated = { ...selectedCard, comments: (selectedCard.comments || []).filter(x => x.id !== c.id) }; onSaveBoard(updated); setSelectedCard(updated); })}
                                                 className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderChatMessage(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}

@@ -3,7 +3,7 @@
 import { useState, useRef, useContext, memo } from "react";
 import type { Comment, Todo } from "../lib/types";
 import { MEMBERS, MEMBER_NAMES, PRIORITY_ICON, PRIORITY_LABEL, PRIORITY_KEYS } from "../lib/constants";
-import { genId, toggleArr, renderWithMentions, calcDropIdx, reorderKanbanItems } from "../lib/utils";
+import { genId, toggleArr, renderChatMessage, calcDropIdx, reorderKanbanItems } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { DropLine, PillSelect, SavingBadge } from "./shared";
 
@@ -349,7 +349,7 @@ const TodoList = memo(function TodoList({ todos, onToggle, onAdd, onUpdate, onDe
                                         <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
                                             <button onClick={() => { if (!confirm("댓글을 삭제하시겠습니까?")) return; setEditComments(editComments.filter(x => x.id !== c.id)); }}
                                                 className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4">{renderChatMessage(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}

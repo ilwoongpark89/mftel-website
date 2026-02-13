@@ -3,10 +3,21 @@
 import { useState, useEffect, useRef, useCallback, useContext, memo } from "react";
 import type { Paper, Todo, Experiment, Analysis, TeamData, LabFile, TeamChatMsg, TeamMemoCard } from "../lib/types";
 import { MEMBERS, MEMBER_NAMES, TEAM_COLORS, TEAM_EMOJIS, TEAM_MEMO_COLORS, MEMO_COL_MIGRATE, ANALYSIS_STATUS_MIGRATE, EXP_STATUS_MIGRATE } from "../lib/constants";
-import { genId, toggleArr, chatKeyDown, renderWithMentions, saveDraft, loadDraft, clearDraft, hasDraft, calcDropIdx, reorderKanbanItems, uploadFile } from "../lib/utils";
+import { genId, toggleArr, chatKeyDown, renderChatMessage, extractFirstUrl, sendMentionPush, saveDraft, loadDraft, clearDraft, hasDraft, calcDropIdx, reorderKanbanItems, uploadFile } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useMention, MentionPopup, useCommentImg } from "../lib/hooks";
-import { ColorPicker, DropLine, EmojiPickerPopup, FileBox, PillSelect, ReadReceiptBadge, SavingBadge, useLayoutSettings, LayoutSettingsOverlay } from "./shared";
+import { ChatImageLightbox, ColorPicker, DropLine, EmojiPickerPopup, FileBox, PillSelect, ReadReceiptBadge, SavingBadge, useLayoutSettings, LayoutSettingsOverlay } from "./shared";
+import { OgPreviewCard } from "./OgPreviewCard";
+
+const NewMessagesDivider = memo(function NewMessagesDivider() {
+    return (
+        <div className="flex items-center gap-2 my-3 new-messages-divider">
+            <div className="flex-1 h-px bg-red-400" />
+            <span className="text-[11px] text-red-500 font-medium whitespace-nowrap">여기서부터 새 메시지</span>
+            <div className="flex-1 h-px bg-red-400" />
+        </div>
+    );
+});
 
 const TeamOverview = memo(function TeamOverview({ papers, todos, experiments, analyses, teams, onSaveTeams, currentUser }: { papers: Paper[]; todos: Todo[]; experiments: Experiment[]; analyses: Analysis[]; teams: Record<string, TeamData>; onSaveTeams: (t: Record<string, TeamData>) => void; currentUser: string }) {
     const MEMBERS = useContext(MembersContext);
@@ -228,7 +239,7 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
     const { settings: layoutSettings, update: updateLayout, reset: resetLayout, gridTemplate } = useLayoutSettings("team");
     const [chatImg, setChatImg] = useState("");
     const [imgUploading, setImgUploading] = useState(false);
-    const [previewImg, setPreviewImg] = useState("");
+    const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
     const chatFileRef = useRef<HTMLInputElement>(null);
     const [newComment, setNewComment] = useState("");
     const cImg = useCommentImg();
@@ -237,6 +248,21 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
     const teamChatContainerRef = useRef<HTMLDivElement>(null);
     const teamChatDidInit = useRef(false);
     const scrollTeamChat = useCallback(() => { const el = teamChatContainerRef.current; if (el) el.scrollTop = el.scrollHeight; }, []);
+    const teamInitialLastReadRef = useRef<number | null>(null);
+    const teamLastReadLoaded = useRef(false);
+    const teamChatKey = `lastRead_team_${teamName}_${currentUser}`;
+    useEffect(() => {
+        if (!teamLastReadLoaded.current) {
+            teamLastReadLoaded.current = true;
+            try { const v = localStorage.getItem(teamChatKey); if (v) teamInitialLastReadRef.current = Number(v); } catch {}
+        }
+        return () => {
+            if (chat.length > 0) {
+                const lastId = chat[chat.length - 1].id;
+                try { localStorage.setItem(teamChatKey, String(lastId)); } catch {}
+            }
+        };
+    }, [chat, teamChatKey]);
     const composingRef = useRef(false);
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const [dropTarget, setDropTarget] = useState<{ col: string; idx: number } | null>(null);
@@ -303,8 +329,16 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
     const sendChat = () => {
         if (!chatText.trim() && !chatImg) return;
         onAddChat({ id: genId(), author: currentUser, text: chatText.trim(), date: new Date().toLocaleString("ko-KR"), imageUrl: chatImg || undefined, replyTo: replyTo ? { id: replyTo.id, author: replyTo.author, text: replyTo.text } : undefined });
+        if (chatText.trim()) sendMentionPush(chatText.trim(), currentUser, `${teamName} 채팅`);
         setChatText(""); setChatImg(""); setReplyTo(null);
     };
+    // Collect all images from chat messages for lightbox gallery
+    const chatImages = chat.filter(m => m.imageUrl && !m.deleted).map(m => m.imageUrl!);
+    const openLightbox = (url: string) => {
+        const idx = chatImages.indexOf(url);
+        setLightboxIdx(idx >= 0 ? idx : 0);
+    };
+
     const toggleReaction = (msgId: number, emoji: string) => {
         const msg = chat.find(m => m.id === msgId);
         if (!msg) return;
@@ -339,8 +373,14 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
     };
 
     useEffect(() => {
-        if (!teamChatDidInit.current && chat.length > 0) { teamChatDidInit.current = true; setTimeout(scrollTeamChat, 150); }
-        else { requestAnimationFrame(scrollTeamChat); }
+        if (!teamChatDidInit.current && chat.length > 0) {
+            teamChatDidInit.current = true;
+            setTimeout(() => {
+                const divider = teamChatContainerRef.current?.querySelector('.new-messages-divider');
+                if (divider) { divider.scrollIntoView({ behavior: 'auto', block: 'center' }); }
+                else { scrollTeamChat(); }
+            }, 150);
+        } else { requestAnimationFrame(scrollTeamChat); }
     }, [chat.length, scrollTeamChat]);
 
     return (
@@ -426,7 +466,7 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
                                             <div className="text-[11px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
                                             {cmts.slice(-2).map(c => (
                                                 <div key={c.id} className="text-[11px] text-slate-500 truncate">
-                                                    <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
+                                                    <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {renderChatMessage(c.text)}{c.imageUrl && " 📷"}
                                                 </div>
                                             ))}
                                         </div>
@@ -476,13 +516,17 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
                         const timeStr = tm ? `${tm[1] === "오전" ? "AM" : "PM"} ${tm[2]}` : "";
                         const showMyTime = isMe && (!sameAuthor || showDateSep);
                         const reactions = msg.reactions || {};
+                        const teamLastReadId = teamInitialLastReadRef.current;
+                        const showTeamNewDivider = teamLastReadId != null && msg.id > teamLastReadId && (!prev || prev.id <= teamLastReadId || prev.deleted) && chat[chat.length - 1].id > teamLastReadId;
                         if (msg.deleted) return (
                             <div key={msg.id} className={`${sameAuthor && !showDateSep ? "mt-[5px]" : "mt-3"} text-center`}>
+                                {showTeamNewDivider && <NewMessagesDivider />}
                                 <span className="text-[12px] text-slate-400 italic">{msg.author}님이 메시지를 삭제했습니다.</span>
                             </div>
                         );
                         return (
                             <div key={msg.id} data-chat-id={msg.id}>
+                                {showTeamNewDivider && <NewMessagesDivider />}
                                 {showDateSep && (
                                     <div className="flex items-center gap-3 my-4">
                                         <div className="flex-1 h-px bg-slate-200" />
@@ -560,8 +604,8 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
                                                 )}
                                                 <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "7px 14px", lineHeight: "1.5", wordBreak: 'break-all', overflowWrap: 'break-word' }}
                                                     className="text-[13px] text-slate-800">
-                                                    {msg.imageUrl && <img src={msg.imageUrl} alt="" className="w-full rounded-md mb-1.5 cursor-pointer" style={{ maxHeight: 300, objectFit: 'cover' }} onLoad={scrollTeamChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
-                                                    {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
+                                                    {msg.imageUrl && <img src={msg.imageUrl} alt="" className="w-full rounded-md mb-1.5 cursor-pointer" style={{ maxHeight: 300, objectFit: 'cover' }} onLoad={scrollTeamChat} onClick={(e) => { e.stopPropagation(); openLightbox(msg.imageUrl!); }} />}
+                                                    {msg.text && <div className="whitespace-pre-wrap break-words">{renderChatMessage(msg.text)}{extractFirstUrl(msg.text) && <OgPreviewCard url={extractFirstUrl(msg.text)!} />}</div>}
                                                 </div>
                                                 {!msg._sending && !msg._failed && Object.keys(reactions).length > 0 && (
                                                     <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
@@ -627,14 +671,14 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
                         <div className="p-4" style={{ overflow: 'hidden' }}>
                             <div className="text-[12px] text-slate-400 mb-3">{MEMBERS[selected.author]?.emoji || "👤"} {selected.author} · {selected.updatedAt}</div>
                             {selected.content && <div className="text-[14px] text-slate-700 mb-4 whitespace-pre-wrap" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{selected.content}</div>}
-                            {selected.imageUrl && <img src={selected.imageUrl} alt="" className="rounded-lg mb-4 cursor-pointer" style={{ maxWidth: '100%', height: 'auto' }} onClick={() => setPreviewImg(selected.imageUrl!)} />}
+                            {selected.imageUrl && <img src={selected.imageUrl} alt="" className="rounded-lg mb-4 cursor-pointer" style={{ maxWidth: '100%', height: 'auto' }} onClick={() => openLightbox(selected.imageUrl!)} />}
                             <div className="border-t border-slate-200 pt-4">
                                 <div className="text-[13px] font-semibold text-slate-600 mb-3">💬 댓글 ({(selected.comments || []).length})</div>
                                 <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto">
                                     {(selected.comments || []).map(c => (
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group/c relative">
                                             <button onClick={() => deleteComment(c.id)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderChatMessage(c.text)}{c.text && extractFirstUrl(c.text) && <OgPreviewCard url={extractFirstUrl(c.text)!} />}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
@@ -682,10 +726,8 @@ const TeamMemoView = memo(function TeamMemoView({ teamName, kanban, chat, files,
                 </div>
             )}
 
-            {previewImg && (
-                <div className="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center p-4 cursor-pointer" role="dialog" aria-modal="true" onClick={() => setPreviewImg("")}>
-                    <img src={previewImg} alt="" className="max-w-[90vw] max-h-[85vh] rounded-lg shadow-2xl object-contain" />
-                </div>
+            {lightboxIdx !== null && chatImages.length > 0 && (
+                <ChatImageLightbox images={chatImages} currentIndex={lightboxIdx} onClose={() => setLightboxIdx(null)} />
             )}
 
         </div>

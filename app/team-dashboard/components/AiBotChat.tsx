@@ -5,47 +5,39 @@ import type { TeamChatMsg } from "../lib/types";
 import type { DashboardData, BotResponse } from "../lib/aiBot";
 import { parseCommand, generateResponse, SLASH_COMMANDS } from "../lib/aiBot";
 import { ALL_MEMBER_NAMES } from "../lib/constants";
-import { genId, chatKeyDown, renderWithMentions } from "../lib/utils";
+import { genId, chatKeyDown, renderChatMessage, extractFirstUrl } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useMention, MentionPopup, useCommentImg } from "../lib/hooks";
 import { ReadReceiptBadge } from "./shared";
+import { OgPreviewCard } from "./OgPreviewCard";
 
-// ─── Simple Markdown-like Renderer ──────────────────────────────────────────
+// ─── Bot text renderer (uses renderChatMessage + bold handling) ──────────────
 
 function renderBotText(text: string) {
-    const lines = text.split("\n");
-    return lines.map((line, i) => {
-        // Bold **text**
-        const parts = line.split(/(\*\*[^*]+\*\*)/g);
-        const rendered = parts.map((part, j) => {
-            if (part.startsWith("**") && part.endsWith("**")) {
-                return <strong key={j}>{part.slice(2, -2)}</strong>;
-            }
-            // Inline code `text`
-            const codeParts = part.split(/(`[^`]+`)/g);
-            return codeParts.map((cp, k) => {
-                if (cp.startsWith("`") && cp.endsWith("`")) {
-                    return <code key={`${j}-${k}`} className="px-1 py-0.5 bg-slate-200 rounded text-[12px] font-mono">{cp.slice(1, -1)}</code>;
-                }
-                return cp;
-            });
-        });
-        return <div key={i}>{rendered}</div>;
+    // renderChatMessage handles code blocks, inline code, math, URLs, mentions
+    // We also handle bold **text** for bot responses
+    const boldParts = text.split(/(\*\*[^*]+\*\*)/g);
+    if (boldParts.length === 1) return renderChatMessage(text);
+    return boldParts.map((part, i) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+            return <strong key={i}>{part.slice(2, -2)}</strong>;
+        }
+        return <span key={i}>{renderChatMessage(part)}</span>;
     });
 }
 
 // ─── /command Highlight ─────────────────────────────────────────────────────
 
 function renderUserText(text: string) {
-    // Highlight /command at the start of messages, then run renderWithMentions on remaining parts
+    // Highlight /command at the start of messages, then run renderChatMessage on remaining parts
     const slashRegex = /(^\/\S+)/;
     const parts = text.split(slashRegex);
-    if (parts.length === 1) return renderWithMentions(text);
+    if (parts.length === 1) return renderChatMessage(text);
     return parts.map((part, i) => {
         if (/^\/\S+/.test(part)) {
             return <span key={i} className="px-1 py-0.5 rounded text-blue-600 font-bold" style={{ background: "rgba(59,130,246,0.15)" }}>{part}</span>;
         }
-        return <span key={i}>{renderWithMentions(part)}</span>;
+        return <span key={i}>{renderChatMessage(part)}</span>;
     });
 }
 
@@ -332,6 +324,7 @@ export const AiBotChat = memo(function AiBotChat({
                                             }}>
                                             {msg.imageUrl && <img src={msg.imageUrl} alt="" className="w-full rounded-lg mb-1" style={{ maxHeight: 300, objectFit: 'cover' }} />}
                                             {isBot ? renderBotText(msg.text) : renderUserText(msg.text)}
+                                            {msg.text && extractFirstUrl(msg.text) && <OgPreviewCard url={extractFirstUrl(msg.text)!} />}
                                         </div>
                                         {!isMe && !isBot && !msg._sending && !msg._failed && <ReadReceiptBadge msgId={msg.id} currentUser={currentUser} readReceipts={readReceipts} showZero={true} />}
                                     </div>

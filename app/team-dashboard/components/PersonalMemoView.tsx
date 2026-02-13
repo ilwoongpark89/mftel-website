@@ -3,10 +3,11 @@
 import { useState, useEffect, useRef, useCallback, useContext, memo } from "react";
 import type { LabFile, Memo, TeamChatMsg } from "../lib/types";
 import { MEMBERS, MEMO_COLORS } from "../lib/constants";
-import { genId, chatKeyDown, renderWithMentions, uploadFile } from "../lib/utils";
+import { genId, chatKeyDown, renderChatMessage, extractFirstUrl, sendMentionPush, uploadFile } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useMention, MentionPopup, useCommentImg } from "../lib/hooks";
-import { ColorPicker, EmojiPickerPopup, FileBox, ReadReceiptBadge, SavingBadge, useLayoutSettings, LayoutSettingsOverlay } from "./shared";
+import { ChatImageLightbox, ColorPicker, EmojiPickerPopup, FileBox, ReadReceiptBadge, SavingBadge, useLayoutSettings, LayoutSettingsOverlay } from "./shared";
+import { OgPreviewCard } from "./OgPreviewCard";
 
 const PersonalMemoView = memo(function PersonalMemoView({ memos, onSave, onDelete, files, onAddFile, onDeleteFile, chat, onAddChat, onUpdateChat, onDeleteChat, onClearChat, onRetryChat, currentUser, readReceipts, externalLayoutOpen, onExternalLayoutClose }: {
     memos: Memo[]; onSave: (m: Memo) => void; onDelete: (id: number) => void;
@@ -30,7 +31,7 @@ const PersonalMemoView = memo(function PersonalMemoView({ memos, onSave, onDelet
     const [chatText, setChatText] = useState("");
     const [chatImg, setChatImg] = useState("");
     const [imgUploading, setImgUploading] = useState(false);
-    const [previewImg, setPreviewImg] = useState("");
+    const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
     const [showLayoutSettings, setShowLayoutSettings] = useState(false);
     const layoutOpen = showLayoutSettings || !!externalLayoutOpen;
     const closeLayout = () => { setShowLayoutSettings(false); onExternalLayoutClose?.(); };
@@ -52,6 +53,13 @@ const PersonalMemoView = memo(function PersonalMemoView({ memos, onSave, onDelet
         const pos = el?.selectionStart ?? chatText.length;
         const result = mention.apply(chatText, pos, name);
         if (result) { setChatText(result.newText); mention.close(); setTimeout(() => { el?.focus(); el?.setSelectionRange(result.cursorPos, result.cursorPos); }, 10); }
+    };
+
+    // Collect all images from chat messages for lightbox gallery
+    const chatImages = chat.filter(m => m.imageUrl && !m.deleted).map(m => m.imageUrl!);
+    const openLightbox = (url: string) => {
+        const idx = chatImages.indexOf(url);
+        setLightboxIdx(idx >= 0 ? idx : 0);
     };
 
     const toggleReaction = (msgId: number, emoji: string) => {
@@ -95,6 +103,7 @@ const PersonalMemoView = memo(function PersonalMemoView({ memos, onSave, onDelet
     const sendChat = () => {
         if (!chatText.trim() && !chatImg) return;
         onAddChat({ id: genId(), author: currentUser, text: chatText.trim(), date: new Date().toLocaleString("ko-KR"), imageUrl: chatImg || undefined, replyTo: chatReplyTo ? { id: chatReplyTo.id, author: chatReplyTo.author, text: chatReplyTo.text } : undefined });
+        if (chatText.trim()) sendMentionPush(chatText.trim(), currentUser, "PI 채팅");
         setChatText(""); setChatImg(""); setChatReplyTo(null);
     };
     const handleChatImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -168,7 +177,7 @@ const PersonalMemoView = memo(function PersonalMemoView({ memos, onSave, onDelet
                                             <div className="text-[11px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
                                             {cmts.slice(-2).map(c => (
                                                 <div key={c.id} className="text-[11px] text-slate-500 truncate">
-                                                    <span className="font-medium text-slate-600">{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
+                                                    <span className="font-medium text-slate-600">{c.author}</span> {renderChatMessage(c.text)}{c.imageUrl && " 📷"}
                                                 </div>
                                             ))}
                                         </div>
@@ -297,8 +306,8 @@ const PersonalMemoView = memo(function PersonalMemoView({ memos, onSave, onDelet
                                                 )}
                                                 <div style={{ background: isMe ? "#E3F2FD" : "#F1F3F5", borderRadius: "18px", padding: "7px 14px", lineHeight: "1.5", wordBreak: 'break-all', overflowWrap: 'break-word' }}
                                                     className="text-[13px] text-slate-800">
-                                                    {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollPiChat} onClick={(e) => { e.stopPropagation(); setPreviewImg(msg.imageUrl!); }} />}
-                                                    {msg.text && <div className="whitespace-pre-wrap break-words">{renderWithMentions(msg.text)}</div>}
+                                                    {msg.imageUrl && <img src={msg.imageUrl} alt="" className="max-h-[300px] rounded-md mb-1 cursor-pointer" style={{maxWidth:"min(80%, 400px)"}} onLoad={scrollPiChat} onClick={(e) => { e.stopPropagation(); const idx = chatImages.indexOf(msg.imageUrl!); setLightboxIdx(idx >= 0 ? idx : 0); }} />}
+                                                    {msg.text && <div className="whitespace-pre-wrap break-words">{renderChatMessage(msg.text)}{extractFirstUrl(msg.text) && <OgPreviewCard url={extractFirstUrl(msg.text)!} />}</div>}
                                                 </div>
                                                 {Object.keys(reactions).length > 0 && (
                                                     <div className={`absolute -bottom-3 ${isMe ? "right-1" : "left-1"} flex flex-wrap gap-0.5`}>
@@ -394,7 +403,7 @@ const PersonalMemoView = memo(function PersonalMemoView({ memos, onSave, onDelet
                                     {(selected.comments || []).map(c => (
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group/c relative">
                                             <button onClick={() => deleteComment(c.id)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderChatMessage(c.text)}{c.text && extractFirstUrl(c.text) && <OgPreviewCard url={extractFirstUrl(c.text)!} />}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{c.date}</div>
                                         </div>
                                     ))}
@@ -435,10 +444,8 @@ const PersonalMemoView = memo(function PersonalMemoView({ memos, onSave, onDelet
                 </div>
             )}
 
-            {previewImg && (
-                <div className="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center p-4 cursor-pointer" role="dialog" aria-modal="true" onClick={() => setPreviewImg("")}>
-                    <img src={previewImg} alt="" className="max-w-[90vw] max-h-[85vh] rounded-lg shadow-2xl object-contain" />
-                </div>
+            {lightboxIdx !== null && (
+                <ChatImageLightbox images={chatImages} currentIndex={lightboxIdx} onClose={() => setLightboxIdx(null)} />
             )}
         </div>
     );

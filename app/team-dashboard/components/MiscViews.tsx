@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo, useContext, memo } from "react";
 import type { Comment, ConferenceTrip, DailyTarget, IdeaPost, Resource, Announcement, LabFile } from "../lib/types";
 import { MEMBERS, MEMBER_NAMES, DEFAULT_TEAMS, MEMO_COLORS } from "../lib/constants";
-import { genId, chatKeyDown, renderWithMentions, saveDraft, loadDraft, clearDraft, hasDraft } from "../lib/utils";
+import { genId, chatKeyDown, renderChatMessage, saveDraft, loadDraft, clearDraft, hasDraft } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useCommentImg } from "../lib/hooks";
 import { ColorPicker, SavingBadge, DetailModal3Col } from "./shared";
@@ -528,7 +528,7 @@ const ConferenceTripView = memo(function ConferenceTripView({ items, onSave, onD
                                         <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
                                             <button onClick={() => { if (!confirm("댓글을 삭제하시겠습니까?")) return; setComments(comments.filter(x => x.id !== c.id)); }}
                                                 className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderChatMessage(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
                                             <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
@@ -707,7 +707,7 @@ const ResourceView = memo(function ResourceView({ resources, onSave, onDelete, o
                                 {cmt.length > 0 ? (
                                     cmt.slice(-1).map(c => (
                                         <div key={c.id} className="text-[12px] text-slate-500 truncate">
-                                            <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
+                                            <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {renderChatMessage(c.text)}{c.imageUrl && " 📷"}
                                         </div>
                                     ))
                                 ) : (
@@ -754,7 +754,7 @@ const ResourceView = memo(function ResourceView({ resources, onSave, onDelete, o
                                         <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
                                             <button onClick={() => { if (!confirm("댓글을 삭제하시겠습니까?")) return; setComments(comments.filter(x => x.id !== c.id)); }}
                                                 className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderChatMessage(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
                                             <div className="text-[11px] text-slate-400 mt-0.5">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
@@ -918,7 +918,7 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
                                 <div className="text-[11px] font-semibold text-slate-400 mb-1">💬 댓글 {idea.comments.length}개</div>
                                 {idea.comments.slice(-2).map(c => (
                                     <div key={c.id} className="text-[12px] text-slate-500 truncate">
-                                        <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
+                                        <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {renderChatMessage(c.text)}{c.imageUrl && " 📷"}
                                     </div>
                                 ))}
                             </div>
@@ -989,7 +989,7 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group relative">
                                             <button onClick={() => deleteComment(c.id)}
                                                 className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderChatMessage(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{MEMBERS[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}

@@ -243,3 +243,13 @@
 .modal-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(0,0,0,0.2);
 }
+
+/* Chat search highlight animation */
+@keyframes chatSearchFlash {
+  0% { background-color: rgba(251, 191, 36, 0.35); }
+  100% { background-color: transparent; }
+}
+.chat-search-highlight {
+  animation: chatSearchFlash 1.8s ease-out forwards;
+  border-radius: 8px;
+}

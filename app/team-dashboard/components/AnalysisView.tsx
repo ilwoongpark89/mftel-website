@@ -3,7 +3,7 @@
 import { useState, useRef, useContext, memo } from "react";
 import type { Comment, Analysis, AnalysisLog, LabFile } from "../lib/types";
 import { MEMBERS, MEMBER_NAMES, ANALYSIS_STATUS_CONFIG, ANALYSIS_STATUS_KEYS, ANALYSIS_STATUS_MIGRATE } from "../lib/constants";
-import { genId, toggleArr, statusText, chatKeyDown, renderWithMentions, calcDropIdx, reorderKanbanItems } from "../lib/utils";
+import { genId, toggleArr, statusText, chatKeyDown, renderChatMessage, calcDropIdx, reorderKanbanItems } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useCommentImg } from "../lib/hooks";
 import { DropLine, ItemFiles, PillSelect, SavingBadge, TeamSelect, MobileReorderButtons, moveInColumn, DetailModal3Col } from "./shared";

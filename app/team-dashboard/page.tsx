@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useMemo, useRef, useContext, startTra
 // ─── Lib imports ────────────────────────────────────────────────────────────
 import type { TeamData, Paper, Todo, Experiment, Analysis, Patent, Report, Meeting, TeamMemoCard, TeamChatMsg, LabFile, ConferenceTrip, IdeaPost, Memo, Resource, DailyTarget, Announcement, VacationEntry, ScheduleEvent, TimetableBlock, ExpLogEntry, AnalysisLogEntry, MenuConfig } from "./lib/types";
 import { DEFAULT_MEMBERS, MEMBERS, MEMBER_NAMES, STATUS_CONFIG, STATUS_KEYS, PAPER_TAGS, DEFAULT_EQUIPMENT, ANALYSIS_TOOLS, CALENDAR_TYPES, CATEGORY_COLORS, DEFAULT_TEAMS, DEFAULT_PAPERS, DEFAULT_TODOS, DEFAULT_EXPERIMENTS, DEFAULT_PATENTS, DEFAULT_TIMETABLE, MEMO_COLORS } from "./lib/constants";
-import { genId, stripMsgFlags, renderWithMentions, saveDraft, loadDraft, clearDraft, hasDraft, chatKeyDown } from "./lib/utils";
+import { genId, stripMsgFlags, renderChatMessage, saveDraft, loadDraft, clearDraft, hasDraft, chatKeyDown } from "./lib/utils";
 import type { DashboardData } from "./lib/aiBot";
 import { MembersContext, ConfirmDeleteContext, SavingContext } from "./lib/contexts";
 import { useConfirmDelete, useCommentImg } from "./lib/hooks";
@@ -117,7 +117,7 @@ function ChatWithAiTab({ userName, aiBotChat, handleAddAiBotChat, handleUpdateAi
                                                 <div className="text-[11px] font-semibold text-slate-400">💬 댓글 {cmts.length}개</div>
                                                 {cmts.slice(-2).map(c => (
                                                     <div key={c.id} className="text-[11px] text-slate-500 truncate">
-                                                        <span className="font-medium text-slate-600">{MCTX[c.author]?.emoji}{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
+                                                        <span className="font-medium text-slate-600">{MCTX[c.author]?.emoji}{c.author}</span> {renderChatMessage(c.text)}{c.imageUrl && " 📷"}
                                                     </div>
                                                 ))}
                                             </div>
@@ -184,7 +184,7 @@ function ChatWithAiTab({ userName, aiBotChat, handleAddAiBotChat, handleUpdateAi
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group/c relative">
                                             <button onClick={() => confirmDel(() => { const updated = { ...selectedCard, comments: (selectedCard.comments || []).filter(x => x.id !== c.id) }; onSaveBoard(updated); setSelectedCard(updated); })}
                                                 className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{renderChatMessage(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{MCTX[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}

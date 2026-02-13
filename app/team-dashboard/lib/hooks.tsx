@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useContext, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useContext, useRef } from "react";
 import { ALL_MEMBER_NAMES, DEFAULT_MEMBERS } from "./constants";
 import { uploadFile } from "./utils";
 import { MembersContext } from "./contexts";
@@ -34,14 +34,24 @@ export function useConfirmDelete() {
 
 // ─── @Mention Hook ──────────────────────────────────────────────────────────
 
+const MENTION_SPECIAL = [
+    { name: "전체", emoji: "📢", desc: "모든 멤버에게 알림" },
+    { name: "all", emoji: "📢", desc: "Notify all members" },
+];
+const MENTION_SPECIAL_NAMES = MENTION_SPECIAL.map(s => s.name);
+
 export function useMention() {
     const [open, setOpen] = useState(false);
     const [filter, setFilter] = useState("");
     const [idx, setIdx] = useState(0);
     const filtered = useMemo(() => {
         const q = filter.toLowerCase();
-        const list = q ? ALL_MEMBER_NAMES.filter(n => n.includes(q) || (DEFAULT_MEMBERS[n]?.team || "").toLowerCase().includes(q)) : ALL_MEMBER_NAMES;
-        return list.slice(0, 6);
+        // Filter special entries
+        const specials = q ? MENTION_SPECIAL_NAMES.filter(n => n.toLowerCase().includes(q)) : MENTION_SPECIAL_NAMES;
+        // Filter member names
+        const members = q ? ALL_MEMBER_NAMES.filter(n => n.includes(q) || (DEFAULT_MEMBERS[n]?.team || "").toLowerCase().includes(q)) : ALL_MEMBER_NAMES;
+        // Specials first, then members
+        return [...specials, ...members].slice(0, 8);
     }, [filter]);
     const check = useCallback((text: string, pos: number) => {
         const before = text.slice(0, pos);
@@ -75,16 +85,20 @@ export function MentionPopup({ m, onSelect }: { m: ReturnType<typeof useMention>
     if (!m.open || m.filtered.length === 0) return null;
     return (
         <div className="absolute bottom-full left-0 right-0 z-50 bg-white rounded-lg shadow-lg border border-slate-200 py-1 mb-1" onWheel={e => e.stopPropagation()}>
-            {m.filtered.map((name, i) => (
-                <button key={name} type="button" onMouseDown={e => e.preventDefault()} onClick={() => onSelect(name)}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors"
-                    style={{ background: i === m.idx ? "#F1F5F9" : "transparent" }}
-                    onMouseEnter={() => m.setIdx(i)}>
-                    <span className="text-[14px]">{DEFAULT_MEMBERS[name]?.emoji || "👤"}</span>
-                    <span className="text-[13px] text-slate-700 font-medium">{name}</span>
-                    <span className="text-[11px] text-slate-400">{DEFAULT_MEMBERS[name]?.team}</span>
-                </button>
-            ))}
+            {m.filtered.map((name, i) => {
+                const special = MENTION_SPECIAL.find(s => s.name === name);
+                const isSpecial = !!special;
+                return (
+                    <button key={name} type="button" onMouseDown={e => e.preventDefault()} onClick={() => onSelect(name)}
+                        className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors ${isSpecial ? "border-b border-slate-100" : ""}`}
+                        style={{ background: i === m.idx ? (isSpecial ? "#FEF2F2" : "#F1F5F9") : "transparent" }}
+                        onMouseEnter={() => m.setIdx(i)}>
+                        <span className="text-[14px]">{isSpecial ? special.emoji : (DEFAULT_MEMBERS[name]?.emoji || "👤")}</span>
+                        <span className={`text-[13px] font-medium ${isSpecial ? "text-red-600" : "text-slate-700"}`}>{name}</span>
+                        <span className={`text-[11px] ${isSpecial ? "text-red-400" : "text-slate-400"}`}>{isSpecial ? special.desc : DEFAULT_MEMBERS[name]?.team}</span>
+                    </button>
+                );
+            })}
         </div>
     );
 }
@@ -151,4 +165,67 @@ export function useCommentImg() {
         </div>
     ) : null;
     return { img, clear, onPaste, uploading, preview };
+}
+
+// ─── Typing Indicator Hook ─────────────────────────────────────────────────
+
+export function useTypingIndicator(section: string, currentUser: string) {
+    const [typingUsers, setTypingUsers] = useState<string[]>([]);
+    const lastTypeRef = useRef(0);
+
+    // Report typing - throttle to once per 2 seconds
+    const reportTyping = useCallback(() => {
+        if (!currentUser || !section) return;
+        const now = Date.now();
+        if (now - lastTypeRef.current < 2000) return;
+        lastTypeRef.current = now;
+        const token = localStorage.getItem("mftel-auth-token");
+        if (!token) return;
+        fetch('/api/chat-typing', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ section, user: currentUser })
+        }).catch(() => {});
+    }, [section, currentUser]);
+
+    // Poll for typing users every 3 seconds
+    useEffect(() => {
+        if (!section || !currentUser) return;
+        const token = localStorage.getItem("mftel-auth-token");
+        if (!token) return;
+        let active = true;
+        const poll = () => {
+            if (!active) return;
+            fetch(`/api/chat-typing?section=${encodeURIComponent(section)}&user=${encodeURIComponent(currentUser)}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+                .then(r => r.json())
+                .then(d => { if (active) setTypingUsers(d.typing || []); })
+                .catch(() => {});
+        };
+        poll();
+        const interval = setInterval(poll, 3000);
+        return () => { active = false; clearInterval(interval); };
+    }, [section, currentUser]);
+
+    return { typingUsers, reportTyping };
+}
+
+// ─── Typing Indicator UI Component ─────────────────────────────────────────
+
+export function TypingIndicator({ typingUsers }: { typingUsers: string[] }) {
+    if (typingUsers.length === 0) return null;
+    return (
+        <div className="px-3 py-1 text-[12px] text-slate-400 flex items-center gap-1.5">
+            <span className="flex gap-0.5">
+                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </span>
+            {typingUsers.length === 1
+                ? `${typingUsers[0]}님이 입력 중...`
+                : `${typingUsers[0]} 외 ${typingUsers.length - 1}명이 입력 중...`
+            }
+        </div>
+    );
 }

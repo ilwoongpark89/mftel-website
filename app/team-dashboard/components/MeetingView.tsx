@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useContext, useMemo, memo } from "react";
 import type { Comment, Meeting, LabFile } from "../lib/types";
 import { MEMBERS, MEMBER_NAMES } from "../lib/constants";
-import { genId, toggleArr, chatKeyDown, renderWithMentions, saveDraft, loadDraft, clearDraft } from "../lib/utils";
+import { genId, toggleArr, chatKeyDown, renderChatMessage, saveDraft, loadDraft, clearDraft } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useCommentImg } from "../lib/hooks";
 import { PillSelect, SavingBadge, TeamFilterBar, TeamSelect, DetailModal3Col } from "./shared";
@@ -95,7 +95,7 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
                                 <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2 group relative text-[13px]">
                                     <button onClick={() => { if (!confirm("댓글을 삭제하시겠습니까?")) return; setComments(comments.filter(x => x.id !== c.id)); }}
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100">✕</button>
-                                    <div className="text-slate-700 pr-4">{renderWithMentions(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                    <div className="text-slate-700 pr-4">{renderChatMessage(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
                                     <div className="text-[11px] text-slate-400 mt-0.5">{c.author} · {c.date}</div>
                                 </div>
                             ))}
@@ -191,7 +191,7 @@ const MeetingView = memo(function MeetingView({ meetings, onSave, onDelete, curr
                                 <div className="text-[11px] font-semibold text-slate-400 mb-1">💬 댓글 {m.comments.length}개</div>
                                 {m.comments.slice(-2).map(c => (
                                     <div key={c.id} className="text-[12px] text-slate-500 truncate">
-                                        <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {renderWithMentions(c.text)}{c.imageUrl && " 📷"}
+                                        <span className="font-medium text-slate-600">{MEMBERS[c.author]?.emoji}{c.author}</span> {renderChatMessage(c.text)}{c.imageUrl && " 📷"}
                                     </div>
                                 ))}
                             </div>
