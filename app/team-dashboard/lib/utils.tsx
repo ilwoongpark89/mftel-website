@@ -76,7 +76,7 @@ export function sendMentionPush(messageText: string, sender: string, chatName: s
     const targetUsers = isAll ? ALL_MEMBER_NAMES : ALL_MEMBER_NAMES.filter(n => mentioned.includes(n));
     if (targetUsers.length === 0) return;
     const preview = messageText.length > 50 ? messageText.slice(0, 50) + "..." : messageText;
-    const tk = typeof window !== "undefined" ? localStorage.getItem("dashToken") || "" : "";
+    const tk = typeof window !== "undefined" ? localStorage.getItem("mftel-auth-token") || "" : "";
     fetch("/api/push/send", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(tk ? { Authorization: `Bearer ${tk}` } : {}) },
@@ -379,7 +379,7 @@ export const isImageFile = (f: LabFile) => /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i
 export const isPdfFile = (f: LabFile) => /\.pdf$/i.test(f.name) || f.type === "application/pdf";
 
 export async function uploadFile(file: File): Promise<string> {
-    const tk = typeof window !== "undefined" ? localStorage.getItem("dashToken") || "" : "";
+    const tk = typeof window !== "undefined" ? localStorage.getItem("mftel-auth-token") || "" : "";
     const form = new FormData();
     form.append("file", file);
     const res = await fetch("/api/dashboard-files", {
