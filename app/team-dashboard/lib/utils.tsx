@@ -85,16 +85,18 @@ export const isImageFile = (f: LabFile) => /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i
 export const isPdfFile = (f: LabFile) => /\.pdf$/i.test(f.name) || f.type === "application/pdf";
 
 export async function uploadFile(file: File): Promise<string> {
-    try {
-        const { upload } = await import("@vercel/blob/client");
-        const blob = await upload(`dashboard/${Date.now()}_${file.name}`, file, { access: "public", handleUploadUrl: "/api/dashboard-files" });
-        return blob.url;
-    } catch {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
+    const tk = typeof window !== "undefined" ? localStorage.getItem("dashToken") || "" : "";
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/dashboard-files", {
+        method: "POST",
+        body: form,
+        headers: tk ? { Authorization: `Bearer ${tk}` } : {},
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "업로드 실패" }));
+        throw new Error(err.error || "업로드 실패");
     }
+    const { url } = await res.json();
+    return url;
 }
