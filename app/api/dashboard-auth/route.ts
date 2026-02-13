@@ -60,6 +60,8 @@ async function getSessions(): Promise<Sessions> {
 
 async function setSessions(s: Sessions): Promise<void> {
     await setKey(SESSION_KEY, JSON.stringify(s));
+    // Invalidate the in-memory session cache used by validateToken
+    try { const { invalidateSessionCache } = await import('../lib/auth'); invalidateSessionCache(); } catch {}
 }
 
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;

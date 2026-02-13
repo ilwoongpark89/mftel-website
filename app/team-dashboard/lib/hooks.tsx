@@ -188,7 +188,7 @@ export function useTypingIndicator(section: string, currentUser: string) {
         }).catch(() => {});
     }, [section, currentUser]);
 
-    // Poll for typing users every 3 seconds
+    // Poll for typing users every 5 seconds
     useEffect(() => {
         if (!section || !currentUser) return;
         const token = localStorage.getItem("mftel-auth-token");
@@ -204,7 +204,7 @@ export function useTypingIndicator(section: string, currentUser: string) {
                 .catch(() => {});
         };
         poll();
-        const interval = setInterval(poll, 3000);
+        const interval = setInterval(poll, 5000);
         return () => { active = false; clearInterval(interval); };
     }, [section, currentUser]);
 

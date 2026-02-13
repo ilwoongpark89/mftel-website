@@ -723,22 +723,38 @@ export default function DashboardPage() {
 
     const pollBackoffRef = useRef(0);
     const fetchingRef = useRef(false);
+    const serverVersionRef = useRef(0);
     const fetchData = useCallback(async () => {
         const token = localStorage.getItem("mftel-auth-token");
-        if (!token) return; // Skip if not authenticated
+        if (!token) return;
         if (pendingSavesRef.current > 0 || fetchingRef.current) return;
         fetchingRef.current = true;
         try {
             const ctrl = new AbortController();
             const timeout = setTimeout(() => ctrl.abort(), 10000);
-            const res = await fetch("/api/dashboard?section=all", { signal: ctrl.signal, headers: { "Authorization": `Bearer ${token}` } });
+            const v = serverVersionRef.current;
+            const res = await fetch(`/api/dashboard?section=all${v ? `&v=${v}` : ''}`, { signal: ctrl.signal, headers: { "Authorization": `Bearer ${token}` } });
             clearTimeout(timeout);
             const d = await res.json();
             pollBackoffRef.current = 0;
             if (pendingSavesRef.current > 0) return;
-            // Cache for instant hydration on next visit
-            try { localStorage.setItem('mftel-dc', JSON.stringify(d)); } catch {}
-            hydrateData(d);
+            // Update server version
+            if (d._v) serverVersionRef.current = d._v;
+            // Skip if nothing changed (delta sync)
+            if (d._noChange) return;
+            // For partial updates, only hydrate changed sections
+            if (d._partial) {
+                const partial = { ...d };
+                delete partial._v;
+                delete partial._partial;
+                hydrateData(partial);
+                return;
+            }
+            // Full fetch — cache for instant hydration
+            const clean = { ...d };
+            delete clean._v;
+            try { localStorage.setItem('mftel-dc', JSON.stringify(clean)); } catch {}
+            hydrateData(clean);
         } catch {
             pollBackoffRef.current = Math.min(pollBackoffRef.current + 1, 3);
         } finally {
@@ -849,13 +865,13 @@ export default function DashboardPage() {
         // Initial fetch only if not already triggered eagerly from login/token validation
         const d = dataLoaded ? undefined : setTimeout(() => { fetchData(); fetchOnline(); fetchLogs(); }, 0);
         const a = setInterval(() => {
-            const delay = pollBackoffRef.current * 5000; // 0, 5s, 10s, 15s backoff
+            const delay = pollBackoffRef.current * 5000;
             if (delay > 0) { pollBackoffRef.current--; return; }
             fetchData();
-        }, 15000);
-        const b = setInterval(fetchOnline, 15000);
-        const c = setInterval(sendHeartbeat, 15000);
-        const l = setInterval(fetchLogs, 30000);
+        }, 30000);
+        const b = setInterval(fetchOnline, 30000);
+        const c = setInterval(sendHeartbeat, 30000);
+        const l = setInterval(fetchLogs, 60000);
         return () => { if (d) clearTimeout(d); clearInterval(a); clearInterval(b); clearInterval(c); clearInterval(l); };
     }, [loggedIn, fetchData, fetchOnline, sendHeartbeat, fetchLogs]);
 
