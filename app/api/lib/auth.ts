@@ -16,7 +16,7 @@ type Sessions = Record<string, { userName: string; expiresAt: number }>;
 // ─── In-memory session cache (avoids Redis read on every API call) ──────────
 let cachedSessions: Sessions | null = null;
 let sessionsCacheTime = 0;
-const SESSION_CACHE_TTL = 60_000; // 60 seconds
+const SESSION_CACHE_TTL = 300_000; // 5 minutes
 
 async function getSessions(): Promise<Sessions> {
     const now = Date.now();

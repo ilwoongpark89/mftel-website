@@ -860,20 +860,32 @@ export default function DashboardPage() {
         })();
     }, []);
 
+    // ─── Smart polling: pause when tab hidden, longer intervals ────────────────
+    const tabVisibleRef = useRef(true);
+    useEffect(() => {
+        const handler = () => { tabVisibleRef.current = !document.hidden; };
+        document.addEventListener("visibilitychange", handler);
+        return () => document.removeEventListener("visibilitychange", handler);
+    }, []);
+
     useEffect(() => {
         if (!loggedIn) return;
         // Initial fetch only if not already triggered eagerly from login/token validation
-        const d = dataLoaded ? undefined : setTimeout(() => { fetchData(); fetchOnline(); fetchLogs(); }, 0);
+        const d = dataLoaded ? undefined : setTimeout(() => { fetchData(); fetchOnline(); }, 0);
+        // Data polling: 60s (was 30s), skip when tab hidden
         const a = setInterval(() => {
+            if (!tabVisibleRef.current) return;
             const delay = pollBackoffRef.current * 5000;
             if (delay > 0) { pollBackoffRef.current--; return; }
             fetchData();
-        }, 30000);
-        const b = setInterval(fetchOnline, 30000);
-        const c = setInterval(sendHeartbeat, 30000);
-        const l = setInterval(fetchLogs, 60000);
-        return () => { if (d) clearTimeout(d); clearInterval(a); clearInterval(b); clearInterval(c); clearInterval(l); };
-    }, [loggedIn, fetchData, fetchOnline, sendHeartbeat, fetchLogs]);
+        }, 60000);
+        // Online polling: 60s (was 30s), skip when tab hidden
+        const b = setInterval(() => { if (tabVisibleRef.current) fetchOnline(); }, 60000);
+        // Heartbeat: 60s (was 30s), always send (even if hidden, to keep presence)
+        const c = setInterval(sendHeartbeat, 60000);
+        // Logs: only fetch on demand (removed from polling — saves ~30GB/month)
+        return () => { if (d) clearTimeout(d); clearInterval(a); clearInterval(b); clearInterval(c); };
+    }, [loggedIn, fetchData, fetchOnline, sendHeartbeat]);
 
     useEffect(() => {
         if (!userName) return;
@@ -1783,6 +1795,7 @@ export default function DashboardPage() {
     const openNoti = () => {
         setNotiOpen(true);
         markNotiRead();
+        fetchLogs(); // on-demand only (no more polling)
     };
     const markNotiRead = () => {
         // genId() = Date.now()*100 + seq, so notiLastSeen must use same scale

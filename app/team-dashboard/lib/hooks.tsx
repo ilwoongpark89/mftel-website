@@ -188,14 +188,14 @@ export function useTypingIndicator(section: string, currentUser: string) {
         }).catch(() => {});
     }, [section, currentUser]);
 
-    // Poll for typing users every 5 seconds
+    // Poll for typing users every 10 seconds (only when tab visible)
     useEffect(() => {
         if (!section || !currentUser) return;
         const token = localStorage.getItem("mftel-auth-token");
         if (!token) return;
         let active = true;
         const poll = () => {
-            if (!active) return;
+            if (!active || document.hidden) return;
             fetch(`/api/chat-typing?section=${encodeURIComponent(section)}&user=${encodeURIComponent(currentUser)}`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
@@ -204,7 +204,7 @@ export function useTypingIndicator(section: string, currentUser: string) {
                 .catch(() => {});
         };
         poll();
-        const interval = setInterval(poll, 5000);
+        const interval = setInterval(poll, 10000);
         return () => { active = false; clearInterval(interval); };
     }, [section, currentUser]);
 

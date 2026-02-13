@@ -12,8 +12,10 @@ const redis = isRedisConfigured ? new Redis({
 // In-memory fallback for local dev
 const localTyping: Record<string, number> = {};
 
-const TYPING_TTL = 4; // seconds
-const KEY_PREFIX = 'mftel:dashboard:typing:';
+// Use a single Redis hash instead of individual keys + SCAN
+// Hash: mftel:dashboard:typing → { "section:user": timestamp, ... }
+const TYPING_HASH = 'mftel:dashboard:typing';
+const TYPING_TTL_MS = 5000; // 5 seconds (slightly longer than poll interval)
 
 // POST - Report that user is typing
 export async function POST(request: NextRequest) {
@@ -26,13 +28,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'section and user required' }, { status: 400 });
         }
 
-        const key = `${KEY_PREFIX}${section}:${user}`;
+        const field = `${section}:${user}`;
 
         if (redis) {
-            await redis.set(key, '1', { ex: TYPING_TTL });
+            await redis.hset(TYPING_HASH, { [field]: Date.now() });
         } else {
-            // Local dev fallback with manual TTL tracking
-            localTyping[key] = Date.now() + TYPING_TTL * 1000;
+            localTyping[field] = Date.now();
         }
 
         return NextResponse.json({ ok: true });
@@ -57,33 +58,41 @@ export async function GET(request: NextRequest) {
 
     try {
         const typingUsers: string[] = [];
+        const now = Date.now();
+        const prefix = `${section}:`;
 
         if (redis) {
-            // Scan for keys matching the section pattern
-            const pattern = `${KEY_PREFIX}${section}:*`;
-            let cursor = 0;
-            do {
-                const [nextCursor, keys] = await redis.scan(cursor, { match: pattern, count: 50 });
-                cursor = typeof nextCursor === 'number' ? nextCursor : Number(nextCursor);
-                for (const key of keys) {
-                    const userName = (key as string).replace(`${KEY_PREFIX}${section}:`, '');
-                    if (userName && userName !== currentUser) {
-                        typingUsers.push(userName);
+            // 1 hgetall instead of SCAN — O(1) command count
+            const all = await redis.hgetall(TYPING_HASH) as Record<string, string | number> | null;
+            if (all) {
+                const staleFields: string[] = [];
+                for (const [field, ts] of Object.entries(all)) {
+                    const timestamp = typeof ts === 'number' ? ts : parseInt(String(ts), 10);
+                    if (now - timestamp > TYPING_TTL_MS) {
+                        staleFields.push(field); // collect stale entries for cleanup
+                        continue;
+                    }
+                    if (field.startsWith(prefix)) {
+                        const userName = field.slice(prefix.length);
+                        if (userName && userName !== currentUser) {
+                            typingUsers.push(userName);
+                        }
                     }
                 }
-            } while (cursor !== 0);
+                // Lazy cleanup of stale entries (fire-and-forget)
+                if (staleFields.length > 0) {
+                    redis.hdel(TYPING_HASH, ...staleFields).catch(() => {});
+                }
+            }
         } else {
             // Local dev fallback
-            const now = Date.now();
-            const prefix = `${KEY_PREFIX}${section}:`;
-            for (const [key, expiry] of Object.entries(localTyping)) {
-                if (key.startsWith(prefix) && expiry > now) {
-                    const userName = key.replace(prefix, '');
+            for (const [field, ts] of Object.entries(localTyping)) {
+                if (now - ts > TYPING_TTL_MS) { delete localTyping[field]; continue; }
+                if (field.startsWith(prefix)) {
+                    const userName = field.slice(prefix.length);
                     if (userName && userName !== currentUser) {
                         typingUsers.push(userName);
                     }
-                } else if (expiry <= now) {
-                    delete localTyping[key];
                 }
             }
         }

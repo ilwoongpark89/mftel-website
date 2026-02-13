@@ -31,13 +31,9 @@ async function setKey(key: string, value: string): Promise<void> {
 
 const DASHBOARD_PREFIX = 'mftel:dashboard:';
 const LOG_PREFIX = 'mftel:log:';
-const MAX_LOG_ENTRIES = 5000;
-
-// ─── In-memory version tracking for delta sync ─────────────────────────────
-// Each section gets a version number that increments on write.
-// Clients send their known versions; server only returns sections that changed.
-const sectionVersions: Record<string, number> = {};
-let globalVersion = 0;
+const VERSION_KEY = 'mftel:dashboard:_gv';        // global version (Redis persisted)
+const SECTION_VERSIONS_KEY = 'mftel:dashboard:_sv'; // per-section versions (Redis persisted)
+const MAX_LOG_ENTRIES = 2000; // reduced from 5000
 
 const ALLOWED_SECTIONS = new Set([
     "announcements", "papers", "experiments", "todos", "conferences",
@@ -48,6 +44,39 @@ const ALLOWED_SECTIONS = new Set([
     "members", "online", "dispatches", "readReceipts", "pushPrefs", "experimentLogs", "analysisLogs", "experimentLogCategories", "analysisLogCategories",
     "aiBotChat", "aiBotBoard", "casualChat", "menuConfig",
 ]);
+
+// ─── Redis-persisted delta sync ─────────────────────────────────────────────
+// Versions are stored in Redis so they survive serverless cold starts.
+// In-memory cache avoids re-reading on every request within same instance.
+let cachedGV = 0;
+let cachedSV: Record<string, number> = {};
+let versionCacheTime = 0;
+const VERSION_CACHE_TTL = 10_000; // 10s — short enough to catch cross-instance writes
+
+async function getVersions(): Promise<{ gv: number; sv: Record<string, number> }> {
+    const now = Date.now();
+    if (cachedGV > 0 && now - versionCacheTime < VERSION_CACHE_TTL) {
+        return { gv: cachedGV, sv: cachedSV };
+    }
+    if (!redis) return { gv: 1, sv: {} };
+    const [gvRaw, svRaw] = await Promise.all([redis.get(VERSION_KEY), redis.get(SECTION_VERSIONS_KEY)]);
+    cachedGV = typeof gvRaw === 'number' ? gvRaw : (gvRaw ? parseInt(String(gvRaw), 10) : 1);
+    if (cachedGV < 1) cachedGV = 1; // never 0
+    cachedSV = svRaw ? (typeof svRaw === 'string' ? JSON.parse(svRaw) : svRaw as Record<string, number>) : {};
+    versionCacheTime = now;
+    return { gv: cachedGV, sv: cachedSV };
+}
+
+async function bumpVersion(section: string): Promise<number> {
+    if (!redis) { cachedGV++; cachedSV[section] = cachedGV; return cachedGV; }
+    const newGV = await redis.incr(VERSION_KEY);
+    cachedGV = newGV;
+    cachedSV[section] = newGV;
+    versionCacheTime = Date.now();
+    // Fire-and-forget: persist section versions (non-blocking)
+    redis.set(SECTION_VERSIONS_KEY, JSON.stringify(cachedSV)).catch(() => {});
+    return newGV;
+}
 
 async function appendLog(logKey: string, entry: Record<string, unknown>) {
     const raw = await getKey(logKey);
@@ -72,7 +101,7 @@ export async function GET(request: NextRequest) {
             const users = raw ? JSON.parse(raw) : [];
             // Filter to only users active in last 60s (heartbeat every 30s)
             const now = Date.now();
-            const active = users.filter((u: { name: string; timestamp: number }) => now - u.timestamp < 60000);
+            const active = users.filter((u: { name: string; timestamp: number }) => now - u.timestamp < 120000);
             return NextResponse.json({ users: active });
         }
 
@@ -84,28 +113,44 @@ export async function GET(request: NextRequest) {
         if (section === 'all') {
             const keys = ["announcements","papers","experiments","todos","conferences","lectures","patents","vacations","schedule","timetable","reports","teams","dailyTargets","philosophy","resources","ideas","analyses","chatPosts","customEmojis","statusMessages","equipmentList","personalMemos","personalFiles","piChat","teamMemos","labChat","labBoard","labFiles","meetings","analysisToolList","paperTagList","members","dispatches","readReceipts","pushPrefs","experimentLogs","analysisLogs","experimentLogCategories","analysisLogCategories","aiBotChat","aiBotBoard","casualChat","menuConfig"];
 
-            // Delta sync: client sends `v` param with known globalVersion
-            // If nothing changed, return 304-equivalent empty response
+            // Delta sync with Redis-persisted versions (survives cold starts)
+            const { gv, sv } = await getVersions(); // 1 Redis read (cached 10s)
             const clientVersion = parseInt(searchParams.get('v') || '0', 10);
-            if (clientVersion > 0 && clientVersion >= globalVersion) {
-                return NextResponse.json({ _noChange: true, _v: globalVersion });
+
+            if (clientVersion > 0 && clientVersion >= gv) {
+                return NextResponse.json({ _noChange: true, _v: gv });
             }
 
-            // If client has a previous version, only return changed sections
+            // Partial: only return changed sections
             if (clientVersion > 0) {
-                const changedKeys = keys.filter(k => (sectionVersions[k] || 0) > clientVersion);
+                const changedKeys = keys.filter(k => (sv[k] || 0) > clientVersion);
                 if (changedKeys.length === 0) {
-                    return NextResponse.json({ _noChange: true, _v: globalVersion });
+                    return NextResponse.json({ _noChange: true, _v: gv });
                 }
-                const results = await Promise.all(changedKeys.map(k => getKey(`${DASHBOARD_PREFIX}${k}`)));
-                const out: Record<string, unknown> = { _v: globalVersion, _partial: true };
+                // Use mget for batch read (1 command instead of N)
+                let results: (string | null)[];
+                if (redis) {
+                    const redisKeys = changedKeys.map(k => `${DASHBOARD_PREFIX}${k}`);
+                    const raw = await redis.mget<(string | null)[]>(...redisKeys);
+                    results = raw.map(v => v === null || v === undefined ? null : typeof v === 'string' ? v : JSON.stringify(v));
+                } else {
+                    results = await Promise.all(changedKeys.map(k => getKey(`${DASHBOARD_PREFIX}${k}`)));
+                }
+                const out: Record<string, unknown> = { _v: gv, _partial: true };
                 changedKeys.forEach((k, i) => { out[k] = results[i] ? JSON.parse(results[i] as string) : null; });
                 return NextResponse.json(out);
             }
 
-            // Full fetch (first load)
-            const results = await Promise.all(keys.map(k => getKey(`${DASHBOARD_PREFIX}${k}`)));
-            const out: Record<string, unknown> = { _v: globalVersion };
+            // Full fetch (first load only) — use mget for 1 batch command
+            let results: (string | null)[];
+            if (redis) {
+                const redisKeys = keys.map(k => `${DASHBOARD_PREFIX}${k}`);
+                const raw = await redis.mget<(string | null)[]>(...redisKeys);
+                results = raw.map(v => v === null || v === undefined ? null : typeof v === 'string' ? v : JSON.stringify(v));
+            } else {
+                results = await Promise.all(keys.map(k => getKey(`${DASHBOARD_PREFIX}${k}`)));
+            }
+            const out: Record<string, unknown> = { _v: gv };
             keys.forEach((k, i) => { out[k] = results[i] ? JSON.parse(results[i] as string) : null; });
             return NextResponse.json(out);
         }
@@ -180,10 +225,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: true });
         }
 
-        // Save section data + bump version for delta sync
+        // Save section data + bump version for delta sync (persisted to Redis)
         await setKey(`${DASHBOARD_PREFIX}${section}`, JSON.stringify(data));
-        globalVersion++;
-        sectionVersions[section] = globalVersion;
+        await bumpVersion(section);
         // Log modification (skip frequent/noisy sections)
         if (userName && !['online', 'readReceipts'].includes(section)) {
             await appendLog(`${LOG_PREFIX}modifications`, { userName, section, action: 'update', ...(detail ? { detail } : {}) });
