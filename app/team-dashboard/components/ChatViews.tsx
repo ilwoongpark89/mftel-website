@@ -1,13 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useContext, memo } from "react";
+import dynamic from "next/dynamic";
 import type { LabFile, Memo, TeamChatMsg, TeamMemoCard } from "../lib/types";
 import { MEMBERS, MEMO_COLORS } from "../lib/constants";
-import { genId, chatKeyDown, renderChatMessage, extractFirstUrl, sendMentionPush, saveDraft, loadDraft, clearDraft, hasDraft, uploadFile } from "../lib/utils";
+import { genId, chatKeyDown, renderChatMessage, extractFirstUrl, sendMentionPush, saveDraft, loadDraft, clearDraft, hasDraft, uploadFile, stripHtml } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useMention, MentionPopup, useCommentImg, useTypingIndicator, TypingIndicator } from "../lib/hooks";
 import { ChatActionMenu, ColorPicker, EmojiPickerPopup, FileBox, ReadReceiptBadge, ReactionBadges, SavingBadge } from "./shared";
 import { OgPreviewCard } from "./OgPreviewCard";
+import { RichViewer } from "./editor";
+
+const RichEditor = dynamic(() => import("./editor/RichEditor").then(m => ({ default: m.RichEditor })), { ssr: false });
 
 const SimpleChatPanel = memo(function SimpleChatPanel({ chat, currentUser, onAdd, onUpdate, onDelete, onClear, onRetry, readReceipts }: {
     chat: TeamChatMsg[]; currentUser: string; onAdd: (msg: TeamChatMsg) => void; onUpdate: (msg: TeamChatMsg) => void; onDelete: (id: number) => void; onClear: () => void; onRetry: (id: number) => void;
@@ -331,7 +335,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                                     <h4 className="text-[13px] font-semibold text-slate-800 flex-1 min-w-0" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{card.title}<SavingBadge id={card.id} /></h4>
                                     <span className="text-[11px] text-slate-400 ml-1 whitespace-nowrap flex-shrink-0">{card.updatedAt}</span>
                                 </div>
-                                {card.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-2" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{card.content}</div>}
+                                {card.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-2" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{stripHtml(card.content)}</div>}
                                 {card.imageUrl && <img src={card.imageUrl} alt="" className="w-full rounded-lg mt-2 mb-2" style={{ maxHeight: 300, objectFit: 'cover' }} />}
                                 <div className="text-[11px] text-slate-400 mb-1">{MEMBERS[card.author]?.emoji || "👤"} {card.author}</div>
                                 {cmts.length > 0 ? (
@@ -529,8 +533,8 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                             <button onClick={() => { setBoardAdding(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
-                            <input value={boardTitle} onChange={e => setBoardTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/40" style={{height:48}} onPaste={boardImg.onPaste} />
-                            <textarea value={boardContent} onChange={e => setBoardContent(e.target.value)} placeholder="내용을 입력하세요... (Ctrl+V로 이미지 붙여넣기)" className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
+                            <input value={boardTitle} onChange={e => setBoardTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/40" style={{height:48}} />
+                            <RichEditor content={boardContent} onChange={setBoardContent} placeholder="내용을 입력하세요..." minHeight={200} />
                             {boardImg.preview}
                             <ColorPicker color={boardColor} onColor={setBoardColor} />
                         </div>
@@ -551,7 +555,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                         </div>
                         <div className="p-4" style={{ overflow: 'hidden' }}>
                             <div className="text-[12px] text-slate-400 mb-3">{MEMBERS[selectedCard.author]?.emoji || "👤"} {selectedCard.author} · {selectedCard.updatedAt}</div>
-                            {selectedCard.content && <div className="text-[14px] text-slate-700 mb-4 whitespace-pre-wrap" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{selectedCard.content}</div>}
+                            {selectedCard.content && <div className="mb-4"><RichViewer content={selectedCard.content} /></div>}
                             {selectedCard.imageUrl && <img src={selectedCard.imageUrl} alt="" className="rounded-lg mb-4 cursor-pointer" style={{ maxWidth: '100%', height: 'auto' }} onClick={() => setPreviewImg(selectedCard.imageUrl!)} />}
                             <div className="border-t border-slate-200 pt-4">
                                 <div className="text-[13px] font-semibold text-slate-600 mb-3">💬 댓글 ({(selectedCard.comments || []).length})</div>
@@ -607,8 +611,7 @@ const LabChatView = memo(function LabChatView({ chat, currentUser, onAdd, onUpda
                             </div>
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">내용</label>
-                                <textarea value={boardContent} onChange={e => setBoardContent(e.target.value)}
-                                    className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
+                                <RichEditor content={boardContent} onChange={setBoardContent} placeholder="내용을 입력하세요..." minHeight={200} />
                             </div>
                             {boardImg.preview}
                             <ColorPicker color={boardColor} onColor={setBoardColor} />

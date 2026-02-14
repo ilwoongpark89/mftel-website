@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useContext, memo } from "react";
+import dynamic from "next/dynamic";
 import type { Comment, Experiment, ExperimentLog, LabFile } from "../lib/types";
 import { MEMBERS, MEMBER_NAMES, EXP_STATUS_CONFIG, EXP_STATUS_KEYS, EXP_STATUS_MIGRATE } from "../lib/constants";
 import { genId, toggleArr, statusText, chatKeyDown, renderChatMessage, calcDropIdx, reorderKanbanItems } from "../lib/utils";
@@ -8,6 +9,9 @@ import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useCommentImg } from "../lib/hooks";
 import { DropLine, ItemFiles, PillSelect, SavingBadge, TeamSelect, MobileReorderButtons, moveInColumn, DetailModal3Col } from "./shared";
 import type { ChatMessage } from "./shared";
+import { RichViewer } from "./editor";
+
+const RichEditor = dynamic(() => import("./editor/RichEditor").then(m => ({ default: m.RichEditor })), { ssr: false });
 
 function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUser, equipmentList, teamNames }: {
     experiment: Experiment | null; onSave: (e: Experiment) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; equipmentList: string[]; teamNames?: string[];
@@ -67,8 +71,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
                     </div>
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">목표</label>
-                        <textarea value={goal} onChange={e => setGoal(e.target.value)} placeholder="실험 목표를 작성하세요..."
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] h-[60px] resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+                        <RichEditor content={goal} onChange={setGoal} placeholder="실험 목표를 작성하세요..." compact minHeight={60} />
                     </div>
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">달성도 {progress}%</label>
@@ -119,7 +122,7 @@ function ExperimentFormModal({ experiment, onSave, onDelete, onClose, currentUse
                         </div>
                         <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
                             {logs.map(l => (
-                                <div key={l.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
+                                <div key={l.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group relative">
                                     <button onClick={() => { if (!confirm("기록을 삭제하시겠습니까?")) return; setLogs(logs.filter(x => x.id !== l.id)); }}
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                     <div className="text-[13px] text-slate-700 pr-4">{l.text}</div>
@@ -390,7 +393,7 @@ const ExperimentView = memo(function ExperimentView({ experiments, onSave, onDel
                     {selected.goal && (
                         <div>
                             <span className="text-[12px] font-semibold text-slate-500 block mb-1">목표</span>
-                            <p className="text-[13px] text-slate-600 whitespace-pre-wrap">{selected.goal}</p>
+                            <RichViewer content={selected.goal} />
                         </div>
                     )}
                     {selected.team && (

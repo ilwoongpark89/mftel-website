@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useMemo, useRef, useContext, startTra
 // ─── Lib imports ────────────────────────────────────────────────────────────
 import type { TeamData, Paper, Todo, Experiment, Analysis, Patent, Report, Meeting, TeamMemoCard, TeamChatMsg, LabFile, ConferenceTrip, IdeaPost, Memo, Resource, DailyTarget, Announcement, VacationEntry, ScheduleEvent, TimetableBlock, ExpLogEntry, AnalysisLogEntry, MenuConfig } from "./lib/types";
 import { DEFAULT_MEMBERS, MEMBERS, MEMBER_NAMES, STATUS_CONFIG, STATUS_KEYS, PAPER_TAGS, DEFAULT_EQUIPMENT, ANALYSIS_TOOLS, CALENDAR_TYPES, CATEGORY_COLORS, DEFAULT_TEAMS, DEFAULT_PAPERS, DEFAULT_TODOS, DEFAULT_EXPERIMENTS, DEFAULT_PATENTS, DEFAULT_TIMETABLE, MEMO_COLORS } from "./lib/constants";
-import { genId, stripMsgFlags, renderChatMessage, saveDraft, loadDraft, clearDraft, hasDraft, chatKeyDown } from "./lib/utils";
+import { genId, stripMsgFlags, renderChatMessage, saveDraft, loadDraft, clearDraft, hasDraft, chatKeyDown, stripHtml } from "./lib/utils";
 import type { DashboardData } from "./lib/aiBot";
 import { MembersContext, ConfirmDeleteContext, SavingContext } from "./lib/contexts";
 import { useConfirmDelete, useCommentImg } from "./lib/hooks";
@@ -13,6 +13,9 @@ import dynamic from "next/dynamic";
 import { LoginScreen } from "./components/LoginScreen";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ColorPicker, SavingBadge } from "./components/shared";
+import { RichViewer } from "./components/editor";
+
+const RichEditor = dynamic(() => import("./components/editor/RichEditor").then(m => ({ default: m.RichEditor })), { ssr: false });
 
 // ─── Lazy-loaded components (code splitting) ─────────────────────────────────
 const OverviewDashboard = dynamic(() => import("./components/OverviewDashboard").then(m => ({ default: m.OverviewDashboard })), { ssr: false });
@@ -110,7 +113,7 @@ function ChatWithAiTab({ userName, aiBotChat, handleAddAiBotChat, handleUpdateAi
                                             <h4 className="text-[13px] font-semibold text-slate-800 break-words flex-1">{card.title}<SavingBadge id={card.id} /></h4>
                                             <span className="text-[11px] text-slate-400 ml-1 whitespace-nowrap">{card.updatedAt}</span>
                                         </div>
-                                        {card.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-2 break-words">{card.content}</div>}
+                                        {card.content && <div className="text-[11px] text-slate-600 mb-2 line-clamp-2 break-words">{stripHtml(card.content)}</div>}
                                         <div className="text-[11px] text-slate-400 mb-1">{MCTX[card.author]?.emoji || "👤"} {card.author}</div>
                                         {cmts.length > 0 ? (
                                             <div className="border-t border-slate-100 pt-1.5 mt-auto space-y-0.5">
@@ -153,8 +156,8 @@ function ChatWithAiTab({ userName, aiBotChat, handleAddAiBotChat, handleUpdateAi
                             <button onClick={() => { setBoardAdding(false); boardImg.clear(); }} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                         </div>
                         <div className="p-4 space-y-3">
-                            <input value={boardTitle} onChange={e => setBoardTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/40" style={{height:48}} onPaste={boardImg.onPaste} />
-                            <textarea value={boardContent} onChange={e => setBoardContent(e.target.value)} placeholder="내용을 입력하세요... (Ctrl+V로 이미지 붙여넣기)" className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
+                            <input value={boardTitle} onChange={e => setBoardTitle(e.target.value)} placeholder="제목" className="w-full border border-slate-200 rounded-lg px-3 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/40" style={{height:48}} />
+                            <RichEditor content={boardContent} onChange={setBoardContent} placeholder="내용을 입력하세요..." minHeight={200} />
                             {boardImg.preview}
                             <ColorPicker color={boardColor} onColor={setBoardColor} />
                         </div>
@@ -175,7 +178,7 @@ function ChatWithAiTab({ userName, aiBotChat, handleAddAiBotChat, handleUpdateAi
                         </div>
                         <div className="p-4">
                             <div className="text-[12px] text-slate-400 mb-3">{MCTX[selectedCard.author]?.emoji || "👤"} {selectedCard.author} · {selectedCard.updatedAt}</div>
-                            {selectedCard.content && <div className="text-[14px] text-slate-700 mb-4 whitespace-pre-wrap break-words">{selectedCard.content}</div>}
+                            {selectedCard.content && <div className="mb-4"><RichViewer content={selectedCard.content} /></div>}
                             {selectedCard.imageUrl && <img src={selectedCard.imageUrl} alt="" className="max-w-full max-h-[300px] rounded-md mb-4" />}
                             <div className="border-t border-slate-200 pt-4">
                                 <div className="text-[13px] font-semibold text-slate-600 mb-3">💬 댓글 ({(selectedCard.comments || []).length})</div>
@@ -184,7 +187,7 @@ function ChatWithAiTab({ userName, aiBotChat, handleAddAiBotChat, handleUpdateAi
                                         <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group/c relative">
                                             <button onClick={() => confirmDel(() => { const updated = { ...selectedCard, comments: (selectedCard.comments || []).filter(x => x.id !== c.id) }; onSaveBoard(updated); setSelectedCard(updated); })}
                                                 className="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover/c:opacity-100 transition-opacity">✕</button>
-                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{renderChatMessage(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
+                                            <div className="text-[13px] text-slate-700 pr-4 break-words">{renderChatMessage(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-lg mt-1" />}</div>
                                             <div className="text-[11px] text-slate-400 mt-1">{MCTX[c.author]?.emoji} {c.author} · {c.date}</div>
                                         </div>
                                     ))}
@@ -231,8 +234,7 @@ function ChatWithAiTab({ userName, aiBotChat, handleAddAiBotChat, handleUpdateAi
                             </div>
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">내용</label>
-                                <textarea value={boardContent} onChange={e => setBoardContent(e.target.value)}
-                                    className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
+                                <RichEditor content={boardContent} onChange={setBoardContent} placeholder="내용을 입력하세요..." minHeight={200} />
                             </div>
                             {boardImg.preview}
                             <ColorPicker color={boardColor} onColor={setBoardColor} />
@@ -2313,7 +2315,7 @@ export default function DashboardPage() {
                         };
                         return (
                             <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" style={{ animation: "backdropIn 0.15s ease" }} onClick={() => { setShowExpMgr(false); setEditingCat(null); }}>
-                                <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:520, animation: "modalIn 0.2s ease"}} onClick={e => e.stopPropagation()}>
+                                <div className="bg-white rounded-xl w-full shadow-2xl p-4" style={{maxWidth:520, animation: "modalIn 0.2s ease"}} onClick={e => e.stopPropagation()}>
                                     <div className="flex items-center justify-between mb-4">
                                         <h3 className="text-[15px] font-bold text-slate-800">실험일지 관리</h3>
                                         <button onClick={() => { setShowExpMgr(false); setEditingCat(null); }} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
@@ -2391,7 +2393,7 @@ export default function DashboardPage() {
                         };
                         return (
                             <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" style={{ animation: "backdropIn 0.15s ease" }} onClick={() => { setShowAnalysisMgr(false); setEditingCat(null); }}>
-                                <div className="bg-white rounded-xl w-full shadow-2xl p-5" style={{maxWidth:520, animation: "modalIn 0.2s ease"}} onClick={e => e.stopPropagation()}>
+                                <div className="bg-white rounded-xl w-full shadow-2xl p-4" style={{maxWidth:520, animation: "modalIn 0.2s ease"}} onClick={e => e.stopPropagation()}>
                                     <div className="flex items-center justify-between mb-4">
                                         <h3 className="text-[15px] font-bold text-slate-800">해석일지 관리</h3>
                                         <button onClick={() => { setShowAnalysisMgr(false); setEditingCat(null); }} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>

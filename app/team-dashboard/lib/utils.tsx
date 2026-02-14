@@ -394,3 +394,14 @@ export async function uploadFile(file: File): Promise<string> {
     const { url } = await res.json();
     return url;
 }
+
+// ─── Strip HTML tags (for card previews) ────────────────────────────────────
+export function stripHtml(html: string): string {
+    if (!html || !/<[a-z][\s\S]*>/i.test(html)) return html || "";
+    if (typeof document !== "undefined") {
+        const tmp = document.createElement("div");
+        tmp.innerHTML = html;
+        return tmp.textContent || "";
+    }
+    return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ");
+}

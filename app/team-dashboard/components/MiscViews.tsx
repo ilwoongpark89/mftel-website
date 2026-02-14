@@ -1,13 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useContext, memo } from "react";
+import dynamic from "next/dynamic";
 import type { Comment, ConferenceTrip, DailyTarget, IdeaPost, Resource, Announcement, LabFile } from "../lib/types";
 import { MEMBERS, MEMBER_NAMES, DEFAULT_TEAMS, MEMO_COLORS } from "../lib/constants";
-import { genId, chatKeyDown, renderChatMessage, saveDraft, loadDraft, clearDraft, hasDraft } from "../lib/utils";
+import { genId, chatKeyDown, renderChatMessage, saveDraft, loadDraft, clearDraft, hasDraft, stripHtml } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useCommentImg } from "../lib/hooks";
 import { ColorPicker, SavingBadge, DetailModal3Col } from "./shared";
 import type { ChatMessage } from "./shared";
+import { RichViewer } from "./editor";
+
+const RichEditor = dynamic(() => import("./editor/RichEditor").then(m => ({ default: m.RichEditor })), { ssr: false });
 
 const DailyTargetView = memo(function DailyTargetView({ targets, onSave, currentUser }: { targets: DailyTarget[]; onSave: (t: DailyTarget[]) => void; currentUser: string }) {
     const MEMBERS = useContext(MembersContext);
@@ -298,13 +302,13 @@ const DailyTargetView = memo(function DailyTargetView({ targets, onSave, current
             {/* Edit modal */}
             {editCell && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setEditCell(null)}>
-                    <div className="bg-white rounded-xl p-4 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+                    <div className="bg-white rounded-xl p-4 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
                         <h4 className="text-[14px] mb-1" style={{fontWeight:650, color:"#334155"}}>{editCell.date === todayStr ? "오늘 목표" : `${editCell.date} 목표`}</h4>
                         <p className="text-[12px] text-slate-400 mb-3">{editCell.name}</p>
                         <textarea value={editText} onChange={e => setEditText(e.target.value)} placeholder="오늘의 목표를 작성하세요..."
                             className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/40" autoFocus />
                         <div className="flex justify-end gap-2 mt-3">
-                            <button onClick={() => setEditCell(null)} className="px-3 py-1.5 text-[13px] text-slate-500">취소</button>
+                            <button onClick={() => setEditCell(null)} className="px-3 py-1.5 text-[13px] text-slate-500 hover:bg-slate-50 rounded-lg">취소</button>
                             {editText.trim() === "" && getTarget(editCell.name, editCell.date) && (
                                 <button onClick={handleSave} className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-[13px] font-medium">삭제</button>
                             )}
@@ -525,7 +529,7 @@ const ConferenceTripView = memo(function ConferenceTripView({ items, onSave, onD
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">댓글 ({comments.length})</label>
                                 <div className="space-y-1.5 max-h-[200px] overflow-y-auto mb-2">
                                     {comments.map(c => (
-                                        <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
+                                        <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group relative">
                                             <button onClick={() => { if (!confirm("댓글을 삭제하시겠습니까?")) return; setComments(comments.filter(x => x.id !== c.id)); }}
                                                 className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                             <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderChatMessage(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
@@ -751,7 +755,7 @@ const ResourceView = memo(function ResourceView({ resources, onSave, onDelete, o
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">코멘트 ({comments.length})</label>
                                 <div className="space-y-1.5 max-h-[200px] overflow-y-auto mb-2">
                                     {comments.map(c => (
-                                        <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
+                                        <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group relative">
                                             <button onClick={() => { if (!confirm("댓글을 삭제하시겠습니까?")) return; setComments(comments.filter(x => x.id !== c.id)); }}
                                                 className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                             <div className="text-[13px] text-slate-700 pr-4" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{renderChatMessage(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="rounded-md mt-1" style={{ maxWidth: '100%', height: 'auto' }} />}</div>
@@ -909,7 +913,7 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
                             <div className="text-[14px] font-semibold text-slate-800 break-words flex-1">{idea.title}<SavingBadge id={idea.id} /></div>
                             <span className="text-[11px] text-slate-400 ml-2 whitespace-nowrap">{idea.date}</span>
                         </div>
-                        {idea.body && <div className="text-[13px] text-slate-600 mb-3 line-clamp-3 break-words">{idea.body}</div>}
+                        {idea.body && <div className="text-[13px] text-slate-600 mb-3 line-clamp-3 break-words">{stripHtml(idea.body)}</div>}
                         {idea.imageUrl && <img src={idea.imageUrl} alt="" className="w-full rounded-lg mt-2 mb-2" style={{ maxHeight: 300, objectFit: 'cover' }} />}
                         <div className="text-[12px] text-slate-400 mb-2">{MEMBERS[idea.author]?.emoji || "👤"} {idea.author}</div>
                         {/* Comment preview */}
@@ -954,8 +958,7 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
                             </div>
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">내용</label>
-                                <textarea value={body} onChange={e => setBody(e.target.value)}
-                                    className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
+                                <RichEditor content={body} onChange={setBody} placeholder="내용을 입력하세요..." minHeight={200} />
                             </div>
                             {boardImg.preview}
                             <ColorPicker color={ideaColor} onColor={setIdeaColor} />
@@ -978,7 +981,7 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
                         </div>
                         <div className="p-4">
                             <div className="text-[12px] text-slate-400 mb-3">{MEMBERS[selected.author]?.emoji || "👤"} {selected.author} · {selected.date}</div>
-                            {selected.body && <div className="text-[14px] text-slate-700 mb-4 whitespace-pre-wrap" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{selected.body}</div>}
+                            {selected.body && <div className="mb-4"><RichViewer content={selected.body} /></div>}
                             {selected.imageUrl && <img src={selected.imageUrl} alt="" className="rounded-lg mb-4 cursor-pointer" style={{ maxWidth: '100%', height: 'auto' }} onClick={() => window.open(selected.imageUrl!, '_blank')} />}
 
                             {/* Comments section */}
@@ -1037,8 +1040,7 @@ const IdeasView = memo(function IdeasView({ ideas, onSave, onDelete, onReorder, 
                             </div>
                             <div>
                                 <label className="text-[12px] font-semibold text-slate-500 block mb-1">내용</label>
-                                <textarea value={body} onChange={e => setBody(e.target.value)}
-                                    className="w-full border border-slate-200 rounded-lg px-3 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" style={{minHeight:200}} onPaste={boardImg.onPaste} onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.max(200, t.scrollHeight) + "px"; }} />
+                                <RichEditor content={body} onChange={setBody} placeholder="내용을 입력하세요..." minHeight={200} />
                             </div>
                             {boardImg.preview}
                             <ColorPicker color={ideaColor} onColor={setIdeaColor} />
@@ -1192,14 +1194,11 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
                             {/* Add input */}
                             {addingCol === col.key && (
                                 <div className="mb-3 rounded-xl p-3" style={{ background: "#F8F9FA", border: `1px solid ${colCfg.accent}` }}>
-                                    <textarea value={newText} onChange={e => setNewText(e.target.value)} placeholder="내용 작성... (Ctrl+V로 이미지 첨부)"
-                                        className="w-full bg-transparent text-[14px] focus:outline-none resize-none" rows={2} autoFocus
-                                        onPaste={annImg.onPaste}
-                                        onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && newText.trim()) { e.preventDefault(); submitAdd(); } if (e.key === "Escape") { setAddingCol(null); setNewText(""); annImg.clear(); } }} />
+                                    <RichEditor content={newText} onChange={v => setNewText(v)} placeholder="내용 작성..." compact minHeight={80} />
                                     {annImg.preview}
                                     {annImg.uploading && <div className="text-[11px] text-slate-400 mb-1">업로드 중...</div>}
                                     <div className="flex justify-end gap-1.5 mt-1">
-                                        <button onClick={() => { setAddingCol(null); setNewText(""); annImg.clear(); }} className="px-2.5 py-1 text-[12px] text-slate-400 hover:text-slate-600">취소</button>
+                                        <button onClick={() => { setAddingCol(null); setNewText(""); annImg.clear(); }} className="px-2.5 py-1 text-[12px] text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg">취소</button>
                                         <button onClick={submitAdd} className="px-3 py-1 rounded-lg text-[12px] font-medium text-white" style={{ background: colCfg.color }}>게시</button>
                                     </div>
                                 </div>
@@ -1214,7 +1213,7 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
                                         className={`group/card bg-white rounded-xl p-3.5 cursor-grab transition-all flex flex-col ${draggedItem?.id === item.id ? "opacity-40" : ""}`}
                                         style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.08)", borderLeft: `2px solid ${colCfg.color}` }}>
                                         <div className="flex items-start justify-between">
-                                            <span className="text-[14px] text-slate-800 whitespace-pre-wrap line-clamp-4 flex-1" style={{ lineHeight: 1.6, wordBreak: 'break-all', overflowWrap: 'break-word' }}>{item.text}<SavingBadge id={item.id} /></span>
+                                            <span className="text-[14px] text-slate-800 whitespace-pre-wrap line-clamp-4 flex-1" style={{ lineHeight: 1.6, wordBreak: 'break-all', overflowWrap: 'break-word' }}>{stripHtml(item.text)}<SavingBadge id={item.id} /></span>
                                         </div>
                                         {item.imageUrl && <img src={item.imageUrl} alt="" className="w-full rounded-lg mt-2" style={{ maxHeight: 300, objectFit: 'cover' }} />}
                                         <div className="mt-auto pt-2 text-[11px] text-slate-400">{item.author} · {item.date}</div>
@@ -1237,17 +1236,20 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
                             <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                         </div>
                         <div className="p-4">
-                            <p className="text-[14px] text-slate-800 whitespace-pre-wrap leading-relaxed" style={{ wordBreak: "break-all", overflowWrap: "break-word" }}>{selected.text}</p>
+                            <div className="text-[12px] text-slate-400 mb-3">{selected.author} · {selected.date}</div>
+                            <RichViewer content={selected.text} />
                             {selected.imageUrl && <img src={selected.imageUrl} alt="" className="w-full rounded-lg mt-3 cursor-pointer" style={{ maxHeight: 400, objectFit: "contain" }} onClick={() => window.open(selected.imageUrl, "_blank")} />}
                         </div>
                         <div className="flex items-center justify-between p-4 border-t border-slate-200">
-                            <span className="text-[12px] text-slate-400">{selected.author} · {selected.date}</span>
-                            {(isPI || currentUser === selected.author) && (
-                                <div className="flex gap-2">
-                                    <button onClick={() => confirmDel(() => { deleteItem(selected); setSelected(null); })} className="px-3 py-1.5 text-[13px] text-red-500 hover:bg-red-50 rounded-lg transition-colors">삭제</button>
-                                    <button onClick={() => { openEdit(selected); setSelected(null); }} className="px-4 py-1.5 text-[13px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium transition-colors">수정</button>
-                                </div>
-                            )}
+                            {(isPI || currentUser === selected.author) ? (
+                                <button onClick={() => { openEdit(selected); setSelected(null); }} className="text-[13px] text-blue-600 hover:text-blue-700 font-medium">수정</button>
+                            ) : <div />}
+                            <div className="flex items-center gap-3">
+                                {(isPI || currentUser === selected.author) && (
+                                    <button onClick={() => confirmDel(() => { deleteItem(selected); setSelected(null); })} className="text-[13px] text-red-500 hover:text-red-600">삭제</button>
+                                )}
+                                <button onClick={() => setSelected(null)} className="px-4 py-2 text-[14px] text-slate-500 hover:bg-slate-50 rounded-lg">닫기</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1261,9 +1263,7 @@ const AnnouncementView = memo(function AnnouncementView({ announcements, onAdd, 
                             <button onClick={() => setEditing(null)} className="text-slate-400 hover:text-slate-600 text-lg" title="닫기">✕</button>
                         </div>
                         <div className="p-4">
-                            <textarea value={editText} onChange={e => setEditText(e.target.value)} rows={4}
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" autoFocus
-                                onPaste={editImg.onPaste} placeholder="Ctrl+V로 이미지 첨부 가능" />
+                            <RichEditor content={editText} onChange={v => setEditText(v)} placeholder="내용을 입력하세요..." compact minHeight={80} />
                             {editImg.uploading && <div className="text-[11px] text-slate-400 mt-1">업로드 중...</div>}
                             {editImg.img ? editImg.preview : editImgUrl ? (
                                 <div className="mt-2 relative inline-block">

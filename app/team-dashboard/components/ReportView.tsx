@@ -133,7 +133,7 @@ function ReportFormModal({ report, initialCategory, onSave, onDelete, onClose, c
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">코멘트 ({comments.length})</label>
                         <div className="space-y-1.5 max-h-[200px] overflow-y-auto mb-2">
                             {comments.map(c => (
-                                <div key={c.id} className="bg-slate-50 rounded-md px-3 py-2 group relative">
+                                <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group relative">
                                     <button onClick={() => { if (!confirm("댓글을 삭제하시겠습니까?")) return; setComments(comments.filter(x => x.id !== c.id)); }}
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                     <div className="text-[13px] text-slate-700 pr-4">{renderChatMessage(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>

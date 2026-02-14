@@ -1,13 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef, useContext, useMemo, memo } from "react";
+import dynamic from "next/dynamic";
 import type { Comment, Meeting, LabFile } from "../lib/types";
 import { MEMBERS, MEMBER_NAMES } from "../lib/constants";
-import { genId, toggleArr, chatKeyDown, renderChatMessage, saveDraft, loadDraft, clearDraft } from "../lib/utils";
+import { genId, toggleArr, chatKeyDown, renderChatMessage, saveDraft, loadDraft, clearDraft, stripHtml } from "../lib/utils";
 import { MembersContext, ConfirmDeleteContext } from "../lib/contexts";
 import { useCommentImg } from "../lib/hooks";
 import { PillSelect, SavingBadge, TeamFilterBar, TeamSelect, DetailModal3Col } from "./shared";
 import type { ChatMessage } from "./shared";
+import { RichViewer } from "./editor";
+
+const RichEditor = dynamic(() => import("./editor/RichEditor").then(m => ({ default: m.RichEditor })), { ssr: false });
 
 function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, teamNames }: {
     meeting: Meeting | null; onSave: (m: Meeting) => void; onDelete?: (id: number) => void; onClose: () => void; currentUser: string; teamNames: string[];
@@ -84,15 +88,14 @@ function MeetingFormModal({ meeting, onSave, onDelete, onClose, currentUser, tea
                     {teamNames.length > 0 && <TeamSelect teamNames={teamNames} selected={team} onSelect={v => setTeam(v)} />}
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">내용 요약</label>
-                        <textarea value={summary} onChange={e => setSummary(e.target.value)} rows={5} placeholder="회의 내용을 요약해 주세요..."
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none" />
+                        <RichEditor content={summary} onChange={setSummary} placeholder="회의 내용을 요약해 주세요..." minHeight={160} />
                     </div>
                     {/* Comments */}
                     <div>
                         <label className="text-[12px] font-semibold text-slate-500 block mb-1">댓글 ({comments.length})</label>
                         <div className="space-y-1.5 mb-2 max-h-[200px] overflow-y-auto">
                             {comments.map(c => (
-                                <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2 group relative text-[13px]">
+                                <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2.5 group relative text-[13px]">
                                     <button onClick={() => { if (!confirm("댓글을 삭제하시겠습니까?")) return; setComments(comments.filter(x => x.id !== c.id)); }}
                                         className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500 text-[12px] opacity-0 group-hover:opacity-100">✕</button>
                                     <div className="text-slate-700 pr-4">{renderChatMessage(c.text)}{c.imageUrl && <img src={c.imageUrl} alt="" className="max-w-full max-h-[200px] rounded-md mt-1" />}</div>
@@ -180,7 +183,7 @@ const MeetingView = memo(function MeetingView({ meetings, onSave, onDelete, curr
                         </div>
                         {m.team && <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 font-semibold self-start mb-1">{m.team}</span>}
                         {m.goal && <div className="text-[12px] text-blue-600 mb-1 line-clamp-1"><span className="font-semibold">목표:</span> {m.goal}</div>}
-                        {m.summary && <div className="text-[13px] text-slate-600 mb-2 line-clamp-3 break-words">{m.summary}</div>}
+                        {m.summary && <div className="text-[13px] text-slate-600 mb-2 line-clamp-3 break-words">{stripHtml(m.summary)}</div>}
                         <div className="flex flex-wrap gap-0.5 mb-2">
                             {m.assignees.slice(0, 5).map(a => <span key={a} className="text-[11px] px-1 py-0.5 rounded bg-slate-50 text-slate-600">{MEMBERS[a]?.emoji}{a}</span>)}
                             {m.assignees.length > 5 && <span className="text-[11px] text-slate-400">+{m.assignees.length - 5}</span>}
@@ -235,7 +238,7 @@ const MeetingView = memo(function MeetingView({ meetings, onSave, onDelete, curr
                     {selected.summary && (
                         <div>
                             <span className="text-[12px] font-semibold text-slate-500 block mb-1">내용 요약</span>
-                            <div className="text-[13px] text-slate-700 whitespace-pre-wrap break-words">{selected.summary}</div>
+                            <RichViewer content={selected.summary} />
                         </div>
                     )}
                     {selected.team && (
