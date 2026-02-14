@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/team-dashboard",
-        destination: "https://mftel-dashboard.vercel.app",
+        destination: "https://mftel-db.vercel.app",
         permanent: false, // 307 임시 리다이렉트 (나중에 되돌릴 수 있도록)
       },
     ];
