@@ -9,6 +9,15 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "50mb",
     },
   },
+  async redirects() {
+    return [
+      {
+        source: "/team-dashboard",
+        destination: "https://mftel-dashboard.vercel.app",
+        permanent: false, // 307 임시 리다이렉트 (나중에 되돌릴 수 있도록)
+      },
+    ];
+  },
 };
 
 export default nextConfig;
