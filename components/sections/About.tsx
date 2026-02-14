@@ -41,7 +41,7 @@ export default function About() {
             return (
                 <>
                     About{" "}
-                    <Link href="/team-dashboard" className="hover:text-rose-800 transition-colors cursor-pointer">
+                    <Link href="https://mftel-dashboard.vercel.app" className="hover:text-rose-800 transition-colors cursor-pointer">
                         Us
                     </Link>
                 </>

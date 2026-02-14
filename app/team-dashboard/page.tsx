@@ -1841,6 +1841,23 @@ export default function DashboardPage() {
         const now = Date.now() * 100 + 99;
         setNotiLastSeen(now);
         try { localStorage.setItem(`mftel_notiLastSeen_${userName}`, String(now)); } catch (e) { console.warn("notiLastSeen save failed:", e); }
+        // Also mark all chat channels as read so tab title badge syncs
+        setChatReadTs(prev => {
+            const next = { ...prev };
+            // Mark all channels that have unread messages
+            if (labChat.some(m => m.author !== userName && m.id > (prev.labChat || 0))) next.labChat = now;
+            if (announcements.some(a => a.author !== userName && a.id > (prev.announcements || 0))) next.announcements = now;
+            if (aiBotChat.some(m => m.author !== userName && m.id > (prev.chat || 0)) || aiBotBoard.some(c => c.author !== userName && c.id > (prev.chat || 0))) next.chat = now;
+            teamNames.forEach(t => {
+                const ts = prev[`teamMemo_${t}`] || 0;
+                if ((teamMemos[t]?.chat || []).some(m => m.author !== userName && m.id > ts)) next[`teamMemo_${t}`] = now;
+            });
+            memberNames.forEach(n => {
+                if ((piChat[n] || []).some(m => m.author !== userName && m.id > (prev[`memo_${n}`] || 0))) next[`memo_${n}`] = now;
+            });
+            try { localStorage.setItem(`mftel_chatReadTs_${userName}`, JSON.stringify(next)); } catch {}
+            return next;
+        });
     };
     const PUSH_CATEGORIES = [
         { key: "chat", label: "채팅", desc: "연구실 채팅, 팀 메모, PI 채팅" },
@@ -1873,18 +1890,20 @@ export default function DashboardPage() {
     };
 
     // Tab notification: flash title + favicon badge when hidden & unread
+    // Must match unreadCounts formula exactly (labBoard, kanban included)
     const totalUnread = useMemo(() => {
-        const labNew = labChat.filter(m => m.author !== userName && m.id > (chatReadTs.labChat || 0)).length;
+        const labNew = labChat.filter(m => m.author !== userName && m.id > (chatReadTs.labChat || 0)).length
+            + labBoard.filter(c => c.author !== userName && c.id > (chatReadTs.labChat || 0)).length;
         const annNew = announcements.filter(a => a.author !== userName && a.id > (chatReadTs.announcements || 0)).length;
         const aiNew = aiBotChat.filter(m => m.author !== userName && m.id > (chatReadTs.chat || 0)).length + aiBotBoard.filter(c => c.author !== userName && c.id > (chatReadTs.chat || 0)).length;
         const teamNew = teamNames.reduce((sum, t) => {
             const ts = chatReadTs[`teamMemo_${t}`] || 0;
-            return sum + (teamMemos[t]?.chat || []).filter(m => m.author !== userName && m.id > ts).length;
+            return sum + (teamMemos[t]?.chat || []).filter(m => m.author !== userName && m.id > ts).length
+                + (teamMemos[t]?.kanban || []).filter(c => c.author !== userName && c.id > ts).length;
         }, 0);
         const piNew = memberNames.reduce((sum, n) => sum + (piChat[n] || []).filter(m => m.author !== userName && m.id > (chatReadTs[`memo_${n}`] || 0)).length, 0);
-        const total = labNew + annNew + aiNew + teamNew + piNew;
-        return total;
-    }, [labChat, announcements, aiBotChat, aiBotBoard, teamMemos, piChat, chatReadTs, userName, teamNames, memberNames]);
+        return labNew + annNew + aiNew + teamNew + piNew;
+    }, [labChat, labBoard, announcements, aiBotChat, aiBotBoard, teamMemos, piChat, chatReadTs, userName, teamNames, memberNames]);
 
     const lastBadgeCountRef = useRef(-1);
     useEffect(() => {
