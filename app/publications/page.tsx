@@ -1,6 +1,14 @@
 export default function Publications() {
   const publications = [
     {
+      number: 24,
+      authors: "Sung Jin Kim, Sangmin Song, Junbeom Song, Il Woong Park*, Hee Sang Yoo, Hyun Sun Park",
+      title: "Effects of surface characteristics of oxidized Zircaloy-4 on Pool boiling heat transfer",
+      journal: "International Communications in Heat and Mass Transfer",
+      details: "176, 111277, 2026",
+      link: "https://doi.org/10.1016/j.icheatmasstransfer.2026.111277"
+    },
+    {
       number: 23,
       authors: "Hyunjin Yong, Jaehyeok Yang, Yunseok Choi, Il Woong Park*, Sai Raja Gopal Vadlamudi, Uwe Hampel, Hyun Sun Park",
       title: "Experimental Study on the Influence of Sub-Millimeter Copper Foams on Boiling Heat Transfer in Vertical Orientation",
