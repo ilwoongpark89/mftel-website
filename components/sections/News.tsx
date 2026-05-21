@@ -16,6 +16,103 @@ interface NewsItem {
 
 const newsItems: NewsItem[] = [
     {
+        date: "2026. 05. 21.",
+        title: {
+            EN: "2026 New Industry Global HR Development Program — Call for Overseas Dispatch Students",
+            KR: "2026 신산업 글로벌 인력양성사업 해외파견 학생 모집 공고"
+        },
+        description: {
+            EN: `「Development of a Korean-style Energy Island Based on Wind Power — New Industry Global HR Development Program」 (Project No. RS-2026-25540249)
+
+Sponsored by the Ministry of Climate, Energy and Environment. We are recruiting graduate students to participate in overseas education and research programs.
+
+1. Program Overview
+- Title: Development of a Korean-style Energy Island Based on Wind Power — New Industry Global HR Development Program
+- Project No.: RS-2026-25540249
+- Period: 2026. 4. 1. – 2027. 3. 31. (12 months)
+- Scope: Overseas education, research, and field training to strengthen global competence in wind power and energy island fields.
+
+2. Recruitment
+- Eligibility: Graduate students in participating departments
+- Destination country: To be announced individually
+- Dispatch period: At least 6 months within the project period
+- Support: Airfare, living expenses, tuition, etc. (partial or full; varies by country/program)
+
+3. Qualifications
+- Master's / PhD students with research outputs in the dispatch field and active conference participation
+- Able to conduct on-site research for at least 6 months
+- Sufficient foreign-language proficiency for research communication
+- Holds related research experience and capabilities
+- Holds a valid passport (no expiry during dispatch) and meets visa requirements
+
+4. Application
+- Posting period: From the announcement date
+- Deadline: 2026. 5. 31. (Sun) 18:00
+- Documents: Application form, dispatch research plan, enrollment certificate, language proficiency proof or advisor's confirmation, passport copy (or issuance plan)
+- Submission: Email to ilwoongpark@inha.ac.kr
+
+5. Selection
+- Document and interview review
+- Criteria: foreign-language ability, research-field fit, related performance, study-abroad plan, academic plan, and motivation
+
+6. Notes
+- Submitted documents will not be returned.
+- Selection may be cancelled if false information is provided.
+- Schedule and program details may change.
+- A SCIE-class paper Accept within 1 year after dispatch is required. Failure may require partial or full return of the support.
+- Other matters follow the program operating standards.
+
+7. Contact
+- Inha University, Department of Mechanical Engineering
+- Prof. Il Woong Park
+- Email: ilwoongpark@inha.ac.kr`,
+            KR: `「풍력발전 기반 한국형 에너지 아일랜드 개발을 위한 신산업 글로벌 인력양성사업」
+(과제번호: RS-2026-25540249)
+
+본 사업단에서는 기후에너지환경부 지원 「풍력발전 기반 한국형 에너지 아일랜드 개발을 위한 신산업 글로벌 인력양성사업」의 일환으로 해외 교육 및 연구 프로그램에 참여할 학생을 아래와 같이 모집하오니 관심 있는 학생들의 많은 지원 바랍니다.
+
+1. 사업 개요
+- 사업명: 풍력발전 기반 한국형 에너지 아일랜드 개발을 위한 신산업 글로벌 인력양성사업
+- 과제번호: RS-2026-25540249
+- 사업기간: 2026. 4. 1. ~ 2027. 3. 31. (12개월)
+- 주요내용: 풍력발전 및 에너지 아일랜드 분야 글로벌 역량 강화를 위한 해외 교육·연구·현장연수 프로그램 운영
+
+2. 모집 개요
+- 모집대상: 본 사업 참여 학과 대학원생
+- 파견국가: 추후 개별 안내
+- 파견기간: 사업기간 내 최소 6개월
+- 지원내용: 항공료, 체재비, 교육비 등 일부 또는 전액 지원 ※ 파견 국가 및 프로그램에 따라 지원 비용은 상이할 수 있음
+
+3. 지원 자격
+- 파견연구 분야 연구 결과물이 있으며 활발하게 학회 참여 중인 석·박사과정 학생
+- 최소 6개월 이상 현지에서 파견연구 활동을 수행할 수 있는 석·박사 과정 학생
+- 파견연구를 위한 소통이 가능하도록 충분한 외국어 능력을 겸비한 학생
+- 파견연구 주제와 직·간접적 관련 연구를 수행하였으며, 해당 역량을 보유한 학생
+- 여권 소지, 파견기간 중 만료일 도래 여부 및 비자발급 조건에 결함이 없는 학생
+
+4. 신청 방법
+- 공고 시작일: 공고일로부터
+- 접수 마감일: 2026년 5월 31일(일) 18:00까지
+- 제출서류: 참가 지원서 1부 / 파견 연구계획서 1부 / 재학증명서 또는 과정확인 서류 1부 / 어학능력 증빙서류 또는 지도교수 확인서 / 여권 사본 또는 여권 발급 예정 확인 자료
+- 접수방법: 이메일 접수 (ilwoongpark@inha.ac.kr)
+
+5. 선발 방법
+- 서류심사 및 면접심사 진행
+- 평가 기준: 외국어 능력, 연구 분야 적합성, 지원연구 관련 실적, 국외수학 계획서, 학업계획 및 참여 의지 등
+
+6. 유의사항
+- 제출된 서류는 반환하지 않음
+- 허위 사실 기재 시 선발이 취소될 수 있음
+- 해외 파견 일정 및 세부 프로그램은 사정에 따라 변경될 수 있음
+- 파견 후 1년 안에 SCIE급 논문 Accept이 필수임. 조건을 만족하지 못할 경우 지원 경비 일부 또는 전액 반환이 요구됨
+- 기타 사항은 사업단 운영 기준에 따름
+
+7. 문의처
+- 인하대학교 기계공학과 박일웅 교수
+- 이메일: ilwoongpark@inha.ac.kr`
+        },
+    },
+    {
         date: "2026. 01. 25.",
         title: {
             EN: "Visiting Researchers at Th2FLAB",
@@ -216,7 +313,7 @@ function NewsCard({ item, index }: { item: NewsItem; index: number }) {
                         className="overflow-hidden"
                     >
                         <div className="px-5 pb-5">
-                            <p className="text-gray-600 text-sm mb-4 sm:ml-[154px]">{item.description[language]}</p>
+                            <p className="text-gray-600 text-sm mb-4 sm:ml-[154px] whitespace-pre-line">{item.description[language]}</p>
                             {hasImages && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:ml-[154px]">
                                     {item.images!.map((src, idx) => (
