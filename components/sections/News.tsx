@@ -111,6 +111,9 @@ Sponsored by the Ministry of Climate, Energy and Environment. We are recruiting 
 - 인하대학교 기계공학과 박일웅 교수
 - 이메일: ilwoongpark@inha.ac.kr`
         },
+        images: [
+            "/images/news/260521-global-hr-program.png",
+        ],
     },
     {
         date: "2026. 01. 25.",
