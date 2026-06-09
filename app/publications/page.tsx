@@ -1,6 +1,14 @@
 export default function Publications() {
   const publications = [
     {
+      number: 25,
+      authors: "Sung Jin Kim, Hyunjin Yong, Hee Sang Yoo, Il Woong Park*",
+      title: "From water to dielectric fluids: Pool boiling research under pressure and subcooling for next-generation cooling",
+      journal: "Renewable and Sustainable Energy Reviews",
+      details: "239, 116852, 2026",
+      link: "https://doi.org/10.1016/j.rser.2026.116852"
+    },
+    {
       number: 24,
       authors: "Sung Jin Kim, Sangmin Song, Junbeom Song, Il Woong Park*, Hee Sang Yoo, Hyun Sun Park",
       title: "Effects of surface characteristics of oxidized Zircaloy-4 on Pool boiling heat transfer",
