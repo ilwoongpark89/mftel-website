@@ -38,7 +38,7 @@ const translations: Record<Language, Record<string, string>> = {
         "hero.research": "Explore Research",
         "hero.stat.publications": "Publications",
         "hero.stat.projects": "Funded Projects",
-        "hero.stat.patents": "Patents",
+        "hero.stat.patents": "Patents · Granted + Filed",
         "hero.stat.partners": "Collaborators",
         "hero.fig": "FIG. 1 — Temperature field · Pool boiling, two heat sources",
 
@@ -149,7 +149,7 @@ const translations: Record<Language, Record<string, string>> = {
         "hero.research": "연구 분야 보기",
         "hero.stat.publications": "국제 학술 논문",
         "hero.stat.projects": "연구 과제",
-        "hero.stat.patents": "특허",
+        "hero.stat.patents": "특허 등록·출원",
         "hero.stat.partners": "협력 기관",
         "hero.fig": "FIG. 1 — 온도장 · 풀비등, 두 열원",
 

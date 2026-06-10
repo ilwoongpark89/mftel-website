@@ -26,12 +26,40 @@ export const publications = [
   { number: 1, authors: "Yeon-Gun Lee, Il Woong Park, Goon-Cherl Park", title: "SBLOCA and LOFW experiments in a scaled-down IET facility of rex-10 reactor", journal: "Nuclear Engineering and Technology", year: "2013", link: "https://doi.org/10.5516/NET.02.2013.024", details: "45, 347, 2013", category: ["smr"] },
 ];
 
-export const patents = [
-  { title: "Sand battery and energy extraction method", number: "10-2906225", date: "2025-12-26" },
-  { title: "Reactor and containment cooling system with hydrophobic surface modification for vapor condensation and phase change material coating", number: "10-2906216", date: "2025-12-26" },
-  { title: "Battery immersion cooling by boiling with gas-liquid flow path separation", number: "10-2855737", date: "2025-09-02" },
-  { title: "Super hydrophobic flexible sheet and manufacturing method", number: "10-2023-0069264", date: "2024-11-15" }
+// 인하대 IPMS 실데이터 동기 (2026-06-10) — 등록 7 + 출원(심사청구) 11 = 18
+export const patents: {
+  title: string;
+  titleKR: string;
+  status: "registered" | "filed";
+  appNumber: string;
+  appDate: string;
+  regNumber?: string;
+  regDate?: string;
+}[] = [
+  // ── 등록완료 7 ──
+  { title: "Passive condensation heat exchanger with hydrophobic surface modification and phase-change material coating", titleKR: "소수성표면 개질 및 상변화 물질 코팅을 적용한 피동응축 열교환기", status: "registered", appNumber: "10-2024-0005702", appDate: "2024-01-12", regNumber: "10-2974414", regDate: "2026-06-02" },
+  { title: "Vertical chip-stack cooling using through-silicon vias and pulsating heat pipes", titleKR: "실리콘 관통전극과 맥동 히트파이프 기술을 적용한 수직 배열 칩 냉각 방법", status: "registered", appNumber: "10-2025-0001617", appDate: "2025-01-06", regNumber: "10-2931003", regDate: "2026-02-20" },
+  { title: "Non-destructive integrity diagnosis of metal electrodes in semiconductor packaging", titleKR: "반도체 패키징 금속 전극의 비파괴 건전성 진단", status: "registered", appNumber: "10-2023-0099513", appDate: "2023-07-31", regNumber: "10-2916500", regDate: "2026-01-19" },
+  { title: "Hydrophobic surface modification and phase-change material coating for steam condensation in reactor containment buildings", titleKR: "원자로 격납 건물 증기 응축을 위한 소수성표면 개질 및 상변화 물질 코팅 적용", status: "registered", appNumber: "10-2024-0070293", appDate: "2024-05-29", regNumber: "10-2906216", regDate: "2025-12-26" },
+  { title: "Direct steam generation in sand-battery thermal energy storage via quenching and boiling", titleKR: "열에너지 저장 시스템인 모래 배터리 내부 급랭과 비등 현상을 활용한 직접 증기 생산 기술", status: "registered", appNumber: "10-2023-0092743", appDate: "2023-07-17", regNumber: "10-2906225", regDate: "2025-12-26" },
+  { title: "Battery immersion cooling with gas–liquid flow-path separation boiling", titleKR: "기체-액체 유로 분리 비등 냉각 기법 적용 배터리 액침 냉각", status: "registered", appNumber: "10-2024-0038241", appDate: "2024-03-20", regNumber: "10-2855737", regDate: "2025-09-02" },
+  { title: "Transparent, flexible superhydrophobic surfaces via microstructure replication", titleKR: "미세구조 복제 방법을 통한 투명하고 유연한 초소수성 표면 제작", status: "registered", appNumber: "10-2023-0069264", appDate: "2023-05-30", regNumber: "10-2732292", regDate: "2024-11-15" },
+  // ── 출원완료 (심사청구) 11 ──
+  { title: "Natural-convection heating system with mesh–gravel–sand triple structure", titleKR: "메쉬-자갈-모래 3중 구조 채택 자연대류 기반 난방 시스템", status: "filed", appNumber: "10-2026-0053907", appDate: "2026-03-25" },
+  { title: "Hybrid direct/indirect-contact steam generation system", titleKR: "직·간접접촉 하이브리드 증기 생산 시스템", status: "filed", appNumber: "10-2026-0018690", appDate: "2026-01-30" },
+  { title: "Energy discharge method for thermal energy storage systems", titleKR: "열에너지 저장시스템의 에너지 방출 방법", status: "filed", appNumber: "10-2026-0003727", appDate: "2026-01-08" },
+  { title: "Passive thermal energy storage and recovery combining a high-temperature store and a low-temperature water bath", titleKR: "고온 축열조-저온 수조 복합 무동력 열에너지 저장 및 회수 장치", status: "filed", appNumber: "10-2025-0121319", appDate: "2025-08-28" },
+  { title: "Outlet temperature control via piping with differentiated heat-transfer areas", titleKR: "서로 다른 전열면적을 가지는 배관을 통한 출구 온도 조절", status: "filed", appNumber: "10-2025-0119051", appDate: "2025-08-26" },
+  { title: "Head-difference-driven vertical modular thermal energy storage", titleKR: "수두차 기반 수직 모듈형 열에너지 저장시스템", status: "filed", appNumber: "10-2025-0099879", appDate: "2025-07-23" },
+  { title: "Power-demand smoothing with long-duration thermal energy storage", titleKR: "장주기 열저장장치를 활용한 전력 수요 평활화 시스템", status: "filed", appNumber: "10-2025-0101254", appDate: "2025-07-25" },
+  { title: "In-tube condensation length control in water pools for direct-condensation safety", titleKR: "직접 응축 안전성 증진을 위한 수조 내 관내 응축 길이 조절", status: "filed", appNumber: "10-2025-0082552", appDate: "2025-06-23" },
+  { title: "Steam generation inside sand-battery storage with hot-water production via condensation", titleKR: "열에너지 저장시스템인 모래 배터리 내부 증기 생산 기술과 응축을 이용한 온수 생산 기술", status: "filed", appNumber: "10-2025-0007879", appDate: "2025-01-20" },
+  { title: "Metal foam fabrication with vertical pores via 3-D structure pressing", titleKR: "3차원 구조물 프레스를 이용한 수직 방향 공극을 포함한 메탈 폼 제조 방법", status: "filed", appNumber: "10-2025-0000637", appDate: "2025-01-03" },
+  { title: "Rock and rock–sand mixture thermal energy storage with direct steam generation via quenching and boiling", titleKR: "급랭과 비등 현상을 활용한 직접 증기 생산 기술을 적용한 암석/암석-모래 혼합물 열에너지 저장 시스템", status: "filed", appNumber: "10-2025-0000644", appDate: "2025-01-03" },
 ];
+
+export const registeredPatentCount = patents.filter((p) => p.status === "registered").length;
+export const filedPatentCount = patents.filter((p) => p.status === "filed").length;
 
 export const projects = [
   { year: "2025", title: "Research on improving the cooling performance of the HiMSEN engine pre-combustion chamber", sponsor: "HD Hyundai Heavy Industry" },

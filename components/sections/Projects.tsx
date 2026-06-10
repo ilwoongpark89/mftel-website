@@ -162,24 +162,42 @@ export default function Projects() {
                 </ul>
             </div>
 
-            {/* 04.B — intellectual property */}
+            {/* 04.B — intellectual property (인하대 IPMS 동기: 등록 + 출원) */}
             <div className="mt-16 md:mt-24">
                 <Kicker index="04.B">{isKR ? "지식재산권" : "Intellectual Property"}</Kicker>
                 <h3 className="mt-5 break-keep text-2xl font-semibold tracking-tight text-ink">
                     {t("projects.patents")}
+                    <span className="ml-3 text-base font-medium text-ink-3">
+                        {isKR
+                            ? `등록 ${patents.filter((p) => p.status === "registered").length} · 출원 ${patents.filter((p) => p.status === "filed").length}`
+                            : `${patents.filter((p) => p.status === "registered").length} registered · ${patents.filter((p) => p.status === "filed").length} filed`}
+                    </span>
                 </h3>
                 <ul className="mt-6 border-b border-hairline">
                     {patents.map((p) => (
                         <li
-                            key={p.number}
+                            key={p.appNumber}
                             className="flex flex-col gap-1.5 border-t border-hairline py-4 md:flex-row md:items-baseline md:justify-between md:gap-8"
                         >
                             <p className="break-keep text-[15px] font-medium leading-snug text-ink md:text-base">
-                                {p.title}
+                                {isKR ? p.titleKR : p.title}
                             </p>
-                            <Meta className="shrink-0">
-                                KR {p.number} · {p.date.slice(0, 7).replace("-", ".")}
-                            </Meta>
+                            <span className="flex shrink-0 items-baseline gap-3">
+                                {p.status === "registered" ? (
+                                    <span className="text-[12px] font-semibold uppercase tracking-[0.1em] text-ember-700">
+                                        {isKR ? "등록" : "Registered"}
+                                    </span>
+                                ) : (
+                                    <span className="text-[12px] font-semibold uppercase tracking-[0.1em] text-ink-3">
+                                        {isKR ? "출원" : "Filed"}
+                                    </span>
+                                )}
+                                <Meta>
+                                    {p.status === "registered" && p.regNumber && p.regDate
+                                        ? `KR ${p.regNumber} · ${p.regDate.slice(0, 7).replace("-", ".")}`
+                                        : `KR ${p.appNumber} · ${p.appDate.slice(0, 7).replace("-", ".")}`}
+                                </Meta>
+                            </span>
                         </li>
                     ))}
                 </ul>
