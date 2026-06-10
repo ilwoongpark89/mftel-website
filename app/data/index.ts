@@ -59,7 +59,6 @@ export const teamMembers = [
   { name: "Chaeyeon Kim", nameKR: "김채연", degree: "M.S. student", degreeKR: "석사과정", research: "Phase-change heat transfer", researchKR: "상변화 열전달" },
   { name: "Eunbin Park", nameKR: "박은빈", degree: "M.S. student", degreeKR: "석사과정", research: "Two-phase flow instability", researchKR: "이상유동 불안정성" },
   { name: "Manho Kim", nameKR: "김만호", degree: "M.S. student", degreeKR: "석사과정", research: "Computational fluid dynamics", researchKR: "전산유체역학" },
-  { name: "Joonhwan Hyun", nameKR: "현준환", degree: "M.S. student", degreeKR: "석사과정", research: "Thermal energy storage", researchKR: "열에너지 저장" },
   { name: "Yeongjun Jung", nameKR: "정영준", degree: "M.S. student", degreeKR: "석사과정", research: "Boiling heat transfer", researchKR: "비등 열전달" }
 ];
 

@@ -43,13 +43,11 @@ const translations: Record<Language, Record<string, string>> = {
         "hero.fig": "FIG. 1 — Temperature field · Pool boiling, two heat sources",
 
         // Home story (v3)
-        "home.numbers.label": "Track Record",
-        "home.numbers.title": "Evidence, not claims",
+        "home.numbers.label": "Our Record",
+        "home.numbers.title": "A record we are building — together",
+        "home.numbers.sub": "Every paper, project, and patent here was written with our students. The next line is yours.",
         "home.research.label": "Research",
         "home.research.title": "Three fronts against the thermal bottleneck",
-        "home.research.metric.tes": "round-trip efficiency",
-        "home.research.metric.cooling": "cooling energy vs air",
-        "home.research.metric.smr": "carbon-free baseload",
         "home.pubs.label": "Publications",
         "home.pubs.title": "Published where it matters",
         "home.pubs.cta": "All publications",
@@ -156,13 +154,11 @@ const translations: Record<Language, Record<string, string>> = {
         "hero.fig": "FIG. 1 — 온도장 · 풀비등, 두 열원",
 
         // Home story (v3)
-        "home.numbers.label": "연구 실적",
-        "home.numbers.title": "말이 아니라 기록으로",
+        "home.numbers.label": "쌓아온 기록",
+        "home.numbers.title": "함께 쌓아가는 기록",
+        "home.numbers.sub": "이 숫자들은 모두 학생들과 함께 쓴 기록입니다. 다음 줄은 당신의 몫입니다.",
         "home.research.label": "연구 분야",
         "home.research.title": "열의 한계를 넘는 세 가지 연구",
-        "home.research.metric.tes": "왕복 효율",
-        "home.research.metric.cooling": "공랭 대비 냉각 에너지",
-        "home.research.metric.smr": "무탄소 기저전력",
         "home.pubs.label": "논문",
         "home.pubs.title": "최고 학술지에 기록을 남깁니다",
         "home.pubs.cta": "논문 전체 보기",

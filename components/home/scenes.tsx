@@ -161,14 +161,15 @@ function SceneNumbers() {
             <Reveal>
                 <Label>{t("home.numbers.label")}</Label>
                 <h2 className={cn("mt-5", title(isKR))}>{t("home.numbers.title")}</h2>
+                <p className={cn("mt-4 max-w-xl", lead(isKR))}>{t("home.numbers.sub")}</p>
             </Reveal>
-            <Reveal className="reveal-stagger mt-16 grid grid-cols-2 gap-y-16 md:mt-24 md:grid-cols-4">
+            <Reveal className="reveal-stagger mt-14 grid grid-cols-2 gap-y-12 border-t border-white/8 pt-12 md:mt-20 md:grid-cols-4">
                 {stats.map((s) => (
                     <div key={s.label}>
-                        <div className="text-[88px] font-bold leading-none tracking-[-0.04em] text-paper tabular-nums md:text-[140px]">
+                        <div className="text-[56px] font-bold leading-none tracking-[-0.03em] text-paper tabular-nums md:text-[72px]">
                             <CountUp to={s.value} />
                         </div>
-                        <p className="mt-5 text-[13px] font-semibold uppercase tracking-[0.18em] text-stone-400">
+                        <p className="mt-4 text-[13px] font-semibold uppercase tracking-[0.18em] text-stone-400">
                             {s.label}
                         </p>
                     </div>
@@ -183,29 +184,11 @@ function SceneNumbers() {
 function SceneResearch() {
     const { t, language } = useLanguage();
     const isKR = language === "KR";
+    // 수치는 설명문 안에서만 — 근거 없는 대형 숫자 금지 (상세 근거는 /research)
     const rows = [
-        {
-            index: "01",
-            title: t("about.tes.title"),
-            desc: t("about.tes.description"),
-            metric: "60%+",
-            metricLabel: t("home.research.metric.tes"),
-        },
-        {
-            index: "02",
-            title: t("about.thermal.title"),
-            desc: t("about.thermal.description"),
-            metric: "−90%",
-            metricLabel: t("home.research.metric.cooling"),
-        },
-        {
-            index: "03",
-            title: t("about.smr.title"),
-            desc: t("about.smr.description"),
-            // evidence over industry claims — derived from our own publication record
-            metric: String(publications.filter((p) => (p.category as readonly string[]).includes("smr")).length),
-            metricLabel: t("home.research.metric.smr"),
-        },
+        { index: "01", title: t("about.tes.title"), desc: t("about.tes.description") },
+        { index: "02", title: t("about.thermal.title"), desc: t("about.thermal.description") },
+        { index: "03", title: t("about.smr.title"), desc: t("about.smr.description") },
     ];
     return (
         <Scene>
@@ -218,12 +201,12 @@ function SceneResearch() {
                     <li key={row.index} className="border-b border-white/8">
                         <Link
                             href="/research"
-                            className="group grid grid-cols-12 items-center gap-x-4 rounded-xl px-2 py-9 transition-colors duration-150 hover:bg-white/[0.04] md:px-4 md:py-12"
+                            className="group grid grid-cols-12 items-center gap-x-4 rounded-xl px-2 py-9 transition-colors duration-150 hover:bg-white/[0.04] md:px-4 md:py-11"
                         >
                             <span className="col-span-12 mb-3 text-[15px] font-semibold text-ember-400 md:col-span-1 md:mb-0">
                                 {row.index}
                             </span>
-                            <span className="col-span-12 md:col-span-7">
+                            <span className="col-span-11 md:col-span-10">
                                 <span
                                     className={cn(
                                         "block break-keep text-[24px] font-bold tracking-[-0.02em] text-paper md:text-[28px]",
@@ -234,20 +217,18 @@ function SceneResearch() {
                                 </span>
                                 <span
                                     className={cn(
-                                        "mt-2.5 block max-w-lg text-[16px] text-stone-400",
+                                        "mt-2.5 block max-w-2xl text-[16px] text-stone-400",
                                         isKR ? "leading-[1.7]" : "leading-[1.6]"
                                     )}
                                 >
                                     {row.desc}
                                 </span>
                             </span>
-                            <span className="col-span-12 mt-6 md:col-span-4 md:mt-0 md:text-right">
-                                <span className="block text-[36px] font-bold leading-none tracking-[-0.02em] text-paper tabular-nums md:text-[44px]">
-                                    {row.metric}
-                                </span>
-                                <span className="mt-2 block text-[13px] font-semibold uppercase tracking-[0.14em] text-stone-400">
-                                    {row.metricLabel}
-                                </span>
+                            <span
+                                aria-hidden
+                                className="col-span-1 text-right text-[20px] text-stone-600 transition-all duration-150 group-hover:translate-x-1 group-hover:text-ember-400 max-md:hidden"
+                            >
+                                →
                             </span>
                         </Link>
                     </li>
@@ -423,11 +404,11 @@ function ScenePartners() {
         <Scene full={false} center>
             <Reveal>
                 <Label>{t("home.partners.label")}</Label>
-                <div className="mx-auto mt-10 flex max-w-5xl flex-wrap items-baseline justify-center gap-x-10 gap-y-5">
+                <div className="mx-auto mt-9 flex max-w-4xl flex-wrap items-baseline justify-center gap-x-8 gap-y-3">
                     {names.map((n) => (
                         <span
                             key={n}
-                            className="whitespace-nowrap text-[24px] font-bold tracking-[-0.02em] text-stone-600 transition-colors duration-200 hover:text-stone-300 md:text-[32px]"
+                            className="whitespace-nowrap text-[16px] font-semibold text-stone-400 transition-colors duration-200 hover:text-stone-200 md:text-[18px]"
                         >
                             {n}
                         </span>
@@ -484,11 +465,12 @@ export default function HomeStory() {
                 }}
             />
             <SceneHero />
-            <SceneNumbers />
             <SceneResearch />
             <ScenePubs />
             <ScenePeople />
             <ScenePartners />
+            {/* the record sits last — a bridge into Join: "다음 줄은 당신의 몫" */}
+            <SceneNumbers />
             <SceneJoin />
         </div>
     );
