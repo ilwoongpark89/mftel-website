@@ -23,6 +23,7 @@ export default function Band({
     return (
         <section
             id={id}
+            data-nav-dark={surface === "coal" ? "" : undefined}
             className={cn(
                 compact ? "py-14 md:py-20" : "py-16 md:py-28",
                 surface === "paper" && "bg-paper",

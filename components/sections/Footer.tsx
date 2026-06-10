@@ -34,7 +34,7 @@ export default function Footer() {
         : [CONTACT.addressEN, CONTACT.addressKR];
 
     return (
-        <footer id="footer" className="bg-coal py-16 text-paper md:py-20">
+        <footer id="footer" data-nav-dark className="bg-coal py-16 text-paper md:py-20">
             <div className="mx-auto max-w-6xl px-6 md:px-8">
                 <SectionHeader
                     index={FOOTER_INDEX}

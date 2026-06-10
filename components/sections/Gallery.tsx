@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { X } from "lucide-react";
 import Band from "@/components/ui/band";
+import Reveal from "@/components/ui/reveal";
 import { Meta, SectionHeader } from "@/components/ui/typo";
 import { galleryImages } from "@/app/data";
 import { useLanguage } from "@/lib/LanguageContext";
@@ -44,7 +45,7 @@ export default function Gallery() {
             />
 
             {/* bento — 2-col mobile / 3-col desktop; dense flow backfills span-2 holes */}
-            <div className="grid grid-flow-dense grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+            <Reveal className="reveal-stagger grid grid-flow-dense grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
                 {galleryImages.map((item, i) => (
                     <button
                         key={item.image}
@@ -68,7 +69,7 @@ export default function Gallery() {
                                         ? "(max-width: 768px) 100vw, 50vw"
                                         : "(max-width: 768px) 50vw, 33vw"
                                 }
-                                className="object-cover"
+                                className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
                             />
                         </div>
                         {/* caption bar — always visible, below the photo */}
@@ -80,7 +81,7 @@ export default function Gallery() {
                         </div>
                     </button>
                 ))}
-            </div>
+            </Reveal>
 
             {/* lightbox — Esc + click-outside close, caption anchored to the image */}
             {open ? (

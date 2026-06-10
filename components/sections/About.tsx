@@ -3,6 +3,7 @@
 import { Flame, Droplets, Atom } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
 import Band from "@/components/ui/band";
+import Reveal from "@/components/ui/reveal";
 import { SectionHeader, Meta } from "@/components/ui/typo";
 
 /**
@@ -73,7 +74,7 @@ export default function About() {
                 </div>
 
                 {/* 3 pillar rows — hairline-divided list, each row links to Research */}
-                <ul className="border-t border-hairline md:col-span-7">
+                <Reveal as="ul" className="reveal-stagger border-t border-hairline md:col-span-7">
                     {PILLARS.map((pillar) => {
                         const Icon = pillar.icon;
                         return (
@@ -124,7 +125,7 @@ export default function About() {
                             </li>
                         );
                     })}
-                </ul>
+                </Reveal>
             </div>
         </Band>
     );

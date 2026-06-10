@@ -127,7 +127,7 @@ export default function Contact() {
                         {/* the band's single filled ember element */}
                         <a
                             href={`mailto:${EMAIL}`}
-                            className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-ember-600 px-6 text-[15px] font-medium text-white transition-colors duration-150 hover:bg-ember-500 sm:w-auto"
+                            className="glow-ember mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-ember-600 px-6 text-[15px] font-medium text-white transition-colors duration-150 hover:bg-ember-500 sm:w-auto"
                         >
                             <Mail aria-hidden className="h-4 w-4" />
                             {t("contact.apply")}

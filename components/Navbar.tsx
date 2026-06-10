@@ -17,6 +17,7 @@ import { SECTIONS, NAV_SECTIONS, JOIN_ID } from "@/lib/sections";
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const [navDark, setNavDark] = useState(true); // hero is dark — start dark
     const [activeId, setActiveId] = useState<string>("");
     const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
     const { language, setLanguage, t } = useLanguage();
@@ -61,12 +62,42 @@ export default function Navbar() {
         return () => observer.disconnect();
     }, [onHome]);
 
+    // dark-band awareness: any [data-nav-dark] element under the 64px top bar
+    // flips the nav to its dark skin. Deterministic rect check per scroll frame
+    // (IntersectionObserver edge-touch/jump-scroll cases are spec traps); the
+    // elements are re-queried each pass so late-mounted dynamic bands count.
+    useEffect(() => {
+        let raf = 0;
+        const update = () => {
+            raf = 0;
+            let dark = false;
+            document.querySelectorAll("[data-nav-dark]").forEach((el) => {
+                const r = el.getBoundingClientRect();
+                if (r.top < 64 && r.bottom > 0) dark = true;
+            });
+            setNavDark(dark);
+        };
+        const onScroll = () => {
+            if (!raf) raf = requestAnimationFrame(update);
+        };
+        window.addEventListener("scroll", onScroll, { passive: true });
+        window.addEventListener("resize", onScroll, { passive: true });
+        update();
+        return () => {
+            cancelAnimationFrame(raf);
+            window.removeEventListener("scroll", onScroll);
+            window.removeEventListener("resize", onScroll);
+        };
+    }, [pathname]);
+
     const hrefFor = (id: string) => (onHome ? `#${id}` : `/#${id}`);
+    const dk = navDark && !isOpen;
 
     const langToggle = (cls?: string) => (
         <div
             className={cn(
-                "flex items-center rounded-lg border border-hairline p-0.5 font-mono text-[13px]",
+                "flex items-center rounded-lg border p-0.5 font-mono text-[13px] transition-colors duration-200",
+                dk ? "border-white/15" : "border-hairline",
                 cls
             )}
             role="group"
@@ -79,7 +110,13 @@ export default function Navbar() {
                     aria-pressed={language === lang}
                     className={cn(
                         "rounded-md px-2 py-0.5 transition-colors duration-150",
-                        language === lang ? "bg-well text-ink" : "text-ink-3 hover:text-ink"
+                        language === lang
+                            ? dk
+                                ? "bg-white/10 text-paper"
+                                : "bg-well text-ink"
+                            : dk
+                              ? "text-stone-400 hover:text-paper"
+                              : "text-ink-3 hover:text-ink"
                     )}
                 >
                     {lang}
@@ -95,16 +132,32 @@ export default function Navbar() {
                     "fixed top-0 z-40 w-full transition-[background-color,border-color,box-shadow] duration-200",
                     isOpen
                         ? "bg-transparent"
-                        : scrolled
-                          ? "border-b border-hairline bg-paper/90 backdrop-blur-md"
-                          : "border-b border-transparent bg-paper/90 backdrop-blur-md"
+                        : dk
+                          ? scrolled
+                              ? "border-b border-white/10 bg-coal/75 backdrop-blur-md"
+                              : "border-b border-transparent bg-transparent"
+                          : scrolled
+                            ? "border-b border-hairline bg-paper/90 backdrop-blur-md"
+                            : "border-b border-transparent bg-paper/90 backdrop-blur-md"
                 )}
             >
                 <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6 md:px-8">
                     {/* wordmark */}
                     <a href={onHome ? "#home" : "/"} className="flex items-baseline gap-3">
-                        <span className="text-lg font-bold tracking-tight text-ink">MFTEL</span>
-                        <span className="hidden font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3 xl:block">
+                        <span
+                            className={cn(
+                                "text-lg font-bold tracking-tight transition-colors duration-200",
+                                dk ? "text-paper" : "text-ink"
+                            )}
+                        >
+                            MFTEL
+                        </span>
+                        <span
+                            className={cn(
+                                "hidden font-mono text-[11px] uppercase tracking-[0.08em] transition-colors duration-200 xl:block",
+                                dk ? "text-stone-400" : "text-ink-3"
+                            )}
+                        >
                             Multiphase Flow &amp; Thermal Engineering Lab
                         </span>
                     </a>
@@ -118,8 +171,12 @@ export default function Navbar() {
                                 className={cn(
                                     "text-sm font-medium underline-offset-[10px] transition-colors duration-150",
                                     activeId === s.id
-                                        ? "text-ink underline decoration-ember-600 decoration-2"
-                                        : "text-ink-2 hover:text-ink"
+                                        ? dk
+                                            ? "text-paper underline decoration-ember-400 decoration-2"
+                                            : "text-ink underline decoration-ember-600 decoration-2"
+                                        : dk
+                                          ? "text-stone-300 hover:text-paper"
+                                          : "text-ink-2 hover:text-ink"
                                 )}
                             >
                                 {t(s.labelKey)}
@@ -131,7 +188,12 @@ export default function Navbar() {
                         {langToggle()}
                         <a
                             href={hrefFor(JOIN_ID)}
-                            className="inline-flex h-9 items-center rounded-lg bg-ember-700 px-4 text-sm font-medium text-white transition-colors duration-150 hover:bg-ember-800"
+                            className={cn(
+                                "inline-flex h-9 items-center rounded-lg px-4 text-sm font-medium text-white transition-colors duration-150",
+                                dk
+                                    ? "bg-ember-600 hover:bg-ember-500"
+                                    : "bg-ember-700 hover:bg-ember-800"
+                            )}
                         >
                             {t("nav.joinUs")}
                         </a>
@@ -140,7 +202,10 @@ export default function Navbar() {
                     {/* mobile trigger */}
                     <button
                         onClick={() => setIsOpen(!isOpen)}
-                        className="relative z-[60] -mr-2 flex h-11 w-11 items-center justify-center text-ink lg:hidden"
+                        className={cn(
+                            "relative z-[60] -mr-2 flex h-11 w-11 items-center justify-center transition-colors duration-200 lg:hidden",
+                            dk ? "text-paper" : "text-ink"
+                        )}
                         aria-label="Toggle menu"
                         aria-expanded={isOpen}
                     >

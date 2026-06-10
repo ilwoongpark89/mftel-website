@@ -28,13 +28,15 @@ function observe(el: Element) {
 }
 
 export default function Reveal({
+    as: Tag = "div",
     className,
     children,
 }: {
+    as?: "div" | "ul";
     className?: string;
     children: React.ReactNode;
 }) {
-    const ref = useRef<HTMLDivElement>(null);
+    const ref = useRef<HTMLElement>(null);
 
     useEffect(() => {
         const el = ref.current;
@@ -56,8 +58,9 @@ export default function Reveal({
     }, []);
 
     return (
-        <div ref={ref} className={className}>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        <Tag ref={ref as any} className={className}>
             {children}
-        </div>
+        </Tag>
     );
 }
