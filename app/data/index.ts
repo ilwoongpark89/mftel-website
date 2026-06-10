@@ -63,7 +63,6 @@ export const filedPatentCount = patents.filter((p) => p.status === "filed").leng
 
 export const projects = [
   { year: "2026", title: "Development of regulatory verification technology for full-lifecycle safety review of light-water SMRs", sponsor: "SMR Regulation Research Foundation" },
-  { year: "2026", title: "Development of mechanistic models and validation technology for an optimal integrated safety analysis framework", sponsor: "National Research Foundation of Korea" },
   { year: "2025 ~ 2026", title: "Research on improving the cooling performance of the HiMSEN engine pre-combustion chamber", sponsor: "HD Hyundai Heavy Industry" },
   { year: "2025", title: "Development of Thermal Energy Storage", sponsor: "Laboratory-Specialized Startup Leading University, Ministry of Science and Technology" },
   { year: "2025", title: "Basic Research on Electric Vehicle Battery Cooling Using Insulating Fluid Boiling Heat Transfer", sponsor: "Inha University" },
