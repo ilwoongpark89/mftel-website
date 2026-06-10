@@ -311,7 +311,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
             stat: { value: "~90%", label: "냉각 에너지 절감" },
             processLabel: "작동 원리",
             steps: [
-                { label: "절연 유체 침지", sub: "서버를 유전체 유체에 직접 담가 열 전달" },
+                { label: "절연 유체 침지", sub: "서버를 절연 유체에 직접 침지해 열을 전달" },
                 { label: "이상 비등 열전달", sub: "유체가 끓으면서 잠열로 대량의 열을 흡수" },
                 { label: "응축 & 순환", sub: "증기가 응축기에서 냉각, 유체 자연 순환" },
             ],
@@ -406,7 +406,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
             "열적 마진 시험",
             "절연유체",
             "Leidenfrost 효과",
-            "젖음성",
+            "표면 젖음 특성",
             "응축",
         ],
         computationalLabel: "전산 해석",
