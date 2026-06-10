@@ -39,7 +39,12 @@ const detailsLine = (details: string) =>
         .filter(Boolean)
         .join(" · ");
 
-export default function Publications() {
+export default function Publications({
+    citations,
+}: {
+    /** OpenAlex cited-by counts (bare-DOI keyed) — optional, server-fetched */
+    citations?: { byDoi: Record<string, number>; total: number };
+}) {
     const { t, language } = useLanguage();
     const isKR = language === "KR";
 
@@ -116,7 +121,18 @@ export default function Publications() {
                 index="03"
                 kicker={t("publications.label")}
                 title={t("publications.title")}
-                sub={t("publications.count").replace("{count}", String(totalPubs))}
+                sub={
+                    <>
+                        {t("publications.count").replace("{count}", String(totalPubs))}
+                        {citations && citations.total > 0 ? (
+                            <span className="mt-1 block text-sm text-ink-3">
+                                {isKR
+                                    ? `총 피인용 ${citations.total.toLocaleString()}회 · 출처 OpenAlex`
+                                    : `${citations.total.toLocaleString()} total citations · source: OpenAlex`}
+                            </span>
+                        ) : null}
+                    </>
+                }
                 isKorean={isKR}
             />
 
@@ -244,6 +260,15 @@ export default function Publications() {
                                                 {pub.journal}
                                             </span>
                                             <Meta>{detailsLine(pub.details)}</Meta>
+                                            {(() => {
+                                                const d = pub.link.match(/doi\.org\/(.+)$/i)?.[1]?.toLowerCase();
+                                                const n = d ? citations?.byDoi[d] : undefined;
+                                                return n ? (
+                                                    <Meta className="text-xs">
+                                                        {isKR ? `인용 ${n}` : `Cited by ${n}`}
+                                                    </Meta>
+                                                ) : null;
+                                            })()}
                                             {special
                                                 ?.split(",")
                                                 .map((tag) => tag.trim())
