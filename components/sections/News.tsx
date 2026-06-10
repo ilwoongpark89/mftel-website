@@ -1,363 +1,738 @@
 "use client";
 
-import { useState } from "react";
-import Section from "@/components/ui/section";
-import { Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
-import { useLanguage } from "@/lib/LanguageContext";
+import { ChevronDown, X } from "lucide-react";
+import Band from "@/components/ui/band";
+import { SectionHeader, Meta, FigCaption } from "@/components/ui/typo";
+import { useLanguage, type Language } from "@/lib/LanguageContext";
 
-interface NewsItem {
-    date: string;
-    title: { EN: string; KR: string };
-    description: { EN: string; KR: string };
-    images?: string[];
+/**
+ * CALORIMETER §06 NEWS — two content types split:
+ * 1) pinned CALL announcement card (ember-50 wash, ember-600 left rule,
+ *    structured h4/dl detail behind a CSS grid-rows accordion — never a
+ *    pre-line blob), 2) activity rows (thumbnail kept on mobile, mono date,
+ *    full-row <button aria-expanded>, CSS-only 250ms accordion, lightbox).
+ * Frame-0: every string + image is in the server HTML; collapsed content is
+ * hidden with grid-rows-[0fr], never conditionally rendered.
+ */
+
+interface Localized {
+    EN: string;
+    KR: string;
 }
 
-const newsItems: NewsItem[] = [
-    {
-        date: "2026. 05. 21.",
-        title: {
-            EN: "2026 New Industry Global HR Development Program — Call for Overseas Dispatch Students",
-            KR: "2026 신산업 글로벌 인력양성사업 해외파견 학생 모집 공고"
-        },
-        description: {
-            EN: `「Development of a Korean-style Energy Island Based on Wind Power — New Industry Global HR Development Program」 (Project No. RS-2026-25540249)
+interface AnnouncementItem {
+    label?: Localized;
+    text: Localized;
+    href?: string;
+}
 
-Sponsored by the Ministry of Climate, Energy and Environment. We are recruiting graduate students to participate in overseas education and research programs.
+interface AnnouncementSection {
+    heading: Localized;
+    items: AnnouncementItem[];
+}
 
-1. Program Overview
-- Title: Development of a Korean-style Energy Island Based on Wind Power — New Industry Global HR Development Program
-- Project No.: RS-2026-25540249
-- Period: 2026. 4. 1. – 2027. 3. 31. (12 months)
-- Scope: Overseas education, research, and field training to strengthen global competence in wind power and energy island fields.
+interface Announcement {
+    date: string; // ISO
+    deadline: string; // ISO
+    deadlineTime: string;
+    projectNo: string;
+    email: string;
+    image: string;
+    title: Localized;
+    intro: Localized;
+    sections: AnnouncementSection[];
+}
 
-2. Recruitment
-- Eligibility: Graduate students in participating departments
-- Destination country: To be announced individually
-- Dispatch period: At least 6 months within the project period
-- Support: Airfare, living expenses, tuition, etc. (partial or full; varies by country/program)
-
-3. Qualifications
-- Master's / PhD students with research outputs in the dispatch field and active conference participation
-- Able to conduct on-site research for at least 6 months
-- Sufficient foreign-language proficiency for research communication
-- Holds related research experience and capabilities
-- Holds a valid passport (no expiry during dispatch) and meets visa requirements
-
-4. Application
-- Posting period: From the announcement date
-- Deadline: 2026. 5. 31. (Sun) 18:00
-- Documents: Application form, dispatch research plan, enrollment certificate, language proficiency proof or advisor's confirmation, passport copy (or issuance plan)
-- Submission: Email to ilwoongpark@inha.ac.kr
-
-5. Selection
-- Document and interview review
-- Criteria: foreign-language ability, research-field fit, related performance, study-abroad plan, academic plan, and motivation
-
-6. Notes
-- Submitted documents will not be returned.
-- Selection may be cancelled if false information is provided.
-- Schedule and program details may change.
-- A SCIE-class paper Accept within 1 year after dispatch is required. Failure may require partial or full return of the support.
-- Other matters follow the program operating standards.
-
-7. Contact
-- Inha University, Department of Mechanical Engineering
-- Prof. Il Woong Park
-- Email: ilwoongpark@inha.ac.kr`,
-            KR: `「풍력발전 기반 한국형 에너지 아일랜드 개발을 위한 신산업 글로벌 인력양성사업」
-(과제번호: RS-2026-25540249)
-
-본 사업단에서는 기후에너지환경부 지원 「풍력발전 기반 한국형 에너지 아일랜드 개발을 위한 신산업 글로벌 인력양성사업」의 일환으로 해외 교육 및 연구 프로그램에 참여할 학생을 아래와 같이 모집하오니 관심 있는 학생들의 많은 지원 바랍니다.
-
-1. 사업 개요
-- 사업명: 풍력발전 기반 한국형 에너지 아일랜드 개발을 위한 신산업 글로벌 인력양성사업
-- 과제번호: RS-2026-25540249
-- 사업기간: 2026. 4. 1. ~ 2027. 3. 31. (12개월)
-- 주요내용: 풍력발전 및 에너지 아일랜드 분야 글로벌 역량 강화를 위한 해외 교육·연구·현장연수 프로그램 운영
-
-2. 모집 개요
-- 모집대상: 본 사업 참여 학과 대학원생
-- 파견국가: 추후 개별 안내
-- 파견기간: 사업기간 내 최소 6개월
-- 지원내용: 항공료, 체재비, 교육비 등 일부 또는 전액 지원 ※ 파견 국가 및 프로그램에 따라 지원 비용은 상이할 수 있음
-
-3. 지원 자격
-- 파견연구 분야 연구 결과물이 있으며 활발하게 학회 참여 중인 석·박사과정 학생
-- 최소 6개월 이상 현지에서 파견연구 활동을 수행할 수 있는 석·박사 과정 학생
-- 파견연구를 위한 소통이 가능하도록 충분한 외국어 능력을 겸비한 학생
-- 파견연구 주제와 직·간접적 관련 연구를 수행하였으며, 해당 역량을 보유한 학생
-- 여권 소지, 파견기간 중 만료일 도래 여부 및 비자발급 조건에 결함이 없는 학생
-
-4. 신청 방법
-- 공고 시작일: 공고일로부터
-- 접수 마감일: 2026년 5월 31일(일) 18:00까지
-- 제출서류: 참가 지원서 1부 / 파견 연구계획서 1부 / 재학증명서 또는 과정확인 서류 1부 / 어학능력 증빙서류 또는 지도교수 확인서 / 여권 사본 또는 여권 발급 예정 확인 자료
-- 접수방법: 이메일 접수 (ilwoongpark@inha.ac.kr)
-
-5. 선발 방법
-- 서류심사 및 면접심사 진행
-- 평가 기준: 외국어 능력, 연구 분야 적합성, 지원연구 관련 실적, 국외수학 계획서, 학업계획 및 참여 의지 등
-
-6. 유의사항
-- 제출된 서류는 반환하지 않음
-- 허위 사실 기재 시 선발이 취소될 수 있음
-- 해외 파견 일정 및 세부 프로그램은 사정에 따라 변경될 수 있음
-- 파견 후 1년 안에 SCIE급 논문 Accept이 필수임. 조건을 만족하지 못할 경우 지원 경비 일부 또는 전액 반환이 요구됨
-- 기타 사항은 사업단 운영 기준에 따름
-
-7. 문의처
-- 인하대학교 기계공학과 박일웅 교수
-- 이메일: ilwoongpark@inha.ac.kr`
-        },
-        images: [
-            "/images/news/260521-global-hr-program.png",
-        ],
+const ANNOUNCEMENT: Announcement = {
+    date: "2026-05-21",
+    deadline: "2026-05-31",
+    deadlineTime: "18:00",
+    projectNo: "RS-2026-25540249",
+    email: "ilwoongpark@inha.ac.kr",
+    image: "/images/news/260521-global-hr-program.png",
+    title: {
+        EN: "2026 New Industry Global HR Development Program — Call for Overseas Dispatch Students",
+        KR: "2026 신산업 글로벌 인력양성사업 해외파견 학생 모집 공고",
     },
-    {
-        date: "2026. 01. 25.",
-        title: {
-            EN: "Visiting Researchers at Th2FLAB",
-            KR: "NTNU Th2FLAB 방문연구 시작"
+    intro: {
+        EN: "Sponsored by the Ministry of Climate, Energy and Environment under 「Development of a Korean-style Energy Island Based on Wind Power — New Industry Global HR Development Program」 (Project No. RS-2026-25540249). We are recruiting graduate students to participate in overseas education and research programs.",
+        KR: "본 사업단에서는 기후에너지환경부 지원 「풍력발전 기반 한국형 에너지 아일랜드 개발을 위한 신산업 글로벌 인력양성사업」(과제번호: RS-2026-25540249)의 일환으로 해외 교육 및 연구 프로그램에 참여할 학생을 아래와 같이 모집하오니 관심 있는 학생들의 많은 지원 바랍니다.",
+    },
+    sections: [
+        {
+            heading: { EN: "Program Overview", KR: "사업 개요" },
+            items: [
+                {
+                    label: { EN: "Title", KR: "사업명" },
+                    text: {
+                        EN: "Development of a Korean-style Energy Island Based on Wind Power — New Industry Global HR Development Program",
+                        KR: "풍력발전 기반 한국형 에너지 아일랜드 개발을 위한 신산업 글로벌 인력양성사업",
+                    },
+                },
+                {
+                    label: { EN: "Project No.", KR: "과제번호" },
+                    text: { EN: "RS-2026-25540249", KR: "RS-2026-25540249" },
+                },
+                {
+                    label: { EN: "Period", KR: "사업기간" },
+                    text: {
+                        EN: "2026. 4. 1. – 2027. 3. 31. (12 months)",
+                        KR: "2026. 4. 1. ~ 2027. 3. 31. (12개월)",
+                    },
+                },
+                {
+                    label: { EN: "Scope", KR: "주요내용" },
+                    text: {
+                        EN: "Overseas education, research, and field training to strengthen global competence in wind power and energy island fields.",
+                        KR: "풍력발전 및 에너지 아일랜드 분야 글로벌 역량 강화를 위한 해외 교육·연구·현장연수 프로그램 운영",
+                    },
+                },
+            ],
         },
+        {
+            heading: { EN: "Recruitment", KR: "모집 개요" },
+            items: [
+                {
+                    label: { EN: "Eligibility", KR: "모집대상" },
+                    text: {
+                        EN: "Graduate students in participating departments",
+                        KR: "본 사업 참여 학과 대학원생",
+                    },
+                },
+                {
+                    label: { EN: "Destination", KR: "파견국가" },
+                    text: { EN: "To be announced individually", KR: "추후 개별 안내" },
+                },
+                {
+                    label: { EN: "Dispatch period", KR: "파견기간" },
+                    text: {
+                        EN: "At least 6 months within the project period",
+                        KR: "사업기간 내 최소 6개월",
+                    },
+                },
+                {
+                    label: { EN: "Support", KR: "지원내용" },
+                    text: {
+                        EN: "Airfare, living expenses, tuition, etc. (partial or full; varies by country/program)",
+                        KR: "항공료, 체재비, 교육비 등 일부 또는 전액 지원 ※ 파견 국가 및 프로그램에 따라 지원 비용은 상이할 수 있음",
+                    },
+                },
+            ],
+        },
+        {
+            heading: { EN: "Qualifications", KR: "지원 자격" },
+            items: [
+                {
+                    text: {
+                        EN: "Master's / PhD students with research outputs in the dispatch field and active conference participation",
+                        KR: "파견연구 분야 연구 결과물이 있으며 활발하게 학회 참여 중인 석·박사과정 학생",
+                    },
+                },
+                {
+                    text: {
+                        EN: "Able to conduct on-site research for at least 6 months",
+                        KR: "최소 6개월 이상 현지에서 파견연구 활동을 수행할 수 있는 석·박사 과정 학생",
+                    },
+                },
+                {
+                    text: {
+                        EN: "Sufficient foreign-language proficiency for research communication",
+                        KR: "파견연구를 위한 소통이 가능하도록 충분한 외국어 능력을 겸비한 학생",
+                    },
+                },
+                {
+                    text: {
+                        EN: "Holds related research experience and capabilities",
+                        KR: "파견연구 주제와 직·간접적 관련 연구를 수행하였으며, 해당 역량을 보유한 학생",
+                    },
+                },
+                {
+                    text: {
+                        EN: "Holds a valid passport (no expiry during dispatch) and meets visa requirements",
+                        KR: "여권 소지, 파견기간 중 만료일 도래 여부 및 비자발급 조건에 결함이 없는 학생",
+                    },
+                },
+            ],
+        },
+        {
+            heading: { EN: "Application", KR: "신청 방법" },
+            items: [
+                {
+                    label: { EN: "Posting period", KR: "공고 시작일" },
+                    text: { EN: "From the announcement date", KR: "공고일로부터" },
+                },
+                {
+                    label: { EN: "Deadline", KR: "접수 마감일" },
+                    text: {
+                        EN: "2026. 5. 31. (Sun) 18:00",
+                        KR: "2026년 5월 31일(일) 18:00까지",
+                    },
+                },
+                {
+                    label: { EN: "Documents", KR: "제출서류" },
+                    text: {
+                        EN: "Application form, dispatch research plan, enrollment certificate, language proficiency proof or advisor's confirmation, passport copy (or issuance plan)",
+                        KR: "참가 지원서 1부 / 파견 연구계획서 1부 / 재학증명서 또는 과정확인 서류 1부 / 어학능력 증빙서류 또는 지도교수 확인서 / 여권 사본 또는 여권 발급 예정 확인 자료",
+                    },
+                },
+                {
+                    label: { EN: "Submission", KR: "접수방법" },
+                    text: {
+                        EN: "Email to ilwoongpark@inha.ac.kr",
+                        KR: "이메일 접수 (ilwoongpark@inha.ac.kr)",
+                    },
+                    href: "mailto:ilwoongpark@inha.ac.kr",
+                },
+            ],
+        },
+        {
+            heading: { EN: "Selection", KR: "선발 방법" },
+            items: [
+                {
+                    text: {
+                        EN: "Document and interview review",
+                        KR: "서류심사 및 면접심사 진행",
+                    },
+                },
+                {
+                    label: { EN: "Criteria", KR: "평가 기준" },
+                    text: {
+                        EN: "Foreign-language ability, research-field fit, related performance, study-abroad plan, academic plan, and motivation",
+                        KR: "외국어 능력, 연구 분야 적합성, 지원연구 관련 실적, 국외수학 계획서, 학업계획 및 참여 의지 등",
+                    },
+                },
+            ],
+        },
+        {
+            heading: { EN: "Notes", KR: "유의사항" },
+            items: [
+                {
+                    text: {
+                        EN: "Submitted documents will not be returned.",
+                        KR: "제출된 서류는 반환하지 않음",
+                    },
+                },
+                {
+                    text: {
+                        EN: "Selection may be cancelled if false information is provided.",
+                        KR: "허위 사실 기재 시 선발이 취소될 수 있음",
+                    },
+                },
+                {
+                    text: {
+                        EN: "Schedule and program details may change.",
+                        KR: "해외 파견 일정 및 세부 프로그램은 사정에 따라 변경될 수 있음",
+                    },
+                },
+                {
+                    text: {
+                        EN: "A SCIE-class paper Accept within 1 year after dispatch is required. Failure may require partial or full return of the support.",
+                        KR: "파견 후 1년 안에 SCIE급 논문 Accept이 필수임. 조건을 만족하지 못할 경우 지원 경비 일부 또는 전액 반환이 요구됨",
+                    },
+                },
+                {
+                    text: {
+                        EN: "Other matters follow the program operating standards.",
+                        KR: "기타 사항은 사업단 운영 기준에 따름",
+                    },
+                },
+            ],
+        },
+        {
+            heading: { EN: "Contact", KR: "문의처" },
+            items: [
+                {
+                    text: {
+                        EN: "Inha University, Department of Mechanical Engineering — Prof. Il Woong Park",
+                        KR: "인하대학교 기계공학과 박일웅 교수",
+                    },
+                },
+                {
+                    label: { EN: "Email", KR: "이메일" },
+                    text: { EN: "ilwoongpark@inha.ac.kr", KR: "ilwoongpark@inha.ac.kr" },
+                    href: "mailto:ilwoongpark@inha.ac.kr",
+                },
+            ],
+        },
+    ],
+};
+
+interface ActivityItem {
+    date: string; // ISO
+    title: Localized;
+    description: Localized;
+    images: string[];
+}
+
+const ACTIVITY_ITEMS: ActivityItem[] = [
+    {
+        date: "2026-01-25",
+        title: { EN: "Visiting Researchers at Th2FLAB", KR: "NTNU Th2FLAB 방문연구 시작" },
         description: {
             EN: "Sungjin Kim, Hyeon Geun Shin, and Sangmin Song will stay at NTNU for a year to conduct collaborative research with Professor Carlos Dorao. It was a hard working weekend!",
-            KR: "김성진, 신현근, 송상민 학생이 Carlos Dorao 교수님과 공동연구를 위해 NTNU에서 1년간 방문연구를 시작합니다. 주말임에도 Carlos 교수님께서 실험장치 세팅을 도와주셨습니다!"
+            KR: "김성진, 신현근, 송상민 학생이 Carlos Dorao 교수님과 공동연구를 위해 NTNU에서 1년간 방문연구를 시작합니다. 주말임에도 Carlos 교수님께서 실험장치 세팅을 도와주셨습니다!",
         },
-        images: [
-            "/images/news/250125-hard-work-ntnu-2.jpg",
-            "/images/news/250125-hard-work-ntnu-1.jpg",
-        ],
+        images: ["/images/news/250125-hard-work-ntnu-2.jpg", "/images/news/250125-hard-work-ntnu-1.jpg"],
     },
     {
-        date: "2026. 01. 22.",
-        title: {
-            EN: "EPT Day 2026",
-            KR: "EPT Day 2026"
-        },
+        date: "2026-01-22",
+        title: { EN: "EPT Day 2026", KR: "EPT Day 2026" },
         description: {
             EN: "Prof. Il Woong Park participated in EPT Day 2026, showcasing the latest research developments in multiphase flow and thermal engineering.",
-            KR: "박일웅 교수님이 EPT Day 2026에 참가하여 다상유동 및 열공학 분야 최신 연구 성과를 소개하였습니다."
+            KR: "박일웅 교수님이 EPT Day 2026에 참가하여 다상유동 및 열공학 분야 최신 연구 성과를 소개하였습니다.",
         },
-        images: [
-            "/images/news/ept-day-2026-1.jpg",
-            "/images/news/ept-day-2026-2.png",
-        ],
+        images: ["/images/news/ept-day-2026-1.jpg", "/images/news/ept-day-2026-2.png"],
     },
     {
-        date: "2025. 12. 19.",
-        title: {
-            EN: "MFTEL Visited Th2FLAB",
-            KR: "MFTEL의 NTNU Th2FLAB 방문"
-        },
+        date: "2025-12-19",
+        title: { EN: "MFTEL Visited Th2FLAB", KR: "MFTEL의 NTNU Th2FLAB 방문" },
         description: {
             EN: "MFTEL students visited NTNU Th2FLAB in Norway for research collaboration and exchange.",
-            KR: "MFTEL 학생들이 노르웨이 NTNU의 Th2FLAB을 방문하여 공동연구 및 학술교류를 진행하였습니다."
+            KR: "MFTEL 학생들이 노르웨이 NTNU의 Th2FLAB을 방문하여 공동연구 및 학술교류를 진행하였습니다.",
         },
-        images: [
-            "/images/news/251219-carlos-maria-visit-1.jpeg",
-            "/images/news/251219-carlos-maria-visit-2.jpeg",
-        ],
+        images: ["/images/news/251219-carlos-maria-visit-1.jpeg", "/images/news/251219-carlos-maria-visit-2.jpeg"],
     },
     {
-        date: "2025. 11. 17.",
-        title: {
-            EN: "Buildersgate CEO Visited Inha University",
-            KR: "빌더스게이트 대표님 특강"
-        },
+        date: "2025-11-17",
+        title: { EN: "Buildersgate CEO Visited Inha University", KR: "빌더스게이트 대표님 특강" },
         description: {
             EN: "CEO Kwang Ho Park of Buildersgate visited Inha University and presented the future of coding using vibe coding.",
-            KR: "빌더스게이트 박광호 대표님이 인하대를 방문하여 '바이브 코딩으로 보는 코딩의 미래'를 주제로 특강을 진행해주셨습니다."
+            KR: "빌더스게이트 박광호 대표님이 인하대를 방문하여 '바이브 코딩으로 보는 코딩의 미래'를 주제로 특강을 진행해주셨습니다.",
         },
-        images: [
-            "/images/news/251117-vibe-coding-ceo-visit.jpeg",
-            "/images/news/251117-vibe-coding-ceo-visit-2.png",
-        ],
+        images: ["/images/news/251117-vibe-coding-ceo-visit.jpeg", "/images/news/251117-vibe-coding-ceo-visit-2.png"],
     },
     {
-        date: "2025. 10. 21.",
-        title: {
-            EN: "UTFORSK 2024 at Inha University",
-            KR: "UTFORSK - NTNU 학생들 인하대 방문"
-        },
+        date: "2025-10-21",
+        title: { EN: "UTFORSK 2024 at Inha University", KR: "UTFORSK - NTNU 학생들 인하대 방문" },
         description: {
             EN: "NTNU students visited Inha University through the UTFORSK program.",
-            KR: "UTFORSK 프로그램으로 NTNU 학생들이 인하대학교를 방문하였습니다."
+            KR: "UTFORSK 프로그램으로 NTNU 학생들이 인하대학교를 방문하였습니다.",
         },
-        images: [
-            "/images/news/251021-visiting-inha-utforsk-2.png",
-            "/images/news/251021-visiting-inha-utforsk-1.jpeg",
-        ],
+        images: ["/images/news/251021-visiting-inha-utforsk-2.png", "/images/news/251021-visiting-inha-utforsk-1.jpeg"],
     },
     {
-        date: "2025. 09. 03.",
-        title: {
-            EN: "NURETH-21",
-            KR: "NURETH-21 국제학회"
-        },
+        date: "2025-09-03",
+        title: { EN: "NURETH-21", KR: "NURETH-21 국제학회" },
         description: {
             EN: "MFTEL participated in NURETH-21 with NTNU Th2FLAB members: Prof. Carlos Dorao, Th2FLAB alumni Dr. Julio Pacio, and PhD student Karim.",
-            KR: "MFTEL이 NTNU Th2FLAB과 함께 NURETH-21에 참가하였습니다. Carlos Dorao 교수님, Th2FLAB 졸업생 Julio Pacio 박사님, 박사과정 Karim과 함께했습니다."
+            KR: "MFTEL이 NTNU Th2FLAB과 함께 NURETH-21에 참가하였습니다. Carlos Dorao 교수님, Th2FLAB 졸업생 Julio Pacio 박사님, 박사과정 Karim과 함께했습니다.",
         },
-        images: [
-            "/images/news/250903-nureth.jpeg",
-        ],
+        images: ["/images/news/250903-nureth.jpeg"],
     },
     {
-        date: "2025. 08. 14.",
-        title: {
-            EN: "MFTEL Visited Th2FLAB",
-            KR: "NTNU Th2FLAB 방문"
-        },
+        date: "2025-08-14",
+        title: { EN: "MFTEL Visited Th2FLAB", KR: "NTNU Th2FLAB 방문" },
         description: {
             EN: "MFTEL visited Th2FLAB to discuss future collaboration on multiphase flow research.",
-            KR: "다상유동 공동연구 논의를 위해 노르웨이 NTNU의 Th2FLAB을 방문하였습니다."
+            KR: "다상유동 공동연구 논의를 위해 노르웨이 NTNU의 Th2FLAB을 방문하였습니다.",
         },
-        images: [
-            "/images/news/250814-visiting-ntnu-1.jpeg",
-            "/images/news/250814-visiting-ntnu-2.jpeg",
-        ],
+        images: ["/images/news/250814-visiting-ntnu-1.jpeg", "/images/news/250814-visiting-ntnu-2.jpeg"],
     },
     {
-        date: "2025. 08. 11.",
-        title: {
-            EN: "UTFORSK 2024 at NTNU",
-            KR: "UTFORSK - NTNU 방문"
-        },
+        date: "2025-08-11",
+        title: { EN: "UTFORSK 2024 at NTNU", KR: "UTFORSK - NTNU 방문" },
         description: {
             EN: "MFTEL visited Prof. Hyun Joo Kim as part of the UTFORSK 2025 program.",
-            KR: "UTFORSK 프로그램으로 NTNU 김현주 교수님 연구실을 방문하였습니다."
+            KR: "UTFORSK 프로그램으로 NTNU 김현주 교수님 연구실을 방문하였습니다.",
         },
-        images: [
-            "/images/news/250811-utforsk-ntnu.jpeg",
-            "/images/news/250811-utforsk-ntnu-visiting.jpeg",
-        ],
+        images: ["/images/news/250811-utforsk-ntnu.jpeg", "/images/news/250811-utforsk-ntnu-visiting.jpeg"],
     },
     {
-        date: "2025. 05. 11.",
-        title: {
-            EN: "11th WORTH in China",
-            KR: "WORTH-11 학회 (중국)"
-        },
+        date: "2025-05-11",
+        title: { EN: "11th WORTH in China", KR: "WORTH-11 학회 (중국)" },
         description: {
             EN: "Hyeon Geun Shin presented research findings at the 11th WORTH conference in China.",
-            KR: "신현근 학생이 중국에서 열린 제11회 WORTH 학회에서 연구 결과를 발표하였습니다."
+            KR: "신현근 학생이 중국에서 열린 제11회 WORTH 학회에서 연구 결과를 발표하였습니다.",
         },
-        images: [
-            "/images/news/250505-hyeongeun-shin-worth.jpg",
-        ],
+        images: ["/images/news/250505-hyeongeun-shin-worth.jpg"],
     },
     {
-        date: "2025. 03. 02.",
-        title: {
-            EN: "Visiting Research at HZDR and UPC",
-            KR: "독일 HZDR, 스페인 UPC 방문연구"
-        },
+        date: "2025-03-02",
+        title: { EN: "Visiting Research at HZDR and UPC", KR: "독일 HZDR, 스페인 UPC 방문연구" },
         description: {
             EN: "Hyun Jin Yong conducted visiting research at HZDR, Germany, and Kyeong Ju Ko at UPC, Spain.",
-            KR: "용현진 학생은 독일 HZDR에서, 고경주 학생은 스페인 UPC에서 방문연구를 수행하였습니다."
+            KR: "용현진 학생은 독일 HZDR에서, 고경주 학생은 스페인 UPC에서 방문연구를 수행하였습니다.",
         },
-        images: [
-            "/images/news/250309-hyunjin-yong-hzdr.jpg",
-            "/images/news/250309-kyeongju-ko-upc.jpg",
-        ],
+        images: ["/images/news/250309-hyunjin-yong-hzdr.jpg", "/images/news/250309-kyeongju-ko-upc.jpg"],
     },
 ];
 
-function NewsCard({ item, index }: { item: NewsItem; index: number }) {
-    const [isExpanded, setIsExpanded] = useState(false);
-    const hasImages = item.images && item.images.length > 0;
-    const { language } = useLanguage();
+const INITIAL_ROWS = 5;
+
+const EN_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function formatDate(iso: string, language: Language): string {
+    const [y, m, d] = iso.split("-").map(Number);
+    if (language === "KR") {
+        return `${y}. ${String(m).padStart(2, "0")}. ${String(d).padStart(2, "0")}.`;
+    }
+    return `${EN_MONTHS[m - 1]} ${d}, ${y}`;
+}
+
+interface LightboxImage {
+    src: string;
+    alt: string;
+}
+
+function Lightbox({ image, language, onClose }: { image: LightboxImage; language: Language; onClose: () => void }) {
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, [onClose]);
 
     return (
         <div
-            className="border-b border-gray-100 last:border-b-0 cursor-pointer group"
-            onClick={() => setIsExpanded(!isExpanded)}
+            role="dialog"
+            aria-modal="true"
+            aria-label={image.alt}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-coal/90 p-4 md:p-10"
+            onClick={onClose}
         >
-            <div className="py-3 px-5 hover:bg-gray-50/80 transition-colors">
-                <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                        {/* Thumbnail preview */}
-                        {hasImages && (
-                            <div className="hidden sm:block relative w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-gray-100">
-                                <Image
-                                    src={item.images![0]}
-                                    alt=""
-                                    fill
-                                    sizes="40px"
-                                    className="object-cover"
-                                />
-                            </div>
-                        )}
-                        <div className="flex items-center gap-1.5 text-sm text-rose-600 w-[130px] shrink-0">
-                            <Calendar className="h-3.5 w-3.5" />
-                            <span className="font-medium">{item.date}</span>
-                        </div>
-                        <h4 className="text-sm md:text-base font-medium text-gray-900 truncate">{item.title[language]}</h4>
-                    </div>
-                    <div className="shrink-0 text-gray-300 group-hover:text-gray-500 transition-colors">
-                        {isExpanded ? (
-                            <ChevronUp className="h-4 w-4" />
-                        ) : (
-                            <ChevronDown className="h-4 w-4" />
-                        )}
-                    </div>
-                </div>
+            <button
+                type="button"
+                aria-label={language === "KR" ? "닫기" : "Close"}
+                className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-lg text-paper/70 transition-colors duration-150 hover:text-paper"
+                onClick={onClose}
+            >
+                <X className="h-6 w-6" />
+            </button>
+            <div
+                className="relative h-full max-h-[82vh] w-full max-w-4xl"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <Image
+                    src={image.src}
+                    alt={image.alt}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 896px"
+                    className="object-contain"
+                />
             </div>
-
-            <AnimatePresence>
-                {isExpanded && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.25 }}
-                        className="overflow-hidden"
-                    >
-                        <div className="px-5 pb-5">
-                            <p className="text-gray-600 text-sm mb-4 sm:ml-[154px] whitespace-pre-line">{item.description[language]}</p>
-                            {hasImages && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:ml-[154px]">
-                                    {item.images!.map((src, idx) => (
-                                        <div key={idx} className="relative aspect-[4/3] rounded-xl overflow-hidden bg-gray-100">
-                                            <Image
-                                                src={src}
-                                                alt={`${item.title[language]} - Image ${idx + 1}`}
-                                                fill
-                                                sizes="(max-width: 768px) 100vw, 400px"
-                                                className="object-cover"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     );
 }
 
-export default function News() {
-    const { t } = useLanguage();
+function ActivityRow({
+    item,
+    language,
+    onImageOpen,
+}: {
+    item: ActivityItem;
+    language: Language;
+    onImageOpen: (image: LightboxImage) => void;
+}) {
+    const [expanded, setExpanded] = useState(false);
+    const isKR = language === "KR";
+    const panelId = `news-activity-${item.date}`;
 
     return (
-        <Section id="news" className="bg-white">
-            <div className="text-center max-w-3xl mx-auto mb-12">
-                <h2 className="text-sm font-semibold text-rose-600 tracking-widest uppercase mb-3">{t("news.label")}</h2>
-                <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">{t("news.title")}</h3>
-                <p className="text-lg text-gray-600 leading-relaxed">
-                    {t("news.description")}
+        <div>
+            <button
+                type="button"
+                aria-expanded={expanded}
+                aria-controls={panelId}
+                onClick={() => setExpanded((v) => !v)}
+                className="flex w-full items-center gap-4 px-4 py-4 text-left transition-colors duration-150 hover:bg-well md:px-5"
+            >
+                {/* thumbnail — kept on mobile */}
+                <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-hairline bg-well">
+                    <Image src={item.images[0]} alt="" fill sizes="48px" className="object-cover" />
+                </span>
+                {/* date — left column on desktop */}
+                <span className="hidden w-28 shrink-0 md:block">
+                    <Meta className="whitespace-nowrap">{formatDate(item.date, language)}</Meta>
+                </span>
+                <span className="min-w-0 flex-1">
+                    <span className="line-clamp-2 break-keep text-[15px] font-semibold leading-snug text-ink md:text-base">
+                        {item.title[language]}
+                    </span>
+                    {/* date — below title on mobile */}
+                    <span className="mt-1 block md:hidden">
+                        <Meta className="whitespace-nowrap">{formatDate(item.date, language)}</Meta>
+                    </span>
+                </span>
+                <ChevronDown
+                    aria-hidden
+                    className={`h-4 w-4 shrink-0 text-ink-3 transition-transform duration-150 ${expanded ? "rotate-180" : ""}`}
+                />
+            </button>
+
+            {/* CSS-only accordion: content always in server HTML */}
+            <div
+                id={panelId}
+                className={`grid transition-[grid-template-rows] duration-[250ms] ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+            >
+                <div className="min-h-0 overflow-hidden">
+                    <div className="flex gap-4 px-4 pb-5 md:px-5">
+                        {/* spacers mirror the row geometry — alignment by construction */}
+                        <span aria-hidden className="hidden w-12 shrink-0 md:block" />
+                        <span aria-hidden className="hidden w-28 shrink-0 md:block" />
+                        <div className="min-w-0 flex-1">
+                            <p
+                                className={`whitespace-pre-line text-sm text-ink-2 md:text-[15px] ${isKR ? "leading-[1.75]" : "leading-relaxed"}`}
+                            >
+                                {item.description[language]}
+                            </p>
+                            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                {item.images.map((src, i) => (
+                                    <button
+                                        key={src}
+                                        type="button"
+                                        aria-label={language === "KR" ? "이미지 크게 보기" : "Enlarge image"}
+                                        onClick={() =>
+                                            onImageOpen({ src, alt: `${item.title[language]} — ${i + 1}` })
+                                        }
+                                        className="relative aspect-[3/2] overflow-hidden rounded-lg border border-hairline bg-well transition-colors duration-150 hover:border-hairline-2"
+                                    >
+                                        <Image
+                                            src={src}
+                                            alt={`${item.title[language]} — ${i + 1}`}
+                                            fill
+                                            sizes="(max-width: 768px) 100vw, 400px"
+                                            className="object-cover"
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function AnnouncementCard({
+    language,
+    onImageOpen,
+}: {
+    language: Language;
+    onImageOpen: (image: LightboxImage) => void;
+}) {
+    const [expanded, setExpanded] = useState(false);
+    const isKR = language === "KR";
+    const detailId = "news-call-detail";
+
+    return (
+        <article className="mb-10 overflow-hidden rounded-lg border border-ember-200 border-l-2 border-l-ember-600 bg-ember-50 md:mb-14">
+            <div className="p-5 md:p-7">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <Meta className="font-medium text-ink-2">
+                        {isKR ? "CALL — 모집공고" : "CALL — ANNOUNCEMENT"}
+                    </Meta>
+                    <Meta>{formatDate(ANNOUNCEMENT.date, language)}</Meta>
+                    <Meta className="hidden sm:inline">{ANNOUNCEMENT.projectNo}</Meta>
+                </div>
+
+                <h3 className="mt-3 max-w-3xl break-keep text-[17px] font-semibold leading-snug text-ink md:text-lg">
+                    {ANNOUNCEMENT.title[language]}
+                </h3>
+
+                <p
+                    className={`mt-2 max-w-3xl text-sm text-ink-2 md:text-[15px] ${isKR ? "leading-[1.75]" : "leading-relaxed"}`}
+                >
+                    {ANNOUNCEMENT.intro[language]}
                 </p>
+
+                <div className="mt-5">
+                    <Meta className="text-sm font-medium text-ember-700">
+                        {isKR ? "마감" : "DEADLINE"} · {formatDate(ANNOUNCEMENT.deadline, language)}{" "}
+                        {ANNOUNCEMENT.deadlineTime}
+                    </Meta>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-3">
+                    <a
+                        href={`mailto:${ANNOUNCEMENT.email}`}
+                        className="inline-flex h-11 items-center rounded-lg border border-hairline-2 bg-white px-5 text-sm font-medium text-ink transition-colors duration-150 hover:border-ink-4"
+                    >
+                        {isKR ? "이메일로 지원" : "Apply by Email"}
+                    </a>
+                    <button
+                        type="button"
+                        aria-expanded={expanded}
+                        aria-controls={detailId}
+                        onClick={() => setExpanded((v) => !v)}
+                        className="inline-flex h-11 items-center gap-2 rounded-lg border border-hairline-2 bg-white px-5 text-sm font-medium text-ink transition-colors duration-150 hover:border-ink-4"
+                    >
+                        {expanded
+                            ? isKR
+                                ? "접기"
+                                : "Collapse"
+                            : isKR
+                              ? "공고 전문 보기"
+                              : "View Full Announcement"}
+                        <ChevronDown
+                            aria-hidden
+                            className={`h-4 w-4 text-ink-3 transition-transform duration-150 ${expanded ? "rotate-180" : ""}`}
+                        />
+                    </button>
+                </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-200/80 overflow-hidden shadow-sm">
-                {newsItems.map((item, index) => (
-                    <NewsCard key={index} item={item} index={index} />
-                ))}
+            {/* full announcement — structured, CSS-only accordion */}
+            <div
+                id={detailId}
+                className={`grid transition-[grid-template-rows] duration-[250ms] ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+            >
+                <div className="min-h-0 overflow-hidden">
+                    <div className="border-t border-ember-200 p-5 md:p-7">
+                        <div className="grid gap-8 md:grid-cols-3">
+                            <div className="grid content-start gap-6 sm:grid-cols-2 md:col-span-2">
+                                {ANNOUNCEMENT.sections.map((sec, sIdx) => (
+                                    <section key={sec.heading.EN}>
+                                        <h4 className="break-keep text-sm font-semibold text-ink">
+                                            {sIdx + 1}. {sec.heading[language]}
+                                        </h4>
+                                        <ul className="mt-2 space-y-1.5 text-sm text-ink-2">
+                                            {sec.items.map((it) => (
+                                                <li
+                                                    key={it.text.EN}
+                                                    className={`flex gap-2 ${isKR ? "break-keep leading-[1.75]" : "leading-relaxed"}`}
+                                                >
+                                                    <span aria-hidden className="shrink-0 text-ink-4">
+                                                        –
+                                                    </span>
+                                                    <span className="min-w-0">
+                                                        {it.label ? (
+                                                            <span className="font-medium text-ink">
+                                                                {it.label[language]}:{" "}
+                                                            </span>
+                                                        ) : null}
+                                                        {it.href ? (
+                                                            <a
+                                                                href={it.href}
+                                                                className="text-ember-700 underline underline-offset-2 transition-colors duration-150 hover:text-ember-800"
+                                                            >
+                                                                {it.text[language]}
+                                                            </a>
+                                                        ) : (
+                                                            it.text[language]
+                                                        )}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </section>
+                                ))}
+                            </div>
+                            <figure className="md:col-span-1">
+                                <button
+                                    type="button"
+                                    aria-label={language === "KR" ? "이미지 크게 보기" : "Enlarge image"}
+                                    onClick={() =>
+                                        onImageOpen({
+                                            src: ANNOUNCEMENT.image,
+                                            alt: ANNOUNCEMENT.title[language],
+                                        })
+                                    }
+                                    className="block w-full overflow-hidden rounded-lg border border-hairline bg-white transition-colors duration-150 hover:border-hairline-2"
+                                >
+                                    <span className="relative block aspect-[1686/1186]">
+                                        <Image
+                                            src={ANNOUNCEMENT.image}
+                                            alt={ANNOUNCEMENT.title[language]}
+                                            fill
+                                            sizes="(max-width: 768px) 100vw, 360px"
+                                            className="object-contain"
+                                        />
+                                    </span>
+                                </button>
+                                <FigCaption className="mt-2">
+                                    {isKR ? "모집공고 포스터" : "CALL POSTER"} — {ANNOUNCEMENT.projectNo}
+                                </FigCaption>
+                            </figure>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </Section>
+        </article>
+    );
+}
+
+export default function News() {
+    const { t, language } = useLanguage();
+    const isKR = language === "KR";
+    const [showAll, setShowAll] = useState(false);
+    const [lightbox, setLightbox] = useState<LightboxImage | null>(null);
+
+    const firstRows = ACTIVITY_ITEMS.slice(0, INITIAL_ROWS);
+    const restRows = ACTIVITY_ITEMS.slice(INITIAL_ROWS);
+    const moreId = "news-more-rows";
+
+    return (
+        <Band id="news" surface="white">
+            <SectionHeader
+                index="06"
+                kicker={t("news.label")}
+                title={t("news.title")}
+                sub={t("news.description")}
+                isKorean={isKR}
+            />
+
+            <AnnouncementCard language={language} onImageOpen={setLightbox} />
+
+            {/* activity rows */}
+            <div className="overflow-hidden rounded-lg border border-hairline bg-white">
+                <ul>
+                    {firstRows.map((item, i) => (
+                        <li key={item.date} className={i > 0 ? "border-t border-hairline" : ""}>
+                            <ActivityRow item={item} language={language} onImageOpen={setLightbox} />
+                        </li>
+                    ))}
+                </ul>
+
+                {restRows.length > 0 ? (
+                    <>
+                        <div
+                            id={moreId}
+                            className={`grid transition-[grid-template-rows] duration-[250ms] ${showAll ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+                        >
+                            <div className="min-h-0 overflow-hidden">
+                                <ul>
+                                    {restRows.map((item) => (
+                                        <li key={item.date} className="border-t border-hairline">
+                                            <ActivityRow
+                                                item={item}
+                                                language={language}
+                                                onImageOpen={setLightbox}
+                                            />
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            aria-expanded={showAll}
+                            aria-controls={moreId}
+                            onClick={() => setShowAll((v) => !v)}
+                            className="flex h-12 w-full items-center justify-center gap-2 border-t border-hairline text-sm font-medium text-ink-2 transition-colors duration-150 hover:bg-well hover:text-ink"
+                        >
+                            {showAll
+                                ? isKR
+                                    ? "접기"
+                                    : "Show Less"
+                                : isKR
+                                  ? `전체 보기 (${restRows.length})`
+                                  : `View All (${restRows.length})`}
+                            <ChevronDown
+                                aria-hidden
+                                className={`h-4 w-4 text-ink-3 transition-transform duration-150 ${showAll ? "rotate-180" : ""}`}
+                            />
+                        </button>
+                    </>
+                ) : null}
+            </div>
+
+            {lightbox ? (
+                <Lightbox image={lightbox} language={language} onClose={() => setLightbox(null)} />
+            ) : null}
+        </Band>
     );
 }

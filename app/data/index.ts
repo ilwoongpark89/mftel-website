@@ -75,13 +75,23 @@ export const researchAreas = [
   { title: "Thermal Energy Storage", image: "Thermal Energy Storage.png" }
 ];
 
-export const galleryImages = [
-  { title: "UTFORSK 2024 Field Trip to NTNU, Norway", date: "August 2025", image: "2025. 08. @MFTEL : UTFORSK 2024 Field Trip to NTNU, Norway .jpg", sortDate: "2025-08" },
-  { title: "KSFM2024 in Jeju", date: "December 2024", image: "2024. 12. @MFTEL : KSFM2024 in Jeju.jpg", sortDate: "2024-12" },
-  { title: "Yun Seok Choi (Best Paper Award): WORTH-10 in Jeju", date: "November 2023", image: "2023. 11.  @Yun Seok Choi (Best Paper Award) : WORTH-10 in Jeju.png", sortDate: "2023-11" },
-  { title: "Junbeom Song: GPPS Hong Kong 23", date: "October 2023", image: "2023. 10.   @Junbeom Song : GPPS Hong Kong 23, Hong Kong.png", sortDate: "2023-10" },
-  { title: "ICMF in Kobe, Japan", date: "April 2023", image: "2023. 04.  ICMF in Kobe, Japan.jpg", sortDate: "2023-04-02" },
-  { title: "KSME Thermal Engineering Division in Busan", date: "April 2023", image: "2023. 04.  KSME Thermal Engineering Division in Busan.jpg", sortDate: "2023-04-01" }
+export const galleryImages: {
+  title: string;
+  date: string;
+  image: string;
+  sortDate: string;
+  /** Curated bento emphasis — 2 = col-span-2 tile (explicit, never index-parity). */
+  span?: number;
+}[] = [
+  { title: "Hyeon Jin Yong: Visiting Research at HZDR, Germany", date: "March – September 2025", image: "2025-03-hyeonjin-yong-hzdr.jpg", sortDate: "2025-09-03" },
+  { title: "Kyeong Ju Ko: Visiting Research at UPC, Spain", date: "March – September 2025", image: "2025-03-kyeongju-ko-upc.jpg", sortDate: "2025-09-02" },
+  { title: "UTFORSK 2024 Field Trip to NTNU, Norway", date: "August 2025", image: "2025-08-utforsk-ntnu-field-trip.jpg", sortDate: "2025-08", span: 2 },
+  { title: "Hyeon Geun Shin: Presentation at 11th WORTH, China", date: "May 2025", image: "2025-05-hyeongeun-shin-worth11.jpg", sortDate: "2025-05" },
+  { title: "KSFM2024 in Jeju", date: "December 2024", image: "2024-12-ksfm2024-jeju.jpg", sortDate: "2024-12" },
+  { title: "Yun Seok Choi (Best Paper Award): WORTH-10 in Jeju", date: "November 2023", image: "2023-11-yunseok-choi-worth10-award.png", sortDate: "2023-11", span: 2 },
+  { title: "Junbeom Song: GPPS Hong Kong 23", date: "October 2023", image: "2023-10-junbeom-song-gpps-hk.png", sortDate: "2023-10" },
+  { title: "ICMF in Kobe, Japan", date: "April 2023", image: "2023-04-icmf-kobe.jpg", sortDate: "2023-04-02" },
+  { title: "KSME Thermal Engineering Division in Busan", date: "April 2023", image: "2023-04-ksme-busan.jpg", sortDate: "2023-04-01" }
 ].sort((a, b) => b.sortDate.localeCompare(a.sortDate));
 
 export const collaborators = [

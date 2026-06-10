@@ -1,268 +1,314 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import Section from "@/components/ui/section";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { useMemo, useState } from "react";
+import { ChevronDown, Search } from "lucide-react";
+import Band from "@/components/ui/band";
+import { Meta, SectionHeader } from "@/components/ui/typo";
 import { publications } from "@/app/data";
-import { ExternalLink, Search, Copy, Check, ChevronDown, X } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
 
-const CATEGORIES = [
-    { key: "all", label: "All", labelKR: "전체" },
-    { key: "boiling", label: "Boiling", labelKR: "비등" },
-    { key: "condensation", label: "Condensation", labelKR: "응축" },
-    { key: "smr", label: "SMR", labelKR: "SMR" },
-    { key: "tes", label: "TES", labelKR: "TES" },
-    { key: "wettability", label: "Wettability", labelKR: "젖음성" },
-];
+type Publication = (typeof publications)[number];
 
-function generateBibTeX(pub: typeof publications[0]) {
-    const firstAuthor = pub.authors.split(",")[0].trim().replace("*", "");
-    const lastName = firstAuthor.split(" ").pop() || "Author";
-    const key = `${lastName.toLowerCase()}${pub.year}`;
-    return `@article{${key},
-  author = {${pub.authors.replace(/\*/g, "")}},
-  title = {${pub.title}},
-  journal = {${pub.journal}},
-  year = {${pub.year}},
-  doi = {${pub.link.replace("https://doi.org/", "")}}
-}`;
-}
+/**
+ * CALORIMETER 03 — PUBLICATIONS. Year-grouped single-column citation list
+ * (year rail left, hairline-separated entries). Frame-0: the default list
+ * is fully present in server HTML; filters are additive client state.
+ * Pills are DERIVED from data with counts — a dead pill (e.g. the old TES
+ * pill with 0 entries) is representation-impossible.
+ */
 
-function generateAPA(pub: typeof publications[0]) {
-    const authorList = pub.authors.replace(/\*/g, "");
-    return `${authorList} (${pub.year}). ${pub.title}. ${pub.journal}. ${pub.link}`;
-}
+/** KR/EN display labels for category keys that exist in app/data. */
+const CATEGORY_LABELS: Record<string, { en: string; kr: string }> = {
+    boiling: { en: "Boiling", kr: "비등" },
+    condensation: { en: "Condensation", kr: "응축" },
+    smr: { en: "SMR", kr: "SMR" },
+    wettability: { en: "Wettability", kr: "젖음성" },
+};
+
+const VISIBLE_DEFAULT = 8;
+
+/** `special` exists only on some data entries — safe union access. */
+const specialOf = (pub: Publication): string | undefined =>
+    "special" in pub ? pub.special : undefined;
+
+/** "239, 116852, 2026" → "239 · 116852 · 2026" (vol · article/pages · year). */
+const detailsLine = (details: string) =>
+    details
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .join(" · ");
 
 export default function Publications() {
-    const [showAll, setShowAll] = useState(false);
+    const { t, language } = useLanguage();
+    const isKR = language === "KR";
+
     const [activeCategory, setActiveCategory] = useState("all");
     const [selectedYear, setSelectedYear] = useState("all");
-    const [authorSearch, setAuthorSearch] = useState("");
-    const [copiedId, setCopiedId] = useState<string | null>(null);
-    const [citeOpen, setCiteOpen] = useState<number | null>(null);
-    const { t, language } = useLanguage();
+    const [search, setSearch] = useState("");
+    const [showAll, setShowAll] = useState(false);
 
-    const years = useMemo(() => {
-        const uniqueYears = [...new Set(publications.map(p => p.year))].sort((a, b) => b.localeCompare(a));
-        return uniqueYears;
+    const totalPubs = publications.length;
+
+    /** [key, count] pairs derived from data, largest group first. */
+    const categories = useMemo(() => {
+        const counts = new Map<string, number>();
+        for (const pub of publications) {
+            for (const key of pub.category) counts.set(key, (counts.get(key) ?? 0) + 1);
+        }
+        return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     }, []);
 
+    const years = useMemo(
+        () => [...new Set(publications.map((p) => p.year))].sort((a, b) => b.localeCompare(a)),
+        []
+    );
+
     const filteredPubs = useMemo(() => {
-        return publications.filter(pub => {
-            const matchCategory = activeCategory === "all" || (pub.category && pub.category.includes(activeCategory));
+        const query = search.trim().toLowerCase();
+        return publications.filter((pub) => {
+            const matchCategory = activeCategory === "all" || pub.category.includes(activeCategory);
             const matchYear = selectedYear === "all" || pub.year === selectedYear;
-            const matchAuthor = !authorSearch || pub.authors.toLowerCase().includes(authorSearch.toLowerCase());
-            return matchCategory && matchYear && matchAuthor;
+            const matchQuery =
+                !query ||
+                pub.title.toLowerCase().includes(query) ||
+                pub.authors.toLowerCase().includes(query);
+            return matchCategory && matchYear && matchQuery;
         });
-    }, [activeCategory, selectedYear, authorSearch]);
+    }, [activeCategory, selectedYear, search]);
 
-    const displayedPubs = showAll ? filteredPubs : filteredPubs.slice(0, 6);
-    const totalPubs = publications.length;
-    const hasFilters = activeCategory !== "all" || selectedYear !== "all" || authorSearch !== "";
+    const displayedPubs = showAll ? filteredPubs : filteredPubs.slice(0, VISIBLE_DEFAULT);
 
-    const handleCopy = async (text: string, id: string) => {
-        await navigator.clipboard.writeText(text);
-        setCopiedId(id);
-        setTimeout(() => setCopiedId(null), 2000);
-    };
+    /** Data is ordered newest-first, so consecutive grouping preserves year order. */
+    const yearGroups = useMemo(() => {
+        const groups: { year: string; items: Publication[] }[] = [];
+        for (const pub of displayedPubs) {
+            const last = groups[groups.length - 1];
+            if (last && last.year === pub.year) last.items.push(pub);
+            else groups.push({ year: pub.year, items: [pub] });
+        }
+        return groups;
+    }, [displayedPubs]);
+
+    const hasFilters = activeCategory !== "all" || selectedYear !== "all" || search.trim() !== "";
 
     const clearFilters = () => {
         setActiveCategory("all");
         setSelectedYear("all");
-        setAuthorSearch("");
+        setSearch("");
     };
 
-    return (
-        <Section id="publications" className="bg-slate-50/50">
-            <div className="text-center max-w-3xl mx-auto mb-12">
-                <h2 className="text-sm font-semibold text-rose-600 tracking-widest uppercase mb-3">{t("publications.label")}</h2>
-                <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{t("publications.title")}</h3>
-                <p className="text-gray-500">
-                    {t("publications.count").replace("{count}", String(publications.length))}
-                </p>
-            </div>
+    const categoryLabel = (key: string) => {
+        const label = CATEGORY_LABELS[key];
+        return label ? (isKR ? label.kr : label.en) : key.toUpperCase();
+    };
 
-            {/* Filters */}
-            <div className="mb-8 space-y-4">
-                {/* Category Pills */}
-                <div className="flex flex-wrap justify-center gap-2">
-                    {CATEGORIES.map(cat => (
+    const pillClass = (active: boolean) =>
+        `inline-flex min-h-11 items-center gap-2 rounded-lg border px-3.5 text-sm font-medium transition-colors duration-150 md:min-h-9 ${
+            active
+                ? "border-ember-200 bg-ember-50 text-ember-700"
+                : "border-hairline bg-white text-ink-2 hover:border-hairline-2"
+        }`;
+
+    return (
+        <Band id="publications" surface="white">
+            <SectionHeader
+                index="03"
+                kicker={t("publications.label")}
+                title={t("publications.title")}
+                sub={t("publications.count").replace("{count}", String(totalPubs))}
+                isKorean={isKR}
+            />
+
+            {/* filter rail — pills derived from data with counts */}
+            <div className="space-y-4">
+                <div
+                    role="group"
+                    aria-label={isKR ? "분야 필터" : "Filter by category"}
+                    className="flex flex-wrap gap-2"
+                >
+                    <button
+                        type="button"
+                        onClick={() => setActiveCategory("all")}
+                        aria-pressed={activeCategory === "all"}
+                        className={pillClass(activeCategory === "all")}
+                    >
+                        {isKR ? "전체" : "All"}
+                        <Meta className={`text-xs ${activeCategory === "all" ? "text-ember-700" : ""}`}>
+                            {totalPubs}
+                        </Meta>
+                    </button>
+                    {categories.map(([key, count]) => (
                         <button
-                            key={cat.key}
-                            onClick={() => setActiveCategory(cat.key)}
-                            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                                activeCategory === cat.key
-                                    ? "bg-rose-500 text-white shadow-sm"
-                                    : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
-                            }`}
+                            key={key}
+                            type="button"
+                            onClick={() => setActiveCategory(key)}
+                            aria-pressed={activeCategory === key}
+                            className={pillClass(activeCategory === key)}
                         >
-                            {language === "KR" ? cat.labelKR : cat.label}
+                            {categoryLabel(key)}
+                            <Meta className={`text-xs ${activeCategory === key ? "text-ember-700" : ""}`}>
+                                {count}
+                            </Meta>
                         </button>
                     ))}
                 </div>
 
-                {/* Year + Author Row */}
-                <div className="flex flex-col sm:flex-row justify-center gap-3 max-w-xl mx-auto">
-                    <div className="relative">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <div className="relative w-full sm:w-44">
                         <select
                             value={selectedYear}
-                            onChange={e => setSelectedYear(e.target.value)}
-                            className="appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2 pr-8 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-300 cursor-pointer"
+                            onChange={(e) => setSelectedYear(e.target.value)}
+                            aria-label={isKR ? "연도 필터" : "Filter by year"}
+                            className="h-11 w-full cursor-pointer appearance-none rounded-lg border border-hairline bg-white pl-3 pr-9 text-sm text-ink-2 transition-colors duration-150 hover:border-hairline-2 focus:border-hairline-2 focus:outline-none md:h-9"
                         >
-                            <option value="all">{language === "KR" ? "전체 연도" : "All Years"}</option>
-                            {years.map(y => (
-                                <option key={y} value={y}>{y}</option>
+                            <option value="all">{isKR ? "전체 연도" : "All Years"}</option>
+                            {years.map((y) => (
+                                <option key={y} value={y}>
+                                    {y}
+                                </option>
                             ))}
                         </select>
-                        <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                    </div>
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder={language === "KR" ? "저자 검색..." : "Search by author..."}
-                            value={authorSearch}
-                            onChange={e => setAuthorSearch(e.target.value)}
-                            className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-300"
+                        <ChevronDown
+                            aria-hidden
+                            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-4"
                         />
                     </div>
+                    <div className="relative w-full sm:max-w-xs sm:flex-1">
+                        <Search
+                            aria-hidden
+                            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-4"
+                        />
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder={isKR ? "제목·저자 검색..." : "Search title or author..."}
+                            aria-label={isKR ? "논문 검색" : "Search publications"}
+                            className="h-11 w-full rounded-lg border border-hairline bg-white pl-9 pr-3 text-sm text-ink placeholder:text-ink-4 transition-colors duration-150 hover:border-hairline-2 focus:border-hairline-2 focus:outline-none md:h-9"
+                        />
+                    </div>
+                    {hasFilters && (
+                        <p className="text-sm text-ink-3">
+                            <span className="tabular-nums">
+                                {filteredPubs.length} / {totalPubs}
+                            </span>{" "}
+                            {isKR ? "편" : "papers"}
+                            <button
+                                type="button"
+                                onClick={clearFilters}
+                                className="ml-3 font-medium text-ember-700 transition-colors duration-150 hover:text-ember-800"
+                            >
+                                {isKR ? "필터 초기화" : "Clear filters"}
+                            </button>
+                        </p>
+                    )}
                 </div>
+            </div>
 
-                {/* Filter Results Count */}
-                {hasFilters && (
-                    <div className="text-center">
-                        <span className="text-sm text-gray-500">
-                            {filteredPubs.length} / {totalPubs} {language === "KR" ? "편" : "papers"}
-                        </span>
-                        <button onClick={clearFilters} className="ml-2 text-sm text-rose-500 hover:text-rose-600 font-medium">
-                            {language === "KR" ? "필터 초기화" : "Clear filters"}
+            {/* year-grouped citation list — frame-0, no entrance animation */}
+            <div className="mt-8 md:mt-10">
+                {yearGroups.map(({ year, items }) => (
+                    <div
+                        key={year}
+                        className="grid border-t border-hairline py-5 md:grid-cols-[96px_1fr] md:gap-6 md:py-6"
+                    >
+                        <div className="pb-2 md:pb-0">
+                            <p className="text-2xl font-semibold leading-none tracking-tight text-hairline-2 tabular-nums md:sticky md:top-24">
+                                {year}
+                            </p>
+                        </div>
+                        <ul className="divide-y divide-hairline">
+                            {items.map((pub) => {
+                                const special = specialOf(pub);
+                                const isDoi = pub.link.includes("doi.org");
+                                return (
+                                    <li
+                                        key={pub.number}
+                                        id={`pub-${totalPubs - pub.number + 1}`}
+                                        className="scroll-mt-24 py-4 first:pt-0 last:pb-0"
+                                    >
+                                        <a
+                                            href={pub.link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="break-keep text-base font-semibold leading-snug text-ink transition-colors duration-150 hover:text-ember-700"
+                                        >
+                                            {pub.title}
+                                        </a>
+                                        <p className="mt-1.5 text-sm leading-relaxed text-ink-3">
+                                            {pub.authors}
+                                        </p>
+                                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+                                            <span className="text-sm font-medium text-ink">
+                                                {pub.journal}
+                                            </span>
+                                            <Meta>{detailsLine(pub.details)}</Meta>
+                                            {special
+                                                ?.split(",")
+                                                .map((tag) => tag.trim())
+                                                .filter(Boolean)
+                                                .map((tag) => (
+                                                    <span
+                                                        key={tag}
+                                                        className="inline-flex items-center rounded-md border border-ember-200 bg-ember-50 px-1.5 py-0.5"
+                                                    >
+                                                        <Meta className="text-[11px] uppercase tracking-[0.08em] text-ember-700">
+                                                            {tag}
+                                                        </Meta>
+                                                    </span>
+                                                ))}
+                                            <a
+                                                href={pub.link}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                aria-label={`${isDoi ? "DOI" : "PDF"} — ${pub.title}`}
+                                                className="ml-auto inline-flex min-h-11 items-center rounded-lg border border-hairline px-2.5 transition-colors duration-150 hover:border-hairline-2 md:min-h-8"
+                                            >
+                                                <Meta className="text-xs text-ink-2">
+                                                    {isDoi ? "DOI" : "PDF"} ↗
+                                                </Meta>
+                                            </a>
+                                        </div>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
+                ))}
+
+                {filteredPubs.length === 0 ? (
+                    <div className="border-t border-hairline py-12">
+                        <p className="text-base text-ink-3">
+                            {isKR ? "검색 결과가 없습니다" : "No publications found"}
+                        </p>
+                        <button
+                            type="button"
+                            onClick={clearFilters}
+                            className="mt-2 text-sm font-medium text-ember-700 transition-colors duration-150 hover:text-ember-800"
+                        >
+                            {isKR ? "필터 초기화" : "Clear filters"}
                         </button>
                     </div>
+                ) : (
+                    <div aria-hidden className="border-t border-hairline" />
                 )}
             </div>
 
-            <div className="grid md:grid-cols-2 gap-5">
-                {displayedPubs.map((pub, i) => (
-                    <motion.div
-                        key={pub.number}
-                        id={`pub-${totalPubs - pub.number + 1}`}
-                        className="block group h-full scroll-mt-24 relative"
-                        initial={{ opacity: 0, y: 12 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: i * 0.05 }}
+            {filteredPubs.length > VISIBLE_DEFAULT && (
+                <div className="mt-8">
+                    <button
+                        type="button"
+                        onClick={() => setShowAll(!showAll)}
+                        aria-expanded={showAll}
+                        className="inline-flex h-11 items-center rounded-lg border border-hairline-2 px-5 text-sm font-medium text-ink transition-colors duration-150 hover:border-ink-4 hover:bg-well"
                     >
-                        <Card className="hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 h-full border-transparent hover:border-rose-200 bg-white">
-                            <CardContent className="p-6 flex gap-4 items-start h-full">
-                                <div className="hidden sm:flex flex-shrink-0 w-10 h-10 rounded-lg bg-slate-100 text-slate-500 items-center justify-center font-semibold text-sm">
-                                    {totalPubs - pub.number + 1}
-                                </div>
-                                <div className="flex-1 flex flex-col">
-                                    <a
-                                        href={pub.link}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-base font-semibold text-gray-900 group-hover:text-rose-600 transition-colors mb-2 leading-snug line-clamp-2 hover:underline"
-                                    >
-                                        {pub.title}
-                                    </a>
-                                    <p className="text-sm text-gray-500 mb-2 line-clamp-1">{pub.authors}</p>
-                                    <div className="flex items-center text-xs text-gray-400 gap-2 mt-auto">
-                                        <span className="font-medium text-gray-600">{pub.journal}</span>
-                                        <span className="text-gray-300">·</span>
-                                        <span>{pub.year}</span>
-                                        {/* Cite Button */}
-                                        <button
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                setCiteOpen(citeOpen === pub.number ? null : pub.number);
-                                            }}
-                                            className="ml-auto px-2 py-0.5 rounded text-xs font-medium text-rose-500 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all"
-                                        >
-                                            Cite
-                                        </button>
-                                        <a href={pub.link} target="_blank" rel="noopener noreferrer">
-                                            <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-rose-400" />
-                                        </a>
-                                    </div>
-
-                                    {/* Citation Popup */}
-                                    <AnimatePresence>
-                                        {citeOpen === pub.number && (
-                                            <motion.div
-                                                initial={{ opacity: 0, height: 0 }}
-                                                animate={{ opacity: 1, height: "auto" }}
-                                                exit={{ opacity: 0, height: 0 }}
-                                                className="mt-3 overflow-hidden"
-                                            >
-                                                <div className="bg-slate-50 rounded-lg p-3 border border-slate-200 space-y-2">
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <span className="text-xs font-semibold text-slate-600">BibTeX</span>
-                                                        <button
-                                                            onClick={() => handleCopy(generateBibTeX(pub), `bib-${pub.number}`)}
-                                                            className="flex items-center gap-1 text-xs text-slate-500 hover:text-rose-500 transition-colors"
-                                                        >
-                                                            {copiedId === `bib-${pub.number}` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                                                            {copiedId === `bib-${pub.number}` ? "Copied!" : "Copy"}
-                                                        </button>
-                                                    </div>
-                                                    <pre className="text-[10px] text-slate-600 bg-white p-2 rounded border overflow-x-auto whitespace-pre-wrap font-mono leading-relaxed">
-                                                        {generateBibTeX(pub)}
-                                                    </pre>
-
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <span className="text-xs font-semibold text-slate-600">APA</span>
-                                                        <button
-                                                            onClick={() => handleCopy(generateAPA(pub), `apa-${pub.number}`)}
-                                                            className="flex items-center gap-1 text-xs text-slate-500 hover:text-rose-500 transition-colors"
-                                                        >
-                                                            {copiedId === `apa-${pub.number}` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                                                            {copiedId === `apa-${pub.number}` ? "Copied!" : "Copy"}
-                                                        </button>
-                                                    </div>
-                                                    <p className="text-[11px] text-slate-600 bg-white p-2 rounded border leading-relaxed">
-                                                        {generateAPA(pub)}
-                                                    </p>
-                                                    <button
-                                                        onClick={() => setCiteOpen(null)}
-                                                        className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 mt-1"
-                                                    >
-                                                        <X className="w-3 h-3" /> Close
-                                                    </button>
-                                                </div>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                ))}
-            </div>
-
-            {filteredPubs.length === 0 && (
-                <div className="text-center py-12 text-gray-400">
-                    <p className="text-lg">{language === "KR" ? "검색 결과가 없습니다" : "No publications found"}</p>
-                    <button onClick={clearFilters} className="mt-2 text-sm text-rose-500 hover:text-rose-600">
-                        {language === "KR" ? "필터 초기화" : "Clear filters"}
+                        {showAll
+                            ? t("publications.showLess")
+                            : t("publications.viewAll").replace("{count}", String(filteredPubs.length))}
                     </button>
                 </div>
             )}
-
-            {filteredPubs.length > 6 && (
-                <div className="text-center mt-10">
-                    <Button
-                        onClick={() => setShowAll(!showAll)}
-                        variant="outline"
-                        className="rounded-full px-8"
-                    >
-                        {showAll ? t("publications.showLess") : `${language === "KR" ? "전체 보기" : "View All"} (${filteredPubs.length})`}
-                    </Button>
-                </div>
-            )}
-        </Section>
+        </Band>
     );
 }

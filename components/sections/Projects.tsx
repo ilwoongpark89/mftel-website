@@ -1,254 +1,189 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { motion } from "framer-motion";
-import Section from "@/components/ui/section";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import Band from "@/components/ui/band";
+import { Kicker, Meta, FigCaption, SectionHeader } from "@/components/ui/typo";
 import { projects, patents } from "@/app/data";
-import { Rocket, Lightbulb, LayoutGrid, GanttChart } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
 
-const COLORS = [
-    "bg-rose-500", "bg-sky-500", "bg-amber-500", "bg-emerald-500",
-    "bg-violet-500", "bg-pink-500", "bg-cyan-500", "bg-orange-500",
-    "bg-teal-500", "bg-indigo-500", "bg-lime-500", "bg-fuchsia-500",
-];
+/**
+ * CALORIMETER 04 — PROJECTS & IP. Funding Gantt as the hero artifact
+ * (pure CSS bars derived from the grant year ranges — ember-600 active,
+ * hairline-2 completed), an editorial grants table sorted active-first,
+ * and a patents (intellectual property) sub-block. Frame-0 doctrine:
+ * zero animation, zero state, every row in the server HTML.
+ */
 
 function parseYearRange(yearStr: string): { start: number; end: number } {
-    const parts = yearStr.split("~").map(s => parseInt(s.trim()));
+    const parts = yearStr.split("~").map((s) => parseInt(s.trim(), 10));
     if (parts.length === 2) return { start: parts[0], end: parts[1] };
     return { start: parts[0], end: parts[0] };
 }
 
-function Timeline() {
-    const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-    const { language } = useLanguage();
+const CURRENT_YEAR = new Date().getFullYear();
 
-    const parsed = useMemo(() =>
-        projects.map((proj, i) => ({
-            ...proj,
-            ...parseYearRange(proj.year),
-            color: COLORS[i % COLORS.length],
-        }))
-    , []);
+/** Grants with derived status, active-first then most recent start. */
+const grants = projects
+    .map((p) => {
+        const { start, end } = parseYearRange(p.year);
+        return { ...p, start, end, active: start <= CURRENT_YEAR && CURRENT_YEAR <= end };
+    })
+    .sort((a, b) => Number(b.active) - Number(a.active) || b.start - a.start || b.end - a.end);
 
-    const minYear = Math.min(...parsed.map(p => p.start));
-    const maxYear = Math.max(...parsed.map(p => p.end)) + 1;
-    const yearRange = Array.from({ length: maxYear - minYear + 1 }, (_, i) => minYear + i);
+const MIN_YEAR = Math.min(...grants.map((g) => g.start));
+const MAX_YEAR = Math.max(...grants.map((g) => g.end));
+const SPAN = MAX_YEAR - MIN_YEAR + 1;
+const YEARS = Array.from({ length: SPAN }, (_, i) => MIN_YEAR + i);
 
-    return (
-        <div className="mb-12">
-            {/* Desktop Timeline */}
-            <div className="hidden md:block overflow-x-auto">
-                <div className="min-w-[700px]">
-                    {/* Year headers */}
-                    <div className="flex border-b border-gray-200 mb-2">
-                        <div className="w-[200px] flex-shrink-0" />
-                        {yearRange.map(y => (
-                            <div key={y} className="flex-1 text-center text-xs font-medium text-gray-400 pb-2">
-                                {y}
-                            </div>
-                        ))}
-                    </div>
+const pct = (v: number) => ((v - MIN_YEAR) / SPAN) * 100;
+const TODAY_PCT =
+    CURRENT_YEAR >= MIN_YEAR && CURRENT_YEAR <= MAX_YEAR ? pct(CURRENT_YEAR + 0.5) : null;
 
-                    {/* Bars */}
-                    <div className="space-y-1.5">
-                        {parsed.map((proj, i) => {
-                            const startOffset = ((proj.start - minYear) / (maxYear - minYear + 1)) * 100;
-                            const width = proj.start === proj.end
-                                ? (0.8 / (maxYear - minYear + 1)) * 100
-                                : ((proj.end - proj.start + 1) / (maxYear - minYear + 1)) * 100;
-
-                            return (
-                                <div
-                                    key={i}
-                                    className="flex items-center group"
-                                    onMouseEnter={() => setHoveredIdx(i)}
-                                    onMouseLeave={() => setHoveredIdx(null)}
-                                >
-                                    <div className="w-[200px] flex-shrink-0 pr-3">
-                                        <p className="text-xs text-gray-600 truncate font-medium leading-tight">
-                                            {proj.title.length > 40 ? proj.title.slice(0, 40) + "..." : proj.title}
-                                        </p>
-                                    </div>
-                                    <div className="flex-1 relative h-7">
-                                        <motion.div
-                                            className={`absolute top-0.5 h-6 rounded-md ${proj.color} cursor-pointer transition-all`}
-                                            style={{
-                                                left: `${startOffset}%`,
-                                                width: `${width}%`,
-                                                minWidth: proj.start === proj.end ? "12px" : undefined,
-                                            }}
-                                            initial={{ scaleX: 0, originX: 0 }}
-                                            whileInView={{ scaleX: 1 }}
-                                            viewport={{ once: true }}
-                                            transition={{ delay: i * 0.05, duration: 0.4 }}
-                                            whileHover={{ scale: 1.03 }}
-                                        >
-                                            {proj.start === proj.end && (
-                                                <div className={`w-3 h-3 rounded-full ${proj.color} absolute top-1.5 left-0 ring-2 ring-white`} />
-                                            )}
-                                        </motion.div>
-
-                                        {/* Tooltip */}
-                                        {hoveredIdx === i && (
-                                            <div
-                                                className="absolute z-20 bg-slate-900 text-white p-3 rounded-lg shadow-xl text-xs max-w-xs"
-                                                style={{
-                                                    left: `${startOffset}%`,
-                                                    top: "32px",
-                                                }}
-                                            >
-                                                <p className="font-semibold mb-1 leading-tight">{proj.title}</p>
-                                                <p className="text-slate-300 text-[11px]">{proj.sponsor}</p>
-                                                <p className="text-slate-400 mt-1">{proj.year}</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
-
-            {/* Mobile Vertical Timeline */}
-            <div className="md:hidden space-y-3">
-                {parsed.map((proj, i) => (
-                    <motion.div
-                        key={i}
-                        initial={{ opacity: 0, x: -12 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: i * 0.05 }}
-                        className="flex gap-3"
-                    >
-                        <div className="flex flex-col items-center">
-                            <div className={`w-3 h-3 rounded-full ${proj.color} flex-shrink-0`} />
-                            {i < parsed.length - 1 && <div className="w-0.5 flex-1 bg-gray-200 mt-1" />}
-                        </div>
-                        <div className="pb-4">
-                            <span className="text-xs font-medium text-gray-400">{proj.year}</span>
-                            <p className="text-sm font-semibold text-gray-900 leading-tight">{proj.title}</p>
-                            <p className="text-xs text-gray-500">{proj.sponsor}</p>
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
-        </div>
-    );
-}
+const rangeLabel = (g: { start: number; end: number }) =>
+    g.start === g.end ? `${g.start}` : `${g.start}–${g.end}`;
 
 export default function Projects() {
-    const [showAllProjects, setShowAllProjects] = useState(false);
-    const [view, setView] = useState<"grid" | "timeline">("grid");
-    const displayedProjects = showAllProjects ? projects : projects.slice(0, 4);
     const { t, language } = useLanguage();
+    const isKR = language === "KR";
+    const activeLabel = isKR ? "진행 중" : "ACTIVE";
 
     return (
-        <Section id="projects">
-            {/* Projects */}
-            <div className="text-center max-w-3xl mx-auto mb-8">
-                <h2 className="text-sm font-semibold text-rose-600 tracking-widest uppercase mb-3">{t("projects.label")}</h2>
-                <h3 className="text-3xl md:text-4xl font-bold text-gray-900">{t("projects.title")}</h3>
-            </div>
+        <Band id="projects" surface="paper">
+            <SectionHeader
+                index="04"
+                kicker={t("projects.label")}
+                title={t("projects.title")}
+                isKorean={isKR}
+            />
 
-            {/* View Toggle */}
-            <div className="flex justify-center gap-2 mb-8">
-                <button
-                    onClick={() => setView("grid")}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        view === "grid"
-                            ? "bg-slate-900 text-white shadow-sm"
-                            : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
-                    }`}
-                >
-                    <LayoutGrid className="w-4 h-4" />
-                    Grid
-                </button>
-                <button
-                    onClick={() => setView("timeline")}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        view === "timeline"
-                            ? "bg-slate-900 text-white shadow-sm"
-                            : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
-                    }`}
-                >
-                    <GanttChart className="w-4 h-4" />
-                    Timeline
-                </button>
-            </div>
+            {/* FIG. 04 — funding Gantt, data-derived pure CSS bars */}
+            <figure className="rounded-lg border border-hairline bg-white p-4 md:p-6">
+                <FigCaption>
+                    FIG. 04 — {isKR ? "연구 과제 기간" : "FUNDED PROJECTS"} · {MIN_YEAR}–{MAX_YEAR}
+                </FigCaption>
 
-            {view === "timeline" ? (
-                <Timeline />
-            ) : (
-                <>
-                    <div className="grid md:grid-cols-2 gap-5 mb-12">
-                        {displayedProjects.map((proj, i) => (
-                            <motion.div
-                                key={i}
-                                initial={{ opacity: 0, y: 12 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: i * 0.08 }}
+                <div aria-hidden className="relative mt-4">
+                    {/* year gridlines + dashed today marker */}
+                    <div className="absolute inset-0">
+                        {YEARS.map((y) => (
+                            <span
+                                key={y}
+                                className="absolute inset-y-0 w-px bg-hairline"
+                                style={{ left: `${pct(y)}%` }}
+                            />
+                        ))}
+                        <span className="absolute inset-y-0 right-0 w-px bg-hairline" />
+                        {TODAY_PCT !== null && (
+                            <span
+                                className="absolute inset-y-0 w-px border-l border-dashed border-ink-3/50"
+                                style={{ left: `${TODAY_PCT}%` }}
+                            />
+                        )}
+                    </div>
+
+                    {/* mono year axis */}
+                    <div className="relative h-5">
+                        {YEARS.map((y, i) => (
+                            <span
+                                key={y}
+                                className={`absolute top-0 pl-1 ${i % 2 ? "hidden md:block" : ""}`}
+                                style={{ left: `${pct(y)}%` }}
                             >
-                                <div className="bg-white rounded-xl shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 h-full p-5 flex gap-4 items-start">
-                                    <div className="w-9 h-9 rounded-lg bg-rose-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                        <Rocket className="w-4.5 h-4.5 text-rose-500" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex items-center justify-between gap-2 mb-1">
-                                            <h4 className="text-base font-semibold leading-tight">{proj.title}</h4>
-                                            <span className="text-xs font-medium bg-slate-100 px-2.5 py-1 rounded-full text-slate-500 flex-shrink-0">
-                                                {proj.year}
-                                            </span>
-                                        </div>
-                                        <p className="text-sm text-gray-500">{proj.sponsor}</p>
-                                    </div>
-                                </div>
-                            </motion.div>
+                                <Meta className="text-[11px]">{y}</Meta>
+                            </span>
                         ))}
                     </div>
 
-                    <div className="text-center mb-24">
-                        <Button
-                            onClick={() => setShowAllProjects(!showAllProjects)}
-                            variant="outline"
-                            className="rounded-full px-8"
-                        >
-                            {showAllProjects ? t("projects.showLess") : t("projects.viewAll").replace("{count}", String(projects.length))}
-                        </Button>
+                    {/* bars — 8px tall, same order as the table below */}
+                    <div className="mt-2 space-y-1.5 pb-1">
+                        {grants.map((g) => (
+                            <div key={g.title} className="relative h-2">
+                                <span
+                                    title={`${g.title} (${g.year})`}
+                                    className={`absolute inset-y-0 rounded-sm ${
+                                        g.active ? "bg-ember-600" : "bg-hairline-2"
+                                    }`}
+                                    style={{
+                                        left: `${pct(g.start)}%`,
+                                        width: `${((g.end - g.start + 1) / SPAN) * 100}%`,
+                                    }}
+                                />
+                            </div>
+                        ))}
                     </div>
-                </>
-            )}
+                </div>
 
-            {/* Patents */}
-            <div className="text-center max-w-3xl mx-auto mb-12">
-                <h3 className="text-2xl font-bold text-gray-900">{t("projects.patents")}</h3>
-            </div>
-            <div className="grid md:grid-cols-2 gap-5">
-                {patents.map((patent, i) => (
-                    <motion.div
-                        key={i}
-                        initial={{ opacity: 0, y: 12 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: i * 0.08 }}
-                    >
-                        <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-5 flex gap-4 items-start">
-                            <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <Lightbulb className="w-4.5 h-4.5 text-amber-500" />
+                {/* legend */}
+                <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-hairline pt-3">
+                    <span className="inline-flex items-center gap-2">
+                        <span aria-hidden className="h-2 w-6 rounded-sm bg-ember-600" />
+                        <Meta className="text-xs uppercase tracking-[0.08em]">{activeLabel}</Meta>
+                    </span>
+                    <span className="inline-flex items-center gap-2">
+                        <span aria-hidden className="h-2 w-6 rounded-sm bg-hairline-2" />
+                        <Meta className="text-xs uppercase tracking-[0.08em]">
+                            {isKR ? "완료" : "COMPLETED"}
+                        </Meta>
+                    </span>
+                </div>
+            </figure>
+
+            {/* grants table — active first, titles wrap free */}
+            <div className="mt-10 md:mt-12">
+                <div className="hidden rounded-t-lg bg-well px-5 py-2.5 md:grid md:grid-cols-[120px_1fr] md:gap-x-8">
+                    <Meta className="text-right text-xs uppercase tracking-[0.08em]">
+                        {isKR ? "기간" : "Years"}
+                    </Meta>
+                    <Meta className="text-xs uppercase tracking-[0.08em]">
+                        {isKR ? "과제명 · 지원기관" : "Project · Sponsor"}
+                    </Meta>
+                </div>
+                <ul className="border-b border-hairline">
+                    {grants.map((g) => (
+                        <li
+                            key={g.title}
+                            className="border-t border-hairline py-4 md:grid md:grid-cols-[120px_1fr] md:gap-x-8 md:px-5"
+                        >
+                            <div className="flex items-baseline gap-3 md:flex-col md:items-end md:gap-0.5">
+                                <Meta>{rangeLabel(g)}</Meta>
+                                {g.active && (
+                                    <Meta className="text-xs font-medium text-ember-700">
+                                        {activeLabel}
+                                    </Meta>
+                                )}
                             </div>
-                            <div className="flex-1">
-                                <h4 className="text-base font-semibold leading-tight mb-1">{patent.title}</h4>
-                                <p className="text-sm text-gray-500">{patent.number}</p>
-                                {patent.date && <p className="text-xs text-gray-400 mt-1">{patent.date}</p>}
+                            <div className="mt-1.5 md:mt-0">
+                                <p className="break-keep text-[15px] font-medium leading-snug text-ink md:text-base">
+                                    {g.title}
+                                </p>
+                                <Meta className="mt-1 block text-xs leading-normal">{g.sponsor}</Meta>
                             </div>
-                        </div>
-                    </motion.div>
-                ))}
+                        </li>
+                    ))}
+                </ul>
             </div>
-        </Section>
+
+            {/* 04.B — intellectual property */}
+            <div className="mt-16 md:mt-24">
+                <Kicker index="04.B">{isKR ? "지식재산권" : "Intellectual Property"}</Kicker>
+                <h3 className="mt-5 break-keep text-2xl font-semibold tracking-tight text-ink">
+                    {t("projects.patents")}
+                </h3>
+                <ul className="mt-6 border-b border-hairline">
+                    {patents.map((p) => (
+                        <li
+                            key={p.number}
+                            className="flex flex-col gap-1.5 border-t border-hairline py-4 md:flex-row md:items-baseline md:justify-between md:gap-8"
+                        >
+                            <p className="break-keep text-[15px] font-medium leading-snug text-ink md:text-base">
+                                {p.title}
+                            </p>
+                            <Meta className="shrink-0">
+                                KR {p.number} · {p.date.slice(0, 7).replace("-", ".")}
+                            </Meta>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </Band>
     );
 }

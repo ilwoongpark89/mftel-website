@@ -1,96 +1,123 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
-import Section from "@/components/ui/section";
+import { X } from "lucide-react";
+import Band from "@/components/ui/band";
+import { Meta, SectionHeader } from "@/components/ui/typo";
 import { galleryImages } from "@/app/data";
 import { useLanguage } from "@/lib/LanguageContext";
-import { X } from "lucide-react";
 
+/**
+ * 07 MOMENTS — coal band. Curated bento: explicit `span` field in data
+ * (no index-parity sizing), caption BARS below each tile (never hover-gated,
+ * never scrim-over-photo), frame-0 grid, ~40 LOC lightbox (Esc + click-outside).
+ */
 export default function Gallery() {
-    const { t } = useLanguage();
-    const [selectedImage, setSelectedImage] = useState<number | null>(null);
+    const { t, language } = useLanguage();
+    const [selected, setSelected] = useState<number | null>(null);
+
+    // Esc to close + scroll lock while the lightbox is open
+    useEffect(() => {
+        if (selected === null) return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setSelected(null);
+        };
+        window.addEventListener("keydown", onKey);
+        document.body.style.overflow = "hidden";
+        return () => {
+            window.removeEventListener("keydown", onKey);
+            document.body.style.overflow = "";
+        };
+    }, [selected]);
+
+    const open = selected !== null ? galleryImages[selected] : null;
 
     return (
-        <Section id="gallery" className="bg-slate-900 text-white">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-                <h2 className="text-sm font-semibold text-rose-400 tracking-widest uppercase mb-3">{t("gallery.label")}</h2>
-                <h3 className="text-3xl md:text-4xl font-bold text-white">{t("gallery.title")}</h3>
-            </div>
+        <Band id="gallery" surface="coal">
+            <SectionHeader
+                index="07"
+                kicker={t("gallery.label")}
+                title={t("gallery.title")}
+                dark
+                isKorean={language === "KR"}
+            />
 
-            {/* Bento Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 auto-rows-[200px] md:auto-rows-[220px]">
-                {galleryImages.map((item, i) => {
-                    // Alternate large and small tiles
-                    const isLarge = i % 3 === 0;
-                    return (
-                        <motion.div
-                            key={i}
-                            className={`group relative rounded-2xl overflow-hidden cursor-pointer ${
-                                isLarge ? "col-span-2 row-span-2" : "col-span-1 row-span-1"
+            {/* bento — 2-col mobile / 3-col desktop; dense flow backfills span-2 holes */}
+            <div className="grid grid-flow-dense grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+                {galleryImages.map((item, i) => (
+                    <button
+                        key={item.image}
+                        type="button"
+                        onClick={() => setSelected(i)}
+                        className={`group flex flex-col overflow-hidden rounded-lg border border-white/10 bg-coal-raised text-left transition-colors duration-150 hover:border-white/25 ${
+                            item.span === 2 ? "col-span-2" : ""
+                        }`}
+                    >
+                        <div
+                            className={`relative w-full ${
+                                item.span === 2 ? "aspect-[2/1] md:aspect-[8/3]" : "aspect-[4/3]"
                             }`}
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            whileInView={{ opacity: 1, scale: 1 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: i * 0.06 }}
-                            onClick={() => setSelectedImage(i)}
                         >
                             <Image
                                 src={`/images/${item.image}`}
                                 alt={item.title}
                                 fill
-                                sizes={isLarge ? "(max-width: 768px) 100vw, 50vw" : "(max-width: 768px) 50vw, 25vw"}
-                                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                sizes={
+                                    item.span === 2
+                                        ? "(max-width: 768px) 100vw, 50vw"
+                                        : "(max-width: 768px) 50vw, 33vw"
+                                }
+                                className="object-cover"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                            <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                                <p className="text-rose-300 text-xs font-medium mb-0.5">{item.date}</p>
-                                <h4 className="text-sm md:text-base font-semibold text-white leading-tight">{item.title}</h4>
-                            </div>
-                        </motion.div>
-                    );
-                })}
+                        </div>
+                        {/* caption bar — always visible, below the photo */}
+                        <div className="flex-1 border-t border-white/10 px-3 py-2.5 md:px-4 md:py-3">
+                            <p className="text-[13px] font-medium leading-snug text-paper">{item.title}</p>
+                            <Meta dark className="mt-1 block text-[11px]">
+                                {item.date}
+                            </Meta>
+                        </div>
+                    </button>
+                ))}
             </div>
 
-            {/* Lightbox */}
-            <AnimatePresence>
-                {selectedImage !== null && (
-                    <motion.div
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => setSelectedImage(null)}
+            {/* lightbox — Esc + click-outside close, caption anchored to the image */}
+            {open ? (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label={open.title}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 md:p-8"
+                    onClick={() => setSelected(null)}
+                >
+                    <button
+                        type="button"
+                        aria-label={language === "KR" ? "닫기" : "Close"}
+                        onClick={() => setSelected(null)}
+                        className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-lg text-white/70 transition-colors duration-150 hover:text-white"
                     >
-                        <button
-                            className="absolute top-6 right-6 text-white/70 hover:text-white transition-colors z-10"
-                            onClick={() => setSelectedImage(null)}
-                        >
-                            <X className="w-8 h-8" />
-                        </button>
-                        <motion.div
-                            className="relative w-full max-w-4xl aspect-[16/10] rounded-xl overflow-hidden"
-                            initial={{ scale: 0.9 }}
-                            animate={{ scale: 1 }}
-                            exit={{ scale: 0.9 }}
-                            onClick={(e) => e.stopPropagation()}
-                        >
+                        <X className="h-7 w-7" />
+                    </button>
+                    <figure className="w-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="relative h-[60vh] md:h-[72vh]">
                             <Image
-                                src={`/images/${galleryImages[selectedImage].image}`}
-                                alt={galleryImages[selectedImage].title}
+                                src={`/images/${open.image}`}
+                                alt={open.title}
                                 fill
                                 sizes="(max-width: 768px) 100vw, 896px"
                                 className="object-contain"
                             />
-                        </motion.div>
-                        <div className="absolute bottom-8 text-center">
-                            <p className="text-rose-300 text-sm mb-1">{galleryImages[selectedImage].date}</p>
-                            <h4 className="text-white text-lg font-semibold">{galleryImages[selectedImage].title}</h4>
                         </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </Section>
+                        <figcaption className="mt-4 text-center">
+                            <p className="text-base font-medium text-paper">{open.title}</p>
+                            <Meta dark className="mt-1 block">
+                                {open.date}
+                            </Meta>
+                        </figcaption>
+                    </figure>
+                </div>
+            ) : null}
+        </Band>
     );
 }

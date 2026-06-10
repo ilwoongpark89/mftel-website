@@ -43,7 +43,16 @@ export default function Reveal({
         if (el.getBoundingClientRect().top <= window.innerHeight) return; // already on screen — never hide
         el.classList.add("reveal-pending");
         observe(el);
-        return () => sharedObserver?.unobserve(el);
+        // failsafe: content may never stay hidden (jump-scrolls, bots, print, odd
+        // IntersectionObserver timing) — force-reveal after 2s regardless.
+        const failsafe = window.setTimeout(() => {
+            el.classList.add("reveal-in");
+            sharedObserver?.unobserve(el);
+        }, 2000);
+        return () => {
+            window.clearTimeout(failsafe);
+            sharedObserver?.unobserve(el);
+        };
     }, []);
 
     return (

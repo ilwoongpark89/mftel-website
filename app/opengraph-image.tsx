@@ -9,6 +9,7 @@ export const size = {
 };
 export const contentType = 'image/png';
 
+// CALORIMETER: warm paper, ink, single ember accent — matches the site.
 export default async function Image() {
     return new ImageResponse(
         (
@@ -18,55 +19,79 @@ export default async function Image() {
                     width: '100%',
                     display: 'flex',
                     flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%)',
-                    padding: '60px',
+                    justifyContent: 'space-between',
+                    background: '#FAFAF9',
+                    padding: '72px 80px',
                 }}
             >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+                    <div
+                        style={{
+                            fontSize: 22,
+                            fontWeight: 600,
+                            color: '#C2410C',
+                            letterSpacing: '0.12em',
+                        }}
+                    >
+                        INHA UNIVERSITY · MFTEL
+                    </div>
+                    <div style={{ flex: 1, height: 1, background: '#E7E5E4', display: 'flex' }} />
+                </div>
+
                 <div
                     style={{
                         display: 'flex',
                         flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        textAlign: 'center',
+                        gap: 28,
                     }}
                 >
                     <div
                         style={{
-                            fontSize: 32,
-                            fontWeight: 600,
-                            color: '#e11d48',
-                            letterSpacing: '0.1em',
-                            marginBottom: 20,
-                        }}
-                    >
-                        MFTEL @ INHA UNIVERSITY
-                    </div>
-                    <div
-                        style={{
-                            fontSize: 64,
+                            fontSize: 76,
                             fontWeight: 700,
-                            color: 'white',
-                            lineHeight: 1.2,
-                            marginBottom: 30,
-                            maxWidth: 900,
+                            color: '#1C1917',
+                            lineHeight: 1.1,
+                            letterSpacing: '-0.02em',
+                            maxWidth: 1000,
                         }}
                     >
-                        Engineering a Sustainable Energy Future
+                        Engineering Sustainable Energy Future
                     </div>
                     <div
                         style={{
-                            fontSize: 24,
-                            color: '#94a3b8',
-                            lineHeight: 1.6,
-                            maxWidth: 800,
-                            textAlign: 'center',
+                            fontSize: 26,
+                            color: '#44403C',
+                            lineHeight: 1.5,
+                            maxWidth: 860,
                         }}
                     >
-                        Multiphase Flow and Thermal Engineering Laboratory advancing thermal science through thermal energy storage, electronics cooling, and reactor safety research.
+                        Multiphase Flow and Thermal Engineering Laboratory — thermal energy
+                        storage, immersion cooling, and reactor safety research.
                     </div>
+                </div>
+
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 48,
+                        borderTop: '1px solid #E7E5E4',
+                        paddingTop: 28,
+                    }}
+                >
+                    {[
+                        ['25', 'PUBLICATIONS'],
+                        ['12', 'FUNDED PROJECTS'],
+                        ['4', 'PATENTS'],
+                        ['12', 'COLLABORATORS'],
+                    ].map(([value, label]) => (
+                        <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                            <div style={{ fontSize: 40, fontWeight: 700, color: '#1C1917' }}>{value}</div>
+                            <div style={{ fontSize: 17, color: '#78716C', letterSpacing: '0.08em' }}>
+                                {label}
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         ),

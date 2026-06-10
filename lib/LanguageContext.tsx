@@ -83,8 +83,6 @@ const translations: Record<Language, Record<string, string>> = {
         "projects.label": "Funding & Patents",
         "projects.title": "Research Projects",
         "projects.patents": "Patents",
-        "projects.showLess": "Show Less",
-        "projects.viewAll": "View All Projects ({count})",
 
         // Gallery
         "gallery.label": "Moments",
@@ -182,8 +180,6 @@ const translations: Record<Language, Record<string, string>> = {
         "projects.label": "과제",
         "projects.title": "연구 과제",
         "projects.patents": "특허",
-        "projects.showLess": "접기",
-        "projects.viewAll": "전체 보기 ({count}건)",
 
         // Gallery
         "gallery.label": "갤러리",
