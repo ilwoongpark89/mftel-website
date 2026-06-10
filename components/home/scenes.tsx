@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Mail } from "lucide-react";
+import { Mail, Check } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
 import { publications, projects, patents, collaborators, collaboratorCount, teamMembers } from "@/app/data";
 import { JOIN_ID } from "@/lib/sections";
@@ -421,9 +422,22 @@ function ScenePartners() {
 
 /* ── S7 join ───────────────────────────────────────────────────────────── */
 
+const JOIN_EMAIL = "ilwoongpark@inha.ac.kr";
+
 function SceneJoin() {
     const { t, language } = useLanguage();
     const isKR = language === "KR";
+    const [copied, setCopied] = useState(false);
+
+    const copyEmail = async () => {
+        try {
+            await navigator.clipboard.writeText(JOIN_EMAIL);
+        } catch {
+            // clipboard unavailable — the address is shown either way
+        }
+        setCopied(true);
+    };
+
     return (
         <Scene id={JOIN_ID} center className="min-h-[100svh]">
             <Reveal>
@@ -432,16 +446,33 @@ function SceneJoin() {
                     {t("contact.title1")} <span className="text-ember-400">{t("contact.title2")}</span>
                 </h2>
                 <p className={cn("mx-auto mt-7 max-w-xl", lead(isKR))}>{t("contact.description")}</p>
-                <div className="mt-10 flex flex-col items-center gap-5">
-                    <a
-                        href="mailto:ilwoongpark@inha.ac.kr"
+                <div className="mt-10 flex flex-col items-center gap-4">
+                    {/* 클릭 = 메일앱 실행 ❌ — 주소 표시 + 클립보드 복사 */}
+                    <button
+                        type="button"
+                        onClick={copyEmail}
                         className="glow-ember inline-flex h-13 items-center gap-2.5 rounded-full bg-ember-600 px-9 text-[16px] font-semibold text-white transition-colors duration-150 hover:bg-ember-500"
                     >
-                        <Mail aria-hidden className="h-4.5 w-4.5" />
-                        {t("contact.apply")}
-                    </a>
-                    <p className="text-[15px] text-stone-400">
-                        ilwoongpark@inha.ac.kr · Inha Univ. 2N687
+                        {copied ? (
+                            <>
+                                <Check aria-hidden className="h-4.5 w-4.5" />
+                                {JOIN_EMAIL}
+                            </>
+                        ) : (
+                            <>
+                                <Mail aria-hidden className="h-4.5 w-4.5" />
+                                {t("contact.apply")}
+                            </>
+                        )}
+                    </button>
+                    <p
+                        aria-live="polite"
+                        className={cn(
+                            "text-[15px] transition-colors duration-200",
+                            copied ? "text-ember-400" : "text-stone-400"
+                        )}
+                    >
+                        {copied ? t("contact.emailCopied") : "Inha Univ. 2N687"}
                     </p>
                 </div>
             </Reveal>
