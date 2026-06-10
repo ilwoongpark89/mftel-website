@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useLanguage } from "@/lib/LanguageContext";
-import { NAV_ROUTES, JOIN_ID } from "@/lib/sections";
+import { NAV_ROUTES } from "@/lib/sections";
 
 /**
  * v3 footer — compact, quiet close. No heading block, no icons, one address
@@ -23,7 +23,7 @@ const CONTACT = {
 const SITEMAP = [
     ...NAV_ROUTES,
     { href: "/lecture", labelKey: "nav.lecture" },
-    { href: `/#${JOIN_ID}`, labelKey: "nav.joinUs" },
+    { href: "/join", labelKey: "nav.joinUs" },
 ];
 
 export default function Footer() {
@@ -63,6 +63,12 @@ export default function Footer() {
                             >
                                 Lab DB ↗
                             </a>
+                            <Link
+                                href="/philosophy"
+                                className="text-sm text-stone-500 transition-colors duration-150 hover:text-ember-400"
+                            >
+                                {isKR ? "우리가 믿는 것" : "What we believe"}
+                            </Link>
                         </nav>
 
                         <div className="mt-7 space-y-1.5 text-sm text-stone-400">

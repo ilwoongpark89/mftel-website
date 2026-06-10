@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Menu, X } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
-import { NAV_ROUTES, JOIN_ID } from "@/lib/sections";
+import { NAV_ROUTES } from "@/lib/sections";
 
 /**
  * v3 navbar — the home page is a story, archives are routes. 5 route links +
@@ -69,7 +69,7 @@ export default function Navbar() {
     }, [pathname]);
 
     const dk = navDark && !isOpen;
-    const joinHref = onHome ? `#${JOIN_ID}` : `/#${JOIN_ID}`;
+    const joinHref = "/join";
 
     const langToggle = (forceDark?: boolean) => {
         const d = forceDark ?? dk;
