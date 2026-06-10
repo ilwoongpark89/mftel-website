@@ -33,8 +33,14 @@ const translations: Record<Language, Record<string, string>> = {
         "hero.line2b": "Energy",
         "hero.line3": "Future",
         "hero.description": "Multiphase Flow and Thermal Engineering Laboratory (MFTEL) at Inha University advances thermal science through thermal energy storage, electronics cooling, and reactor safety research.",
-        "hero.publications": "Latest Publications",
-        "hero.projects": "Latest Projects",
+        "hero.kicker": "Inha University · Multiphase Flow & Thermal Engineering Lab",
+        "hero.join": "Join Our Lab",
+        "hero.research": "Explore Research",
+        "hero.stat.publications": "Publications",
+        "hero.stat.projects": "Funded Projects",
+        "hero.stat.patents": "Patents",
+        "hero.stat.partners": "Collaborators",
+        "hero.fig": "FIG. 1 — Temperature field · Pool boiling, two heat sources",
 
         // About
         "about.label": "About Us",
@@ -126,8 +132,14 @@ const translations: Record<Language, Record<string, string>> = {
         "hero.line2b": "미래를",
         "hero.line3": "설계하다",
         "hero.description": "인하대학교 다상유동열공학연구실(MFTEL)은 열에너지 저장, 전자기기 냉각, 원자로 안전 연구를 통해 열공학의 미래를 만들어갑니다.",
-        "hero.publications": "논문 보기",
-        "hero.projects": "과제 보기",
+        "hero.kicker": "인하대학교 다상유동열공학연구실 · MFTEL",
+        "hero.join": "연구실 지원",
+        "hero.research": "연구 분야 보기",
+        "hero.stat.publications": "국제 학술 논문",
+        "hero.stat.projects": "연구 과제",
+        "hero.stat.patents": "특허",
+        "hero.stat.partners": "협력 기관",
+        "hero.fig": "FIG. 1 — 온도장 · 풀비등, 두 열원",
 
         // About
         "about.label": "연구실 소개",

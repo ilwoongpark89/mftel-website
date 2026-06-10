@@ -1,13 +1,20 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import dynamic from "next/dynamic";
 const ChatWidget = dynamic(() => import("@/components/ChatWidget"));
 import { LanguageProvider } from "@/lib/LanguageContext";
 
-const plusJakartaSans = Plus_Jakarta_Sans({
+const geist = Geist({
   subsets: ["latin"],
-  variable: "--font-sans",
+  variable: "--font-geist",
+  display: "swap",
+});
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-geist-mono",
   display: "swap",
 });
 
@@ -106,7 +113,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${plusJakartaSans.variable} font-sans antialiased selection:bg-rose-500/20 selection:text-rose-600`}
+        className={`${geist.variable} ${geistMono.variable} font-sans antialiased selection:bg-ember-200/60 selection:text-ember-900`}
       >
         <LanguageProvider>
           {children}

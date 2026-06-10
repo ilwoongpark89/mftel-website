@@ -83,3 +83,12 @@ export const galleryImages = [
   { title: "ICMF in Kobe, Japan", date: "April 2023", image: "2023. 04.  ICMF in Kobe, Japan.jpg", sortDate: "2023-04-02" },
   { title: "KSME Thermal Engineering Division in Busan", date: "April 2023", image: "2023. 04.  KSME Thermal Engineering Division in Busan.jpg", sortDate: "2023-04-01" }
 ].sort((a, b) => b.sortDate.localeCompare(a.sortDate));
+
+export const collaborators = [
+  { group: "international", groupKR: "해외", names: ["NTNU", "HZDR", "UPC", "Kyushu Univ."], links: { NTNU: "https://thermaltwophaseflowlab.org/" } },
+  { group: "institutes", groupKR: "연구기관", names: ["KAERI", "KIER"], links: {} },
+  { group: "industry", groupKR: "산업체", names: ["HD Hyundai Heavy Industries", "Hyundai E&C", "LG Electronics", "Builders Gate"], links: { "Builders Gate": "https://www.buildersgate.com/" } },
+  { group: "universities", groupKR: "대학", names: ["Seoul Nat'l Univ.", "Kyung Hee Univ."], links: {} },
+] as const;
+
+export const collaboratorCount = collaborators.reduce((n, g) => n + g.names.length, 0);

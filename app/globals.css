@@ -1,8 +1,41 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Pretendard Variable', 'Pretendard', var(--font-sans), 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  
+  /* Latin resolves to Geist, Hangul falls through to Pretendard (skeletons match) */
+  --font-sans: var(--font-geist), 'Pretendard Variable', 'Pretendard', system-ui, -apple-system, sans-serif;
+  --font-kr: 'Pretendard Variable', 'Pretendard', system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), 'Pretendard Variable', 'Pretendard', ui-monospace, monospace;
+
+  /* ── CALORIMETER — public-site design tokens (2026-06 zero-base) ──
+     Ground: warm paper + stone inks. Accent: single ember ramp.
+     LAW: accent text + filled CTA on light = ember-700 (#C2410C, AA);
+     ember-600 only for non-text accents and ≥24px display numerals.
+     On dark: text = ember-400, fill = ember-600. Never two saturated
+     ember elements in one viewport. Mono only via <Kicker>/<Meta>/<FigCaption>. */
+  --color-paper: #FAFAF9;
+  --color-well: #F5F5F4;
+  --color-ink: #1C1917;
+  --color-ink-2: #44403C;
+  --color-ink-3: #78716C;
+  --color-ink-4: #A8A29E;
+  --color-hairline: #E7E5E4;
+  --color-hairline-2: #D6D3D1;
+  --color-coal: #0C0A09;
+  --color-coal-raised: #1C1917;
+  --color-ember-50: #FFF8F3;
+  --color-ember-100: #FFEDE0;
+  --color-ember-200: #FFD9BE;
+  --color-ember-300: #FFB98A;
+  --color-ember-400: #FF9650;
+  --color-ember-500: #F97316;
+  --color-ember-600: #EA580C;
+  --color-ember-700: #C2410C;
+  --color-ember-800: #9A3412;
+  --color-ember-900: #7C2D12;
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-inout-quart: cubic-bezier(0.65, 0, 0.35, 1);
+
+
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -139,14 +172,40 @@
 
   body {
     @apply bg-background text-foreground border-border;
-    font-size: 14px;
-    line-height: 1.6;
+    line-height: 1.7;
     font-weight: 400;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
   h2 { line-height: 1.3; }
   h3, h4, h5, h6 { line-height: 1.4; }
+  /* internal tools (team-dashboard/admin) keep their original 14px density */
+  .dashboard-root { font-size: 14px; line-height: 1.6; }
+}
+
+/* ── CALORIMETER motion ──
+   Frame-0 doctrine: content is server-rendered visible; motion is additive.
+   .reveal-pending is added by JS only for below-fold header blocks. */
+.reveal-pending {
+  opacity: 0;
+  transform: translateY(12px);
+}
+.reveal-in {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.5s var(--ease-expo), transform 0.5s var(--ease-expo);
+}
+@keyframes calRise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.cal-rise { animation: calRise 0.45s var(--ease-expo) 80ms both; }
+.cal-rise-2 { animation: calRise 0.45s var(--ease-expo) 180ms both; }
+.cal-rise-3 { animation: calRise 0.45s var(--ease-expo) 280ms both; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal-pending { opacity: 1; transform: none; }
+  .reveal-in { transition: none; }
+  .cal-rise, .cal-rise-2, .cal-rise-3 { animation: none; }
 }
 
 @keyframes dropPulse {

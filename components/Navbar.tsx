@@ -2,255 +2,182 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Menu, X } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
+import { SECTIONS, NAV_SECTIONS, JOIN_ID } from "@/lib/sections";
 
-// Sections with dark backgrounds
-const darkSections = ["home", "gallery", "contact", "footer"];
-
+/**
+ * CALORIMETER navbar — always light-on-paper (the dark-section detection
+ * state machine is gone with the dark hero). 5 links from the shared section
+ * manifest + EN|KR segmented control + one ember Join CTA. Scroll-spy = one
+ * IntersectionObserver over the manifest, not per-scroll measurement.
+ */
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
-    const [onDarkSection, setOnDarkSection] = useState(true); // Start on Hero (dark)
-    const [activeSection, setActiveSection] = useState("home");
+    const [activeId, setActiveId] = useState<string>("");
     const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
     const { language, setLanguage, t } = useLanguage();
+    const pathname = usePathname();
+    const onHome = pathname === "/";
 
-    const navItems = [
-        { name: t("nav.about"), href: "#about" },
-        { name: t("nav.news"), href: "#news" },
-        { name: t("nav.team"), href: "#team" },
-        { name: t("nav.joinUs"), href: "#contact", highlight: true },
-        { name: t("nav.research"), href: "#research" },
-        { name: t("nav.publications"), href: "#publications" },
-        { name: t("nav.projects"), href: "#projects" },
-        { name: t("nav.gallery"), href: "#gallery" },
-        { name: t("nav.lecture"), href: "#lecture" },
-        { name: t("nav.contact"), href: "#footer" },
-    ];
-
-    const toggleLanguage = () => {
-        setLanguage(language === "KR" ? "EN" : "KR");
-    };
-
-    // Set portal target after mount
     useEffect(() => {
         setPortalTarget(document.body);
     }, []);
 
-    // Lock body scroll when mobile menu is open
+    // lock body scroll while the mobile sheet is open
     useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = "hidden";
-        } else {
+        document.body.style.overflow = isOpen ? "hidden" : "";
+        return () => {
             document.body.style.overflow = "";
-        }
-        return () => { document.body.style.overflow = ""; };
-    }, [isOpen]);
-
-    useEffect(() => {
-        const handleScroll = () => {
-            // Don't update nav styling while menu is open
-            if (isOpen) return;
-
-            setScrolled(window.scrollY > 50);
-
-            // Check which section we're on
-            const sections = ["home", "about", "news", "team", "contact", "research", "publications", "projects", "gallery", "footer"];
-            for (const sectionId of sections) {
-                const element = document.getElementById(sectionId);
-                if (element) {
-                    const rect = element.getBoundingClientRect();
-                    // Check if section is at the top of viewport
-                    if (rect.top <= 100 && rect.bottom >= 100) {
-                        setOnDarkSection(darkSections.includes(sectionId));
-                        setActiveSection(sectionId);
-                        break;
-                    }
-                }
-            }
         };
-
-        window.addEventListener("scroll", handleScroll);
-        handleScroll(); // Initial check
-        return () => window.removeEventListener("scroll", handleScroll);
     }, [isOpen]);
 
-    // Use dark text only when on light section AND menu is closed
-    const useDarkText = !onDarkSection && !isOpen;
+    // hairline + tint after threshold
+    useEffect(() => {
+        const onScroll = () => setScrolled(window.scrollY > 24);
+        window.addEventListener("scroll", onScroll, { passive: true });
+        onScroll();
+        return () => window.removeEventListener("scroll", onScroll);
+    }, []);
+
+    // scroll-spy over the shared manifest (home only)
+    useEffect(() => {
+        if (!onHome) return;
+        const observer = new IntersectionObserver(
+            (entries) => {
+                for (const entry of entries) {
+                    if (entry.isIntersecting) setActiveId(entry.target.id);
+                }
+            },
+            { rootMargin: "-20% 0px -70% 0px" }
+        );
+        for (const s of SECTIONS) {
+            const el = document.getElementById(s.id);
+            if (el) observer.observe(el);
+        }
+        return () => observer.disconnect();
+    }, [onHome]);
+
+    const hrefFor = (id: string) => (onHome ? `#${id}` : `/#${id}`);
+
+    const langToggle = (cls?: string) => (
+        <div
+            className={cn(
+                "flex items-center rounded-lg border border-hairline p-0.5 font-mono text-[13px]",
+                cls
+            )}
+            role="group"
+            aria-label="Language"
+        >
+            {(["EN", "KR"] as const).map((lang) => (
+                <button
+                    key={lang}
+                    onClick={() => setLanguage(lang)}
+                    aria-pressed={language === lang}
+                    className={cn(
+                        "rounded-md px-2 py-0.5 transition-colors duration-150",
+                        language === lang ? "bg-well text-ink" : "text-ink-3 hover:text-ink"
+                    )}
+                >
+                    {lang}
+                </button>
+            ))}
+        </div>
+    );
 
     return (
         <>
             <nav
                 className={cn(
-                    "fixed top-0 w-full transition-all duration-300",
-                    isOpen ? "z-[10000]" : "z-50",
+                    "fixed top-0 z-40 w-full transition-[background-color,border-color,box-shadow] duration-200",
                     isOpen
-                        ? "bg-transparent py-4"
-                        : onDarkSection
-                            ? scrolled
-                                ? "bg-slate-900/80 backdrop-blur-md py-4"
-                                : "bg-transparent py-6"
-                            : scrolled
-                                ? "bg-white/90 backdrop-blur-md border-b shadow-sm py-4"
-                                : "bg-white/90 backdrop-blur-md py-4"
+                        ? "bg-transparent"
+                        : scrolled
+                          ? "border-b border-hairline bg-paper/90 backdrop-blur-md"
+                          : "border-b border-transparent bg-paper/90 backdrop-blur-md"
                 )}
             >
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="hidden lg:flex justify-between items-center">
-                        {/* Left: Logo */}
-                        <a href="#" className={cn(
-                            "text-2xl font-bold tracking-tighter transition-colors",
-                            useDarkText ? "text-foreground" : "text-white"
-                        )}>
-                            MFTEL
-                        </a>
+                <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6 md:px-8">
+                    {/* wordmark */}
+                    <a href={onHome ? "#home" : "/"} className="flex items-baseline gap-3">
+                        <span className="text-lg font-bold tracking-tight text-ink">MFTEL</span>
+                        <span className="hidden font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3 xl:block">
+                            Multiphase Flow &amp; Thermal Engineering Lab
+                        </span>
+                    </a>
 
-                        {/* Center: Nav items */}
-                        <div className="flex items-center space-x-8">
-                            {navItems.map((item) => (
-                                <a
-                                    key={item.href}
-                                    href={item.href}
-                                    className={cn(
-                                        "text-base font-medium transition-colors",
-                                        item.highlight
-                                            ? useDarkText
-                                                ? "text-rose-600 hover:text-rose-700"
-                                                : "text-rose-400 hover:text-rose-300"
-                                            : useDarkText
-                                                ? "text-muted-foreground hover:text-primary"
-                                                : "text-white/80 hover:text-white"
-                                    )}
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        document.querySelector(item.href)?.scrollIntoView({
-                                            behavior: "smooth",
-                                        });
-                                    }}
-                                >
-                                    {item.name}
-                                </a>
-                            ))}
-                        </div>
-
-                        {/* Right: Language Toggle */}
-                        <button
-                            onClick={toggleLanguage}
-                            className={cn(
-                                "flex items-center text-sm font-medium transition-colors",
-                                useDarkText ? "text-muted-foreground" : "text-white/80"
-                            )}
-                        >
-                            <span className={cn(
-                                "transition-colors",
-                                language === "EN"
-                                    ? useDarkText ? "text-foreground font-semibold" : "text-white font-semibold"
-                                    : ""
-                            )}>
-                                EN
-                            </span>
-                            <span className="mx-1.5">|</span>
-                            <span className={cn(
-                                "transition-colors",
-                                language === "KR"
-                                    ? useDarkText ? "text-foreground font-semibold" : "text-white font-semibold"
-                                    : ""
-                            )}>
-                                KR
-                            </span>
-                        </button>
+                    {/* desktop links */}
+                    <div className="hidden items-center gap-7 lg:flex">
+                        {NAV_SECTIONS.map((s) => (
+                            <a
+                                key={s.id}
+                                href={hrefFor(s.id)}
+                                className={cn(
+                                    "text-sm font-medium underline-offset-[10px] transition-colors duration-150",
+                                    activeId === s.id
+                                        ? "text-ink underline decoration-ember-600 decoration-2"
+                                        : "text-ink-2 hover:text-ink"
+                                )}
+                            >
+                                {t(s.labelKey)}
+                            </a>
+                        ))}
                     </div>
 
-                    <div className="lg:hidden flex justify-between items-center w-full">
-                        <a href="#" className={cn(
-                            "text-2xl font-bold tracking-tighter transition-colors",
-                            isOpen ? "text-white" : useDarkText ? "text-foreground" : "text-white"
-                        )}>
-                            MFTEL
-                        </a>
-                        <button
-                            onClick={() => setIsOpen(!isOpen)}
-                            className={cn(
-                                "p-2 transition-colors z-[10000] relative",
-                                isOpen ? "text-white" : useDarkText ? "text-foreground" : "text-white"
-                            )}
-                            aria-label="Toggle menu"
+                    <div className="hidden items-center gap-3 lg:flex">
+                        {langToggle()}
+                        <a
+                            href={hrefFor(JOIN_ID)}
+                            className="inline-flex h-9 items-center rounded-lg bg-ember-700 px-4 text-sm font-medium text-white transition-colors duration-150 hover:bg-ember-800"
                         >
-                            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                        </button>
+                            {t("nav.joinUs")}
+                        </a>
                     </div>
+
+                    {/* mobile trigger */}
+                    <button
+                        onClick={() => setIsOpen(!isOpen)}
+                        className="relative z-[60] -mr-2 flex h-11 w-11 items-center justify-center text-ink lg:hidden"
+                        aria-label="Toggle menu"
+                        aria-expanded={isOpen}
+                    >
+                        {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                    </button>
                 </div>
             </nav>
 
-            {/* Mobile Fullscreen Menu — Portal to body to escape nav stacking context */}
-            {portalTarget && createPortal(
-                <AnimatePresence>
-                    {isOpen && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="lg:hidden fixed inset-0 z-[9999] bg-slate-900"
-                        >
-                            <div className="flex flex-col items-center justify-center h-full space-y-5">
-                                {navItems.map((item, i) => {
-                                    const sectionId = item.href.replace("#", "");
-                                    const isActive = activeSection === sectionId;
-                                    return (
-                                        <motion.a
-                                            key={item.href}
-                                            href={item.href}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: i * 0.05 }}
-                                            className={cn(
-                                                "text-2xl font-medium transition-colors",
-                                                item.highlight
-                                                    ? "text-rose-400"
-                                                    : isActive
-                                                        ? "text-white"
-                                                        : "text-gray-400 hover:text-white"
-                                            )}
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                setIsOpen(false);
-                                                setTimeout(() => {
-                                                    document.querySelector(item.href)?.scrollIntoView({
-                                                        behavior: "smooth",
-                                                    });
-                                                }, 200);
-                                            }}
-                                        >
-                                            {isActive && <span className="mr-2 text-rose-400">-</span>}
-                                            {item.name}
-                                        </motion.a>
-                                    );
-                                })}
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ delay: 0.5 }}
-                                    className="pt-6 border-t border-gray-700"
-                                >
-                                    <button
-                                        onClick={toggleLanguage}
-                                        className="flex items-center text-lg font-medium text-gray-400"
+            {/* mobile full-screen sheet */}
+            {portalTarget &&
+                isOpen &&
+                createPortal(
+                    <div className="fixed inset-0 z-50 bg-paper lg:hidden">
+                        <div className="flex h-full flex-col justify-between px-8 pb-10 pt-24">
+                            <nav className="flex flex-col gap-1">
+                                {SECTIONS.filter((s) => s.nav || s.id === JOIN_ID).map((s) => (
+                                    <a
+                                        key={s.id}
+                                        href={hrefFor(s.id)}
+                                        onClick={() => setIsOpen(false)}
+                                        className={cn(
+                                            "flex items-baseline gap-4 border-b border-hairline py-4",
+                                            s.id === JOIN_ID ? "text-ember-700" : "text-ink"
+                                        )}
                                     >
-                                        <span className={language === "EN" ? "text-white font-semibold" : ""}>EN</span>
-                                        <span className="mx-2">|</span>
-                                        <span className={language === "KR" ? "text-white font-semibold" : ""}>KR</span>
-                                    </button>
-                                </motion.div>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>,
-                portalTarget
-            )}
+                                        <span className="font-mono text-xs text-ink-3">{s.index}</span>
+                                        <span className="text-2xl font-semibold tracking-tight">
+                                            {t(s.labelKey)}
+                                        </span>
+                                    </a>
+                                ))}
+                            </nav>
+                            {langToggle("self-start")}
+                        </div>
+                    </div>,
+                    portalTarget
+                )}
         </>
     );
 }
