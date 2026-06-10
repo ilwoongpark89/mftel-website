@@ -130,6 +130,8 @@ export default function Footer() {
                             <iframe
                                 src={MAP_EMBED_SRC}
                                 className="h-full w-full border-0"
+                                // dark-grade the default light tiles so the final frame stays in the coal world
+                                style={{ filter: "invert(0.92) hue-rotate(180deg) brightness(0.9) contrast(0.88)" }}
                                 allowFullScreen
                                 loading="lazy"
                                 referrerPolicy="no-referrer-when-downgrade"

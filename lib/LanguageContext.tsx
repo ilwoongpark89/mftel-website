@@ -28,7 +28,7 @@ const translations: Record<Language, Record<string, string>> = {
         "nav.contact": "Contact",
 
         // Hero
-        "hero.line1": "Engineering",
+        "hero.line1": "Engineering a",
         "hero.line2a": "Sustainable",
         "hero.line2b": "Energy",
         "hero.line3": "Future",

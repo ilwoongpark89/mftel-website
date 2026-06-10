@@ -3,10 +3,11 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Pool-boiling bubble field — the lab's own physics as the hero visual.
- * Bubbles nucleate at the heated bottom (ember-tinted), rise with wobble,
- * and fade out. Canvas pauses offscreen / hidden tab; prefers-reduced-motion
- * renders nothing (the static CSS glow underneath carries the scene).
+ * Pool-boiling bubble field v2 — bubbles NUCLEATE at the heated bottom
+ * (ember-bright), rise with wobble and depth variance, cool toward gray, and
+ * dissolve before mid-height — so the physics of the lab reads at a glance
+ * and nothing floats as dust in the top corners. Pauses offscreen / hidden
+ * tab; prefers-reduced-motion renders nothing (CSS glow carries the scene).
  */
 
 type Bubble = {
@@ -44,24 +45,23 @@ export default function HeroCanvas({ className }: { className?: string }) {
         };
         resize();
 
-        const COUNT = Math.max(36, Math.min(90, Math.floor(W / 16)));
-        const spawn = (b?: Bubble): Bubble => {
-            const big = Math.random() < 0.12;
+        const DISSOLVE_Y = 0.32; // bubbles are gone above this fraction of height
+        const COUNT = Math.max(30, Math.min(72, Math.floor(W / 22)));
+
+        const spawn = (b?: Bubble, initial = false): Bubble => {
             const nb: Bubble = b ?? ({} as Bubble);
-            nb.x = Math.random() * W;
-            nb.y = H + Math.random() * H * 0.4;
-            nb.r = big ? 4 + Math.random() * 4 : 1 + Math.random() * 2.6;
-            nb.vy = 24 + Math.random() * 46;
-            nb.amp = 6 + Math.random() * 16;
+            const big = Math.random() < 0.1;
+            // nucleation sites cluster toward the center of the heated wall
+            nb.x = W * (0.5 + (Math.random() - 0.5) * 0.92);
+            nb.y = initial ? H * (0.45 + Math.random() * 0.6) : H * (0.96 + Math.random() * 0.12);
+            nb.r = big ? 3.5 + Math.random() * 3.5 : 1 + Math.random() * 2.2;
+            nb.vy = 16 + nb.r * 7 + Math.random() * 18; // bigger = faster (buoyancy)
+            nb.amp = 5 + Math.random() * 14;
             nb.phase = Math.random() * Math.PI * 2;
             nb.seed = Math.random();
             return nb;
         };
-        const bubbles: Bubble[] = Array.from({ length: COUNT }, () => {
-            const b = spawn();
-            b.y = Math.random() * H; // initial fill
-            return b;
-        });
+        const bubbles: Bubble[] = Array.from({ length: COUNT }, () => spawn(undefined, true));
 
         let last = performance.now();
         const tick = (now: number) => {
@@ -70,27 +70,36 @@ export default function HeroCanvas({ className }: { className?: string }) {
             ctx.clearRect(0, 0, W, H);
             for (const b of bubbles) {
                 b.y -= b.vy * dt;
-                if (b.y < -10) spawn(b);
-                const x = b.x + Math.sin(b.y * 0.02 + b.phase) * b.amp;
-                const lifecycle = 1 - b.y / H; // 0 bottom → 1 top
-                const alpha =
-                    lifecycle < 0.1
-                        ? lifecycle / 0.1
-                        : lifecycle > 0.78
-                          ? Math.max(0, (1 - lifecycle) / 0.22)
-                          : 1;
-                // heated zone tint: ember near the bottom, cool white above
-                const warm = b.y > H * 0.62;
+                const frac = b.y / H; // 1 bottom → 0 top
+                if (frac < DISSOLVE_Y - 0.06) {
+                    spawn(b);
+                    continue;
+                }
+                const x = b.x + Math.sin(b.y * 0.018 + b.phase) * b.amp;
+                // fade in just above the wall, dissolve approaching DISSOLVE_Y
+                const fadeIn = Math.min(1, Math.max(0, (1.02 - frac) / 0.07));
+                const fadeOut = Math.min(1, Math.max(0, (frac - DISSOLVE_Y) / 0.18));
+                const alpha = fadeIn * fadeOut;
+                if (alpha <= 0.01) continue;
+                // heat: ember at the wall, cooling to gray as it climbs
+                const heat = Math.min(1, Math.max(0, (frac - 0.45) / 0.5));
+                const cr = Math.round(180 + 75 * heat);
+                const cg = Math.round(185 - 45 * heat);
+                const cb = Math.round(190 - 110 * heat);
+                const baseA = (0.1 + b.seed * 0.18 + heat * 0.2) * alpha;
                 ctx.beginPath();
                 ctx.arc(x, b.y, b.r, 0, Math.PI * 2);
-                ctx.fillStyle = warm
-                    ? `rgba(255, 150, 80, ${alpha * (0.16 + b.seed * 0.22)})`
-                    : `rgba(250, 250, 249, ${alpha * (0.1 + b.seed * 0.2)})`;
+                ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${baseA})`;
+                if (b.r > 3.5) {
+                    ctx.shadowColor = `rgba(255, 140, 66, ${0.5 * heat * alpha})`;
+                    ctx.shadowBlur = 10;
+                } else {
+                    ctx.shadowBlur = 0;
+                }
                 ctx.fill();
-                if (b.r > 4) {
-                    ctx.strokeStyle = warm
-                        ? `rgba(255, 150, 80, ${alpha * 0.35})`
-                        : `rgba(250, 250, 249, ${alpha * 0.28})`;
+                ctx.shadowBlur = 0;
+                if (b.r > 3.5) {
+                    ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, ${Math.min(0.5, baseA * 1.6)})`;
                     ctx.lineWidth = 1;
                     ctx.stroke();
                 }

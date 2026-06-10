@@ -41,8 +41,8 @@ function Scene({
             id={id}
             data-nav-dark
             className={cn(
-                "relative flex",
-                full ? "min-h-[88svh] items-center py-24" : "py-20 md:py-28",
+                "relative z-[1] flex",
+                full ? "min-h-[80svh] items-center py-20" : "py-16 md:py-24",
                 className
             )}
         >
@@ -68,18 +68,21 @@ function Label({ children, className }: { children: React.ReactNode; className?:
 
 const display = (isKR: boolean) =>
     cn(
-        "break-keep text-[42px] font-bold tracking-[-0.03em] text-paper md:text-[64px]",
+        "break-keep text-[42px] font-bold tracking-[-0.03em] text-paper [text-wrap:balance] md:text-[64px]",
         isKR ? "leading-[1.22]" : "leading-[1.05]"
     );
 
 const title = (isKR: boolean) =>
     cn(
-        "break-keep text-[30px] font-bold tracking-[-0.02em] text-paper md:text-[42px]",
+        "break-keep text-[30px] font-bold tracking-[-0.02em] text-paper [text-wrap:balance] md:text-[42px]",
         isKR ? "leading-[1.3]" : "leading-[1.12]"
     );
 
 const lead = (isKR: boolean) =>
-    cn("text-[18px] text-stone-300 md:text-[20px]", isKR ? "leading-[1.75]" : "leading-[1.65]");
+    cn(
+        "break-keep text-[18px] text-stone-300 md:text-[20px]",
+        isKR ? "leading-[1.75]" : "leading-[1.65]"
+    );
 
 /* ── S1 hero ───────────────────────────────────────────────────────────── */
 
@@ -102,8 +105,9 @@ function SceneHero() {
                 <div className="cal-rise max-w-3xl">
                     <Label className="mb-6">{t("hero.kicker")}</Label>
                     <h1 className={display(isKR)}>
-                        {t("hero.line1")}{" "}
-                        <span className="bg-gradient-to-r from-ember-300 to-ember-500 bg-clip-text text-transparent">
+                        {t("hero.line1")}
+                        <br className="hidden md:inline" />{" "}
+                        <span className="whitespace-nowrap bg-gradient-to-r from-ember-300 to-ember-500 bg-clip-text text-transparent max-md:whitespace-normal">
                             {t("hero.line2a")} {t("hero.line2b")}
                         </span>{" "}
                         {t("hero.line3")}
@@ -158,13 +162,13 @@ function SceneNumbers() {
                 <Label>{t("home.numbers.label")}</Label>
                 <h2 className={cn("mt-5", title(isKR))}>{t("home.numbers.title")}</h2>
             </Reveal>
-            <Reveal className="reveal-stagger mt-16 grid grid-cols-2 gap-y-14 md:mt-24 md:grid-cols-4">
+            <Reveal className="reveal-stagger mt-16 grid grid-cols-2 gap-y-16 md:mt-24 md:grid-cols-4">
                 {stats.map((s) => (
                     <div key={s.label}>
-                        <div className="text-[64px] font-bold leading-none tracking-[-0.03em] text-paper tabular-nums md:text-[84px]">
+                        <div className="text-[88px] font-bold leading-none tracking-[-0.04em] text-paper tabular-nums md:text-[140px]">
                             <CountUp to={s.value} />
                         </div>
-                        <p className="mt-4 text-[13px] font-semibold uppercase tracking-[0.18em] text-stone-500">
+                        <p className="mt-5 text-[13px] font-semibold uppercase tracking-[0.18em] text-stone-400">
                             {s.label}
                         </p>
                     </div>
@@ -198,7 +202,8 @@ function SceneResearch() {
             index: "03",
             title: t("about.smr.title"),
             desc: t("about.smr.description"),
-            metric: "24/7",
+            // evidence over industry claims — derived from our own publication record
+            metric: String(publications.filter((p) => (p.category as readonly string[]).includes("smr")).length),
             metricLabel: t("home.research.metric.smr"),
         },
     ];
@@ -240,7 +245,7 @@ function SceneResearch() {
                                 <span className="block text-[36px] font-bold leading-none tracking-[-0.02em] text-paper tabular-nums md:text-[44px]">
                                     {row.metric}
                                 </span>
-                                <span className="mt-2 block text-[13px] font-semibold uppercase tracking-[0.14em] text-stone-500">
+                                <span className="mt-2 block text-[13px] font-semibold uppercase tracking-[0.14em] text-stone-400">
                                     {row.metricLabel}
                                 </span>
                             </span>
@@ -266,9 +271,6 @@ function ScenePubs() {
             <Reveal>
                 <Label>{t("home.pubs.label")}</Label>
                 <h2 className={cn("mt-5", title(isKR))}>{t("home.pubs.title")}</h2>
-                <p className={cn("mt-4 max-w-xl", lead(isKR))}>
-                    {t("publications.count").replace("{count}", String(publications.length))}
-                </p>
             </Reveal>
             <Reveal as="ul" className="reveal-stagger mt-12 border-t border-white/8 md:mt-16">
                 {featured.map((pub) => (
@@ -282,15 +284,23 @@ function ScenePubs() {
                             <span className="block max-w-3xl break-keep text-[19px] font-semibold leading-[1.45] text-paper transition-colors duration-150 group-hover:text-ember-300 md:text-[21px]">
                                 {pub.title}
                             </span>
-                            <span className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[15px] text-stone-500">
+                            <span className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[15px] text-stone-400">
                                 <span>{pub.journal}</span>
-                                <span aria-hidden>·</span>
+                                <span aria-hidden className="text-stone-600">
+                                    ·
+                                </span>
                                 <span>{pub.year}</span>
                                 {pub.special ? (
                                     <span className="text-[13px] font-semibold uppercase tracking-[0.14em] text-ember-400">
                                         {pub.special.includes("Cover") ? "Cover Article" : pub.special}
                                     </span>
                                 ) : null}
+                                <span
+                                    aria-hidden
+                                    className="text-stone-600 transition-colors duration-150 group-hover:text-ember-400"
+                                >
+                                    ↗
+                                </span>
                             </span>
                         </a>
                     </li>
@@ -313,6 +323,16 @@ function ScenePubs() {
 
 /* ── S5 people ─────────────────────────────────────────────────────────── */
 
+// face-forward crops for photos where the subject is small in the frame —
+// zoom anchored on the face position (measured per photo). Members not listed
+// render at natural crop.
+const FACE_CROPS: Record<string, { scale: number; origin: string }> = {
+    "Chaeyeon Kim": { scale: 2.1, origin: "47% 40%" },
+    "Manho Kim": { scale: 2.0, origin: "48% 28%" },
+    "Eunbin Park": { scale: 2.2, origin: "58% 40%" },
+};
+const PI_CROP = { scale: 1.55, origin: "51% 30%" };
+
 function ScenePeople() {
     const { t, language } = useLanguage();
     const isKR = language === "KR";
@@ -322,7 +342,7 @@ function ScenePeople() {
                 <Label>{t("home.people.label")}</Label>
                 <h2 className={cn("mt-5", title(isKR))}>{t("team.title")}</h2>
             </Reveal>
-            <Reveal className="reveal-stagger mt-14 grid grid-cols-3 gap-3 md:mt-20 md:grid-cols-6 md:gap-4">
+            <Reveal className="reveal-stagger mt-14 grid grid-cols-2 gap-3 sm:grid-cols-3 md:mt-20 md:grid-cols-6 md:gap-4">
                 {/* PI tile — double size anchors the grid */}
                 <Link
                     href="/team"
@@ -334,7 +354,8 @@ function ScenePeople() {
                             alt="Prof. Il Woong Park"
                             fill
                             sizes="(max-width: 768px) 66vw, 33vw"
-                            className="object-cover grayscale transition-all duration-500 group-hover:scale-[1.03] group-hover:grayscale-0"
+                            className="object-cover grayscale transition-all duration-500 group-hover:grayscale-0"
+                            style={{ transform: `scale(${PI_CROP.scale})`, transformOrigin: PI_CROP.origin }}
                         />
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-coal/90 to-transparent px-4 pb-3 pt-10">
                             <p className="text-[15px] font-semibold text-paper">
@@ -355,11 +376,22 @@ function ScenePeople() {
                                 src={`/images/${m.name}.jpg`}
                                 alt={isKR ? m.nameKR : m.name}
                                 fill
-                                sizes="(max-width: 768px) 33vw, 16vw"
-                                className="object-cover grayscale transition-all duration-500 group-hover:scale-[1.03] group-hover:grayscale-0"
+                                sizes="(max-width: 768px) 50vw, 16vw"
+                                className={cn(
+                                    "object-cover grayscale transition-all duration-500 group-hover:grayscale-0",
+                                    !FACE_CROPS[m.name] && "group-hover:scale-[1.03]"
+                                )}
+                                style={
+                                    FACE_CROPS[m.name]
+                                        ? {
+                                              transform: `scale(${FACE_CROPS[m.name].scale})`,
+                                              transformOrigin: FACE_CROPS[m.name].origin,
+                                          }
+                                        : undefined
+                                }
                             />
                             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-coal/90 to-transparent px-3 pb-2.5 pt-8">
-                                <p className="truncate text-[13px] font-medium text-paper">
+                                <p className="break-keep text-[13px] font-medium leading-snug text-paper">
                                     {isKR ? m.nameKR : m.name}
                                 </p>
                             </div>
@@ -391,18 +423,16 @@ function ScenePartners() {
         <Scene full={false} center>
             <Reveal>
                 <Label>{t("home.partners.label")}</Label>
-                <p className="mx-auto mt-8 max-w-4xl text-[18px] font-semibold leading-[2] text-stone-500 md:text-[21px]">
-                    {names.map((n, i) => (
-                        <span key={n}>
-                            <span className="transition-colors duration-150 hover:text-stone-300">{n}</span>
-                            {i < names.length - 1 ? (
-                                <span aria-hidden className="mx-3 text-stone-700">
-                                    ·
-                                </span>
-                            ) : null}
+                <div className="mx-auto mt-10 flex max-w-5xl flex-wrap items-baseline justify-center gap-x-10 gap-y-5">
+                    {names.map((n) => (
+                        <span
+                            key={n}
+                            className="whitespace-nowrap text-[24px] font-bold tracking-[-0.02em] text-stone-600 transition-colors duration-200 hover:text-stone-300 md:text-[32px]"
+                        >
+                            {n}
                         </span>
                     ))}
-                </p>
+                </div>
             </Reveal>
         </Scene>
     );
@@ -429,7 +459,7 @@ function SceneJoin() {
                         <Mail aria-hidden className="h-4.5 w-4.5" />
                         {t("contact.apply")}
                     </a>
-                    <p className="text-[15px] text-stone-500">
+                    <p className="text-[15px] text-stone-400">
                         ilwoongpark@inha.ac.kr · Inha Univ. 2N687
                     </p>
                 </div>
@@ -442,7 +472,17 @@ function SceneJoin() {
 
 export default function HomeStory() {
     return (
-        <div className="bg-coal">
+        <div className="relative bg-coal">
+            {/* continuous environment — one ember space behind every scene,
+                so scene boundaries never hard-cut the illusion */}
+            <div
+                aria-hidden
+                className="pointer-events-none fixed inset-0 z-0"
+                style={{
+                    background:
+                        "radial-gradient(ellipse 110% 50% at 50% 115%, rgba(234,88,12,0.10), rgba(234,88,12,0.03) 55%, transparent 78%), radial-gradient(ellipse 80% 60% at 85% -15%, rgba(68,64,60,0.35), transparent 70%)",
+                }}
+            />
             <SceneHero />
             <SceneNumbers />
             <SceneResearch />

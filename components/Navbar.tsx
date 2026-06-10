@@ -167,8 +167,11 @@ export default function Navbar() {
                         <a
                             href={joinHref}
                             className={cn(
-                                "inline-flex h-9 items-center rounded-full px-4.5 text-sm font-semibold text-white transition-colors duration-150",
-                                dk ? "bg-ember-600 hover:bg-ember-500" : "bg-ember-700 hover:bg-ember-800"
+                                "inline-flex h-9 items-center rounded-full px-4.5 text-sm font-semibold transition-colors duration-150",
+                                // ghost on dark — the hero's filled CTA stays the only solid ember per viewport
+                                dk
+                                    ? "border border-ember-500/50 text-ember-300 hover:border-ember-400 hover:bg-ember-600/10"
+                                    : "bg-ember-700 text-white hover:bg-ember-800"
                             )}
                         >
                             {t("nav.joinUs")}
