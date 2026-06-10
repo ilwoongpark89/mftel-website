@@ -2,23 +2,23 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Menu, X } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
-import { SECTIONS, NAV_SECTIONS, JOIN_ID } from "@/lib/sections";
+import { NAV_ROUTES, JOIN_ID } from "@/lib/sections";
 
 /**
- * CALORIMETER navbar — always light-on-paper (the dark-section detection
- * state machine is gone with the dark hero). 5 links from the shared section
- * manifest + EN|KR segmented control + one ember Join CTA. Scroll-spy = one
- * IntersectionObserver over the manifest, not per-scroll measurement.
+ * v3 navbar — the home page is a story, archives are routes. 5 route links +
+ * EN|KR + one ember Join CTA. Dark/light skin follows [data-nav-dark] bands
+ * under the 64px bar via a deterministic rect check per scroll frame
+ * (IntersectionObserver edge-touch/jump-scroll cases are spec traps).
  */
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
-    const [navDark, setNavDark] = useState(true); // hero is dark — start dark
-    const [activeId, setActiveId] = useState<string>("");
+    const [navDark, setNavDark] = useState(true);
     const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
     const { language, setLanguage, t } = useLanguage();
     const pathname = usePathname();
@@ -36,7 +36,6 @@ export default function Navbar() {
         };
     }, [isOpen]);
 
-    // hairline + tint after threshold
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 24);
         window.addEventListener("scroll", onScroll, { passive: true });
@@ -44,28 +43,7 @@ export default function Navbar() {
         return () => window.removeEventListener("scroll", onScroll);
     }, []);
 
-    // scroll-spy over the shared manifest (home only)
-    useEffect(() => {
-        if (!onHome) return;
-        const observer = new IntersectionObserver(
-            (entries) => {
-                for (const entry of entries) {
-                    if (entry.isIntersecting) setActiveId(entry.target.id);
-                }
-            },
-            { rootMargin: "-20% 0px -70% 0px" }
-        );
-        for (const s of SECTIONS) {
-            const el = document.getElementById(s.id);
-            if (el) observer.observe(el);
-        }
-        return () => observer.disconnect();
-    }, [onHome]);
-
-    // dark-band awareness: any [data-nav-dark] element under the 64px top bar
-    // flips the nav to its dark skin. Deterministic rect check per scroll frame
-    // (IntersectionObserver edge-touch/jump-scroll cases are spec traps); the
-    // elements are re-queried each pass so late-mounted dynamic bands count.
+    // dark-band awareness — re-queried each pass so late-mounted bands count
     useEffect(() => {
         let raf = 0;
         const update = () => {
@@ -90,60 +68,61 @@ export default function Navbar() {
         };
     }, [pathname]);
 
-    const hrefFor = (id: string) => (onHome ? `#${id}` : `/#${id}`);
     const dk = navDark && !isOpen;
+    const joinHref = onHome ? `#${JOIN_ID}` : `/#${JOIN_ID}`;
 
-    const langToggle = (cls?: string) => (
-        <div
-            className={cn(
-                "flex items-center rounded-lg border p-0.5 font-mono text-[13px] transition-colors duration-200",
-                dk ? "border-white/15" : "border-hairline",
-                cls
-            )}
-            role="group"
-            aria-label="Language"
-        >
-            {(["EN", "KR"] as const).map((lang) => (
-                <button
-                    key={lang}
-                    onClick={() => setLanguage(lang)}
-                    aria-pressed={language === lang}
-                    className={cn(
-                        "rounded-md px-2 py-0.5 transition-colors duration-150",
-                        language === lang
-                            ? dk
-                                ? "bg-white/10 text-paper"
-                                : "bg-well text-ink"
-                            : dk
-                              ? "text-stone-400 hover:text-paper"
-                              : "text-ink-3 hover:text-ink"
-                    )}
-                >
-                    {lang}
-                </button>
-            ))}
-        </div>
-    );
+    const langToggle = (forceDark?: boolean) => {
+        const d = forceDark ?? dk;
+        return (
+            <div
+                className={cn(
+                    "flex items-center rounded-full border p-0.5 text-[13px] font-semibold transition-colors duration-200",
+                    d ? "border-white/15" : "border-hairline"
+                )}
+                role="group"
+                aria-label="Language"
+            >
+                {(["EN", "KR"] as const).map((lang) => (
+                    <button
+                        key={lang}
+                        onClick={() => setLanguage(lang)}
+                        aria-pressed={language === lang}
+                        className={cn(
+                            "rounded-full px-2.5 py-0.5 transition-colors duration-150",
+                            language === lang
+                                ? d
+                                    ? "bg-white/10 text-paper"
+                                    : "bg-well text-ink"
+                                : d
+                                  ? "text-stone-400 hover:text-paper"
+                                  : "text-ink-3 hover:text-ink"
+                        )}
+                    >
+                        {lang}
+                    </button>
+                ))}
+            </div>
+        );
+    };
 
     return (
         <>
             <nav
                 className={cn(
-                    "fixed top-0 z-40 w-full transition-[background-color,border-color,box-shadow] duration-200",
+                    "fixed top-0 z-40 w-full transition-[background-color,border-color] duration-200",
                     isOpen
                         ? "bg-transparent"
                         : dk
                           ? scrolled
-                              ? "border-b border-white/10 bg-coal/75 backdrop-blur-md"
+                              ? "border-b border-white/10 bg-coal/80 backdrop-blur-md"
                               : "border-b border-transparent bg-transparent"
                           : scrolled
                             ? "border-b border-hairline bg-paper/90 backdrop-blur-md"
                             : "border-b border-transparent bg-paper/90 backdrop-blur-md"
                 )}
             >
-                <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6 md:px-8">
-                    {/* wordmark */}
-                    <a href={onHome ? "#home" : "/"} className="flex items-baseline gap-3">
+                <div className="mx-auto flex h-16 max-w-[1120px] items-center justify-between px-6 md:px-8">
+                    <Link href="/" className="flex items-baseline gap-3">
                         <span
                             className={cn(
                                 "text-lg font-bold tracking-tight transition-colors duration-200",
@@ -154,23 +133,22 @@ export default function Navbar() {
                         </span>
                         <span
                             className={cn(
-                                "hidden font-mono text-[11px] uppercase tracking-[0.08em] transition-colors duration-200 xl:block",
-                                dk ? "text-stone-400" : "text-ink-3"
+                                "hidden text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors duration-200 xl:block",
+                                dk ? "text-stone-500" : "text-ink-3"
                             )}
                         >
                             Multiphase Flow &amp; Thermal Engineering Lab
                         </span>
-                    </a>
+                    </Link>
 
-                    {/* desktop links */}
                     <div className="hidden items-center gap-7 lg:flex">
-                        {NAV_SECTIONS.map((s) => (
-                            <a
-                                key={s.id}
-                                href={hrefFor(s.id)}
+                        {NAV_ROUTES.map((r) => (
+                            <Link
+                                key={r.href}
+                                href={r.href}
                                 className={cn(
                                     "text-sm font-medium underline-offset-[10px] transition-colors duration-150",
-                                    activeId === s.id
+                                    pathname === r.href
                                         ? dk
                                             ? "text-paper underline decoration-ember-400 decoration-2"
                                             : "text-ink underline decoration-ember-600 decoration-2"
@@ -179,32 +157,29 @@ export default function Navbar() {
                                           : "text-ink-2 hover:text-ink"
                                 )}
                             >
-                                {t(s.labelKey)}
-                            </a>
+                                {t(r.labelKey)}
+                            </Link>
                         ))}
                     </div>
 
                     <div className="hidden items-center gap-3 lg:flex">
                         {langToggle()}
                         <a
-                            href={hrefFor(JOIN_ID)}
+                            href={joinHref}
                             className={cn(
-                                "inline-flex h-9 items-center rounded-lg px-4 text-sm font-medium text-white transition-colors duration-150",
-                                dk
-                                    ? "bg-ember-600 hover:bg-ember-500"
-                                    : "bg-ember-700 hover:bg-ember-800"
+                                "inline-flex h-9 items-center rounded-full px-4.5 text-sm font-semibold text-white transition-colors duration-150",
+                                dk ? "bg-ember-600 hover:bg-ember-500" : "bg-ember-700 hover:bg-ember-800"
                             )}
                         >
                             {t("nav.joinUs")}
                         </a>
                     </div>
 
-                    {/* mobile trigger */}
                     <button
                         onClick={() => setIsOpen(!isOpen)}
                         className={cn(
                             "relative z-[60] -mr-2 flex h-11 w-11 items-center justify-center transition-colors duration-200 lg:hidden",
-                            dk ? "text-paper" : "text-ink"
+                            isOpen ? "text-paper" : dk ? "text-paper" : "text-ink"
                         )}
                         aria-label="Toggle menu"
                         aria-expanded={isOpen}
@@ -214,31 +189,42 @@ export default function Navbar() {
                 </div>
             </nav>
 
-            {/* mobile full-screen sheet */}
+            {/* mobile full-screen sheet — coal, matching the story */}
             {portalTarget &&
                 isOpen &&
                 createPortal(
-                    <div className="fixed inset-0 z-50 bg-paper lg:hidden">
+                    <div className="fixed inset-0 z-50 bg-coal lg:hidden">
                         <div className="flex h-full flex-col justify-between px-8 pb-10 pt-24">
-                            <nav className="flex flex-col gap-1">
-                                {SECTIONS.filter((s) => s.nav || s.id === JOIN_ID).map((s) => (
-                                    <a
-                                        key={s.id}
-                                        href={hrefFor(s.id)}
+                            <nav className="flex flex-col">
+                                {NAV_ROUTES.map((r, i) => (
+                                    <Link
+                                        key={r.href}
+                                        href={r.href}
                                         onClick={() => setIsOpen(false)}
-                                        className={cn(
-                                            "flex items-baseline gap-4 border-b border-hairline py-4",
-                                            s.id === JOIN_ID ? "text-ember-700" : "text-ink"
-                                        )}
+                                        className="flex items-baseline gap-4 border-b border-white/10 py-4"
                                     >
-                                        <span className="font-mono text-xs text-ink-3">{s.index}</span>
-                                        <span className="text-2xl font-semibold tracking-tight">
-                                            {t(s.labelKey)}
+                                        <span className="text-[13px] font-semibold text-stone-500">
+                                            {String(i + 1).padStart(2, "0")}
                                         </span>
-                                    </a>
+                                        <span className="text-2xl font-bold tracking-tight text-paper">
+                                            {t(r.labelKey)}
+                                        </span>
+                                    </Link>
                                 ))}
+                                <a
+                                    href={joinHref}
+                                    onClick={() => setIsOpen(false)}
+                                    className="flex items-baseline gap-4 border-b border-white/10 py-4"
+                                >
+                                    <span className="text-[13px] font-semibold text-stone-500">
+                                        {String(NAV_ROUTES.length + 1).padStart(2, "0")}
+                                    </span>
+                                    <span className="text-2xl font-bold tracking-tight text-ember-400">
+                                        {t("nav.joinUs")}
+                                    </span>
+                                </a>
                             </nav>
-                            {langToggle("self-start")}
+                            {langToggle(true)}
                         </div>
                     </div>,
                     portalTarget

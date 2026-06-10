@@ -1,22 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import dynamic from "next/dynamic";
 const ChatWidget = dynamic(() => import("@/components/ChatWidget"));
 import { LanguageProvider } from "@/lib/LanguageContext";
-
-const geist = Geist({
-  subsets: ["latin"],
-  variable: "--font-geist",
-  display: "swap",
-});
-
-const geistMono = Geist_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-geist-mono",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "MFTEL | Inha University",
@@ -112,9 +98,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body
-        className={`${geist.variable} ${geistMono.variable} font-sans antialiased selection:bg-ember-200/60 selection:text-ember-900`}
-      >
+      <body className="font-sans antialiased selection:bg-ember-200/60 selection:text-ember-900">
         <LanguageProvider>
           {children}
           <ChatWidget />

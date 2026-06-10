@@ -21,7 +21,16 @@ export const SECTIONS: SectionDef[] = [
     { id: "footer", labelKey: "nav.contact", nav: false, index: "10" },
 ];
 
-// The recruiting CTA target (Join Us band). Currently the legacy Contact section id.
-export const JOIN_ID = "contact";
+// The recruiting CTA target (Join Us scene on the home story).
+export const JOIN_ID = "join";
 
 export const NAV_SECTIONS = SECTIONS.filter((s) => s.nav);
+
+// v3 — the home page is a story; archives live on routes. Navbar uses these.
+export const NAV_ROUTES = [
+    { href: "/research", labelKey: "nav.research" },
+    { href: "/publications", labelKey: "nav.publications" },
+    { href: "/team", labelKey: "nav.team" },
+    { href: "/news", labelKey: "nav.news" },
+    { href: "/gallery", labelKey: "nav.gallery" },
+] as const;

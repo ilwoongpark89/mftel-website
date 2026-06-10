@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { MapPin, Mail, Phone } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
-import { SECTIONS } from "@/lib/sections";
+import { NAV_ROUTES, JOIN_ID } from "@/lib/sections";
 import { SectionHeader, Meta } from "@/components/ui/typo";
 
 /**
@@ -22,9 +23,13 @@ const CONTACT = {
     email: "ilwoongpark@inha.ac.kr",
 };
 
-// Sitemap derives from the shared section manifest — anchors can never drift.
-const SITEMAP = SECTIONS.filter((s) => s.id !== "footer");
-const FOOTER_INDEX = SECTIONS.find((s) => s.id === "footer")?.index;
+// Sitemap derives from the shared route manifest — links can never drift.
+const SITEMAP = [
+    ...NAV_ROUTES,
+    { href: "/projects", labelKey: "nav.projects" },
+    { href: "/lecture", labelKey: "nav.lecture" },
+    { href: `/#${JOIN_ID}`, labelKey: "nav.joinUs" },
+];
 
 export default function Footer() {
     const { t, language } = useLanguage();
@@ -37,7 +42,6 @@ export default function Footer() {
         <footer id="footer" data-nav-dark className="bg-coal py-16 text-paper md:py-20">
             <div className="mx-auto max-w-6xl px-6 md:px-8">
                 <SectionHeader
-                    index={FOOTER_INDEX}
                     kicker={t("footer.label")}
                     title={t("footer.title")}
                     sub={t("footer.description")}
@@ -64,13 +68,13 @@ export default function Footer() {
                     <nav aria-label={isKR ? "사이트맵" : "Sitemap"} className="lg:col-span-3">
                         <ul>
                             {SITEMAP.map((s) => (
-                                <li key={s.id}>
-                                    <a
-                                        href={`#${s.id}`}
+                                <li key={s.href}>
+                                    <Link
+                                        href={s.href}
                                         className="flex min-h-11 items-center text-sm text-ink-4 transition-colors duration-150 hover:text-paper"
                                     >
                                         {t(s.labelKey)}
-                                    </a>
+                                    </Link>
                                 </li>
                             ))}
                         </ul>
