@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
-import "./globals.css";
+import "../globals.css";
 import dynamic from "next/dynamic";
 const ChatWidget = dynamic(() => import("@/components/ChatWidget"));
 import { LanguageProvider } from "@/lib/LanguageContext";
+
+// URL is the language SoT: / (ko, unprefixed via middleware rewrite) and /en.
+export function generateStaticParams() {
+  return [{ locale: "ko" }, { locale: "en" }];
+}
+export const dynamicParams = false;
 
 export const metadata: Metadata = {
   title: "MFTEL | Inha University",
@@ -22,6 +28,10 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: "https://mftel.vercel.app",
+    languages: {
+      "ko-KR": "https://mftel.vercel.app",
+      en: "https://mftel.vercel.app/en",
+    },
   },
   openGraph: {
     title: "MFTEL - Engineering a Sustainable Energy Future",
@@ -77,13 +87,17 @@ const jsonLd = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
+  params,
 }: Readonly<{
   children: React.ReactNode;
+  params: Promise<{ locale: string }>;
 }>) {
+  const { locale } = await params;
+  const language = locale === "en" ? ("EN" as const) : ("KR" as const);
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang={locale === "en" ? "en" : "ko"} className="scroll-smooth">
       <head>
         <meta name="format-detection" content="telephone=no" />
         <meta name="theme-color" content="#0F172A" />
@@ -100,7 +114,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased selection:bg-ember-200/60 selection:text-ember-900">
-        <LanguageProvider>
+        <LanguageProvider initialLanguage={language}>
           {children}
           <ChatWidget />
         </LanguageProvider>

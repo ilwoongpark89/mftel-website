@@ -1,13 +1,17 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 export type Language = "EN" | "KR";
 
 interface LanguageContextType {
     language: Language;
+    /** navigates between the / (KR) and /en (EN) trees — URL is the SoT */
     setLanguage: (lang: Language) => void;
     t: (key: string) => string;
+    /** locale-aware internal path: lp("/research") → "/research" | "/en/research" */
+    lp: (path: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -238,27 +242,33 @@ const translations: Record<Language, Record<string, string>> = {
     },
 };
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-    const [language, setLanguageState] = useState<Language>("EN");
+export function LanguageProvider({
+    children,
+    initialLanguage = "KR",
+}: {
+    children: ReactNode;
+    initialLanguage?: Language;
+}) {
+    const router = useRouter();
+    const pathname = usePathname();
+    const language = initialLanguage;
 
-    useEffect(() => {
-        const saved = localStorage.getItem("language") as Language;
-        if (saved && (saved === "EN" || saved === "KR")) {
-            setLanguageState(saved);
-        }
-    }, []);
-
+    // URL is the SoT: switching language navigates between the / and /en trees
     const setLanguage = (lang: Language) => {
-        setLanguageState(lang);
-        localStorage.setItem("language", lang);
+        if (lang === language) return;
+        const bare = pathname === "/en" ? "/" : pathname.startsWith("/en/") ? pathname.slice(3) : pathname;
+        router.push(lang === "EN" ? (bare === "/" ? "/en" : `/en${bare}`) : bare);
     };
+
+    const lp = (path: string) =>
+        language === "EN" ? (path === "/" ? "/en" : `/en${path}`) : path;
 
     const t = (key: string): string => {
         return translations[language][key] || key;
     };
 
     return (
-        <LanguageContext.Provider value={{ language, setLanguage, t }}>
+        <LanguageContext.Provider value={{ language, setLanguage, t, lp }}>
             {children}
         </LanguageContext.Provider>
     );

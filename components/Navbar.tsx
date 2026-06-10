@@ -20,7 +20,7 @@ export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [navDark, setNavDark] = useState(true);
     const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
-    const { language, setLanguage, t } = useLanguage();
+    const { language, setLanguage, t, lp } = useLanguage();
     const pathname = usePathname();
     const onHome = pathname === "/";
 
@@ -69,7 +69,7 @@ export default function Navbar() {
     }, [pathname]);
 
     const dk = navDark && !isOpen;
-    const joinHref = "/join";
+    const joinHref = lp("/join");
 
     const langToggle = (forceDark?: boolean) => {
         const d = forceDark ?? dk;
@@ -122,7 +122,7 @@ export default function Navbar() {
                 )}
             >
                 <div className="mx-auto flex h-16 max-w-[1120px] items-center justify-between px-6 md:px-8">
-                    <Link href="/" className="flex items-baseline gap-3">
+                    <Link href={lp("/")} className="flex items-baseline gap-3">
                         <span
                             className={cn(
                                 "text-lg font-bold tracking-tight transition-colors duration-200",
@@ -145,10 +145,10 @@ export default function Navbar() {
                         {NAV_ROUTES.map((r) => (
                             <Link
                                 key={r.href}
-                                href={r.href}
+                                href={lp(r.href)}
                                 className={cn(
                                     "text-sm font-medium underline-offset-[10px] transition-colors duration-150",
-                                    pathname === r.href
+                                    pathname === lp(r.href)
                                         ? dk
                                             ? "text-paper underline decoration-ember-400 decoration-2"
                                             : "text-ink underline decoration-ember-600 decoration-2"
@@ -202,7 +202,7 @@ export default function Navbar() {
                                 {NAV_ROUTES.map((r, i) => (
                                     <Link
                                         key={r.href}
-                                        href={r.href}
+                                        href={lp(r.href)}
                                         onClick={() => setIsOpen(false)}
                                         className="flex items-baseline gap-4 border-b border-white/10 py-4"
                                     >

@@ -63,7 +63,7 @@ function EmailCopy({ labelIdle }: { labelIdle: string }) {
 }
 
 export default function JoinStory() {
-    const { language } = useLanguage();
+    const { language, lp } = useLanguage();
     const isKR = language === "KR";
 
     const SEEK = isKR
@@ -170,20 +170,6 @@ export default function JoinStory() {
                   title: "International Students",
                   desc: "We welcome international applicants — feel free to reach out in English.",
               },
-          ];
-
-    const SUPPORT = isKR
-        ? [
-              "인하대학교는 이공계 연구생활장려금(한국형 스타이펜드) 참여 대학입니다 — 석사 월 80만 원, 박사 월 110만 원 수준이 보장선입니다.",
-              "연구 과제 참여 인건비는 별도로 지급됩니다.",
-              "국내외 학회 발표 출장을 지원합니다.",
-              "전일제 대학원 장학 제도는 모집요강에서 확인할 수 있습니다.",
-          ]
-        : [
-              "Inha University participates in the national STEM research stipend program — MS ≥ ₩800k/month and PhD ≥ ₩1.1M/month as the guaranteed floor.",
-              "Project participation pay is provided separately.",
-              "Conference travel, domestic and international, is supported.",
-              "Full-time scholarship programs are listed in the admissions guide.",
           ];
 
     const MAIL_SPEC = isKR
@@ -377,26 +363,6 @@ export default function JoinStory() {
                 </Reveal>
             </Scene>
 
-            {/* support & stipend — facts only */}
-            <Scene full={false}>
-                <Reveal>
-                    <Label>{isKR ? "지원과 처우" : "Support"}</Label>
-                </Reveal>
-                <Reveal as="ul" className="reveal-stagger mt-10 grid gap-x-8 gap-y-5 md:grid-cols-2">
-                    {SUPPORT.map((s) => (
-                        <li
-                            key={s}
-                            className={cn(
-                                "break-keep border-l-2 border-ember-600/50 pl-5 text-[15px] text-stone-300",
-                                isKR ? "leading-[1.75]" : "leading-[1.6]"
-                            )}
-                        >
-                            {s}
-                        </li>
-                    ))}
-                </Reveal>
-            </Scene>
-
             {/* the contact mail — applying IS the vision */}
             <Scene>
                 <div className="mx-auto max-w-3xl">
@@ -443,7 +409,7 @@ export default function JoinStory() {
                 </Reveal>
                 <Reveal className="mt-12">
                     <Link
-                        href="/philosophy"
+                        href={lp("/philosophy")}
                         className="text-[14px] text-stone-500 transition-colors duration-150 hover:text-ember-400"
                     >
                         {isKR ? "우리가 믿는 것 →" : "What we believe →"}

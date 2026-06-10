@@ -51,7 +51,7 @@ const SECTIONS = [
 ];
 
 export default function PhilosophyStory() {
-    const { language } = useLanguage();
+    const { language, lp } = useLanguage();
     const isKR = language === "KR";
 
     return (
@@ -103,7 +103,7 @@ export default function PhilosophyStory() {
                 <Reveal className="mx-auto max-w-2xl border-t border-white/8 pt-10">
                     <p className="text-[15px] font-semibold text-stone-400">— MFTEL</p>
                     <Link
-                        href="/join"
+                        href={lp("/join")}
                         className="mt-8 inline-flex h-12 items-center gap-2 rounded-full border border-white/15 px-7 text-[15px] font-medium text-paper transition-colors duration-150 hover:border-white/35 hover:bg-white/5"
                     >
                         {isKR ? "이 길을 함께 걷기" : "Walk this road with us"}

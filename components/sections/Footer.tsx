@@ -27,7 +27,7 @@ const SITEMAP = [
 ];
 
 export default function Footer() {
-    const { t, language } = useLanguage();
+    const { t, language, lp } = useLanguage();
     const isKR = language === "KR";
 
     return (
@@ -49,7 +49,7 @@ export default function Footer() {
                             {SITEMAP.map((s) => (
                                 <Link
                                     key={s.href}
-                                    href={s.href}
+                                    href={lp(s.href)}
                                     className="text-sm text-stone-400 transition-colors duration-150 hover:text-paper"
                                 >
                                     {t(s.labelKey)}
@@ -64,7 +64,7 @@ export default function Footer() {
                                 Lab DB ↗
                             </a>
                             <Link
-                                href="/philosophy"
+                                href={lp("/philosophy")}
                                 className="text-sm text-stone-500 transition-colors duration-150 hover:text-ember-400"
                             >
                                 {isKR ? "우리가 믿는 것" : "What we believe"}

@@ -26,7 +26,7 @@ import { Scene, Label, display, title, lead, AmbientField } from "@/components/h
 /* ── S1 hero ───────────────────────────────────────────────────────────── */
 
 function SceneHero() {
-    const { t, language } = useLanguage();
+    const { t, language, lp } = useLanguage();
     const isKR = language === "KR";
     return (
         <section id="home" data-nav-dark className="relative isolate flex min-h-[100svh] items-center overflow-hidden">
@@ -60,7 +60,7 @@ function SceneHero() {
                             {t("hero.join")}
                         </a>
                         <Link
-                            href="/research"
+                            href={lp("/research")}
                             className="inline-flex h-13 items-center rounded-full border border-white/15 px-8 text-[16px] font-medium text-paper transition-colors duration-150 hover:border-white/35 hover:bg-white/5"
                         >
                             {t("hero.research")}
@@ -121,7 +121,7 @@ function SceneNumbers() {
 /* ── S3 research ───────────────────────────────────────────────────────── */
 
 function SceneResearch() {
-    const { t, language } = useLanguage();
+    const { t, language, lp } = useLanguage();
     const isKR = language === "KR";
     // 수치는 설명문 안에서만 — 근거 없는 대형 숫자 금지 (상세 근거는 /research)
     const rows = [
@@ -139,7 +139,7 @@ function SceneResearch() {
                 {rows.map((row) => (
                     <li key={row.index} className="border-b border-white/8">
                         <Link
-                            href="/research"
+                            href={lp("/research")}
                             className="group grid grid-cols-12 items-center gap-x-4 rounded-xl px-2 py-9 transition-colors duration-150 hover:bg-white/[0.04] md:px-4 md:py-11"
                         >
                             <span className="col-span-12 mb-3 text-[15px] font-semibold text-ember-400 md:col-span-1 md:mb-0">
@@ -180,7 +180,7 @@ function SceneResearch() {
 /* ── S4 publications ───────────────────────────────────────────────────── */
 
 function ScenePubs() {
-    const { t, language } = useLanguage();
+    const { t, language, lp } = useLanguage();
     const isKR = language === "KR";
     const seen = new Set<number>();
     const featured = [publications[0], ...publications.filter((p) => p.special)]
@@ -228,7 +228,7 @@ function ScenePubs() {
             </Reveal>
             <Reveal className="mt-10">
                 <Link
-                    href="/publications"
+                    href={lp("/publications")}
                     className="inline-flex h-12 items-center gap-2 rounded-full border border-white/15 px-7 text-[15px] font-medium text-paper transition-colors duration-150 hover:border-white/35 hover:bg-white/5"
                 >
                     {t("home.pubs.cta")}
@@ -254,7 +254,7 @@ const FACE_CROPS: Record<string, { scale: number; origin: string }> = {
 const PI_CROP = { scale: 1.55, origin: "51% 30%" };
 
 function ScenePeople() {
-    const { t, language } = useLanguage();
+    const { t, language, lp } = useLanguage();
     const isKR = language === "KR";
     return (
         <Scene>
@@ -265,7 +265,7 @@ function ScenePeople() {
             <Reveal className="reveal-stagger mt-14 grid grid-cols-2 gap-3 sm:grid-cols-3 md:mt-20 md:grid-cols-6 md:gap-4">
                 {/* PI tile — double size anchors the grid */}
                 <Link
-                    href="/team"
+                    href={lp("/team")}
                     className="group col-span-2 row-span-2 overflow-hidden rounded-xl border border-white/8"
                 >
                     <div className="relative h-full min-h-[200px] w-full">
@@ -288,7 +288,7 @@ function ScenePeople() {
                 {teamMembers.map((m) => (
                     <Link
                         key={m.name}
-                        href="/team"
+                        href={lp("/team")}
                         className="group overflow-hidden rounded-xl border border-white/8"
                     >
                         <div className="relative aspect-[3/4] w-full">
@@ -321,7 +321,7 @@ function ScenePeople() {
             </Reveal>
             <Reveal className="mt-10">
                 <Link
-                    href="/team"
+                    href={lp("/team")}
                     className="inline-flex h-12 items-center gap-2 rounded-full border border-white/15 px-7 text-[15px] font-medium text-paper transition-colors duration-150 hover:border-white/35 hover:bg-white/5"
                 >
                     {t("home.people.cta")}
@@ -363,7 +363,7 @@ function ScenePartners() {
 const JOIN_EMAIL = "ilwoongpark@inha.ac.kr";
 
 function SceneJoin() {
-    const { t, language } = useLanguage();
+    const { t, language, lp } = useLanguage();
     const isKR = language === "KR";
     const [copied, setCopied] = useState(false);
 
@@ -423,7 +423,7 @@ function SceneJoin() {
                         {copied ? t("contact.emailCopied") : "Inha Univ. 2N687"}
                     </p>
                     <Link
-                        href="/join"
+                        href={lp("/join")}
                         className="mt-2 inline-flex h-11 items-center gap-2 text-[15px] font-medium text-stone-300 transition-colors duration-150 hover:text-paper"
                     >
                         {isKR ? "지원 안내 전체 보기" : "Full application guide"}
