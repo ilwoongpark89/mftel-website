@@ -127,8 +127,8 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
             figAlt: "TES Research Summary",
         },
         immersion: {
-            kicker: "IMMERSION COOLING",
-            title: "Immersion Cooling",
+            kicker: "AI SEMICONDUCTOR COOLING",
+            title: "AI Semiconductor Cooling",
             subtitle: "Reducing Cooling Energy Consumption",
             description:
                 "Two-phase immersion cooling eliminates the need for traditional air cooling infrastructure, reducing cooling energy by up to 90%. Direct contact with dielectric fluid enables higher chip densities and removes the thermal bottleneck at the processor level.",
@@ -303,8 +303,8 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
             figAlt: "열에너지 저장 연구 요약",
         },
         immersion: {
-            kicker: "이머전 쿨링",
-            title: "이머전 쿨링",
+            kicker: "AI 반도체 냉각",
+            title: "AI 반도체 냉각",
             subtitle: "냉각 에너지 소비 절감",
             description:
                 "이상(二相) 이머전 쿨링은 기존 공냉 인프라를 대체하여 냉각 에너지를 최대 90%까지 절감합니다. 절연 유체와의 직접 접촉으로 칩 밀도를 높이고, 프로세서 단에서의 열적 병목을 제거합니다.",

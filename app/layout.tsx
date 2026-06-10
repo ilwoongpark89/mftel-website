@@ -68,6 +68,7 @@ const jsonLd = {
   },
   knowsAbout: [
     "Thermal Energy Storage",
+    "AI Semiconductor Cooling",
     "Immersion Cooling",
     "Small Modular Reactors",
     "Boiling Heat Transfer",
