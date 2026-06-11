@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Flame, Droplets, Atom } from "lucide-react";
 import { teamMembers, alumni, publications } from "@/app/data";
 import { useLanguage } from "@/lib/LanguageContext";
@@ -124,7 +125,7 @@ function CredentialList({
 }
 
 export default function Team() {
-    const { language, t } = useLanguage();
+    const { language, t, lp } = useLanguage();
     const isKR = language === "KR";
 
     const educationCareer = isKR ? educationCareerKR : educationCareerEN;
@@ -256,15 +257,19 @@ export default function Team() {
                                             .join(" ")}
                                     </p>
                                     {pubCount > 0 ? (
-                                        <a
-                                            href="#publications"
-                                            className="mt-auto inline-flex min-h-11 items-center self-start pt-2 text-ember-700 transition-colors duration-150 hover:text-ember-800"
+                                        // 멤버 이름이 검색어로 채워진 논문 목록으로 이동
+                                        <Link
+                                            href={lp(`/publications?q=${encodeURIComponent(member.name)}`)}
+                                            className="mt-auto inline-flex min-h-11 items-center gap-1 self-start pt-2 text-ember-700 transition-colors duration-150 hover:text-ember-800"
                                         >
                                             <Meta className="text-xs uppercase tracking-[0.08em] text-inherit">
                                                 {isKR ? t("team.publications") : "PUBS"} ·{" "}
                                                 {pubCount}
                                             </Meta>
-                                        </a>
+                                            <span aria-hidden className="text-[11px]">
+                                                →
+                                            </span>
+                                        </Link>
                                     ) : null}
                                 </div>
                             </article>

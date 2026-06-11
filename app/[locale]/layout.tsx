@@ -100,7 +100,7 @@ export default async function RootLayout({
     <html lang={locale === "en" ? "en" : "ko"} className="scroll-smooth">
       <head>
         <meta name="format-detection" content="telephone=no" />
-        <meta name="theme-color" content="#0F172A" />
+        <meta name="theme-color" content="#0C0A09" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="manifest" href="/manifest.json" />

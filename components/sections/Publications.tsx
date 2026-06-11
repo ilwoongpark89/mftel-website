@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Search } from "lucide-react";
 import Band from "@/components/ui/band";
 import { Meta, SectionHeader } from "@/components/ui/typo";
@@ -53,6 +53,15 @@ export default function Publications({
     const [search, setSearch] = useState("");
     const [showAll, setShowAll] = useState(false);
 
+    // deep link from team cards: /publications?q=<member name> pre-fills search
+    useEffect(() => {
+        const q = new URLSearchParams(window.location.search).get("q");
+        if (q) {
+            setSearch(q);
+            setShowAll(true);
+        }
+    }, []);
+
     const totalPubs = publications.length;
 
     /** [key, count] pairs derived from data, largest group first. */
@@ -71,13 +80,16 @@ export default function Publications({
 
     const filteredPubs = useMemo(() => {
         const query = search.trim().toLowerCase();
+        // author match is spacing-insensitive ("Hyun Jin Yong" ↔ "Hyunjin Yong")
+        // — same semantics as the team-card pub counts, so the numbers agree
+        const compactQuery = query.replace(/\s+/g, "");
         return publications.filter((pub) => {
             const matchCategory = activeCategory === "all" || pub.category.includes(activeCategory);
             const matchYear = selectedYear === "all" || pub.year === selectedYear;
             const matchQuery =
                 !query ||
                 pub.title.toLowerCase().includes(query) ||
-                pub.authors.toLowerCase().includes(query);
+                pub.authors.toLowerCase().replace(/\s+/g, "").includes(compactQuery);
             return matchCategory && matchYear && matchQuery;
         });
     }, [activeCategory, selectedYear, search]);
