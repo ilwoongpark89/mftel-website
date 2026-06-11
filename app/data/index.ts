@@ -77,8 +77,17 @@ export const projects = [
   { year: "2018 ~ 2021", title: "Improvement of wall boiling model based on boiling experiment with a controlled surface in microscale", sponsor: "National Research Foundation of Korea" },
 ];
 
-export const teamMembers = [
-  { name: "Hyun Jin Yong", nameKR: "용현진", degree: "Ph.D. student", degreeKR: "박사과정", research: "Boiling heat transfer", researchKR: "비등 열전달" },
+export const teamMembers: {
+  name: string;
+  nameKR: string;
+  degree: string;
+  degreeKR: string;
+  research: string;
+  researchKR: string;
+  /** 논문 저자 표기의 로마자 변형 (예: Hyun↔Hyeon) — 논문 수 집계·검색 매칭에 사용 */
+  aliases?: string[];
+}[] = [
+  { name: "Hyun Jin Yong", nameKR: "용현진", degree: "Ph.D. student", degreeKR: "박사과정", research: "Boiling heat transfer", researchKR: "비등 열전달", aliases: ["Hyeon Jin Yong"] },
   { name: "Jun Beom Song", nameKR: "송준범", degree: "Ph.D. student", degreeKR: "박사과정", research: "Thermal energy storage", researchKR: "열에너지 저장" },
   { name: "Sang Min Song", nameKR: "송상민", degree: "Ph.D. student", degreeKR: "박사과정", research: "Condensation", researchKR: "응축" },
   { name: "Jae Hyeok Yang", nameKR: "양재혁", degree: "Ph.D. student", degreeKR: "박사과정", research: "Thermal-hydraulic system code", researchKR: "열수력 시스템 코드" },

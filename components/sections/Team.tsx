@@ -16,12 +16,16 @@ import { SectionHeader, Meta, FigCaption } from "@/components/ui/typo";
  * taxonomy is surfaced as a mono legend instead of hidden card-back colors.
  */
 
-/** Pub count derived from publications author strings (spacing-insensitive). */
-const getStudentPubCount = (studentName: string) => {
-    const compact = studentName.toLowerCase().replace(/\s+/g, "");
-    return publications.filter((pub) =>
-        pub.authors.toLowerCase().replace(/\s+/g, "").includes(compact)
-    ).length;
+/** Pub count derived from publications author strings — spacing-insensitive,
+ *  romanization aliases included (e.g., Hyun Jin Yong ↔ Hyeon Jin Yong). */
+const getStudentPubCount = (member: { name: string; aliases?: string[] }) => {
+    const compacts = [member.name, ...(member.aliases ?? [])].map((n) =>
+        n.toLowerCase().replace(/\s+/g, "")
+    );
+    return publications.filter((pub) => {
+        const authors = pub.authors.toLowerCase().replace(/\s+/g, "");
+        return compacts.some((c) => authors.includes(c));
+    }).length;
 };
 
 type PillarKey = "tes" | "immersion" | "smr";
@@ -226,7 +230,7 @@ export default function Team() {
                         const secondaryName = isKR ? member.name : member.nameKR;
                         const degree = isKR ? member.degreeKR : member.degree;
                         const research = isKR ? member.researchKR : member.research;
-                        const pubCount = getStudentPubCount(member.name);
+                        const pubCount = getStudentPubCount(member);
 
                         return (
                             <article

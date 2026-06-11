@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Search } from "lucide-react";
 import Band from "@/components/ui/band";
 import { Meta, SectionHeader } from "@/components/ui/typo";
-import { publications } from "@/app/data";
+import { publications, teamMembers } from "@/app/data";
 import { useLanguage } from "@/lib/LanguageContext";
 
 type Publication = (typeof publications)[number];
@@ -81,15 +81,22 @@ export default function Publications({
     const filteredPubs = useMemo(() => {
         const query = search.trim().toLowerCase();
         // author match is spacing-insensitive ("Hyun Jin Yong" ↔ "Hyunjin Yong")
-        // — same semantics as the team-card pub counts, so the numbers agree
+        // — same semantics as the team-card pub counts, so the numbers agree.
+        // If the query IS a member's name, expand to their romanization aliases
+        // (e.g., Hyun Jin Yong ↔ Hyeon Jin Yong) so every paper is found.
         const compactQuery = query.replace(/\s+/g, "");
+        const aliasGroup = teamMembers
+            .map((m) => [m.name, ...(m.aliases ?? [])].map((n) => n.toLowerCase().replace(/\s+/g, "")))
+            .find((group) => group.includes(compactQuery));
+        const authorNeedles = aliasGroup ?? (compactQuery ? [compactQuery] : []);
         return publications.filter((pub) => {
             const matchCategory = activeCategory === "all" || pub.category.includes(activeCategory);
             const matchYear = selectedYear === "all" || pub.year === selectedYear;
+            const compactAuthors = pub.authors.toLowerCase().replace(/\s+/g, "");
             const matchQuery =
                 !query ||
                 pub.title.toLowerCase().includes(query) ||
-                pub.authors.toLowerCase().replace(/\s+/g, "").includes(compactQuery);
+                authorNeedles.some((n) => compactAuthors.includes(n));
             return matchCategory && matchYear && matchQuery;
         });
     }, [activeCategory, selectedYear, search]);
