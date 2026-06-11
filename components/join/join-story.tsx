@@ -71,17 +71,17 @@ export default function JoinStory() {
               {
                   index: "01",
                   title: "질문을 새로 만드는 사람",
-                  desc: "주어진 문제를 한 번 더 의심하고, 당연하게 놓인 물음을 다시 정의하는 사람. 답을 잘 맞히는 것보다 물어야 할 것을 찾아내는 쪽이 우리에게는 훨씬 중요합니다.",
+                  desc: "주어진 문제를 한 번 더 의심하고, 당연해 보이는 물음을 다시 정의하는 사람. 답을 빨리 맞히는 것보다 물어야 할 것을 찾아내는 쪽이, 우리에게는 훨씬 중요합니다.",
               },
               {
                   index: "02",
-                  title: "깨지고도 돌아오는 사람",
-                  desc: "실패를 자연스러운 과정으로 받아들이고, 수없이 깨지고도 같은 문제 앞으로 다시 돌아오는 사람. 새로운 것은 그 반복의 끝에서 나옵니다.",
+                  title: "깨지고도 다시 돌아오는 사람",
+                  desc: "실패를 당연한 과정으로 받아들이고, 수없이 깨지고도 같은 문제 앞에 다시 서는 사람. 새로운 것은 늘 그 반복의 끝에서 나왔습니다.",
               },
               {
                   index: "03",
                   title: "몰입을 아는 사람",
-                  desc: "시간을 잊고 무언가에 푹 빠져본 경험이 있는 사람. 연구가 아니어도 좋습니다 — 팀 대 팀의 승부를 아는 스포츠맨이라면 더 빨리 통할 겁니다.",
+                  desc: "시간 가는 줄 모르고 무언가에 빠져 본 사람. 연구가 아니어도 좋습니다. 팀으로 승부를 겨뤄 본 사람이라면, 우리와 더 빨리 통할 겁니다.",
               },
           ]
         : [
@@ -106,15 +106,15 @@ export default function JoinStory() {
         ? [
               {
                   title: "시간을 세지 않습니다",
-                  desc: "몇 시에 왔는지보다 무엇이 쌓였는지를 봅니다. 우리는 결과와 기록으로 말합니다.",
+                  desc: "몇 시에 왔는지보다, 무엇이 쌓였는지를 봅니다. 우리는 결과와 기록으로 말합니다.",
               },
               {
                   title: "몰입은 자리에서 나오지 않습니다",
-                  desc: "깊이 빠질 수 있다면, 그곳이 어디든 연구실입니다.",
+                  desc: "깊이 빠져들 수만 있다면, 그곳이 어디든 연구실입니다.",
               },
               {
                   title: "약속은 하나입니다",
-                  desc: "모든 연구 과정은 우리가 직접 만든 AI 연구 기록 시스템에 쌓입니다. 기록이 곧 연구실의 역사가 됩니다.",
+                  desc: "연구의 모든 과정을 우리가 직접 만든 AI 연구 기록 시스템에 남깁니다. 그 기록이 곧 연구실의 역사가 됩니다.",
               },
           ]
         : [
@@ -136,20 +136,20 @@ export default function JoinStory() {
         ? [
               {
                   title: "석사 · 박사 · 석박사통합",
-                  desc: "연구실의 중심입니다. 세 연구 축(열에너지 저장 · AI 반도체 냉각 · SMR 안전) 안에서 본인의 질문을 찾아갑니다. 입학 전형은 인하대학교 일반대학원 일정을 따르며, 마감 2~3개월 전 컨택을 권장합니다.",
+                  desc: "연구실의 중심입니다. 세 연구 분야 — 열에너지 저장, AI 반도체 냉각, SMR 안전 — 안에서 자신만의 질문을 찾아갑니다. 입학 전형은 인하대학교 일반대학원 일정을 따르며, 마감 두세 달 전에는 미리 연락해 주시길 권합니다.",
                   meta: { label: "모집요강 ↗", href: GRAD_URL },
               },
               {
                   title: "학부연구생 — 상시 모집",
-                  desc: "3~4학년, 방학 집중 또는 학기 병행. 실험 리그 데이터 처리, 적외선 이미지 분석 같은 진짜 과업을 맡습니다. 대학원 진학의 가장 자연스러운 출발점입니다.",
+                  desc: "3~4학년이라면 방학 때 집중해도, 학기 중에 병행해도 좋습니다. 잡무가 아니라 실험 데이터 처리, 적외선 이미지 분석 같은 실제 연구를 맡습니다. 대학원 진학의 가장 자연스러운 출발점입니다.",
               },
               {
                   title: "박사후연구원",
-                  desc: "진행 중인 과제에 따라 수시로 모십니다. CV와 함께 이메일로 문의해 주세요.",
+                  desc: "진행 중인 과제에 따라 수시로 모집합니다. CV와 함께 이메일로 문의해 주세요.",
               },
               {
                   title: "International Students",
-                  desc: "해외 지원자를 환영합니다. 영어로 편하게 연락 주세요 — We welcome international applicants; feel free to reach out in English.",
+                  desc: "국적은 상관없습니다. 영어로 연락 주셔도 좋습니다 — we welcome international applicants.",
               },
           ]
         : [
@@ -175,22 +175,22 @@ export default function JoinStory() {
     const MAIL_SPEC = isKR
         ? {
               heading: "지원은 이메일 한 통으로 시작합니다",
-              sub: "성적표와 스펙 나열은 필요하지 않습니다. 아래 두 가지면 충분합니다.",
+              sub: "성적표도, 화려한 스펙도 필요하지 않습니다. 두 가지면 충분합니다.",
               items: [
-                  { n: "①", text: "당신이 가장 깊이 몰입했던 경험 한 단락 — 연구가 아니어도 좋습니다." },
-                  { n: "②", text: "우리 연구를 보고 생긴 새로운 질문 하나." },
-                  { n: "③", text: "(학위과정 지원자) 관심 있는 연구 축 — 열에너지 저장 · AI 반도체 냉각 · SMR 안전." },
+                  { n: "①", text: "가장 깊이 몰입했던 경험 한 단락. 연구가 아니어도 좋습니다." },
+                  { n: "②", text: "우리 연구를 둘러보다 떠오른 질문 하나." },
+                  { n: "+", text: "학위과정 지원자라면, 관심 있는 연구 분야도 함께 적어 주세요 — 열에너지 저장, AI 반도체 냉각, SMR 안전." },
               ],
-              promise: "보낸 메일에는 1주일 안에 반드시 답합니다.",
+              promise: "받은 메일에는 일주일 안에 반드시 답장합니다.",
               cta: "이메일 주소 복사",
           }
         : {
               heading: "Applying starts with one email",
               sub: "No transcript, no spec sheet. Two things are enough.",
               items: [
-                  { n: "①", text: "One paragraph on the deepest immersion you've experienced — it doesn't have to be research." },
-                  { n: "②", text: "One new question that came to you while reading our research." },
-                  { n: "③", text: "(Degree applicants) the research front you're drawn to — TES · AI semiconductor cooling · SMR safety." },
+                  { n: "①", text: "One paragraph on the deepest immersion you have experienced. It does not have to be research." },
+                  { n: "②", text: "One question that came to you while looking through our research." },
+                  { n: "+", text: "Degree applicants — add the field you are drawn to: thermal energy storage, AI semiconductor cooling, or SMR safety." },
               ],
               promise: "We reply to every email within a week.",
               cta: "Copy email address",
@@ -199,28 +199,28 @@ export default function JoinStory() {
     const FAQ = isKR
         ? [
               {
-                  q: "언제 컨택해야 하나요?",
-                  a: "학위과정은 전형 마감 2~3개월 전을 권장합니다. 학부연구생은 상시 모집입니다. 전형 일정은 인하대 일반대학원 모집요강에서 확인하세요.",
+                  q: "언제 연락하면 되나요?",
+                  a: "학위과정은 전형 마감 두세 달 전이 좋습니다. 학부연구생은 언제든 환영합니다. 전형 일정은 인하대학교 일반대학원 모집요강에서 확인할 수 있습니다.",
               },
               {
                   q: "출신 학교나 전공이 중요한가요?",
-                  a: "출신을 보지 않습니다. 위의 메일 두 가지 — 몰입했던 경험과 새로운 질문 — 로 충분합니다.",
+                  a: "보지 않습니다. 어디에서 왔는지보다, 무엇에 몰입해 봤고 무엇을 묻고 싶은지가 중요합니다.",
               },
               {
                   q: "연구 주제는 어떻게 정하나요?",
-                  a: "세 연구 축 안에서 시작하되, 주어진 주제를 받는 것이 아니라 본인의 질문을 함께 정의해 갑니다.",
+                  a: "세 연구 분야 안에서 시작하되, 정해진 주제를 받아 가는 것이 아니라 자신의 질문을 함께 만들어 갑니다.",
               },
               {
-                  q: "연구실 생활은 어떤가요?",
-                  a: "결과와 기록 중심입니다. 위의 '일하는 방식' 세 문장이 사실상 전부입니다.",
+                  q: "연구실 분위기는 어떤가요?",
+                  a: "결과와 기록으로 말하는 곳입니다. 위의 '일하는 방식' 세 문장이 사실상 전부입니다.",
               },
               {
                   q: "영어가 부족해도 괜찮나요?",
-                  a: "논문은 영어로 쓰지만, 쓰면서 함께 배웁니다. 해외 협력 기관(NTNU · HZDR · UPC)과의 교류 기회가 자연스러운 훈련이 됩니다.",
+                  a: "논문은 영어로 쓰지만, 쓰면서 함께 배웁니다. 노르웨이 NTNU, 독일 HZDR, 스페인 UPC와의 교류가 자연스러운 훈련이 됩니다.",
               },
               {
                   q: "학부연구생은 무엇을 하나요?",
-                  a: "실험 장치의 데이터 처리, 이미지 분석 같은 실제 연구 과업을 맡고, 성과에 따라 학회 포스터·공저 기회가 열립니다.",
+                  a: "실험 데이터 처리, 이미지 분석 같은 실제 연구를 맡습니다. 성과가 쌓이면 학회 포스터 발표와 공저 기회로 이어집니다.",
               },
           ]
         : [
@@ -262,7 +262,7 @@ export default function JoinStory() {
                         {isKR ? (
                             <>
                                 정답을 빨리 맞히는 사람보다,{" "}
-                                <span className="text-ember-400">물어야 할 것을 찾아내는 사람</span>
+                                <span className="text-ember-400">물어야 할 것을 새로 찾아내는 사람</span>
                             </>
                         ) : (
                             <>
@@ -273,8 +273,8 @@ export default function JoinStory() {
                     </h1>
                     <p className={cn("mt-7 max-w-xl", lead(isKR))}>
                         {isKR
-                            ? "MFTEL은 몰입과 실패를 아는 사람을 찾습니다. 어떤 트랙이든, 시작은 이메일 한 통입니다."
-                            : "MFTEL looks for people who know immersion and failure. Whatever the track, it starts with one email."}
+                            ? "MFTEL은 몰입과 실패를 아는 사람을 찾습니다. 석사든 박사든 학부연구생이든, 시작은 이메일 한 통입니다."
+                            : "MFTEL looks for people who know immersion and failure. MS, PhD, or undergraduate — it starts with one email."}
                     </p>
                 </div>
             </Scene>
@@ -335,7 +335,7 @@ export default function JoinStory() {
             {/* tracks */}
             <Scene full={false}>
                 <Reveal>
-                    <Label>{isKR ? "모집 트랙" : "Tracks"}</Label>
+                    <Label>{isKR ? "함께 걷는 길" : "Ways to Join"}</Label>
                 </Reveal>
                 <Reveal as="ul" className="reveal-stagger mt-10 border-t border-white/8">
                     {TRACKS.map((tr) => (

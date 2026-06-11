@@ -133,7 +133,7 @@ const ANNOUNCEMENT: Announcement = {
                 {
                     text: {
                         EN: "Able to conduct on-site research for at least 6 months",
-                        KR: "최소 6개월 이상 현지에서 파견연구 활동을 수행할 수 있는 석·박사 과정 학생",
+                        KR: "6개월 이상 현지에서 파견연구 활동을 수행할 수 있는 석·박사 과정 학생",
                     },
                 },
                 {
@@ -151,7 +151,7 @@ const ANNOUNCEMENT: Announcement = {
                 {
                     text: {
                         EN: "Holds a valid passport (no expiry during dispatch) and meets visa requirements",
-                        KR: "여권 소지, 파견기간 중 만료일 도래 여부 및 비자발급 조건에 결함이 없는 학생",
+                        KR: "여권을 소지하고, 파견기간 중 여권 만료나 비자 발급에 결격 사유가 없는 학생",
                     },
                 },
             ],
@@ -161,7 +161,7 @@ const ANNOUNCEMENT: Announcement = {
             items: [
                 {
                     label: { EN: "Posting period", KR: "공고 시작일" },
-                    text: { EN: "From the announcement date", KR: "공고일로부터" },
+                    text: { EN: "From the announcement date", KR: "공고일부터 접수 시작" },
                 },
                 {
                     label: { EN: "Deadline", KR: "접수 마감일" },
@@ -229,7 +229,7 @@ const ANNOUNCEMENT: Announcement = {
                 {
                     text: {
                         EN: "A SCIE-class paper Accept within 1 year after dispatch is required. Failure may require partial or full return of the support.",
-                        KR: "파견 후 1년 안에 SCIE급 논문 Accept이 필수임. 조건을 만족하지 못할 경우 지원 경비 일부 또는 전액 반환이 요구됨",
+                        KR: "파견 후 1년 안에 SCIE급 논문 게재 확정(Accept)이 필수임. 조건을 만족하지 못할 경우 지원 경비의 일부 또는 전액을 반환해야 함",
                     },
                 },
                 {

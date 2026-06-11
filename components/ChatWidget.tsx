@@ -26,7 +26,7 @@ const chatTexts = {
     newConversation: "New conversation",
   },
   KR: {
-    replyTime: "보통 하루 내 답변드립니다",
+    replyTime: "보통 하루 안에 답변드립니다",
     leaveMessage: "메시지를 남겨주시면",
     getBack: "빠르게 연락드리겠습니다.",
     nameLabel: "이름",
