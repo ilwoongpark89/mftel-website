@@ -63,12 +63,6 @@ export default function Footer() {
                             >
                                 Lab DB ↗
                             </a>
-                            <Link
-                                href={lp("/philosophy")}
-                                className="text-sm text-stone-500 transition-colors duration-150 hover:text-ember-400"
-                            >
-                                {isKR ? "우리가 믿는 것" : "What we believe"}
-                            </Link>
                         </nav>
 
                         <div className="mt-7 space-y-1.5 text-sm text-stone-400">

@@ -2,8 +2,8 @@ import { cn } from "@/lib/utils";
 
 /**
  * v3 DEEP FIELD shared primitives — one scene shell, one label, five type
- * sizes. Used by the home story and the dark narrative pages (/join,
- * /philosophy) so the discipline can never fork.
+ * sizes. Used by the home story and the dark narrative pages (/join) so the
+ * discipline can never fork.
  */
 
 export function Scene({
