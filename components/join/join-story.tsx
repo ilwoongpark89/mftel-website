@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Mail, Check } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -406,14 +405,6 @@ export default function JoinStory() {
                             </p>
                         </li>
                     ))}
-                </Reveal>
-                <Reveal className="mt-12">
-                    <Link
-                        href={lp("/philosophy")}
-                        className="text-[14px] text-stone-500 transition-colors duration-150 hover:text-ember-400"
-                    >
-                        {isKR ? "우리가 믿는 것 →" : "What we believe →"}
-                    </Link>
                 </Reveal>
             </Scene>
         </div>
