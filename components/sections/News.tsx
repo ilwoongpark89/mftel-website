@@ -37,6 +37,7 @@ interface Announcement {
     date: string; // ISO
     deadline: string; // ISO
     deadlineTime: string;
+    closed: boolean; // recruitment window over → muted card + disabled apply
     projectNo: string;
     email: string;
     image: string;
@@ -49,6 +50,7 @@ const ANNOUNCEMENT: Announcement = {
     date: "2026-05-21",
     deadline: "2026-05-31",
     deadlineTime: "18:00",
+    closed: true,
     projectNo: "RS-2026-25540249",
     email: "ilwoongpark@inha.ac.kr",
     image: "/images/news/260521-global-hr-program.png",
@@ -271,7 +273,7 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
         date: "2026-01-25",
         title: { EN: "Visiting Researchers at Th2FLAB", KR: "NTNU Th2FLAB 방문연구 시작" },
         description: {
-            EN: "Sungjin Kim, Hyeon Geun Shin, and Sangmin Song will stay at NTNU for a year to conduct collaborative research with Professor Carlos Dorao. It was a hard working weekend!",
+            EN: "Sung Jin Kim, Hyeon Geun Shin, and Sang Min Song will stay at NTNU for a year to conduct collaborative research with Professor Carlos Dorao. It was a hard-working weekend!",
             KR: "김성진, 신현근, 송상민 학생이 Carlos Dorao 교수님과 공동연구를 위해 NTNU에서 1년간 방문연구를 시작합니다. 주말임에도 Carlos 교수님께서 실험장치 세팅을 도와주셨습니다!",
         },
         images: ["/images/news/250125-hard-work-ntnu-2.jpg", "/images/news/250125-hard-work-ntnu-1.jpg"],
@@ -287,10 +289,10 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
     },
     {
         date: "2025-12-19",
-        title: { EN: "MFTEL Visited Th2FLAB", KR: "MFTEL의 NTNU Th2FLAB 방문" },
+        title: { EN: "Th2FLAB Professors Visited MFTEL", KR: "NTNU Th2FLAB 교수진 MFTEL 방문" },
         description: {
-            EN: "MFTEL students visited NTNU Th2FLAB in Norway for research collaboration and exchange.",
-            KR: "MFTEL 학생들이 노르웨이 NTNU의 Th2FLAB을 방문하여 공동연구 및 학술교류를 진행하였습니다.",
+            EN: "Professors Carlos Alberto Dorao and Maria Fernandino of NTNU's Thermal Two-Phase Flow Laboratory (Th2FLAB) visited MFTEL at Inha University, Korea, for research collaboration and academic exchange.",
+            KR: "노르웨이 NTNU Th2FLAB의 Carlos Alberto Dorao 교수님과 Maria Fernandino 교수님이 인하대학교 MFTEL을 방문하여 공동연구 및 학술교류를 진행하였습니다.",
         },
         images: ["/images/news/251219-carlos-maria-visit-1.jpeg", "/images/news/251219-carlos-maria-visit-2.jpeg"],
     },
@@ -332,10 +334,10 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
     },
     {
         date: "2025-08-11",
-        title: { EN: "UTFORSK 2024 at NTNU", KR: "UTFORSK - NTNU 방문" },
+        title: { EN: "UTFORSK Visit to NTNU", KR: "UTFORSK - MFTEL 전원 NTNU 방문" },
         description: {
-            EN: "MFTEL visited Prof. Hyun Joo Kim as part of the UTFORSK 2025 program.",
-            KR: "UTFORSK 프로그램으로 NTNU 김현주 교수님 연구실을 방문하였습니다.",
+            EN: "The entire MFTEL team from Inha University visited Associate Professor Hyung Ju Kim's lab at NTNU through the UTFORSK program.",
+            KR: "인하대학교 MFTEL 연구실 전원이 UTFORSK 프로그램으로 NTNU를 방문하여 Hyung Ju Kim 교수님 연구실을 찾았습니다.",
         },
         images: ["/images/news/250811-utforsk-ntnu.jpeg", "/images/news/250811-utforsk-ntnu-visiting.jpeg"],
     },
@@ -519,7 +521,13 @@ function AnnouncementCard({
     const detailId = "news-call-detail";
 
     return (
-        <article className="mb-10 overflow-hidden rounded-lg border border-ember-200 border-l-2 border-l-ember-600 bg-ember-50 md:mb-14">
+        <article
+            className={`mb-10 overflow-hidden rounded-lg border md:mb-14 ${
+                ANNOUNCEMENT.closed
+                    ? "border-hairline border-l-2 border-l-ink-4 bg-well"
+                    : "border-ember-200 border-l-2 border-l-ember-600 bg-ember-50"
+            }`}
+        >
             <div className="p-5 md:p-7">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                     <Meta className="font-medium text-ink-2">
@@ -527,6 +535,11 @@ function AnnouncementCard({
                     </Meta>
                     <Meta>{formatDate(ANNOUNCEMENT.date, language)}</Meta>
                     <Meta className="hidden sm:inline">{ANNOUNCEMENT.projectNo}</Meta>
+                    {ANNOUNCEMENT.closed ? (
+                        <span className="inline-flex items-center rounded-full border border-hairline-2 bg-white px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-ink-3">
+                            {isKR ? "마감" : "Closed"}
+                        </span>
+                    ) : null}
                 </div>
 
                 <h3 className="mt-3 max-w-3xl break-keep text-[17px] font-semibold leading-snug text-ink md:text-lg">
@@ -540,19 +553,31 @@ function AnnouncementCard({
                 </p>
 
                 <div className="mt-5">
-                    <Meta className="text-sm font-medium text-ember-700">
+                    <Meta
+                        className={`text-sm font-medium ${ANNOUNCEMENT.closed ? "text-ink-3" : "text-ember-700"}`}
+                    >
                         {isKR ? "마감" : "DEADLINE"} · {formatDate(ANNOUNCEMENT.deadline, language)}{" "}
                         {ANNOUNCEMENT.deadlineTime}
+                        {ANNOUNCEMENT.closed ? (isKR ? " · 접수 마감됨" : " · Applications closed") : null}
                     </Meta>
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-3">
-                    <a
-                        href={`mailto:${ANNOUNCEMENT.email}`}
-                        className="inline-flex h-11 items-center rounded-lg border border-hairline-2 bg-white px-5 text-sm font-medium text-ink transition-colors duration-150 hover:border-ink-4"
-                    >
-                        {isKR ? "이메일로 지원" : "Apply by Email"}
-                    </a>
+                    {ANNOUNCEMENT.closed ? (
+                        <span
+                            aria-disabled="true"
+                            className="inline-flex h-11 cursor-not-allowed items-center rounded-lg border border-hairline bg-well px-5 text-sm font-medium text-ink-4"
+                        >
+                            {isKR ? "지원 마감" : "Applications Closed"}
+                        </span>
+                    ) : (
+                        <a
+                            href={`mailto:${ANNOUNCEMENT.email}`}
+                            className="inline-flex h-11 items-center rounded-lg border border-hairline-2 bg-white px-5 text-sm font-medium text-ink transition-colors duration-150 hover:border-ink-4"
+                        >
+                            {isKR ? "이메일로 지원" : "Apply by Email"}
+                        </a>
+                    )}
                     <button
                         type="button"
                         aria-expanded={expanded}

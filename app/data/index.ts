@@ -63,17 +63,17 @@ export const filedPatentCount = patents.filter((p) => p.status === "filed").leng
 
 export const projects = [
   { year: "2026", title: "Development of regulatory verification technology for full-lifecycle safety review of light-water SMRs", sponsor: "SMR Regulation Research Foundation" },
-  { year: "2025 ~ 2026", title: "Research on improving the cooling performance of the HiMSEN engine pre-combustion chamber", sponsor: "HD Hyundai Heavy Industry" },
-  { year: "2025", title: "Development of Thermal Energy Storage", sponsor: "Laboratory-Specialized Startup Leading University, Ministry of Science and Technology" },
+  { year: "2025 ~ 2026", title: "Research on improving the cooling performance of the HiMSEN engine pre-combustion chamber", sponsor: "HD Hyundai Heavy Industries" },
+  { year: "2025", title: "Development of Thermal Energy Storage", sponsor: "Laboratory-Specialized Startup Leading University, Ministry of Science and ICT" },
   { year: "2025", title: "Basic Research on Electric Vehicle Battery Cooling Using Insulating Fluid Boiling Heat Transfer", sponsor: "Inha University" },
   { year: "2025 ~ 2028", title: "Synergy for Safe and Sustainable Ocean in Norway and Korea (SONoKo)", sponsor: "UTFORSK, Direktoratet for høyere utdanning og kompetanse (HK-dir), Norway" },
-  { year: "2024 ~ 2025", title: "Global human resources training project to secure major design technologies for next-generation SMR safety enhancement", sponsor: "KETEP" },
-  { year: "2024", title: "Development of a yard exhaust pipe explosion pressure prediction model", sponsor: "HD Hyundai Heavy Industry" },
+  { year: "2024 ~ 2025", title: "Global human-resources training program to secure key design technologies for next-generation SMR safety enhancement", sponsor: "KETEP" },
+  { year: "2024", title: "Development of a yard exhaust pipe explosion pressure prediction model", sponsor: "HD Hyundai Heavy Industries" },
   { year: "2023 ~ 2027", title: "Digital-Based Sustainable Energy Process Innovation Convergence Graduate School", sponsor: "KETEP" },
   { year: "2023 ~ 2025", title: "Development of direct contact latent heat storage system", sponsor: "National Research Foundation of Korea" },
   { year: "2023 ~ 2025", title: "Identification of two-phase flow instabilities in a multi-channel system", sponsor: "National Research Foundation of Korea" },
   { year: "2023", title: "Control of wettability and enhancement of phase-change heat transfer by microstructures", sponsor: "ROK-Nordic R&D Cooperation Program, National Research Foundation of Korea" },
-  { year: "2022 ~ 2029", title: "Validation of core safety issues in response to strengthening technical criteria and development of technology to improve core safety in multiple failure accident", sponsor: "National Research Foundation of Korea" },
+  { year: "2022 ~ 2029", title: "Validation of core safety issues in response to strengthened technical criteria and development of technology to improve core safety in multiple-failure accidents", sponsor: "National Research Foundation of Korea" },
   { year: "2018 ~ 2021", title: "Improvement of wall boiling model based on boiling experiment with a controlled surface in microscale", sponsor: "National Research Foundation of Korea" },
 ];
 
@@ -120,13 +120,13 @@ export const galleryImages: {
   /** Curated bento emphasis — 2 = col-span-2 tile (explicit, never index-parity). */
   span?: number;
 }[] = [
-  { title: "Hyeon Jin Yong: Visiting Research at HZDR, Germany", date: "March – September 2025", image: "2025-03-hyeonjin-yong-hzdr.jpg", sortDate: "2025-09-03" },
+  { title: "Hyun Jin Yong: Visiting Research at HZDR, Germany", date: "March – September 2025", image: "2025-03-hyeonjin-yong-hzdr.jpg", sortDate: "2025-09-03" },
   { title: "Kyeong Ju Ko: Visiting Research at UPC, Spain", date: "March – September 2025", image: "2025-03-kyeongju-ko-upc.jpg", sortDate: "2025-09-02" },
   { title: "UTFORSK 2024 Field Trip to NTNU, Norway", date: "August 2025", image: "2025-08-utforsk-ntnu-field-trip.jpg", sortDate: "2025-08", span: 2 },
   { title: "Hyeon Geun Shin: Presentation at 11th WORTH, China", date: "May 2025", image: "2025-05-hyeongeun-shin-worth11.jpg", sortDate: "2025-05" },
   { title: "KSFM2024 in Jeju", date: "December 2024", image: "2024-12-ksfm2024-jeju.jpg", sortDate: "2024-12" },
   { title: "Yun Seok Choi (Best Paper Award): WORTH-10 in Jeju", date: "November 2023", image: "2023-11-yunseok-choi-worth10-award.png", sortDate: "2023-11", span: 2 },
-  { title: "Junbeom Song: GPPS Hong Kong 23", date: "October 2023", image: "2023-10-junbeom-song-gpps-hk.png", sortDate: "2023-10" },
+  { title: "Jun Beom Song: GPPS Hong Kong 23", date: "October 2023", image: "2023-10-junbeom-song-gpps-hk.png", sortDate: "2023-10" },
   { title: "ICMF in Kobe, Japan", date: "April 2023", image: "2023-04-icmf-kobe.jpg", sortDate: "2023-04-02" },
   { title: "KSME Thermal Engineering Division in Busan", date: "April 2023", image: "2023-04-ksme-busan.jpg", sortDate: "2023-04-01" }
 ].sort((a, b) => b.sortDate.localeCompare(a.sortDate));
@@ -134,7 +134,7 @@ export const galleryImages: {
 export const collaborators = [
   { group: "international", groupKR: "해외", names: ["NTNU", "HZDR", "UPC", "Kyushu Univ."], links: { NTNU: "https://thermaltwophaseflowlab.org/" } },
   { group: "institutes", groupKR: "연구기관", names: ["KAERI", "KIER"], links: {} },
-  { group: "industry", groupKR: "산업체", names: ["HD Hyundai Heavy Industries", "Hyundai E&C", "LG Electronics", "Builders Gate"], links: { "Builders Gate": "https://www.buildersgate.com/" } },
+  { group: "industry", groupKR: "산업체", names: ["HD Hyundai Heavy Industries", "Hyundai E&C", "LG Electronics", "Buildersgate"], links: { "Buildersgate": "https://www.buildersgate.com/" } },
   { group: "universities", groupKR: "대학", names: ["Seoul Nat'l Univ.", "Kyung Hee Univ."], links: {} },
 ] as const;
 

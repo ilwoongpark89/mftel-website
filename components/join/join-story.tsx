@@ -91,13 +91,13 @@ export default function JoinStory() {
               },
               {
                   index: "02",
-                  title: "People who come back after breaking",
+                  title: "People who come back after being broken",
                   desc: "Those who treat failure as the natural path and return to the same problem after being broken by it — that is where the new comes from.",
               },
               {
                   index: "03",
                   title: "People who know immersion",
-                  desc: "Those who have lost track of time inside something. It does not have to be research — athletes who know team-versus-team competition tend to get us quickly.",
+                  desc: "Those who have lost track of time inside something. It does not have to be research — those who have competed as a team tend to click with us faster.",
               },
           ];
 
@@ -159,7 +159,7 @@ export default function JoinStory() {
               },
               {
                   title: "Undergraduate Researchers — always open",
-                  desc: "3rd–4th year students, full-time over breaks or part-time during semesters. You take on real tasks — rig data processing, IR image analysis. The most natural path into the graduate program.",
+                  desc: "3rd–4th year students, full-time over breaks or part-time during semesters. You take on real tasks — experimental data processing, infrared (IR) image analysis. The most natural path into the graduate program.",
               },
               {
                   title: "Postdoctoral Researchers",
@@ -245,7 +245,7 @@ export default function JoinStory() {
               },
               {
                   q: "What do undergraduate researchers do?",
-                  a: "Real research tasks — rig data processing, image analysis — with poster and co-authorship opportunities as results accumulate.",
+                  a: "Real research tasks — experimental data processing, image analysis — with poster and co-authorship opportunities as results accumulate.",
               },
           ];
 

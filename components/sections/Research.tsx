@@ -148,7 +148,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
                 { label: "Chip Heat Flux Limit", air: "~10 W/cm²", immersion: "~200 W/cm²" },
                 { label: "Server Density", air: "6–8 kW/rack", immersion: "50–100 kW/rack" },
             ],
-            why: "As AI accelerators (GPUs, TPUs) exceed 700W TDP, air cooling alone cannot keep up. Two-phase boiling heat transfer handles 20x more heat per unit area than air, pushing data center PUE close to 1.0.",
+            why: "As AI accelerators (GPUs, TPUs) exceed 700W TDP, air cooling alone cannot keep up. Two-phase boiling heat transfer handles 20× more heat per unit area than air, pushing data center PUE close to 1.0.",
             activities: [
                 {
                     title: "EV Battery Immersion Cooling via Boiling",
@@ -157,7 +157,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
                 },
                 {
                     title: "Metal Foam-Enhanced Boiling Heat Transfer",
-                    desc: "Systematically characterizing the effects of sub-millimeter copper foam pore size, thickness, and orientation on boiling heat transfer. Experimentally demonstrated that metal foam application increases critical heat flux (CHF) by up to 3x.",
+                    desc: "Systematically characterizing the effects of sub-millimeter copper foam pore size, thickness, and orientation on boiling heat transfer. Experimentally demonstrated that metal foam application increases critical heat flux (CHF) by up to 3×.",
                     tag: "PUB. #1–#4",
                 },
                 {
@@ -251,7 +251,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
     KR: {
         paradox: {
             title: "AI 에너지 패러독스",
-            body: "AI는 효율을 위해 탄생했지만, 역설적으로 최대 에너지 소비원이 되어가고 있습니다. LLM 하나를 학습시키는 데만 수십 GWh가 들고, 추론 한 건은 기존 검색의 10배에 달하는 전력을 소비합니다. 2030년까지 데이터센터 전력은 전 세계 공급의 8%에 도달할 전망입니다. 이 문제의 본질은 열(熱)입니다. 전력의 생산·저장·소비 전 단계에서 다상유동 열전달이 핵심 병목이며, MFTEL은 세 연구 분야로 이 장벽에 도전합니다.",
+            body: "AI는 효율을 위해 탄생했지만, 역설적이게도 지구상 최대 에너지 소비원 중 하나가 되어가고 있습니다. LLM 하나를 학습시키는 데만 수십 GWh가 들고, 추론 한 건은 기존 검색의 10배에 달하는 전력을 소비합니다. 2030년까지 데이터센터가 전 세계 전력 소비의 8%를 차지할 전망입니다. 이 문제의 본질은 열(熱)입니다. 전력의 생산·저장·소비 전 단계에서 다상유동 열전달이 핵심 병목이며, MFTEL은 세 연구 분야로 이 장벽에 도전합니다.",
         },
         activitiesLabel: "MFTEL 연구 활동",
         metricSr: "지표",
@@ -313,7 +313,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
             steps: [
                 { label: "절연 유체 침지", sub: "서버를 절연 유체에 직접 침지해 열을 전달" },
                 { label: "이상 비등 열전달", sub: "유체가 끓으면서 잠열로 대량의 열을 흡수" },
-                { label: "응축 & 순환", sub: "증기가 응축기에서 냉각, 유체 자연 순환" },
+                { label: "응축 & 순환", sub: "증기가 응축되어 유체가 자연 순환" },
             ],
             comparisonLabel: "공냉 vs 이머전 쿨링",
             colAir: "공냉",
@@ -324,7 +324,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
                 { label: "칩 열유속 한계", air: "~10 W/cm²", immersion: "~200 W/cm²" },
                 { label: "서버 밀도", air: "6–8 kW/rack", immersion: "50–100 kW/rack" },
             ],
-            why: "AI 가속기(GPU, TPU)의 열설계전력(TDP)이 700W를 넘어서면서 공냉만으로는 냉각이 불가능합니다. 이상 비등 열전달은 같은 면적에서 공냉 대비 20배 이상의 열을 처리하며, 데이터센터의 전력 효율(PUE)을 1.0에 근접시킵니다.",
+            why: "AI 가속기(GPU, TPU)의 열설계전력(TDP)이 700W를 넘어서면서 공냉만으로는 냉각이 불가능합니다. 이상(二相) 비등 열전달은 같은 면적에서 공냉 대비 20배 이상의 열을 처리하며, 데이터센터의 전력 효율(PUE)을 1.0에 근접시킵니다.",
             activities: [
                 {
                     title: "전기차 배터리 절연유체 비등 냉각",
