@@ -75,7 +75,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
     EN: {
         paradox: {
             title: "The AI Energy Paradox",
-            body: "AI was built to optimize efficiency—yet it is paradoxically becoming one of the largest energy consumers on earth. Training a single LLM costs tens of GWh; each inference draws 10× the power of a conventional search. By 2030, data centers will consume 8% of global electricity. The root of this challenge is thermal—multi-phase flow heat transfer is the bottleneck at every stage of power generation, storage, and consumption. MFTEL tackles this barrier on three fronts.",
+            body: "AI was built to optimize efficiency—yet it is paradoxically becoming one of the largest energy consumers on earth. Training a single LLM costs tens of GWh; each inference draws 10× the power of a conventional search. By 2030, data centers could consume close to 9% of U.S. electricity—roughly 3% of global supply. The root of this challenge is thermal—multi-phase flow heat transfer is the bottleneck at every stage of power generation, storage, and consumption. MFTEL tackles this barrier on three fronts.",
         },
         activitiesLabel: "MFTEL Research Activities",
         metricSr: "Metric",
@@ -251,7 +251,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
     KR: {
         paradox: {
             title: "AI 에너지 패러독스",
-            body: "AI는 효율을 위해 탄생했지만, 역설적이게도 지구상 최대 에너지 소비원 중 하나가 되어가고 있습니다. LLM 하나를 학습시키는 데만 수십 GWh가 들고, 추론 한 건은 기존 검색의 10배에 달하는 전력을 소비합니다. 2030년까지 데이터센터가 전 세계 전력 소비의 8%를 차지할 전망입니다. 이 문제의 본질은 열(熱)입니다. 전력의 생산·저장·소비 전 단계에서 다상유동 열전달이 핵심 병목이며, MFTEL은 세 연구 분야로 이 장벽에 도전합니다.",
+            body: "AI는 효율을 위해 탄생했지만, 역설적이게도 지구상 최대 에너지 소비원 중 하나가 되어가고 있습니다. LLM 하나를 학습시키는 데만 수십 GWh가 들고, 추론 한 건은 기존 검색의 10배에 달하는 전력을 소비합니다. 2030년까지 데이터센터는 미국 전력의 9% 가까이, 전 세계 전력의 약 3%를 소비할 전망입니다. 이 문제의 본질은 열(熱)입니다. 전력의 생산·저장·소비 전 단계에서 다상유동 열전달이 핵심 병목이며, MFTEL은 세 연구 분야로 이 장벽에 도전합니다.",
         },
         activitiesLabel: "MFTEL 연구 활동",
         metricSr: "지표",
