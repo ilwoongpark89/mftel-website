@@ -286,7 +286,7 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
         },
         description: {
             EN: "Prof. Il Woong Park held an international thermal-hydraulics workshop at NTNU in Trondheim, together with Carlos Dorao and Hyung Ju Kim. Researchers and graduate students from Norway, Korea, and India came for two days of talks on multiphase flow and nuclear safety.",
-            KR: "박일웅 교수님이 NTNU의 Carlos Dorao, Hyung Ju Kim 교수님과 함께 노르웨이 트론헤임에서 국제 열수력 워크숍을 열었습니다. 노르웨이와 한국, 인도에서 온 연구자와 대학원생들이 모여 이틀간 다상유동과 원자력 안전을 주제로 발표하고 토론했습니다.",
+            KR: "MFTEL이 NTNU의 Carlos Dorao, Hyung Ju Kim 교수님과 함께 노르웨이 트론헤임에서 국제 열수력 워크숍을 열었습니다. 노르웨이와 한국, 인도에서 온 연구자와 대학원생들이 모여 이틀간 다상유동과 원자력 안전을 주제로 발표하고 토론했습니다.",
         },
         images: [
             "/images/news/260624-th-workshop-trondheim-1.jpeg",
@@ -308,8 +308,8 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
         date: "2026-01-22",
         title: { EN: "EPT Day 2026", KR: "EPT Day 2026" },
         description: {
-            EN: "Prof. Il Woong Park participated in EPT Day 2026, showcasing the latest research developments in multiphase flow and thermal engineering.",
-            KR: "박일웅 교수님이 EPT Day 2026에 참가하여 다상유동 및 열공학 분야 최신 연구 성과를 소개하였습니다.",
+            EN: "Prof. Il Woong Park participated in EPT Day 2026 and presented his latest research on multiphase flow and thermal engineering.",
+            KR: "MFTEL이 EPT Day 2026에 참가하여 다상유동 및 열공학 분야 최신 연구 성과를 소개하였습니다.",
         },
         images: ["/images/news/ept-day-2026-1.jpg", "/images/news/ept-day-2026-2.png"],
     },
