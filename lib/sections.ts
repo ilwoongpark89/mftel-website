@@ -34,4 +34,5 @@ export const NAV_ROUTES = [
     { href: "/team", labelKey: "nav.team" },
     { href: "/news", labelKey: "nav.news" },
     { href: "/gallery", labelKey: "nav.gallery" },
+    { href: "/lecture", labelKey: "nav.lecture" },
 ] as const;

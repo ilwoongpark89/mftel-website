@@ -22,7 +22,6 @@ const CONTACT = {
 // Sitemap derives from the shared route manifest — links can never drift.
 const SITEMAP = [
     ...NAV_ROUTES,
-    { href: "/lecture", labelKey: "nav.lecture" },
     { href: "/join", labelKey: "nav.joinUs" },
 ];
 
