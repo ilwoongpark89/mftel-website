@@ -8,13 +8,14 @@ import { SectionHeader, Meta, FigCaption } from "@/components/ui/typo";
 import { useLanguage, type Language } from "@/lib/LanguageContext";
 
 /**
- * CALORIMETER §06 NEWS — two content types split:
- * 1) pinned CALL announcement card (ember-50 wash, ember-600 left rule,
- *    structured h4/dl detail behind a CSS grid-rows accordion — never a
- *    pre-line blob), 2) activity rows (thumbnail kept on mobile, mono date,
- *    full-row <button aria-expanded>, CSS-only 250ms accordion, lightbox).
- * Frame-0: every string + image is in the server HTML; collapsed content is
- * hidden with grid-rows-[0fr], never conditionally rendered.
+ * CALORIMETER §06 NEWS — one unified, date-sorted stream of rows. Two row
+ * types share the same geometry (thumbnail kept on mobile, mono date,
+ * full-row <button aria-expanded>, CSS-only 250ms accordion, lightbox):
+ * 1) activity rows (description + image grid), 2) the CALL announcement row
+ *    (structured h4/dl detail — never a pre-line blob). The newest entry
+ *    renders expanded by default. Frame-0: every string + image is in the
+ *    server HTML; collapsed content is hidden with grid-rows-[0fr], never
+ *    conditionally rendered.
  */
 
 interface Localized {
@@ -266,9 +267,34 @@ interface ActivityItem {
     title: Localized;
     description: Localized;
     images: string[];
+    /**
+     * "grid" (default) = uniform 3:2 landscape tiles, for snapshot photos.
+     * "feature" = the lead photo (images[0]) shown large and uncropped on the left,
+     * with the remaining images in a narrower secondary column on the right, kept in
+     * their natural portrait ratio — for a hero photo plus document-style assets
+     * (posters, programmes). Stacks to photo-over-posters on mobile.
+     */
+    imageLayout?: "grid" | "feature";
 }
 
 const ACTIVITY_ITEMS: ActivityItem[] = [
+    {
+        date: "2026-06-24",
+        title: {
+            EN: "Frontiers in Thermal-Hydraulics",
+            KR: "트론헤임 열수력 워크숍",
+        },
+        description: {
+            EN: "Prof. Il Woong Park held an international thermal-hydraulics workshop at NTNU in Trondheim, together with Carlos Dorao and Hyung Ju Kim. Researchers and graduate students from Norway, Korea, and India came for two days of talks on multiphase flow and nuclear safety.",
+            KR: "박일웅 교수님이 NTNU의 Carlos Dorao, Hyung Ju Kim 교수님과 함께 노르웨이 트론헤임에서 국제 열수력 워크숍을 열었습니다. 노르웨이와 한국, 인도에서 온 연구자와 대학원생들이 모여 이틀간 다상유동과 원자력 안전을 주제로 발표하고 토론했습니다.",
+        },
+        images: [
+            "/images/news/260624-th-workshop-trondheim-1.jpeg",
+            "/images/news/260624-th-workshop-trondheim-2.jpeg",
+            "/images/news/260624-th-workshop-trondheim-3.jpeg",
+        ],
+        imageLayout: "feature",
+    },
     {
         date: "2026-01-25",
         title: { EN: "Visiting Researchers at Th2FLAB", KR: "NTNU Th2FLAB 방문연구 시작" },
@@ -363,6 +389,20 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
 
 const INITIAL_ROWS = 5;
 
+/**
+ * Unified, date-sorted news stream: activity items + the (closed) CALL
+ * announcement live in one chronological list. The newest entry renders
+ * expanded by default; everything else opens on click.
+ */
+type NewsEntry =
+    | { kind: "activity"; date: string; item: ActivityItem }
+    | { kind: "announcement"; date: string };
+
+const NEWS_ENTRIES: NewsEntry[] = [
+    ...ACTIVITY_ITEMS.map((item) => ({ kind: "activity" as const, date: item.date, item })),
+    { kind: "announcement" as const, date: ANNOUNCEMENT.date },
+].sort((a, b) => b.date.localeCompare(a.date));
+
 const EN_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function formatDate(iso: string, language: Language): string {
@@ -423,12 +463,14 @@ function ActivityRow({
     item,
     language,
     onImageOpen,
+    defaultExpanded = false,
 }: {
     item: ActivityItem;
     language: Language;
     onImageOpen: (image: LightboxImage) => void;
+    defaultExpanded?: boolean;
 }) {
-    const [expanded, setExpanded] = useState(false);
+    const [expanded, setExpanded] = useState(defaultExpanded);
     const isKR = language === "KR";
     const panelId = `news-activity-${item.date}`;
 
@@ -480,26 +522,239 @@ function ActivityRow({
                             >
                                 {item.description[language]}
                             </p>
-                            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                {item.images.map((src, i) => (
+                            {item.imageLayout === "feature" ? (
+                                <div className="mt-4">
+                                    <div className="grid gap-3 md:grid-cols-[3.3fr_1fr] md:items-start md:gap-4">
+                                        {/* the moment — group photo, full and uncropped */}
+                                        <button
+                                            type="button"
+                                            aria-label={language === "KR" ? "이미지 크게 보기" : "Enlarge image"}
+                                            onClick={() =>
+                                                onImageOpen({
+                                                    src: item.images[0],
+                                                    alt: `${item.title[language]} 1`,
+                                                })
+                                            }
+                                            className="relative block aspect-[1280/1216] w-full overflow-hidden rounded-lg border border-hairline bg-well transition-colors duration-150 hover:border-hairline-2"
+                                        >
+                                            <Image
+                                                src={item.images[0]}
+                                                alt={`${item.title[language]} 1`}
+                                                fill
+                                                sizes="(max-width: 768px) 100vw, 640px"
+                                                className="object-cover"
+                                            />
+                                        </button>
+                                        {/* official material — posters, secondary column (stacked beside the photo) */}
+                                        {item.images.length > 1 ? (
+                                            <div>
+                                                <div className="grid grid-cols-2 gap-3 md:grid-cols-1">
+                                                    {item.images.slice(1).map((src, i) => (
+                                                        <button
+                                                            key={src}
+                                                            type="button"
+                                                            aria-label={
+                                                                language === "KR"
+                                                                    ? "이미지 크게 보기"
+                                                                    : "Enlarge image"
+                                                            }
+                                                            onClick={() =>
+                                                                onImageOpen({
+                                                                    src,
+                                                                    alt: `${item.title[language]} ${i + 2}`,
+                                                                })
+                                                            }
+                                                            className="relative block aspect-[800/1194] overflow-hidden rounded-lg border border-hairline bg-white transition-colors duration-150 hover:border-hairline-2"
+                                                        >
+                                                            <Image
+                                                                src={src}
+                                                                alt={`${item.title[language]} ${i + 2}`}
+                                                                fill
+                                                                sizes="(max-width: 768px) 50vw, 200px"
+                                                                className="object-cover"
+                                                            />
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                    {item.images.map((src, i) => (
+                                        <button
+                                            key={src}
+                                            type="button"
+                                            aria-label={language === "KR" ? "이미지 크게 보기" : "Enlarge image"}
+                                            onClick={() =>
+                                                onImageOpen({ src, alt: `${item.title[language]} ${i + 1}` })
+                                            }
+                                            className="relative aspect-[3/2] overflow-hidden rounded-lg border border-hairline bg-well transition-colors duration-150 hover:border-hairline-2"
+                                        >
+                                            <Image
+                                                src={src}
+                                                alt={`${item.title[language]} ${i + 1}`}
+                                                fill
+                                                sizes="(max-width: 768px) 100vw, 400px"
+                                                className="object-cover"
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function AnnouncementRow({
+    language,
+    onImageOpen,
+    defaultExpanded = false,
+}: {
+    language: Language;
+    onImageOpen: (image: LightboxImage) => void;
+    defaultExpanded?: boolean;
+}) {
+    const [expanded, setExpanded] = useState(defaultExpanded);
+    const isKR = language === "KR";
+    const panelId = "news-call-detail";
+    const closed = ANNOUNCEMENT.closed;
+
+    return (
+        <div>
+            <button
+                type="button"
+                aria-expanded={expanded}
+                aria-controls={panelId}
+                onClick={() => setExpanded((v) => !v)}
+                className="flex w-full items-center gap-4 px-4 py-4 text-left transition-colors duration-150 hover:bg-well md:px-5"
+            >
+                {/* poster thumbnail — kept on mobile */}
+                <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-hairline bg-well">
+                    <Image src={ANNOUNCEMENT.image} alt="" fill sizes="48px" className="object-cover" />
+                </span>
+                {/* date — left column on desktop */}
+                <span className="hidden w-28 shrink-0 md:block">
+                    <Meta className="whitespace-nowrap">{formatDate(ANNOUNCEMENT.date, language)}</Meta>
+                </span>
+                <span className="min-w-0 flex-1">
+                    <Meta className="font-medium text-ink-3">
+                        {isKR ? "CALL — 모집공고" : "CALL — ANNOUNCEMENT"}
+                    </Meta>
+                    <span className="mt-0.5 line-clamp-2 break-keep text-[15px] font-semibold leading-snug text-ink md:text-base">
+                        {ANNOUNCEMENT.title[language]}
+                    </span>
+                    {/* date — below title on mobile */}
+                    <span className="mt-1 block md:hidden">
+                        <Meta className="whitespace-nowrap">{formatDate(ANNOUNCEMENT.date, language)}</Meta>
+                    </span>
+                </span>
+                {closed ? (
+                    <span className="hidden shrink-0 items-center rounded-full border border-hairline-2 bg-white px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-ink-3 sm:inline-flex">
+                        {isKR ? "마감" : "Closed"}
+                    </span>
+                ) : null}
+                <ChevronDown
+                    aria-hidden
+                    className={`h-4 w-4 shrink-0 text-ink-3 transition-transform duration-150 ${expanded ? "rotate-180" : ""}`}
+                />
+            </button>
+
+            {/* full announcement — structured, CSS-only accordion (content always in server HTML) */}
+            <div
+                id={panelId}
+                className={`grid transition-[grid-template-rows] duration-[250ms] ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+            >
+                <div className="min-h-0 overflow-hidden">
+                    <div className="flex gap-4 px-4 pb-6 md:px-5">
+                        {/* spacers mirror the row geometry — alignment by construction */}
+                        <span aria-hidden className="hidden w-12 shrink-0 md:block" />
+                        <span aria-hidden className="hidden w-28 shrink-0 md:block" />
+                        <div className="min-w-0 flex-1">
+                            <p
+                                className={`max-w-3xl text-sm text-ink-2 md:text-[15px] ${isKR ? "leading-[1.75]" : "leading-relaxed"}`}
+                            >
+                                {ANNOUNCEMENT.intro[language]}
+                            </p>
+
+                            <div className="mt-4">
+                                <Meta className="text-sm font-medium text-ink-3">
+                                    {isKR ? "마감" : "DEADLINE"} · {formatDate(ANNOUNCEMENT.deadline, language)}{" "}
+                                    {ANNOUNCEMENT.deadlineTime}
+                                    {closed ? (isKR ? " · 접수 마감됨" : " · Applications closed") : null}
+                                </Meta>
+                            </div>
+
+                            <div className="mt-6 grid gap-8 md:grid-cols-3">
+                                <div className="grid content-start gap-6 sm:grid-cols-2 md:col-span-2">
+                                    {ANNOUNCEMENT.sections.map((sec, sIdx) => (
+                                        <section key={sec.heading.EN}>
+                                            <h4 className="break-keep text-sm font-semibold text-ink">
+                                                {sIdx + 1}. {sec.heading[language]}
+                                            </h4>
+                                            <ul className="mt-2 space-y-1.5 text-sm text-ink-2">
+                                                {sec.items.map((it) => (
+                                                    <li
+                                                        key={it.text.EN}
+                                                        className={`flex gap-2 ${isKR ? "break-keep leading-[1.75]" : "leading-relaxed"}`}
+                                                    >
+                                                        <span aria-hidden className="shrink-0 text-ink-4">
+                                                            –
+                                                        </span>
+                                                        <span className="min-w-0">
+                                                            {it.label ? (
+                                                                <span className="font-medium text-ink">
+                                                                    {it.label[language]}:{" "}
+                                                                </span>
+                                                            ) : null}
+                                                            {it.href ? (
+                                                                <a
+                                                                    href={it.href}
+                                                                    className="text-ink underline underline-offset-2 transition-colors duration-150 hover:text-ink-2"
+                                                                >
+                                                                    {it.text[language]}
+                                                                </a>
+                                                            ) : (
+                                                                it.text[language]
+                                                            )}
+                                                        </span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </section>
+                                    ))}
+                                </div>
+                                <figure className="md:col-span-1">
                                     <button
-                                        key={src}
                                         type="button"
                                         aria-label={language === "KR" ? "이미지 크게 보기" : "Enlarge image"}
                                         onClick={() =>
-                                            onImageOpen({ src, alt: `${item.title[language]} — ${i + 1}` })
+                                            onImageOpen({
+                                                src: ANNOUNCEMENT.image,
+                                                alt: ANNOUNCEMENT.title[language],
+                                            })
                                         }
-                                        className="relative aspect-[3/2] overflow-hidden rounded-lg border border-hairline bg-well transition-colors duration-150 hover:border-hairline-2"
+                                        className="block w-full overflow-hidden rounded-lg border border-hairline bg-white transition-colors duration-150 hover:border-hairline-2"
                                     >
-                                        <Image
-                                            src={src}
-                                            alt={`${item.title[language]} — ${i + 1}`}
-                                            fill
-                                            sizes="(max-width: 768px) 100vw, 400px"
-                                            className="object-cover"
-                                        />
+                                        <span className="relative block aspect-[1686/1186]">
+                                            <Image
+                                                src={ANNOUNCEMENT.image}
+                                                alt={ANNOUNCEMENT.title[language]}
+                                                fill
+                                                sizes="(max-width: 768px) 100vw, 360px"
+                                                className="object-contain"
+                                            />
+                                        </span>
                                     </button>
-                                ))}
+                                    <FigCaption className="mt-2">
+                                        {isKR ? "모집공고 포스터" : "CALL POSTER"} — {ANNOUNCEMENT.projectNo}
+                                    </FigCaption>
+                                </figure>
                             </div>
                         </div>
                     </div>
@@ -509,186 +764,32 @@ function ActivityRow({
     );
 }
 
-function AnnouncementCard({
-    language,
-    onImageOpen,
-}: {
-    language: Language;
-    onImageOpen: (image: LightboxImage) => void;
-}) {
-    const [expanded, setExpanded] = useState(false);
-    const isKR = language === "KR";
-    const detailId = "news-call-detail";
-
-    return (
-        <article
-            className={`mb-10 overflow-hidden rounded-lg border md:mb-14 ${
-                ANNOUNCEMENT.closed
-                    ? "border-hairline border-l-2 border-l-ink-4 bg-well"
-                    : "border-ember-200 border-l-2 border-l-ember-600 bg-ember-50"
-            }`}
-        >
-            <div className="p-5 md:p-7">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                    <Meta className="font-medium text-ink-2">
-                        {isKR ? "CALL — 모집공고" : "CALL — ANNOUNCEMENT"}
-                    </Meta>
-                    <Meta>{formatDate(ANNOUNCEMENT.date, language)}</Meta>
-                    <Meta className="hidden sm:inline">{ANNOUNCEMENT.projectNo}</Meta>
-                    {ANNOUNCEMENT.closed ? (
-                        <span className="inline-flex items-center rounded-full border border-hairline-2 bg-white px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-ink-3">
-                            {isKR ? "마감" : "Closed"}
-                        </span>
-                    ) : null}
-                </div>
-
-                <h3 className="mt-3 max-w-3xl break-keep text-[17px] font-semibold leading-snug text-ink md:text-lg">
-                    {ANNOUNCEMENT.title[language]}
-                </h3>
-
-                <p
-                    className={`mt-2 max-w-3xl text-sm text-ink-2 md:text-[15px] ${isKR ? "leading-[1.75]" : "leading-relaxed"}`}
-                >
-                    {ANNOUNCEMENT.intro[language]}
-                </p>
-
-                <div className="mt-5">
-                    <Meta
-                        className={`text-sm font-medium ${ANNOUNCEMENT.closed ? "text-ink-3" : "text-ember-700"}`}
-                    >
-                        {isKR ? "마감" : "DEADLINE"} · {formatDate(ANNOUNCEMENT.deadline, language)}{" "}
-                        {ANNOUNCEMENT.deadlineTime}
-                        {ANNOUNCEMENT.closed ? (isKR ? " · 접수 마감됨" : " · Applications closed") : null}
-                    </Meta>
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-3">
-                    {ANNOUNCEMENT.closed ? (
-                        <span
-                            aria-disabled="true"
-                            className="inline-flex h-11 cursor-not-allowed items-center rounded-lg border border-hairline bg-well px-5 text-sm font-medium text-ink-4"
-                        >
-                            {isKR ? "지원 마감" : "Applications Closed"}
-                        </span>
-                    ) : (
-                        <a
-                            href={`mailto:${ANNOUNCEMENT.email}`}
-                            className="inline-flex h-11 items-center rounded-lg border border-hairline-2 bg-white px-5 text-sm font-medium text-ink transition-colors duration-150 hover:border-ink-4"
-                        >
-                            {isKR ? "이메일로 지원" : "Apply by Email"}
-                        </a>
-                    )}
-                    <button
-                        type="button"
-                        aria-expanded={expanded}
-                        aria-controls={detailId}
-                        onClick={() => setExpanded((v) => !v)}
-                        className="inline-flex h-11 items-center gap-2 rounded-lg border border-hairline-2 bg-white px-5 text-sm font-medium text-ink transition-colors duration-150 hover:border-ink-4"
-                    >
-                        {expanded
-                            ? isKR
-                                ? "접기"
-                                : "Collapse"
-                            : isKR
-                              ? "공고 전문 보기"
-                              : "View Full Announcement"}
-                        <ChevronDown
-                            aria-hidden
-                            className={`h-4 w-4 text-ink-3 transition-transform duration-150 ${expanded ? "rotate-180" : ""}`}
-                        />
-                    </button>
-                </div>
-            </div>
-
-            {/* full announcement — structured, CSS-only accordion */}
-            <div
-                id={detailId}
-                className={`grid transition-[grid-template-rows] duration-[250ms] ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
-            >
-                <div className="min-h-0 overflow-hidden">
-                    <div className="border-t border-ember-200 p-5 md:p-7">
-                        <div className="grid gap-8 md:grid-cols-3">
-                            <div className="grid content-start gap-6 sm:grid-cols-2 md:col-span-2">
-                                {ANNOUNCEMENT.sections.map((sec, sIdx) => (
-                                    <section key={sec.heading.EN}>
-                                        <h4 className="break-keep text-sm font-semibold text-ink">
-                                            {sIdx + 1}. {sec.heading[language]}
-                                        </h4>
-                                        <ul className="mt-2 space-y-1.5 text-sm text-ink-2">
-                                            {sec.items.map((it) => (
-                                                <li
-                                                    key={it.text.EN}
-                                                    className={`flex gap-2 ${isKR ? "break-keep leading-[1.75]" : "leading-relaxed"}`}
-                                                >
-                                                    <span aria-hidden className="shrink-0 text-ink-4">
-                                                        –
-                                                    </span>
-                                                    <span className="min-w-0">
-                                                        {it.label ? (
-                                                            <span className="font-medium text-ink">
-                                                                {it.label[language]}:{" "}
-                                                            </span>
-                                                        ) : null}
-                                                        {it.href ? (
-                                                            <a
-                                                                href={it.href}
-                                                                className="text-ember-700 underline underline-offset-2 transition-colors duration-150 hover:text-ember-800"
-                                                            >
-                                                                {it.text[language]}
-                                                            </a>
-                                                        ) : (
-                                                            it.text[language]
-                                                        )}
-                                                    </span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </section>
-                                ))}
-                            </div>
-                            <figure className="md:col-span-1">
-                                <button
-                                    type="button"
-                                    aria-label={language === "KR" ? "이미지 크게 보기" : "Enlarge image"}
-                                    onClick={() =>
-                                        onImageOpen({
-                                            src: ANNOUNCEMENT.image,
-                                            alt: ANNOUNCEMENT.title[language],
-                                        })
-                                    }
-                                    className="block w-full overflow-hidden rounded-lg border border-hairline bg-white transition-colors duration-150 hover:border-hairline-2"
-                                >
-                                    <span className="relative block aspect-[1686/1186]">
-                                        <Image
-                                            src={ANNOUNCEMENT.image}
-                                            alt={ANNOUNCEMENT.title[language]}
-                                            fill
-                                            sizes="(max-width: 768px) 100vw, 360px"
-                                            className="object-contain"
-                                        />
-                                    </span>
-                                </button>
-                                <FigCaption className="mt-2">
-                                    {isKR ? "모집공고 포스터" : "CALL POSTER"} — {ANNOUNCEMENT.projectNo}
-                                </FigCaption>
-                            </figure>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </article>
-    );
-}
-
 export default function News() {
     const { t, language } = useLanguage();
     const isKR = language === "KR";
     const [showAll, setShowAll] = useState(false);
     const [lightbox, setLightbox] = useState<LightboxImage | null>(null);
 
-    const firstRows = ACTIVITY_ITEMS.slice(0, INITIAL_ROWS);
-    const restRows = ACTIVITY_ITEMS.slice(INITIAL_ROWS);
+    const firstEntries = NEWS_ENTRIES.slice(0, INITIAL_ROWS);
+    const restEntries = NEWS_ENTRIES.slice(INITIAL_ROWS);
     const moreId = "news-more-rows";
+
+    // Newest entry (global index 0) renders expanded by default.
+    const renderEntry = (entry: NewsEntry, globalIndex: number) =>
+        entry.kind === "announcement" ? (
+            <AnnouncementRow
+                language={language}
+                onImageOpen={setLightbox}
+                defaultExpanded={globalIndex === 0}
+            />
+        ) : (
+            <ActivityRow
+                item={entry.item}
+                language={language}
+                onImageOpen={setLightbox}
+                defaultExpanded={globalIndex === 0}
+            />
+        );
 
     return (
         <Band id="news" surface="white">
@@ -700,19 +801,17 @@ export default function News() {
                 isKorean={isKR}
             />
 
-            <AnnouncementCard language={language} onImageOpen={setLightbox} />
-
-            {/* activity rows */}
+            {/* unified, date-sorted news stream */}
             <div className="overflow-hidden rounded-lg border border-hairline bg-white">
                 <ul>
-                    {firstRows.map((item, i) => (
-                        <li key={item.date} className={i > 0 ? "border-t border-hairline" : ""}>
-                            <ActivityRow item={item} language={language} onImageOpen={setLightbox} />
+                    {firstEntries.map((entry, i) => (
+                        <li key={`${entry.kind}-${entry.date}`} className={i > 0 ? "border-t border-hairline" : ""}>
+                            {renderEntry(entry, i)}
                         </li>
                     ))}
                 </ul>
 
-                {restRows.length > 0 ? (
+                {restEntries.length > 0 ? (
                     <>
                         <div
                             id={moreId}
@@ -720,13 +819,9 @@ export default function News() {
                         >
                             <div className="min-h-0 overflow-hidden">
                                 <ul>
-                                    {restRows.map((item) => (
-                                        <li key={item.date} className="border-t border-hairline">
-                                            <ActivityRow
-                                                item={item}
-                                                language={language}
-                                                onImageOpen={setLightbox}
-                                            />
+                                    {restEntries.map((entry, i) => (
+                                        <li key={`${entry.kind}-${entry.date}`} className="border-t border-hairline">
+                                            {renderEntry(entry, INITIAL_ROWS + i)}
                                         </li>
                                     ))}
                                 </ul>
@@ -744,8 +839,8 @@ export default function News() {
                                     ? "접기"
                                     : "Show Less"
                                 : isKR
-                                  ? `전체 보기 (${restRows.length})`
-                                  : `View All (${restRows.length})`}
+                                  ? `전체 보기 (${restEntries.length})`
+                                  : `View All (${restEntries.length})`}
                             <ChevronDown
                                 aria-hidden
                                 className={`h-4 w-4 text-ink-3 transition-transform duration-150 ${showAll ? "rotate-180" : ""}`}
