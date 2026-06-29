@@ -1,4 +1,5 @@
 export const publications = [
+  { number: 26, authors: "Sangmin Song, Sung Jin Kim, Junbeom Song, SungHoon Joung, Il Woong Park*, Young Beom Jo, Youho Lee, Hyun Sun Park", title: "Characterization of surface roughness and wettability of oxidized Zircaloy-4", journal: "Progress in Nuclear Energy", year: "2026", link: "https://doi.org/10.1016/j.pnucene.2026.106487", details: "199, 106487, 2026", category: ["wettability"] },
   { number: 25, authors: "Sung Jin Kim, Hyunjin Yong, Hee Sang Yoo, Il Woong Park*", title: "From water to dielectric fluids: Pool boiling research under pressure and subcooling for next-generation cooling", journal: "Renewable and Sustainable Energy Reviews", year: "2026", link: "https://doi.org/10.1016/j.rser.2026.116852", details: "239, 116852, 2026", category: ["boiling"] },
   { number: 24, authors: "Sung Jin Kim, Sangmin Song, Junbeom Song, Il Woong Park*, Hee Sang Yoo, Hyun Sun Park", title: "Effects of surface characteristics of oxidized Zircaloy-4 on Pool boiling heat transfer", journal: "International Communications in Heat and Mass Transfer", year: "2026", link: "https://doi.org/10.1016/j.icheatmasstransfer.2026.111277", details: "176, 111277, 2026", category: ["boiling"] },
   { number: 23, authors: "Hyunjin Yong, Jaehyeok Yang, Yunseok Choi, Il Woong Park*, Sai Raja Gopal Vadlamudi, Uwe Hampel, Hyun Sun Park", title: "Experimental Study on the Influence of Sub-Millimeter Copper Foams on Boiling Heat Transfer in Vertical Orientation", journal: "International Communications in Heat and Mass Transfer", year: "2026", link: "https://doi.org/10.1016/j.icheatmasstransfer.2025.110346", details: "172, 110346, 2026", category: ["boiling"] },
@@ -62,6 +63,8 @@ export const registeredPatentCount = patents.filter((p) => p.status === "registe
 export const filedPatentCount = patents.filter((p) => p.status === "filed").length;
 
 export const projects = [
+  { year: "2026 ~ 2027", title: "New-industry global human-resources training program for developing a Korean-style energy island based on wind power", sponsor: "KETEP" },
+  { year: "2026 ~ 2027", title: "Development of an integrated superheated-steam production system incorporating a molten-salt thermal energy storage system, and an optimal operation strategy", sponsor: "Hyundai Engineering & Construction" },
   { year: "2026", title: "Development of regulatory verification technology for full-lifecycle safety review of light-water SMRs", sponsor: "SMR Regulation Research Foundation" },
   { year: "2025 ~ 2026", title: "Research on improving the cooling performance of the HiMSEN engine pre-combustion chamber", sponsor: "HD Hyundai Heavy Industries" },
   { year: "2025", title: "Development of Thermal Energy Storage", sponsor: "Laboratory-Specialized Startup Leading University, Ministry of Science and ICT" },
