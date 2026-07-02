@@ -69,6 +69,27 @@ export default function Analytics() {
         }).catch(() => {});
     }, [pathname]);
 
+    // Named goal clicks (recruiting): delegate one document listener, match by href.
+    useEffect(() => {
+        const onClick = (e: MouseEvent) => {
+            const el = (e.target as HTMLElement | null)?.closest?.('a');
+            if (!el) return;
+            const href = el.getAttribute('href') || '';
+            let goal = '';
+            if (href.startsWith('mailto:')) goal = 'contact';
+            else if (/\.pdf(\?|#|$)/i.test(href)) goal = 'pdf';
+            else if (/(^|\/)join(\/|$|\?)/.test(href)) goal = 'join';
+            if (!goal) return;
+            const body = JSON.stringify({ goalOnly: true, goal, path: st.current.path || '/' });
+            try {
+                if (navigator.sendBeacon) navigator.sendBeacon('/api/track', new Blob([body], { type: 'application/json' }));
+                else fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+            } catch { /* ignore */ }
+        };
+        document.addEventListener('click', onClick, true);
+        return () => document.removeEventListener('click', onClick, true);
+    }, []);
+
     // Visibility + unload → maintain engaged time and flush.
     useEffect(() => {
         const onVis = () => {

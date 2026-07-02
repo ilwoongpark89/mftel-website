@@ -40,6 +40,8 @@ interface AnalyticsData {
     pageDwell?: Record<string, number>;
     avgDwellSec?: number;
     sessions?: SessionJourney[];
+    engagement?: { rate: number; engagedN: number; totalN: number; pagesPerSession: number; medianEngagedSec: number };
+    goals?: Record<string, { total: number; period: number; prev: number }>;
     periodTotal: number;
     prevPeriodTotal?: number;
     uniqueTotal?: number;
@@ -65,6 +67,16 @@ function fmtDur(sec: number): string {
     const m = Math.floor(sec / 60);
     const s = sec % 60;
     return s ? `${m}분 ${s}초` : `${m}분`;
+}
+
+const GOAL_LABELS: Record<string, string> = { join: '지원·합류 클릭', pdf: '논문 다운로드', contact: '연락(이메일)' };
+
+// Collapse raw referrer hosts into meaningful buckets for a research lab.
+function bucketReferrer(host: string): string {
+    const h = (host || '').toLowerCase();
+    if (/scholar\.google|\.edu|\.ac\.|ac\.kr|orcid|researchgate|semanticscholar|sciencedirect|springer|nature\.com|wiley|mdpi|ieee|arxiv|doi\.org|academia\.edu/.test(h)) return '학술·연구';
+    if (/news|twitter|x\.com|reddit|facebook|linkedin|youtube|instagram|t\.co|threads|kakao/.test(h)) return '언론·SNS';
+    return '검색·직접';
 }
 
 type VisitSource = 'all' | 'human' | 'vercel' | 'claude';
@@ -311,6 +323,11 @@ export default function AdminAnalytics() {
     const osDist = useMemo(() => tally(parsed, p => p.os), [parsed]);
     const browserDist = useMemo(() => tally(parsed, p => p.browser), [parsed]);
     const referrerDist = useMemo(() => tally(filteredVisits, v => (v.referrer && v.referrer.trim()) ? v.referrer : 'Direct / 직접'), [filteredVisits]);
+    const referrerBuckets = useMemo(() => {
+        const m: Record<string, number> = {};
+        referrerDist.forEach(r => { const b = bucketReferrer(String(r.label)); m[b] = (m[b] || 0) + r.value; });
+        return Object.entries(m).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
+    }, [referrerDist]);
     const pathDist = useMemo(() => tally(filteredVisits, v => v.path || '/'), [filteredVisits]);
     const langDist = useMemo(() => tally(filteredVisits, v => v.language || undefined), [filteredVisits]);
 
@@ -346,18 +363,36 @@ export default function AdminAnalytics() {
 
     const uniqueVisitors = useMemo(() => new Set(filteredVisits.map(v => v.ip)).size, [filteredVisits]);
     const uniquePeriodVal = data?.uniquePeriod ?? uniqueVisitors;
-    const uniqueTotalVal = data?.uniqueTotal ?? 0;
     const todayCount = filteredDailyStats[new Date().toISOString().split('T')[0]] || 0;
     const filteredPeriodTotal = sourceFilter === 'all' ? (data?.periodTotal || 0) : Object.values(filteredDailyStats).reduce((a, b) => a + b, 0);
     const trend = sourceFilter === 'all' && data?.prevPeriodTotal ? ((filteredPeriodTotal - data.prevPeriodTotal) / data.prevPeriodTotal) * 100 : null;
+    const periodLabel = period === 1 ? '오늘' : `최근 ${period}일`;
+
+    // Recruiting goals + join click-through rate.
+    const goals = data?.goals || {};
+    const joinPageViews = Number(data?.pageViews?.['/join'] || data?.pageViews?.['/en/join'] || 0);
+    const joinCtr = joinPageViews > 0 && goals.join ? Math.round((goals.join.total / joinPageViews) * 100) : null;
+
+    // One plain-language "so what" line (magnitude-based, min-N gated, no spurious causality).
+    const summary = useMemo(() => {
+        if (!data) return '';
+        if (filteredPeriodTotal < 5) return `${periodLabel} 방문 ${filteredPeriodTotal}건 — 표본이 적어 아직 뚜렷한 추세는 없습니다.`;
+        const parts: string[] = [];
+        if (trend != null && Math.abs(trend) >= 10) parts.push(`방문 이전 대비 ${trend >= 0 ? '▲' : '▼'}${Math.abs(Math.round(trend))}%`);
+        const eng = data.engagement;
+        if (eng && eng.totalN >= 5) parts.push(`참여율 ${eng.rate}%`);
+        if (referrerBuckets.length && referrerBuckets[0].value) parts.push(`유입 1위 ${referrerBuckets[0].label}`);
+        const pd = Object.entries(data.pageDwell || {}).sort((a, b) => b[1] - a[1])[0];
+        if (pd && pd[1] >= 30) parts.push(`가장 오래 본 페이지 ${pd[0]} (${fmtDur(pd[1])})`);
+        if (data.goals?.join && data.goals.join.period > 0) parts.push(`지원 클릭 ${data.goals.join.period}건`);
+        return `${periodLabel}: ${parts.length ? parts.join(' · ') : '큰 변화 없음'}.`;
+    }, [data, filteredPeriodTotal, trend, referrerBuckets, periodLabel]);
 
     const searchedVisits = useMemo(() => {
         const q = search.trim().toLowerCase();
         if (!q) return filteredVisits;
         return filteredVisits.filter(v => `${v.country} ${v.region} ${v.city} ${v.userAgent} ${v.path || ''} ${v.referrer || ''}`.toLowerCase().includes(q));
     }, [filteredVisits, search]);
-
-    const periodLabel = period === 1 ? '오늘' : `최근 ${period}일`;
 
     const exportCsv = () => {
         const cols = ['timestamp', 'source', 'device', 'os', 'browser', 'country', 'region', 'city', 'ip', 'referrer', 'path', 'language', 'screen', 'userAgent'];
@@ -507,16 +542,52 @@ export default function AdminAnalytics() {
                     </div>
                 </div>
 
-                {/* KPI row */}
+                {/* Row 0 — the 5-second "so what" */}
+                {summary && (
+                    <div className="flex items-start gap-2.5 rounded-xl border border-hairline bg-white px-4 py-3">
+                        <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-ember-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                        <p className="text-sm leading-relaxed text-ink-2">{summary}</p>
+                    </div>
+                )}
+
+                {/* KPI row — meaningful first */}
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-                    <Stat label="전체 방문" value={(data?.totalVisits || 0).toLocaleString()} sub="누적" />
+                    <Stat label="순 방문자" value={uniquePeriodVal.toLocaleString()} sub={`페이지뷰 ${(data?.totalPageViews || 0).toLocaleString()}`} />
+                    <Stat label="참여율" value={data?.engagement ? `${data.engagement.rate}%` : '—'} sub={data?.engagement ? `참여 ${data.engagement.engagedN}/${data.engagement.totalN} 세션` : undefined} />
                     <Stat label={`방문 · ${periodLabel}`} value={filteredPeriodTotal.toLocaleString()} trend={trend} sub={trend != null ? '이전 기간 대비' : undefined} />
-                    <Stat label="순 방문자" value={uniquePeriodVal.toLocaleString()} sub={uniqueTotalVal ? `누적 ${uniqueTotalVal.toLocaleString()}` : 'IP 기준'} />
-                    <Stat label="페이지뷰" value={(data?.totalPageViews || 0).toLocaleString()} sub="누적 조회" />
                     <Stat label="평균 체류" value={fmtDur(data?.avgDwellSec || 0)} sub="페이지당" />
+                    <Stat label="지원 클릭" value={(goals.join?.period ?? 0).toLocaleString()} trend={goals.join && goals.join.prev ? ((goals.join.period - goals.join.prev) / goals.join.prev) * 100 : null} sub={joinCtr != null ? `전환 ${joinCtr}%` : '모집 신호'} />
                     <Stat label="국가" value={sortedCountries.length} sub={countryScope === 'all' ? '누적' : periodLabel} />
                     <Stat label="오늘" value={todayCount.toLocaleString()} />
                 </div>
+
+                {/* Recruiting signals — the actions a PI cares about */}
+                <Panel title="모집 신호" sub="지원자가 실제로 하는 행동">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        {(['join', 'pdf', 'contact'] as const).map(g => {
+                            const gd = goals[g];
+                            const t = gd && gd.prev ? ((gd.period - gd.prev) / gd.prev) * 100 : null;
+                            return (
+                                <div key={g} className="rounded-lg border border-hairline bg-white p-4">
+                                    <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3">{GOAL_LABELS[g]}</p>
+                                    <div className="mt-1.5 flex items-baseline gap-2">
+                                        <p className="text-2xl font-semibold tabular-nums text-ink">{(gd?.period ?? 0).toLocaleString()}</p>
+                                        {t != null && <span className="font-mono text-xs tabular-nums text-ink-3">{t >= 0 ? '▲' : '▼'}{Math.abs(Math.round(t))}%</span>}
+                                    </div>
+                                    <p className="mt-0.5 text-xs text-ink-4">{periodLabel} · 누적 {(gd?.total ?? 0).toLocaleString()}</p>
+                                </div>
+                            );
+                        })}
+                        <div className="rounded-lg border border-hairline bg-well p-4">
+                            <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3">지원 전환율</p>
+                            <p className="mt-1.5 text-2xl font-semibold tabular-nums text-ember-600">{joinCtr != null ? `${joinCtr}%` : '—'}</p>
+                            <p className="mt-0.5 text-xs text-ink-4">/join 방문 중 지원 클릭</p>
+                        </div>
+                    </div>
+                    <p className="mt-3 font-mono text-[10px] text-ink-4">클릭 이벤트만 집계 (개인정보·경로 기록 없음) · 오늘 배포분부터 누적</p>
+                </Panel>
 
                 {/* Main trend chart */}
                 <Panel title="일자별 방문" sub={avgDaily ? `평균 ${avgDaily.toFixed(1)}/일${showUnique ? ' · 방문(면) vs 순방문자(점선)' : ''}` : undefined}>
@@ -543,6 +614,11 @@ export default function AdminAnalytics() {
                             <div className="flex h-full items-center justify-center text-sm text-ink-4">데이터 없음</div>
                         )}
                     </div>
+                    {chartData.length > 0 && (
+                        <p className="mt-2 text-xs text-ink-4">
+                            {periodLabel} 하루 평균 {avgDaily.toFixed(1)}명{trend != null ? ` · 이전 기간 대비 ${trend >= 0 ? '증가' : '감소'} ${Math.abs(Math.round(trend))}%` : ''}.
+                        </p>
+                    )}
                 </Panel>
 
                 {/* Composition: source / device / os / browser */}
@@ -632,7 +708,19 @@ export default function AdminAnalytics() {
 
                 {/* Referrer + landing page + top pages */}
                 <div className="grid gap-4 lg:grid-cols-3">
-                    <Panel title="유입 경로 (Referrer)"><BarList total={filteredVisits.length} items={referrerDist.slice(0, 8)} empty="경로 데이터 없음" /></Panel>
+                    <Panel title="유입 채널" sub="학술·연구 = 스콜라/논문/대학">
+                        <BarList total={filteredVisits.length} items={referrerBuckets} empty="경로 데이터 없음" />
+                        {referrerDist.length > 0 && (
+                            <div className="mt-3 space-y-1 border-t border-hairline pt-3">
+                                {referrerDist.slice(0, 5).map((r, i) => (
+                                    <div key={i} className="flex items-center justify-between gap-2 text-xs">
+                                        <span className="truncate text-ink-3">{r.label}</span>
+                                        <span className="flex-shrink-0 font-mono tabular-nums text-ink-4">{r.value}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </Panel>
                     <Panel title="랜딩 페이지" sub="세션 첫 진입"><BarList total={filteredVisits.length} items={pathDist.slice(0, 8)} empty="페이지 데이터 없음" /></Panel>
                     <Panel title="인기 페이지" sub="조회수 · 평균 체류">
                         <BarList

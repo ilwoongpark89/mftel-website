@@ -15,11 +15,23 @@ export async function POST(request: NextRequest) {
         }
 
         // Client-supplied signals (best-effort; body may be absent for old callers).
-        let clientMeta: { referrer?: string; path?: string; language?: string; screen?: string; pageviewOnly?: boolean; durationOnly?: boolean; ms?: number; sid?: string } = {};
+        let clientMeta: { referrer?: string; path?: string; language?: string; screen?: string; pageviewOnly?: boolean; durationOnly?: boolean; ms?: number; sid?: string; goalOnly?: boolean; goal?: string } = {};
         try { clientMeta = await request.json(); } catch { clientMeta = {}; }
 
         const pvPath = (clientMeta.path || '/').substring(0, 80);
         const sid = (clientMeta.sid || '').substring(0, 64);
+
+        // Named goal micro-conversion (a recruiting-relevant click). Event names
+        // only — no per-user identity, no PII.
+        if (clientMeta.goalOnly) {
+            const g = String(clientMeta.goal || '');
+            if (['join', 'pdf', 'contact'].includes(g)) {
+                const day = new Date().toISOString().split('T')[0];
+                await redis.incr(`mftel:goal:${g}:total`);
+                await redis.incr(`mftel:goal:${g}:${day}`);
+            }
+            return NextResponse.json({ success: true, goal: true });
+        }
 
         // Engaged-time beacon: accumulate dwell (not a new page view).
         if (clientMeta.durationOnly) {

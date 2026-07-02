@@ -116,25 +116,59 @@ export async function GET(request: NextRequest) {
         }
         const avgDwellSec = totalPageViews > 0 ? Math.round(totalDwellMs / totalPageViews / 1000) : 0;
 
-        // Recent session journeys (ordered page sequences).
-        const sessions: Array<{ paths: string[]; country: string; device: string; ms: number; start: string }> = [];
+        // Recent session journeys + engagement aggregate (over up to 100 sessions).
+        let sessions: Array<{ paths: string[]; country: string; device: string; ms: number; start: string }> = [];
+        let engagement = { rate: 0, engagedN: 0, totalN: 0, pagesPerSession: 0, medianEngagedSec: 0 };
         try {
-            const sids = (await redis.lrange('mftel:recent_sessions', 0, 29)) as string[];
-            const uniqSids = Array.from(new Set(sids)).slice(0, 25);
+            const sids = (await redis.lrange('mftel:recent_sessions', 0, 99)) as string[];
+            const uniqSids = Array.from(new Set(sids)).slice(0, 100);
             if (uniqSids.length) {
                 const pipe = redis.pipeline();
                 uniqSids.forEach(sid => { pipe.lrange(`mftel:sess:${sid}`, 0, -1); pipe.hgetall(`mftel:sess:${sid}:m`); });
                 const res = await pipe.exec();
+                const all: typeof sessions = [];
                 for (let i = 0; i < uniqSids.length; i++) {
                     const paths = (res[i * 2] as string[]) || [];
                     const meta = (res[i * 2 + 1] as Record<string, string> | null) || {};
                     if (!paths || !paths.length) continue;
-                    sessions.push({ paths, country: meta?.c || 'Unknown', device: meta?.d || '', ms: Number(meta?.ms) || 0, start: meta?.t || '' });
+                    all.push({ paths, country: meta?.c || 'Unknown', device: meta?.d || '', ms: Number(meta?.ms) || 0, start: meta?.t || '' });
                 }
+                // Engaged if >=2 pages OR foreground dwell >15s (GA4-style OR rule).
+                const engaged = all.filter(s => s.paths.length >= 2 || s.ms >= 15000);
+                const durs = all.map(s => Math.round(s.ms / 1000)).sort((a, b) => a - b);
+                engagement = {
+                    totalN: all.length,
+                    engagedN: engaged.length,
+                    rate: all.length ? Math.round((engaged.length / all.length) * 100) : 0,
+                    pagesPerSession: all.length ? Math.round((all.reduce((s, x) => s + x.paths.length, 0) / all.length) * 10) / 10 : 0,
+                    medianEngagedSec: durs.length ? durs[Math.floor(durs.length / 2)] : 0,
+                };
+                sessions = all.slice(0, 30);
             }
         } catch { /* session keys may be absent */ }
 
+        // Named goal micro-conversions (recruiting-relevant clicks).
+        const goals: Record<string, { total: number; period: number; prev: number }> = {};
+        try {
+            const periodDays = dates.slice(0, period);
+            const prevDays = dates.slice(period, period * 2);
+            for (const g of ['join', 'pdf', 'contact']) {
+                const total = Number(await redis.get(`mftel:goal:${g}:total`)) || 0;
+                const pKeys = periodDays.map(d => `mftel:goal:${g}:${d}`) as [string, ...string[]];
+                const qKeys = prevDays.map(d => `mftel:goal:${g}:${d}`) as [string, ...string[]];
+                const pv = pKeys.length ? (await redis.mget(...pKeys) as (number | string | null)[]) : [];
+                const qv = qKeys.length ? (await redis.mget(...qKeys) as (number | string | null)[]) : [];
+                goals[g] = {
+                    total,
+                    period: pv.reduce((s: number, x) => s + Number(x || 0), 0),
+                    prev: qv.reduce((s: number, x) => s + Number(x || 0), 0),
+                };
+            }
+        } catch { /* goal keys may be absent */ }
+
         return NextResponse.json({
+            engagement,
+            goals,
             totalVisits,
             totalPageViews,
             pageViews,
