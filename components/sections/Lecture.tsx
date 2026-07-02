@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Calculator, Code } from "lucide-react";
+import { BookOpen, Calculator, Code, Flame, Sparkles } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
 import Band from "@/components/ui/band";
 import { SectionHeader, Meta } from "@/components/ui/typo";
@@ -39,6 +39,22 @@ const COURSES = [
         scope: "AI-assisted programming practice",
         scopeKR: "AI 활용 프로그래밍 실습",
         href: "https://mftel-vc.vercel.app/",
+    },
+    {
+        icon: Flame,
+        title: "Phase-Change Heat Transfer",
+        titleKR: "상변화열전달",
+        scope: "Boiling — nucleation, CHF, film & flow boiling",
+        scopeKR: "비등 — 핵생성·CHF·막비등·유동비등",
+        href: "https://mftel-pc.vercel.app/",
+    },
+    {
+        icon: Sparkles,
+        title: "Advanced Prompt Engineering",
+        titleKR: "프롬프트 엔지니어링 심화",
+        scope: "LLM internals, evidence-based prompting, agents, evals",
+        scopeKR: "LLM 원리·근거 기반 프롬프트·에이전트·평가",
+        href: "https://mftel-vca.vercel.app/",
     },
 ] as const;
 
