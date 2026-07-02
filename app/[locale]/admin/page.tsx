@@ -25,10 +25,21 @@ interface Visit {
     screen?: string;
 }
 
+interface SessionJourney {
+    paths: string[];
+    country: string;
+    device: string;
+    ms: number;
+    start: string;
+}
+
 interface AnalyticsData {
     totalVisits: number;
     totalPageViews?: number;
     pageViews?: Record<string, number>;
+    pageDwell?: Record<string, number>;
+    avgDwellSec?: number;
+    sessions?: SessionJourney[];
     periodTotal: number;
     prevPeriodTotal?: number;
     uniqueTotal?: number;
@@ -47,6 +58,14 @@ const INK_3 = '#78716C';
 const GRID = '#E7E5E4';
 const TOOLTIP_STYLE = { borderRadius: 8, border: '1px solid #E7E5E4', fontSize: 12, color: '#1C1917', padding: '6px 10px' } as const;
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+function fmtDur(sec: number): string {
+    if (!sec || sec < 1) return '—';
+    if (sec < 60) return `${sec}초`;
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return s ? `${m}분 ${s}초` : `${m}분`;
+}
 
 type VisitSource = 'all' | 'human' | 'vercel' | 'claude';
 
@@ -489,11 +508,12 @@ export default function AdminAnalytics() {
                 </div>
 
                 {/* KPI row */}
-                <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
                     <Stat label="전체 방문" value={(data?.totalVisits || 0).toLocaleString()} sub="누적" />
                     <Stat label={`방문 · ${periodLabel}`} value={filteredPeriodTotal.toLocaleString()} trend={trend} sub={trend != null ? '이전 기간 대비' : undefined} />
                     <Stat label="순 방문자" value={uniquePeriodVal.toLocaleString()} sub={uniqueTotalVal ? `누적 ${uniqueTotalVal.toLocaleString()}` : 'IP 기준'} />
                     <Stat label="페이지뷰" value={(data?.totalPageViews || 0).toLocaleString()} sub="누적 조회" />
+                    <Stat label="평균 체류" value={fmtDur(data?.avgDwellSec || 0)} sub="페이지당" />
                     <Stat label="국가" value={sortedCountries.length} sub={countryScope === 'all' ? '누적' : periodLabel} />
                     <Stat label="오늘" value={todayCount.toLocaleString()} />
                 </div>
@@ -614,7 +634,13 @@ export default function AdminAnalytics() {
                 <div className="grid gap-4 lg:grid-cols-3">
                     <Panel title="유입 경로 (Referrer)"><BarList total={filteredVisits.length} items={referrerDist.slice(0, 8)} empty="경로 데이터 없음" /></Panel>
                     <Panel title="랜딩 페이지" sub="세션 첫 진입"><BarList total={filteredVisits.length} items={pathDist.slice(0, 8)} empty="페이지 데이터 없음" /></Panel>
-                    <Panel title="인기 페이지" sub="전체 조회수(누적)"><BarList total={pageViewsList.reduce((s, p) => s + p.value, 0)} items={pageViewsList.slice(0, 8)} empty="조회 데이터 없음" /></Panel>
+                    <Panel title="인기 페이지" sub="조회수 · 평균 체류">
+                        <BarList
+                            total={pageViewsList.reduce((s, p) => s + p.value, 0)}
+                            items={pageViewsList.slice(0, 8).map(p => ({ ...p, sub: data?.pageDwell?.[p.label] ? fmtDur(data.pageDwell[p.label]) : undefined }))}
+                            empty="조회 데이터 없음"
+                        />
+                    </Panel>
                 </div>
 
                 {/* Language + resolution + domestic split */}
@@ -653,6 +679,35 @@ export default function AdminAnalytics() {
                             })()}
                         </Panel>
                     </div>
+                )}
+
+                {/* Session journeys — which menus a visitor browsed, in order */}
+                {data?.sessions && data.sessions.length > 0 && (
+                    <Panel title="세션 여정" sub={`최근 ${data.sessions.length} 세션 · 방문자가 본 메뉴 순서`}>
+                        <div className="max-h-[440px] space-y-0 overflow-y-auto">
+                            {data.sessions.map((sess, i) => (
+                                <div key={i} className="flex items-start justify-between gap-3 border-b border-hairline py-2.5 last:border-0">
+                                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                                        <span className="mr-1 flex-shrink-0 whitespace-nowrap text-xs">
+                                            <span className="font-medium text-ink-2">{sess.country}</span>
+                                            {sess.device && <span className="text-ink-4"> · {sess.device}</span>}
+                                        </span>
+                                        {sess.paths.slice(0, 10).map((p, j) => (
+                                            <Fragment key={j}>
+                                                {j > 0 && <span className="text-ink-4">›</span>}
+                                                <span className="rounded border border-hairline bg-paper px-1.5 py-0.5 font-mono text-[11px] text-ink-2">{p}</span>
+                                            </Fragment>
+                                        ))}
+                                        {sess.paths.length > 10 && <span className="text-ink-4">+{sess.paths.length - 10}</span>}
+                                    </div>
+                                    <div className="flex flex-shrink-0 items-center gap-3 pt-0.5 font-mono text-[11px] tabular-nums text-ink-3">
+                                        <span>{sess.paths.length}p</span>
+                                        <span className="min-w-[56px] text-right">{fmtDur(Math.round(sess.ms / 1000))}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </Panel>
                 )}
 
                 {/* Full detail table */}

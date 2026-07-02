@@ -32,13 +32,15 @@ export async function GET(request: NextRequest) {
 
     try {
         // Scalar counters (one round trip)
-        const scalars = await redis.mget('mftel:total_visits', 'mftel:total_pageviews') as (number | string | null)[];
+        const scalars = await redis.mget('mftel:total_visits', 'mftel:total_pageviews', 'mftel:total_dwell_ms') as (number | string | null)[];
         const totalVisits = Number(scalars?.[0] || 0);
         const totalPageViews = Number(scalars?.[1] || 0);
+        const totalDwellMs = Number(scalars?.[2] || 0);
 
-        // Country + page-view hashes
+        // Country + page-view + dwell hashes
         const countries = await redis.hgetall('mftel:countries') || {};
         const pageViews = (await redis.hgetall('mftel:pageviews')) as Record<string, number> || {};
+        const dwellMsByPath = (await redis.hgetall('mftel:dwell_ms')) as Record<string, number> || {};
 
         // Get recent visits (up to 1000 for detailed breakdowns)
         const recentVisits = await redis.lrange('mftel:recent_visits', 0, 999) || [];
@@ -105,10 +107,40 @@ export async function GET(request: NextRequest) {
             }
         } catch { /* HLL keys may not exist yet */ }
 
+        // Per-page average engaged time (seconds) + global average.
+        const pageDwell: Record<string, number> = {};
+        for (const [p, count] of Object.entries(pageViews)) {
+            const c = Number(count) || 0;
+            const ms = Number(dwellMsByPath[p]) || 0;
+            if (c > 0 && ms > 0) pageDwell[p] = Math.round(ms / c / 1000);
+        }
+        const avgDwellSec = totalPageViews > 0 ? Math.round(totalDwellMs / totalPageViews / 1000) : 0;
+
+        // Recent session journeys (ordered page sequences).
+        const sessions: Array<{ paths: string[]; country: string; device: string; ms: number; start: string }> = [];
+        try {
+            const sids = (await redis.lrange('mftel:recent_sessions', 0, 29)) as string[];
+            const uniqSids = Array.from(new Set(sids)).slice(0, 25);
+            if (uniqSids.length) {
+                const pipe = redis.pipeline();
+                uniqSids.forEach(sid => { pipe.lrange(`mftel:sess:${sid}`, 0, -1); pipe.hgetall(`mftel:sess:${sid}:m`); });
+                const res = await pipe.exec();
+                for (let i = 0; i < uniqSids.length; i++) {
+                    const paths = (res[i * 2] as string[]) || [];
+                    const meta = (res[i * 2 + 1] as Record<string, string> | null) || {};
+                    if (!paths || !paths.length) continue;
+                    sessions.push({ paths, country: meta?.c || 'Unknown', device: meta?.d || '', ms: Number(meta?.ms) || 0, start: meta?.t || '' });
+                }
+            }
+        } catch { /* session keys may be absent */ }
+
         return NextResponse.json({
             totalVisits,
             totalPageViews,
             pageViews,
+            pageDwell,
+            avgDwellSec,
+            sessions,
             periodTotal,
             prevPeriodTotal,
             uniqueTotal,
