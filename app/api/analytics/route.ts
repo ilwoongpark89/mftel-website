@@ -31,11 +31,14 @@ export async function GET(request: NextRequest) {
     const period = parseInt(searchParams.get('period') || '7');
 
     try {
-        // Get total visits
-        const totalVisits = await redis.get('mftel:total_visits') || 0;
+        // Scalar counters (one round trip)
+        const scalars = await redis.mget('mftel:total_visits', 'mftel:total_pageviews') as (number | string | null)[];
+        const totalVisits = Number(scalars?.[0] || 0);
+        const totalPageViews = Number(scalars?.[1] || 0);
 
-        // Get country stats
+        // Country + page-view hashes
         const countries = await redis.hgetall('mftel:countries') || {};
+        const pageViews = (await redis.hgetall('mftel:pageviews')) as Record<string, number> || {};
 
         // Get recent visits (up to 1000 for detailed breakdowns)
         const recentVisits = await redis.lrange('mftel:recent_visits', 0, 999) || [];
@@ -69,33 +72,48 @@ export async function GET(request: NextRequest) {
             }
         });
 
-        // Get daily stats for the period
+        // Daily counts for this period + the preceding one, in a single mget.
+        const dates: string[] = [];
+        for (let i = 0; i < period * 2; i++) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            dates.push(date.toISOString().split('T')[0]);
+        }
+        const dayKeys = dates.map(d => `mftel:daily:${d}`) as [string, ...string[]];
+        const dayCounts = dayKeys.length ? (await redis.mget(...dayKeys) as (number | string | null)[]) : [];
         const dailyStats: Record<string, number> = {};
-        for (let i = 0; i < period; i++) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split('T')[0];
-            const count = await redis.get(`mftel:daily:${dateStr}`) || 0;
-            dailyStats[dateStr] = Number(count);
-        }
-
-        // Calculate period total
-        const periodTotal = Object.values(dailyStats).reduce((sum, count) => sum + count, 0);
-
-        // Previous period total (for trend %): the window immediately before this one.
+        let periodTotal = 0;
         let prevPeriodTotal = 0;
-        for (let i = period; i < period * 2; i++) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split('T')[0];
-            const count = await redis.get(`mftel:daily:${dateStr}`) || 0;
-            prevPeriodTotal += Number(count);
+        for (let i = 0; i < dates.length; i++) {
+            const n = Number(dayCounts?.[i] || 0);
+            if (i < period) { dailyStats[dates[i]] = n; periodTotal += n; }
+            else { prevPeriodTotal += n; }
         }
+
+        // Unique visitors via HyperLogLog (accurate all-time + period + per-day).
+        let uniqueTotal = 0;
+        let uniquePeriod = 0;
+        const dailyUnique: Record<string, number> = {};
+        try {
+            uniqueTotal = await redis.pfcount('mftel:uniq:all');
+            const periodUniqKeys = dates.slice(0, period).map(d => `mftel:uniq:day:${d}`) as [string, ...string[]];
+            if (periodUniqKeys.length) uniquePeriod = await redis.pfcount(...periodUniqKeys);
+            if (period <= 30) {
+                for (let i = 0; i < period; i++) {
+                    dailyUnique[dates[i]] = await redis.pfcount(`mftel:uniq:day:${dates[i]}`);
+                }
+            }
+        } catch { /* HLL keys may not exist yet */ }
 
         return NextResponse.json({
-            totalVisits: Number(totalVisits),
+            totalVisits,
+            totalPageViews,
+            pageViews,
             periodTotal,
             prevPeriodTotal,
+            uniqueTotal,
+            uniquePeriod,
+            dailyUnique,
             countries: periodCountries,
             allCountries: countries,
             recentVisits: filteredVisits,

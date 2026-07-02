@@ -27,8 +27,13 @@ interface Visit {
 
 interface AnalyticsData {
     totalVisits: number;
+    totalPageViews?: number;
+    pageViews?: Record<string, number>;
     periodTotal: number;
     prevPeriodTotal?: number;
+    uniqueTotal?: number;
+    uniquePeriod?: number;
+    dailyUnique?: Record<string, number>;
     countries: Record<string, number>;
     allCountries: Record<string, number>;
     recentVisits: Visit[];
@@ -172,29 +177,6 @@ function BarList({ items, total, max, empty = '데이터 없음' }: { items: Arr
     );
 }
 
-function MiniBars({ data, highlight }: { data: Array<{ label: string; value: number }>; highlight: number }) {
-    const max = Math.max(1, ...data.map(d => d.value));
-    return (
-        <div className="flex items-end gap-[3px]" style={{ height: 104 }}>
-            {data.map((d, i) => (
-                <div key={i} className="flex flex-1 flex-col items-center gap-1.5" title={`${d.label} · ${d.value}`}>
-                    <div className="flex w-full flex-1 items-end">
-                        <div
-                            className="w-full rounded-sm"
-                            style={{
-                                height: `${(d.value / max) * 100}%`,
-                                minHeight: d.value ? 2 : 0,
-                                background: i === highlight ? INK : '#D6D3D1',
-                            }}
-                        />
-                    </div>
-                    <span className="font-mono text-[9px] tabular-nums text-ink-4">{d.label}</span>
-                </div>
-            ))}
-        </div>
-    );
-}
-
 export default function AdminAnalytics() {
     const [password, setPassword] = useState('');
     const [showPw, setShowPw] = useState(false);
@@ -296,11 +278,14 @@ export default function AdminAnalytics() {
         return out;
     }, [sourceFilter, data, filteredVisits]);
 
-    const chartData = useMemo(
-        () => Object.entries(filteredDailyStats).sort((a, b) => a[0].localeCompare(b[0])).map(([date, count]) => ({ date: date.slice(5), visits: count })),
-        [filteredDailyStats]
-    );
+    const chartData = useMemo(() => {
+        const du = data?.dailyUnique || {};
+        return Object.entries(filteredDailyStats)
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([date, count]) => ({ date: date.slice(5), visits: count, unique: sourceFilter === 'all' ? (du[date] ?? null) : null }));
+    }, [filteredDailyStats, data, sourceFilter]);
     const avgDaily = chartData.length ? chartData.reduce((s, d) => s + d.visits, 0) / chartData.length : 0;
+    const showUnique = sourceFilter === 'all' && chartData.some(d => d.unique != null);
 
     const parsed = useMemo(() => filteredVisits.map(v => ({ v, ...parseUA(v.userAgent) })), [filteredVisits]);
     const deviceDist = useMemo(() => tally(parsed, p => p.device), [parsed]);
@@ -328,8 +313,21 @@ export default function AdminAnalytics() {
     );
     const sortedCountries = useMemo(() => Object.entries(countrySource).map(([label, value]) => ({ label, value: Number(value) })).sort((a, b) => b.value - a.value), [countrySource]);
     const cityDist = useMemo(() => tally(filteredVisits.filter(v => v.city && v.city !== 'Unknown'), v => `${v.city}|${v.country}`).map(c => { const [city, country] = c.label.split('|'); return { label: city, sub: country, value: c.value }; }), [filteredVisits]);
+    const screenDist = useMemo(() => tally(filteredVisits, v => v.screen || undefined), [filteredVisits]);
+    const pageViewsList = useMemo(() => Object.entries(data?.pageViews || {}).map(([label, value]) => ({ label, value: Number(value) })).sort((a, b) => b.value - a.value), [data]);
+    const domesticCount = useMemo(() => filteredVisits.filter(v => v.country === 'KR').length, [filteredVisits]);
+
+    // Weekday (0=일) × hour (0-23) heatmap matrix.
+    const heat = useMemo(() => {
+        const m = Array.from({ length: 7 }, () => Array<number>(24).fill(0));
+        filteredVisits.forEach(v => { const d = new Date(v.timestamp); const wd = d.getDay(); const h = d.getHours(); if (!isNaN(wd) && !isNaN(h)) m[wd][h]++; });
+        let max = 0; m.forEach(r => r.forEach(c => { if (c > max) max = c; }));
+        return { m, max };
+    }, [filteredVisits]);
 
     const uniqueVisitors = useMemo(() => new Set(filteredVisits.map(v => v.ip)).size, [filteredVisits]);
+    const uniquePeriodVal = data?.uniquePeriod ?? uniqueVisitors;
+    const uniqueTotalVal = data?.uniqueTotal ?? 0;
     const todayCount = filteredDailyStats[new Date().toISOString().split('T')[0]] || 0;
     const filteredPeriodTotal = sourceFilter === 'all' ? (data?.periodTotal || 0) : Object.values(filteredDailyStats).reduce((a, b) => a + b, 0);
     const trend = sourceFilter === 'all' && data?.prevPeriodTotal ? ((filteredPeriodTotal - data.prevPeriodTotal) / data.prevPeriodTotal) * 100 : null;
@@ -341,6 +339,23 @@ export default function AdminAnalytics() {
     }, [filteredVisits, search]);
 
     const periodLabel = period === 1 ? '오늘' : `최근 ${period}일`;
+
+    const exportCsv = () => {
+        const cols = ['timestamp', 'source', 'device', 'os', 'browser', 'country', 'region', 'city', 'ip', 'referrer', 'path', 'language', 'screen', 'userAgent'];
+        const esc = (s: string | number) => `"${String(s ?? '').replace(/"/g, '""')}"`;
+        const rows = searchedVisits.map(v => {
+            const u = parseUA(v.userAgent);
+            return [v.timestamp, classifyUA(v.userAgent), u.device, u.os, u.browser, v.country, v.region, v.city, v.ip, v.referrer || '', v.path || '', v.language || '', v.screen || '', v.userAgent];
+        });
+        const csv = [cols.join(','), ...rows.map(r => r.map(esc).join(','))].join('\n');
+        const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `mftel-visits-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
 
     // ── Login ──────────────────────────────────────────────────────────────────
     if (!isAuthenticated) {
@@ -410,7 +425,7 @@ export default function AdminAnalytics() {
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="hidden items-center gap-1 rounded-lg border border-hairline bg-white p-1 sm:inline-flex">
-                            {[{ d: 1, l: '1D' }, { d: 7, l: '7D' }, { d: 30, l: '30D' }].map(({ d, l }) => (
+                            {[{ d: 1, l: '1D' }, { d: 7, l: '7D' }, { d: 30, l: '30D' }, { d: 90, l: '90D' }].map(({ d, l }) => (
                                 <button
                                     key={d}
                                     onClick={() => handlePeriodChange(d)}
@@ -451,7 +466,7 @@ export default function AdminAnalytics() {
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                         <div className="inline-flex items-center gap-1 rounded-lg border border-hairline bg-white p-1 sm:hidden">
-                            {[{ d: 1, l: '1D' }, { d: 7, l: '7D' }, { d: 30, l: '30D' }].map(({ d, l }) => (
+                            {[{ d: 1, l: '1D' }, { d: 7, l: '7D' }, { d: 30, l: '30D' }, { d: 90, l: '90D' }].map(({ d, l }) => (
                                 <button key={d} onClick={() => handlePeriodChange(d)} className={`rounded-md px-3 py-1.5 text-sm font-medium tabular-nums ${period === d ? 'bg-coal text-paper' : 'text-ink-3'}`}>{l}</button>
                             ))}
                         </div>
@@ -474,16 +489,17 @@ export default function AdminAnalytics() {
                 </div>
 
                 {/* KPI row */}
-                <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
                     <Stat label="전체 방문" value={(data?.totalVisits || 0).toLocaleString()} sub="누적" />
-                    <Stat label={`방문 · ${periodLabel}`} value={filteredPeriodTotal.toLocaleString()} trend={trend} sub={trend != null ? '이전 대비' : undefined} />
-                    <Stat label="순 방문자" value={uniqueVisitors.toLocaleString()} sub="IP 기준" />
-                    <Stat label="국가" value={sortedCountries.length} sub={`${countryScope === 'all' ? '누적' : periodLabel}`} />
+                    <Stat label={`방문 · ${periodLabel}`} value={filteredPeriodTotal.toLocaleString()} trend={trend} sub={trend != null ? '이전 기간 대비' : undefined} />
+                    <Stat label="순 방문자" value={uniquePeriodVal.toLocaleString()} sub={uniqueTotalVal ? `누적 ${uniqueTotalVal.toLocaleString()}` : 'IP 기준'} />
+                    <Stat label="페이지뷰" value={(data?.totalPageViews || 0).toLocaleString()} sub="누적 조회" />
+                    <Stat label="국가" value={sortedCountries.length} sub={countryScope === 'all' ? '누적' : periodLabel} />
                     <Stat label="오늘" value={todayCount.toLocaleString()} />
                 </div>
 
                 {/* Main trend chart */}
-                <Panel title="일자별 방문" sub={avgDaily ? `평균 ${avgDaily.toFixed(1)}/일` : undefined}>
+                <Panel title="일자별 방문" sub={avgDaily ? `평균 ${avgDaily.toFixed(1)}/일${showUnique ? ' · 방문(면) vs 순방문자(점선)' : ''}` : undefined}>
                     <div className="h-[300px]">
                         {chartData.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
@@ -500,6 +516,7 @@ export default function AdminAnalytics() {
                                     <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ stroke: GRID }} />
                                     {avgDaily > 0 && <ReferenceLine y={avgDaily} stroke={INK_3} strokeDasharray="4 4" strokeOpacity={0.5} />}
                                     <Area type="monotone" dataKey="visits" stroke={EMBER} strokeWidth={2} fill="url(#emberFill)" dot={{ r: 2, fill: EMBER }} activeDot={{ r: 4 }} />
+                                    {showUnique && <Area type="monotone" dataKey="unique" stroke={INK_3} strokeWidth={1.5} strokeDasharray="4 3" fill="none" dot={false} activeDot={{ r: 3 }} />}
                                 </AreaChart>
                             </ResponsiveContainer>
                         ) : (
@@ -525,15 +542,38 @@ export default function AdminAnalytics() {
                     <Panel title="브라우저"><BarList total={filteredVisits.length} items={browserDist} /></Panel>
                 </div>
 
-                {/* Time patterns */}
-                <div className="grid gap-4 lg:grid-cols-2">
-                    <Panel title="시간대" sub={filteredVisits.length ? `가장 붐빔 ${String(busiestHour).padStart(2, '0')}시` : undefined}>
-                        <MiniBars data={hourDist.map((d, i) => ({ label: i % 3 === 0 ? d.label : '', value: d.value }))} highlight={busiestHour} />
-                    </Panel>
-                    <Panel title="요일" sub={filteredVisits.length ? `가장 붐빔 ${WEEKDAYS[busiestWeekday]}요일` : undefined}>
-                        <MiniBars data={weekdayDist} highlight={busiestWeekday} />
-                    </Panel>
-                </div>
+                {/* Time heatmap (weekday × hour) */}
+                <Panel title="요일 × 시간대" sub={filteredVisits.length ? `가장 붐빔 · ${WEEKDAYS[busiestWeekday]}요일 ${String(busiestHour).padStart(2, '0')}시` : undefined}>
+                    {filteredVisits.length ? (
+                        <div className="overflow-x-auto">
+                            <div className="min-w-[560px]">
+                                {heat.m.map((row, wd) => (
+                                    <div key={wd} className="flex items-center gap-1">
+                                        <span className="w-5 flex-shrink-0 font-mono text-[10px] text-ink-4">{WEEKDAYS[wd]}</span>
+                                        <div className="flex flex-1 gap-[3px] py-[2px]">
+                                            {row.map((c, h) => (
+                                                <div
+                                                    key={h}
+                                                    title={`${WEEKDAYS[wd]}요일 ${String(h).padStart(2, '0')}시 · ${c}`}
+                                                    className="h-4 flex-1 rounded-[2px]"
+                                                    style={{ background: c ? `rgba(28,25,23,${(0.12 + 0.88 * (c / heat.max)).toFixed(3)})` : '#F5F5F4' }}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                                <div className="mt-1.5 flex items-center gap-1">
+                                    <span className="w-5 flex-shrink-0" />
+                                    <div className="flex flex-1 gap-[3px]">
+                                        {Array.from({ length: 24 }, (_, h) => (
+                                            <span key={h} className="flex-1 text-center font-mono text-[9px] tabular-nums text-ink-4">{h % 3 === 0 ? String(h).padStart(2, '0') : ''}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : <p className="py-6 text-center text-sm text-ink-4">데이터 없음</p>}
+                </Panel>
 
                 {/* Geography */}
                 <div className="grid gap-4 lg:grid-cols-2">
@@ -570,11 +610,27 @@ export default function AdminAnalytics() {
                     </Panel>
                 </div>
 
-                {/* Referrer + Path + Language */}
+                {/* Referrer + landing page + top pages */}
                 <div className="grid gap-4 lg:grid-cols-3">
                     <Panel title="유입 경로 (Referrer)"><BarList total={filteredVisits.length} items={referrerDist.slice(0, 8)} empty="경로 데이터 없음" /></Panel>
-                    <Panel title="방문 페이지"><BarList total={filteredVisits.length} items={pathDist.slice(0, 8)} empty="페이지 데이터 없음" /></Panel>
+                    <Panel title="랜딩 페이지" sub="세션 첫 진입"><BarList total={filteredVisits.length} items={pathDist.slice(0, 8)} empty="페이지 데이터 없음" /></Panel>
+                    <Panel title="인기 페이지" sub="전체 조회수(누적)"><BarList total={pageViewsList.reduce((s, p) => s + p.value, 0)} items={pageViewsList.slice(0, 8)} empty="조회 데이터 없음" /></Panel>
+                </div>
+
+                {/* Language + resolution + domestic split */}
+                <div className="grid gap-4 lg:grid-cols-3">
                     <Panel title="언어"><BarList total={filteredVisits.length} items={langDist.slice(0, 8)} empty="언어 데이터 없음" /></Panel>
+                    <Panel title="화면 해상도"><BarList total={filteredVisits.length} items={screenDist.slice(0, 8)} empty="해상도 데이터 없음" /></Panel>
+                    <Panel title="국내 / 해외">
+                        <BarList
+                            total={filteredVisits.length}
+                            items={[
+                                { label: '국내 (KR)', value: domesticCount, leading: <span className="h-2 w-2 rounded-full" style={{ background: INK }} /> },
+                                { label: '해외', value: filteredVisits.length - domesticCount, leading: <span className="h-2 w-2 rounded-full" style={{ background: '#A8A29E' }} /> },
+                            ].filter(i => i.value > 0)}
+                            empty="데이터 없음"
+                        />
+                    </Panel>
                 </div>
 
                 {/* Region drill-down */}
@@ -604,16 +660,29 @@ export default function AdminAnalytics() {
                     title="방문 상세"
                     sub={`${searchedVisits.length.toLocaleString()}건${search ? ` / ${filteredVisits.length.toLocaleString()}` : ''}`}
                     action={
-                        <div className="relative">
-                            <svg className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z" />
-                            </svg>
-                            <input
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="국가·도시·UA·경로 검색"
-                                className="h-9 w-44 rounded-lg border border-hairline bg-white pl-8 pr-3 text-sm text-ink transition-colors placeholder:text-ink-4 focus:border-ink-4 focus:outline-none sm:w-56"
-                            />
+                        <div className="flex items-center gap-2">
+                            <div className="relative">
+                                <svg className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z" />
+                                </svg>
+                                <input
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder="국가·도시·UA·경로 검색"
+                                    className="h-9 w-40 rounded-lg border border-hairline bg-white pl-8 pr-3 text-sm text-ink transition-colors placeholder:text-ink-4 focus:border-ink-4 focus:outline-none sm:w-52"
+                                />
+                            </div>
+                            <button
+                                onClick={exportCsv}
+                                disabled={!searchedVisits.length}
+                                title="CSV 내보내기"
+                                className="flex h-9 items-center gap-1.5 rounded-lg border border-hairline bg-white px-3 text-sm text-ink-2 transition-colors hover:bg-well hover:text-ink disabled:opacity-40"
+                            >
+                                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+                                </svg>
+                                <span className="hidden sm:inline">CSV</span>
+                            </button>
                         </div>
                     }
                 >

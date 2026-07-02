@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "../globals.css";
+import Analytics from "@/components/Analytics";
 import { LanguageProvider } from "@/lib/LanguageContext";
 
 // URL is the language SoT: / (ko, unprefixed via middleware rewrite) and /en.
@@ -114,6 +115,7 @@ export default async function RootLayout({
       <body className="font-sans antialiased selection:bg-ember-200/60 selection:text-ember-900">
         <LanguageProvider initialLanguage={language}>
           {children}
+          <Analytics />
         </LanguageProvider>
       </body>
     </html>

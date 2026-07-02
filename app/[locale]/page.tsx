@@ -1,7 +1,6 @@
 import dynamic from "next/dynamic";
 import Navbar from "@/components/Navbar";
 import HomeStory from "@/components/home/scenes";
-import Analytics from "@/components/Analytics";
 
 const Footer = dynamic(() => import("@/components/sections/Footer"));
 
@@ -12,7 +11,6 @@ const Footer = dynamic(() => import("@/components/sections/Footer"));
 export default function Home() {
   return (
     <main className="min-h-screen bg-coal">
-      <Analytics />
       <Navbar />
       <HomeStory />
       <Footer />

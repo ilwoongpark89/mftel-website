@@ -15,8 +15,16 @@ export async function POST(request: NextRequest) {
         }
 
         // Client-supplied signals (best-effort; body may be absent for old callers).
-        let clientMeta: { referrer?: string; path?: string; language?: string; screen?: string } = {};
+        let clientMeta: { referrer?: string; path?: string; language?: string; screen?: string; pageviewOnly?: boolean } = {};
         try { clientMeta = await request.json(); } catch { clientMeta = {}; }
+
+        // Every navigation is a page view (separate from once-per-session visits).
+        const pvPath = (clientMeta.path || '/').substring(0, 80);
+        await redis.hincrby('mftel:pageviews', pvPath, 1);
+        await redis.incr('mftel:total_pageviews');
+        if (clientMeta.pageviewOnly) {
+            return NextResponse.json({ success: true, pageview: true });
+        }
 
         // Get IP address
         const forwarded = request.headers.get('x-forwarded-for');
@@ -83,6 +91,11 @@ export async function POST(request: NextRequest) {
 
         // Increment country count
         await redis.hincrby('mftel:countries', location.country, 1);
+
+        // Unique visitors via HyperLogLog (probabilistic; stores no raw IP).
+        // Full IP feeds the sketch for accuracy; only a partial IP is persisted above.
+        await redis.pfadd('mftel:uniq:all', ip);
+        await redis.pfadd(`mftel:uniq:day:${today}`, ip);
 
         // Store recent visits (keep last 1000 for detailed breakdowns)
         await redis.lpush('mftel:recent_visits', JSON.stringify(visit));
