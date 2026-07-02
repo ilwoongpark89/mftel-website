@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import "../globals.css";
-import dynamic from "next/dynamic";
-const ChatWidget = dynamic(() => import("@/components/ChatWidget"));
 import { LanguageProvider } from "@/lib/LanguageContext";
 
 // URL is the language SoT: / (ko, unprefixed via middleware rewrite) and /en.
@@ -116,7 +114,6 @@ export default async function RootLayout({
       <body className="font-sans antialiased selection:bg-ember-200/60 selection:text-ember-900">
         <LanguageProvider initialLanguage={language}>
           {children}
-          <ChatWidget />
         </LanguageProvider>
       </body>
     </html>

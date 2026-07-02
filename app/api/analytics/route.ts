@@ -37,8 +37,8 @@ export async function GET(request: NextRequest) {
         // Get country stats
         const countries = await redis.hgetall('mftel:countries') || {};
 
-        // Get recent visits
-        const recentVisits = await redis.lrange('mftel:recent_visits', 0, 99) || [];
+        // Get recent visits (up to 1000 for detailed breakdowns)
+        const recentVisits = await redis.lrange('mftel:recent_visits', 0, 999) || [];
         const parsedVisits = recentVisits.map((v: string | object) => {
             if (typeof v === 'string') {
                 try {
@@ -82,9 +82,20 @@ export async function GET(request: NextRequest) {
         // Calculate period total
         const periodTotal = Object.values(dailyStats).reduce((sum, count) => sum + count, 0);
 
+        // Previous period total (for trend %): the window immediately before this one.
+        let prevPeriodTotal = 0;
+        for (let i = period; i < period * 2; i++) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+            const count = await redis.get(`mftel:daily:${dateStr}`) || 0;
+            prevPeriodTotal += Number(count);
+        }
+
         return NextResponse.json({
             totalVisits: Number(totalVisits),
             periodTotal,
+            prevPeriodTotal,
             countries: periodCountries,
             allCountries: countries,
             recentVisits: filteredVisits,

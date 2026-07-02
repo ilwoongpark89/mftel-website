@@ -14,6 +14,10 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Redis not configured' });
         }
 
+        // Client-supplied signals (best-effort; body may be absent for old callers).
+        let clientMeta: { referrer?: string; path?: string; language?: string; screen?: string } = {};
+        try { clientMeta = await request.json(); } catch { clientMeta = {}; }
+
         // Get IP address
         const forwarded = request.headers.get('x-forwarded-for');
         const ip = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown';
@@ -46,13 +50,26 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        // Normalize a referrer to its host (drop our own domain → treat as direct).
+        let referrerHost = '';
+        if (clientMeta.referrer) {
+            try {
+                const host = new URL(clientMeta.referrer).hostname.replace(/^www\./, '');
+                if (!host.includes('mftel')) referrerHost = host;
+            } catch { /* malformed referrer, ignore */ }
+        }
+
         const visit = {
             ip: ip.substring(0, 10) + '***', // Partial IP for privacy
             country: location.country,
             city: location.city,
             region: location.region,
             timestamp: new Date().toISOString(),
-            userAgent: request.headers.get('user-agent')?.substring(0, 100) || 'Unknown'
+            userAgent: request.headers.get('user-agent')?.substring(0, 180) || 'Unknown',
+            referrer: referrerHost,
+            path: (clientMeta.path || '').substring(0, 80),
+            language: (clientMeta.language || '').substring(0, 12),
+            screen: (clientMeta.screen || '').substring(0, 12),
         };
 
         // Store visit in Upstash Redis
@@ -67,9 +84,9 @@ export async function POST(request: NextRequest) {
         // Increment country count
         await redis.hincrby('mftel:countries', location.country, 1);
 
-        // Store recent visits (keep last 100)
+        // Store recent visits (keep last 1000 for detailed breakdowns)
         await redis.lpush('mftel:recent_visits', JSON.stringify(visit));
-        await redis.ltrim('mftel:recent_visits', 0, 99);
+        await redis.ltrim('mftel:recent_visits', 0, 999);
 
         return NextResponse.json({ success: true });
     } catch (error) {
