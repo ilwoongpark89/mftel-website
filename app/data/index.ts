@@ -123,6 +123,7 @@ export const galleryImages: {
   /** Curated bento emphasis — 2 = col-span-2 tile (explicit, never index-parity). */
   span?: number;
 }[] = [
+  { title: "Hyun Jin Yong & Manho Kim: Hands-on SMR Modelling Course, Barcelona", date: "July 2026", image: "2026-07-smr-course-barcelona.jpg", sortDate: "2026-07-10" },
   { title: "Sangmin Song: International Workshop at NTNU, Trondheim", date: "June 2026", image: "2026-06-sangmin-song-ntnu-workshop.jpg", sortDate: "2026-06-23" },
   { title: "Hyun Jin Yong: Visiting Research at HZDR, Germany", date: "March – September 2025", image: "2025-03-hyeonjin-yong-hzdr.jpg", sortDate: "2025-09-03" },
   { title: "Kyeong Ju Ko: Visiting Research at UPC, Spain", date: "March – September 2025", image: "2025-03-kyeongju-ko-upc.jpg", sortDate: "2025-09-02" },
