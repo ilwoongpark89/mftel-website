@@ -18,6 +18,18 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // 통합 강의 앱(2026-07-12): mftel.vercel.app/lecture/* = 강의 프로젝트(basePath /lecture)로 프록시.
+  //   beforeFiles = 파일시스템/로케일 라우팅보다 먼저 가로챔 → 브라우저는 단일 origin(mftel.vercel.app)만 봄
+  //   = 쿠키 1개로 전 코스 로그인 성립. 마케팅 사이트(/ /research …)는 무영향.
+  //   ⚠ 배포 순서: 강의 앱(basePath) 먼저 배포 → 이 프록시 배포(타깃이 살아있어야 함).
+  async rewrites() {
+    return {
+      beforeFiles: [
+        { source: "/lecture", destination: "https://mftel-lecture.vercel.app/lecture" },
+        { source: "/lecture/:path*", destination: "https://mftel-lecture.vercel.app/lecture/:path*" },
+      ],
+    };
+  },
 };
 
 export default nextConfig;
