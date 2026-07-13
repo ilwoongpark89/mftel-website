@@ -45,15 +45,19 @@ export default function Footer() {
                             aria-label={isKR ? "사이트맵" : "Sitemap"}
                             className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2.5"
                         >
-                            {SITEMAP.map((s) => (
-                                <Link
-                                    key={s.href}
-                                    href={lp(s.href)}
-                                    className="text-sm text-stone-400 transition-colors duration-150 hover:text-paper"
-                                >
-                                    {t(s.labelKey)}
-                                </Link>
-                            ))}
+                            {SITEMAP.map((s) => {
+                                const scls = "text-sm text-stone-400 transition-colors duration-150 hover:text-paper";
+                                // /lecture = 서버 프록시 → hard-nav <a> (Link 소프트네비 미적용).
+                                return s.href === "/lecture" ? (
+                                    <a key={s.href} href="/lecture" className={scls}>
+                                        {t(s.labelKey)}
+                                    </a>
+                                ) : (
+                                    <Link key={s.href} href={lp(s.href)} className={scls}>
+                                        {t(s.labelKey)}
+                                    </Link>
+                                );
+                            })}
                             <a
                                 href="https://mftel-db.vercel.app"
                                 target="_blank"

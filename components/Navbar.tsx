@@ -142,24 +142,29 @@ export default function Navbar() {
                     </Link>
 
                     <div className="hidden items-center gap-7 lg:flex">
-                        {NAV_ROUTES.map((r) => (
-                            <Link
-                                key={r.href}
-                                href={lp(r.href)}
-                                className={cn(
-                                    "text-sm font-medium underline-offset-[10px] transition-colors duration-150",
-                                    pathname === lp(r.href)
-                                        ? dk
-                                            ? "text-paper underline decoration-ember-400 decoration-2"
-                                            : "text-ink underline decoration-ember-600 decoration-2"
-                                        : dk
-                                          ? "text-stone-300 hover:text-paper"
-                                          : "text-ink-2 hover:text-ink"
-                                )}
-                            >
-                                {t(r.labelKey)}
-                            </Link>
-                        ))}
+                        {NAV_ROUTES.map((r) => {
+                            const cls = cn(
+                                "text-sm font-medium underline-offset-[10px] transition-colors duration-150",
+                                pathname === lp(r.href)
+                                    ? dk
+                                        ? "text-paper underline decoration-ember-400 decoration-2"
+                                        : "text-ink underline decoration-ember-600 decoration-2"
+                                    : dk
+                                      ? "text-stone-300 hover:text-paper"
+                                      : "text-ink-2 hover:text-ink"
+                            );
+                            // /lecture = 서버 프록시(외부 rewrite → 강의앱). Next <Link> 소프트네비는 프록시 미적용(클릭 무반응)
+                            //   → hard-nav <a>. 강의 도구는 별 앱이라 로케일 무관 canonical /lecture.
+                            return r.href === "/lecture" ? (
+                                <a key={r.href} href="/lecture" className={cls}>
+                                    {t(r.labelKey)}
+                                </a>
+                            ) : (
+                                <Link key={r.href} href={lp(r.href)} className={cls}>
+                                    {t(r.labelKey)}
+                                </Link>
+                            );
+                        })}
                     </div>
 
                     <div className="hidden items-center gap-3 lg:flex">
@@ -199,21 +204,29 @@ export default function Navbar() {
                     <div className="fixed inset-0 z-50 bg-coal lg:hidden">
                         <div className="flex h-full flex-col justify-between px-8 pb-10 pt-24">
                             <nav className="flex flex-col">
-                                {NAV_ROUTES.map((r, i) => (
-                                    <Link
-                                        key={r.href}
-                                        href={lp(r.href)}
-                                        onClick={() => setIsOpen(false)}
-                                        className="flex items-baseline gap-4 border-b border-white/10 py-4"
-                                    >
-                                        <span className="text-[13px] font-semibold text-stone-500">
-                                            {String(i + 1).padStart(2, "0")}
-                                        </span>
-                                        <span className="text-2xl font-bold tracking-tight text-paper">
-                                            {t(r.labelKey)}
-                                        </span>
-                                    </Link>
-                                ))}
+                                {NAV_ROUTES.map((r, i) => {
+                                    const inner = (
+                                        <>
+                                            <span className="text-[13px] font-semibold text-stone-500">
+                                                {String(i + 1).padStart(2, "0")}
+                                            </span>
+                                            <span className="text-2xl font-bold tracking-tight text-paper">
+                                                {t(r.labelKey)}
+                                            </span>
+                                        </>
+                                    );
+                                    const mcls = "flex items-baseline gap-4 border-b border-white/10 py-4";
+                                    // /lecture = 서버 프록시 → hard-nav <a> (Link 소프트네비 미적용, 데스크톱과 동일).
+                                    return r.href === "/lecture" ? (
+                                        <a key={r.href} href="/lecture" onClick={() => setIsOpen(false)} className={mcls}>
+                                            {inner}
+                                        </a>
+                                    ) : (
+                                        <Link key={r.href} href={lp(r.href)} onClick={() => setIsOpen(false)} className={mcls}>
+                                            {inner}
+                                        </Link>
+                                    );
+                                })}
                                 <a
                                     href={joinHref}
                                     onClick={() => setIsOpen(false)}
