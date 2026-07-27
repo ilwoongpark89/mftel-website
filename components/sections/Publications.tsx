@@ -21,6 +21,7 @@ type Publication = (typeof publications)[number];
 const CATEGORY_LABELS: Record<string, { en: string; kr: string }> = {
     boiling: { en: "Boiling", kr: "비등" },
     condensation: { en: "Condensation", kr: "응축" },
+    melting: { en: "Melting", kr: "융해" },
     smr: { en: "SMR", kr: "SMR" },
     wettability: { en: "Wettability", kr: "표면 젖음 특성" },
 };
