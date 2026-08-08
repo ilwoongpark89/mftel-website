@@ -100,15 +100,16 @@ function EntryForm({ isKR }: { isKR: boolean }) {
                 : authErr(j.error, isKR ? "등록 실패." : "Registration failed."));
     }
 
-    // P3-1: 비밀번호 초기화 요청 — 앱 안 큐 적재 (교수 콘솔 홈 배지). 존재 비노출 — 항상 접수 표시.
+    // P3-1: 비밀번호 초기화 요청 — 앱 안 큐 적재 (교수 콘솔 홈 배지). 존재 비노출(학번 유무는 안 알림)이되
+    //   전송 실패(스로틀·네트워크)는 정직하게 — ok 일 때만 접수 표시 (거짓 접수 방지, 2026-08-08 검토 #1).
     async function requestReset() {
         if (busy || resetSent) return;
         if (!SID_RE.test(sid)) { setErr(isKR ? "학번을 먼저 입력하세요." : "Enter your student ID first."); return; }
         setBusy(true);
-        await post("reset_request");
+        const j = await post("reset_request");
         setBusy(false);
-        setErr("");
-        setResetSent(true);
+        if (j && j.ok) { setErr(""); setResetSent(true); }
+        else setErr(authErr(j && j.error, isKR ? "요청 전송 실패 — 잠시 후 다시." : "Request failed — try again shortly."));
     }
 
     // DELETE clears both platform cookies; re-render re-reads the cookie store → guest form returns.
