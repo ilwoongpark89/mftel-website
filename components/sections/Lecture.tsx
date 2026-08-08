@@ -243,10 +243,10 @@ function EntryForm({ isKR }: { isKR: boolean }) {
                 )}
             </div>
 
-            <p className="mt-8 break-keep border-t border-hairline pt-4 text-[11px] leading-[1.7] text-ink-4 [overflow-wrap:break-word] [text-wrap:pretty]">
-                {isKR
-                    ? "수집: 학번·답안·접속 기록 · 담당 교수만 열람 · 학기 종료 후 파기. 입장 시 동의로 간주합니다."
-                    : "Collected: ID, answers, access logs · instructor-only · destroyed after the term. Entering implies consent."}
+            {/* 고지 = 의미 단위 2줄 고정 — 폭에 밀린 우연 줄바꿈("입장 시/동의로") 대신 내용/동의 문장으로 나눔 */}
+            <p className="mt-8 break-keep border-t border-hairline pt-4 text-[11px] leading-[1.7] text-ink-4">
+                <span className="block">{isKR ? "수집: 학번·답안·접속 기록 · 담당 교수만 열람 · 학기 종료 후 파기" : "Collected: ID, answers, access logs · instructor-only · destroyed after term"}</span>
+                <span className="block">{isKR ? "입장 시 동의로 간주합니다." : "Entering implies consent."}</span>
             </p>
         </form>
     );
