@@ -10,9 +10,11 @@ import { NextRequest, NextResponse } from "next/server";
 export default function proxy(req: NextRequest) {
     const { pathname } = req.nextUrl;
 
-    // 통합 강의 앱(2026-07-12): /lecture/* 는 로케일 처리에서 제외 → next.config beforeFiles 리라이트가
-    //   강의 프로젝트(basePath /lecture)로 프록시. proxy(middleware) 가 /ko rewrite 로 먼저 먹으면 프록시 무력화되므로 여기서 next() passthrough.
-    if (pathname === "/lecture" || pathname.startsWith("/lecture/")) {
+    // 통합 강의 앱(2026-07-12): /lecture/* (하위 경로만) 는 로케일 처리에서 제외 → next.config beforeFiles
+    //   리라이트가 강의 프로젝트(basePath /lecture)로 프록시. proxy 가 /ko rewrite 로 먼저 먹으면 프록시가
+    //   무력화되므로 여기서 next() passthrough. bare /lecture 는 제외하지 않는다(2026-08-08) — 아래 한국어
+    //   rewrite 를 타고 사이트 자신의 강의 페이지(/ko/lecture, §08 소개+인라인 로그인)로 간다.
+    if (pathname.startsWith("/lecture/")) {
         return NextResponse.next();
     }
 

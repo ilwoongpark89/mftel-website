@@ -153,13 +153,9 @@ export default function Navbar() {
                                       ? "text-stone-300 hover:text-paper"
                                       : "text-ink-2 hover:text-ink"
                             );
-                            // /lecture = 서버 프록시(외부 rewrite → 강의앱). Next <Link> 소프트네비는 프록시 미적용(클릭 무반응)
-                            //   → hard-nav <a>. 강의 도구는 별 앱이라 로케일 무관 canonical /lecture.
-                            return r.href === "/lecture" ? (
-                                <a key={r.href} href="/lecture" className={cls}>
-                                    {t(r.labelKey)}
-                                </a>
-                            ) : (
+                            // /lecture 특례 제거(2026-08-08): bare /lecture 는 이제 사이트 자신의 강의 페이지 —
+                            //   전 항목이 같은 로케일 <Link> 문법. 플랫폼 프록시는 /lecture/{home,…} 하위만.
+                            return (
                                 <Link key={r.href} href={lp(r.href)} className={cls}>
                                     {t(r.labelKey)}
                                 </Link>
@@ -216,12 +212,8 @@ export default function Navbar() {
                                         </>
                                     );
                                     const mcls = "flex items-baseline gap-4 border-b border-white/10 py-4";
-                                    // /lecture = 서버 프록시 → hard-nav <a> (Link 소프트네비 미적용, 데스크톱과 동일).
-                                    return r.href === "/lecture" ? (
-                                        <a key={r.href} href="/lecture" onClick={() => setIsOpen(false)} className={mcls}>
-                                            {inner}
-                                        </a>
-                                    ) : (
+                                    // /lecture 특례 제거(2026-08-08) — 데스크톱과 동일, 전 항목 로케일 <Link>.
+                                    return (
                                         <Link key={r.href} href={lp(r.href)} onClick={() => setIsOpen(false)} className={mcls}>
                                             {inner}
                                         </Link>
