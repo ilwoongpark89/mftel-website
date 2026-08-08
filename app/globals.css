@@ -32,6 +32,8 @@
   --color-ember-700: #C2410C;
   --color-ember-800: #9A3412;
   --color-ember-900: #7C2D12;
+  /* danger — form/error text only (ember 는 브랜드 액센트라 오류 표지로 쓰지 않는다). 2026-08-08 lecture 폼과 함께 도입. */
+  --color-danger: #B23A2E;
   --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-inout-quart: cubic-bezier(0.65, 0, 0.35, 1);
 

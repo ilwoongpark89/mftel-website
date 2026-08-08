@@ -47,12 +47,8 @@ export default function Footer() {
                         >
                             {SITEMAP.map((s) => {
                                 const scls = "text-sm text-stone-400 transition-colors duration-150 hover:text-paper";
-                                // /lecture = 서버 프록시 → hard-nav <a> (Link 소프트네비 미적용).
-                                return s.href === "/lecture" ? (
-                                    <a key={s.href} href="/lecture" className={scls}>
-                                        {t(s.labelKey)}
-                                    </a>
-                                ) : (
+                                // /lecture 특례 제거(2026-08-08) — bare /lecture = 사이트 자신의 강의 페이지, 전 항목 로케일 <Link> (Navbar 동형).
+                                return (
                                     <Link key={s.href} href={lp(s.href)} className={scls}>
                                         {t(s.labelKey)}
                                     </Link>

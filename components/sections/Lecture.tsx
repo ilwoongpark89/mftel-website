@@ -35,7 +35,7 @@ const labelCls = "mb-1.5 block text-xs font-semibold text-ink-2";
 const ctaCls =
     "inline-flex h-11 w-full items-center justify-center rounded-full bg-ember-700 text-sm font-semibold text-white transition-colors duration-150 hover:bg-ember-800 disabled:opacity-55";
 const linkCls =
-    "text-xs text-ink-3 underline underline-offset-[3px] transition-colors duration-150 hover:text-ink";
+    "inline-flex min-h-11 items-center text-xs text-ink-3 underline underline-offset-[3px] transition-colors duration-150 hover:text-ink";
 
 function EntryForm({ isKR }: { isKR: boolean }) {
     const sessionSid = useSyncExternalStore(subscribeNoop, readSidCookie, () => "");
@@ -46,13 +46,18 @@ function EntryForm({ isKR }: { isKR: boolean }) {
     const [busy, setBusy] = useState(false);
     const [forgot, setForgot] = useState(false);
 
+    // never-throw: 네트워크 단절도 {ok:false} 로 수렴 — submit 의 setBusy(false) 경로가 항상 실행된다.
     async function post(action: string, extra: Record<string, unknown> = {}) {
-        const res = await fetch(AUTH_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action, studentId: sid, ...extra }),
-        });
-        return res.json().catch(() => ({ ok: false }));
+        try {
+            const res = await fetch(AUTH_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action, studentId: sid, ...extra }),
+            });
+            return await res.json().catch(() => ({ ok: false }));
+        } catch {
+            return { ok: false, error: "server" };
+        }
     }
     function authErr(e: string | undefined, fallback: string): string {
         if (e === "rate_limited") return isKR ? "요청이 많습니다. 잠시 후 다시." : "Too many requests — try again shortly.";
@@ -63,6 +68,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
 
     async function submit(e: React.FormEvent) {
         e.preventDefault();
+        if (busy) return;
         setErr("");
         if (sid.toLowerCase() === "admin" || sid === "교수") { location.href = ADMIN_URL; return; }
         if (!SID_RE.test(sid)) { setErr(isKR ? "학번을 확인해 주세요 (4–32자)." : "Check the student ID (4–32 chars)."); return; }
@@ -157,7 +163,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
             </div>
 
             {err && (
-                <p role="alert" className="mt-3 break-keep text-[13px] leading-[1.6] text-[#B23A2E]">{err}</p>
+                <p role="alert" className="mt-3 break-keep text-[13px] leading-[1.6] text-danger">{err}</p>
             )}
 
             <button type="submit" className={`${ctaCls} mt-5`} disabled={busy}>
