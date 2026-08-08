@@ -7,13 +7,12 @@ import { SectionHeader } from "@/components/ui/typo";
 
 /**
  * CALORIMETER §08 LECTURE — the site's lecture page IS the platform entrance
- * (2026-08-08 mandate: 홈페이지 통일성 1번, 로그인 그 자리에). Grammar = the
- * archive pages: white band, left axis, unboxed. The sign-in is ONE horizontal
- * control row (Publications filter-row idiom — uses the width instead of a
- * narrow stack), one instruction line, one consent line. No instructor link —
- * console users go to /lecture/admin directly (2026-08-08 v4 교정: 중복 문장·
- * 세로 쌓기·교수자 각주 제거). TOFU = platform auth contract (status →
- * login|register, same-origin via the beforeFiles proxy).
+ * (2026-08-08 mandate: 홈페이지 통일성 1번, 로그인 그 자리에). v5 composition:
+ * two-column band — left = the page's voice (kicker/title/sub, site header
+ * grammar with DISTINCT kicker·title words like every other section), right =
+ * one canonical sign-in column (stacked fields, full-width CTA, one consent
+ * line). No instructor link (console = /lecture/admin 직행). TOFU = platform
+ * auth contract (status → login|register, same-origin via beforeFiles proxy).
  */
 
 const AUTH_URL = "/lecture/api/auth";
@@ -30,11 +29,12 @@ function readSidCookie(): string {
     return hit ? decodeURIComponent(hit.slice("lect_sid=".length)) : "";
 }
 
+// 모바일 h-12(48px — HIG 44pt 상회) / 데스크톱 h-11 (디자인 심판 2026-08-08 지시)
 const inputCls =
-    "h-11 w-full rounded-lg border border-hairline bg-white px-3 text-sm text-ink placeholder:text-ink-4 transition-colors duration-150 hover:border-hairline-2 focus:border-hairline-2 focus:outline-none";
+    "h-12 w-full rounded-lg border border-hairline bg-white px-3 text-sm text-ink placeholder:text-ink-4 transition-colors duration-150 hover:border-hairline-2 focus:border-hairline-2 focus:outline-none md:h-11";
 const labelCls = "mb-1.5 block text-xs font-semibold text-ink-2";
 const ctaCls =
-    "inline-flex h-11 items-center justify-center rounded-full bg-ember-700 px-10 text-sm font-semibold text-white transition-colors duration-150 hover:bg-ember-800 disabled:opacity-55";
+    "inline-flex h-12 w-full items-center justify-center rounded-full bg-ember-700 text-sm font-semibold text-white transition-colors duration-150 hover:bg-ember-800 disabled:opacity-55 md:h-11";
 const linkCls =
     "inline-flex min-h-11 items-center text-xs text-ink-3 underline underline-offset-[3px] transition-colors duration-150 hover:text-ink";
 
@@ -123,17 +123,17 @@ function EntryForm({ isKR }: { isKR: boolean }) {
     if (sessionSid) {
         const isProf = sessionSid === "__prof__";
         return (
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <div className="w-full max-w-sm">
                 <p className="break-keep text-[15px] font-semibold text-ink">
                     {isProf
                         ? (isKR ? "교수자로 로그인되어 있습니다." : "Signed in as instructor.")
                         : (isKR ? `${sessionSid} 님, 로그인되어 있습니다.` : `Signed in as ${sessionSid}.`)}
                 </p>
-                <a href={isProf ? ADMIN_URL : HOME_URL} className={ctaCls}>
+                <a href={isProf ? ADMIN_URL : HOME_URL} className={`${ctaCls} mt-6`}>
                     {isProf ? (isKR ? "관리 콘솔로 →" : "Open console →") : (isKR ? "내 수업으로 →" : "My courses →")}
                 </a>
                 {!isProf && (
-                    <button type="button" onClick={signOut} disabled={busy} className={linkCls}>
+                    <button type="button" onClick={signOut} disabled={busy} className={`${linkCls} mt-3`}>
                         {isKR ? "다른 학번으로 입장" : "Use a different ID"}
                     </button>
                 )}
@@ -142,84 +142,78 @@ function EntryForm({ isKR }: { isKR: boolean }) {
     }
 
     return (
-        <form onSubmit={submit}>
+        <form onSubmit={submit} className="w-full max-w-sm">
             {confirming && (
-                <p className="mb-4 break-keep text-[13px] leading-[1.7] text-ink-2">
+                <p className="mb-5 break-keep text-[13px] leading-[1.7] text-ink-2">
                     <b className="font-semibold text-ember-700">{sid}</b>
-                    {isKR
-                        ? " — 처음 등록하는 학번입니다. 비밀번호(8자 이상)와 교수님이 공지한 반 코드를 넣으면 수업까지 한 번에 열립니다."
-                        : " is new — set a password (8+ chars) and enter the class code from your instructor to open the course in one step."}
+                    {isKR ? " — 첫 등록입니다. 비밀번호와 반 코드를 정하세요." : " — first registration. Set a password and enter your class code."}
                 </p>
             )}
 
-            {/* 한 줄 컨트롤 행 — Publications 필터 행과 같은 문법 (좁은 세로 쌓기 대신 가로폭 사용) */}
-            <div className="flex flex-wrap items-end gap-3">
-                <div className="w-full sm:w-44">
-                    <label className={labelCls} htmlFor="mf-entry-sid">{isKR ? "학번" : "Student ID"}</label>
-                    <input
-                        id="mf-entry-sid"
-                        className={inputCls}
-                        value={sid}
-                        onChange={(e) => { setSid(e.target.value.trim()); if (confirming) setConfirming(false); }}
-                        inputMode="numeric"
-                        placeholder={isKR ? "예: 12231234" : "e.g. 12231234"}
-                        autoComplete="username"
-                    />
-                </div>
-                <div className="w-full sm:w-56">
-                    <label className={labelCls} htmlFor="mf-entry-pw">
-                        {confirming ? (isKR ? "비밀번호 설정 (8자 이상)" : "Set password (8+ chars)") : (isKR ? "비밀번호" : "Password")}
-                    </label>
-                    <input
-                        id="mf-entry-pw"
-                        className={inputCls}
-                        type="password"
-                        value={pw}
-                        onChange={(e) => setPw(e.target.value)}
-                        placeholder={confirming ? (isKR ? "나만 아는 비밀번호" : "A password only you know") : "········"}
-                        autoComplete={confirming ? "new-password" : "current-password"}
-                    />
-                </div>
-                {confirming && (
-                    <div className="w-full sm:w-44">
-                        <label className={labelCls} htmlFor="mf-entry-cls">{isKR ? "반 코드" : "Class code"}</label>
-                        <input
-                            id="mf-entry-cls"
-                            className={inputCls}
-                            value={cls}
-                            onChange={(e) => setCls(e.target.value)}
-                            placeholder={isKR ? "교수님 공지" : "From instructor"}
-                            autoComplete="off"
-                        />
-                    </div>
-                )}
-                <button type="submit" className={ctaCls} disabled={busy}>
-                    {busy
-                        ? (isKR ? "확인 중…" : "Checking…")
-                        : confirming
-                            ? (isKR ? "등록하고 시작 →" : "Register and start →")
-                            : (isKR ? "입장 →" : "Enter →")}
-                </button>
+            <div>
+                <label className={labelCls} htmlFor="mf-entry-sid">{isKR ? "학번" : "Student ID"}</label>
+                <input
+                    id="mf-entry-sid"
+                    className={inputCls}
+                    value={sid}
+                    onChange={(e) => { setSid(e.target.value.trim()); if (confirming) setConfirming(false); }}
+                    inputMode="numeric"
+                    placeholder={isKR ? "예: 12231234" : "e.g. 12231234"}
+                    autoComplete="username"
+                />
             </div>
+            <div className="mt-4">
+                <label className={labelCls} htmlFor="mf-entry-pw">
+                    {confirming ? (isKR ? "비밀번호 설정 (8자 이상)" : "Set password (8+ chars)") : (isKR ? "비밀번호" : "Password")}
+                </label>
+                <input
+                    id="mf-entry-pw"
+                    className={inputCls}
+                    type="password"
+                    value={pw}
+                    onChange={(e) => setPw(e.target.value)}
+                    placeholder={confirming ? (isKR ? "나만 아는 비밀번호" : "A password only you know") : "········"}
+                    autoComplete={confirming ? "new-password" : "current-password"}
+                />
+            </div>
+            {confirming && (
+                <div className="mt-4">
+                    <label className={labelCls} htmlFor="mf-entry-cls">{isKR ? "반 코드" : "Class code"}</label>
+                    <input
+                        id="mf-entry-cls"
+                        className={inputCls}
+                        value={cls}
+                        onChange={(e) => setCls(e.target.value)}
+                        placeholder={isKR ? "교수님 공지" : "From your instructor"}
+                        autoComplete="off"
+                    />
+                </div>
+            )}
 
             {err && (
                 <p role="alert" className="mt-3 break-keep text-[13px] leading-[1.6] text-danger">{err}</p>
             )}
 
-            <div className="mt-5 flex flex-wrap items-baseline gap-x-2">
+            <button type="submit" className={`${ctaCls} mt-6`} disabled={busy}>
+                {busy
+                    ? (isKR ? "확인 중…" : "Checking…")
+                    : confirming
+                        ? (isKR ? "등록하고 시작 →" : "Register and start →")
+                        : (isKR ? "입장 →" : "Enter →")}
+            </button>
+
+            <div className="mt-3">
                 {resetSent ? (
                     <p className="break-keep text-xs leading-[1.7] text-ink-2">
-                        {isKR
-                            ? "초기화 요청이 접수되었습니다 — 교수님 확인 후 재등록하면 됩니다 (학습 기록 유지)."
-                            : "Reset request received — register again after your instructor confirms (records are kept)."}
+                        {isKR ? "초기화 요청 접수 — 교수님 확인 후 재등록하면 됩니다." : "Reset requested — register again after your instructor confirms."}
                     </p>
                 ) : forgot ? (
                     <p className="break-keep text-xs leading-[1.7] text-ink-3">
-                        {isKR ? "학번을 입력하고 " : "Enter your ID and "}
+                        {isKR ? "학번 입력 후 " : "Enter your ID, then "}
                         <button type="button" onClick={requestReset} disabled={busy} className="font-semibold text-ink-2 underline underline-offset-[3px] transition-colors duration-150 hover:text-ink">
                             {isKR ? "초기화 요청" : "request a reset"}
                         </button>
-                        {isKR ? " — 기록은 유지되고 비밀번호만 다시 설정됩니다." : " — records are kept, only the password is set again."}
+                        {isKR ? " — 기록은 유지됩니다." : " — your records are kept."}
                     </p>
                 ) : (
                     <button type="button" onClick={() => setForgot(true)} className={linkCls}>
@@ -228,10 +222,10 @@ function EntryForm({ isKR }: { isKR: boolean }) {
                 )}
             </div>
 
-            <p className="mt-2 break-keep text-[11px] leading-[1.7] text-ink-4">
+            <p className="mt-8 break-keep border-t border-hairline pt-4 text-[11px] leading-[1.7] text-ink-4 [overflow-wrap:break-word] [text-wrap:pretty]">
                 {isKR
-                    ? "수집: 학번·답안·접속 기록 · 담당 교수만 열람 · 학기 종료 후 파기 — 입장 시 동의로 간주합니다."
-                    : "Collected: ID, answers, access logs · instructor-only · destroyed after the term — entering implies consent."}
+                    ? "수집: 학번·답안·접속 기록 · 담당 교수만 열람 · 학기 종료 후 파기. 입장 시 동의로 간주합니다."
+                    : "Collected: ID, answers, access logs · instructor-only · destroyed after the term. Entering implies consent."}
             </p>
         </form>
     );
@@ -243,18 +237,24 @@ export default function Lecture() {
 
     return (
         <Band id="lecture" surface="white">
-            <SectionHeader
-                index="08"
-                kicker={isKR ? "강의" : "Lecture"}
-                title={isKR ? "강의" : "Lectures"}
-                sub={
-                    isKR
-                        ? "학번으로 로그인하면 수강 중인 수업이 모두 열립니다 — 처음이면 그 자리에서 비밀번호를 만들면 됩니다."
-                        : "Sign in with your student ID to open all of your courses — first-time users set a password on the spot."
-                }
-                isKorean={isKR}
-            />
-            <EntryForm isKR={isKR} />
+            {/* 좌 = 페이지의 목소리(사이트 헤더 문법 — kicker·title 은 타 섹션처럼 서로 다른 단어), 우 = 정석 로그인 컬럼 */}
+            <div className="grid items-start gap-10 md:grid-cols-[1fr_24rem] md:gap-20">
+                <SectionHeader
+                    index="08"
+                    kicker={isKR ? "강의" : "Lecture"}
+                    title={isKR ? "강의실 입장" : "Classroom Entry"}
+                    sub={
+                        <span className="break-keep [overflow-wrap:break-word] [text-wrap:pretty]">
+                            {isKR
+                                ? "학번 하나로 수강 중인 수업이 모두 열립니다. 처음이면 그 자리에서 비밀번호를 만듭니다."
+                                : "One student ID opens all of your courses. First time? Set a password on the spot."}
+                        </span>
+                    }
+                    isKorean={isKR}
+                    className="mb-0 md:mb-0"
+                />
+                <EntryForm isKR={isKR} />
+            </div>
         </Band>
     );
 }
