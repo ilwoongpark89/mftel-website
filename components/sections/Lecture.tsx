@@ -73,7 +73,25 @@ function EntryForm({ isKR }: { isKR: boolean }) {
         e.preventDefault();
         if (busy) return;
         setErr("");
-        if (sid.toLowerCase() === "admin" || sid === "교수") { location.href = ADMIN_URL; return; }
+        if (sid.toLowerCase() === "admin" || sid === "교수") {
+            // 2026-08-08 실사용 결함 수리: admin + 비밀번호를 쳤으면 그 자리에서 콘솔 로그인까지 —
+            //   (구버전은 비밀번호를 버리고 콘솔 로그인 화면으로 이동만 해 "다시 물어보는" 이중 로그인이었다.)
+            if (!pw) { location.href = ADMIN_URL; return; }
+            setBusy(true);
+            let j: { ok?: boolean; error?: string };
+            try {
+                const r = await fetch("/lecture/admin/api", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ op: "login", password: pw }),
+                });
+                j = await r.json().catch(() => ({ ok: false }));
+            } catch { j = { ok: false, error: "server" }; }
+            setBusy(false);
+            if (j && j.ok) { location.href = ADMIN_URL; return; }
+            setErr(authErr(j && j.error, isKR ? "관리자 비밀번호가 올바르지 않습니다." : "Incorrect admin password."));
+            return;
+        }
         if (!SID_RE.test(sid)) { setErr(isKR ? "학번을 확인해 주세요 (4–32자)." : "Check the student ID (4–32 chars)."); return; }
         if (!confirming) {
             setBusy(true);
@@ -154,6 +172,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
                 <label className={labelCls} htmlFor="mf-entry-sid">{isKR ? "학번" : "Student ID"}</label>
                 <input
                     id="mf-entry-sid"
+                    name="username"
                     className={inputCls}
                     value={sid}
                     onChange={(e) => { setSid(e.target.value.trim()); if (confirming) setConfirming(false); }}
@@ -168,6 +187,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
                 </label>
                 <input
                     id="mf-entry-pw"
+                    name="password"
                     className={inputCls}
                     type="password"
                     value={pw}
@@ -181,6 +201,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
                     <label className={labelCls} htmlFor="mf-entry-cls">{isKR ? "반 코드" : "Class code"}</label>
                     <input
                         id="mf-entry-cls"
+                        name="class-code"
                         className={inputCls}
                         value={cls}
                         onChange={(e) => setCls(e.target.value)}
