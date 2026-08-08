@@ -42,9 +42,11 @@ function EntryForm({ isKR }: { isKR: boolean }) {
     const [confirming, setConfirming] = useState(false);
     const [sid, setSid] = useState("");
     const [pw, setPw] = useState("");
+    const [cls, setCls] = useState("");           // P3-2: 최초 등록 반코드 (선점 차단 + 등록=수강 1단계)
     const [err, setErr] = useState("");
     const [busy, setBusy] = useState(false);
     const [forgot, setForgot] = useState(false);
+    const [resetSent, setResetSent] = useState(false); // P3-1: 초기화 요청 접수
 
     // never-throw: 네트워크 단절도 {ok:false} 로 수렴 — submit 의 setBusy(false) 경로가 항상 실행된다.
     async function post(action: string, extra: Record<string, unknown> = {}) {
@@ -86,13 +88,27 @@ function EntryForm({ isKR }: { isKR: boolean }) {
             return;
         }
         if (pw.length < 8) { setErr(isKR ? "비밀번호는 8자 이상." : "Password must be 8+ characters."); return; }
+        if (!cls.trim()) { setErr(isKR ? "반 코드를 입력하세요 (교수님 공지)." : "Enter the class code (from your instructor)."); return; }
         setBusy(true);
-        const j = await post("register", { password: pw });
+        const j = await post("register", { password: pw, classCode: cls.trim() });
         setBusy(false);
         if (j.ok) location.href = HOME_URL;
         else setErr(j.error === "already"
             ? (isKR ? "이미 등록된 학번입니다. 다시 로그인해 주세요." : "Already registered — please sign in.")
-            : authErr(j.error, isKR ? "등록 실패." : "Registration failed."));
+            : j.error === "bad_class"
+                ? (isKR ? "반 코드가 올바르지 않습니다." : "Incorrect class code.")
+                : authErr(j.error, isKR ? "등록 실패." : "Registration failed."));
+    }
+
+    // P3-1: 비밀번호 초기화 요청 — 앱 안 큐 적재 (교수 콘솔 홈 배지). 존재 비노출 — 항상 접수 표시.
+    async function requestReset() {
+        if (busy || resetSent) return;
+        if (!SID_RE.test(sid)) { setErr(isKR ? "학번을 먼저 입력하세요." : "Enter your student ID first."); return; }
+        setBusy(true);
+        await post("reset_request");
+        setBusy(false);
+        setErr("");
+        setResetSent(true);
     }
 
     // DELETE clears both platform cookies; re-render re-reads the cookie store → guest form returns.
@@ -161,6 +177,19 @@ function EntryForm({ isKR }: { isKR: boolean }) {
                     autoComplete={confirming ? "new-password" : "current-password"}
                 />
             </div>
+            {confirming && (
+                <div className="mt-4">
+                    <label className={labelCls} htmlFor="mf-entry-cls">{isKR ? "반 코드 (교수님 공지)" : "Class code (from your instructor)"}</label>
+                    <input
+                        id="mf-entry-cls"
+                        className={inputCls}
+                        value={cls}
+                        onChange={(e) => setCls(e.target.value)}
+                        placeholder={isKR ? "예: HT26-2" : "e.g. HT26-2"}
+                        autoComplete="off"
+                    />
+                </div>
+            )}
 
             {err && (
                 <p role="alert" className="mt-3 break-keep text-[13px] leading-[1.6] text-danger">{err}</p>
@@ -178,13 +207,23 @@ function EntryForm({ isKR }: { isKR: boolean }) {
                 <button type="button" onClick={() => setForgot((f) => !f)} className={linkCls}>
                     {isKR ? "비밀번호를 잊었나요?" : "Forgot your password?"}
                 </button>
-                {forgot && (
-                    <p className="mt-1.5 break-keep text-xs leading-[1.75] text-ink-3">
+                {forgot && (resetSent ? (
+                    <p className="mt-1.5 break-keep text-xs leading-[1.75] text-ink-2">
                         {isKR
-                            ? "담당 교수에게 초기화를 요청하세요 — 학습 기록은 유지된 채 비밀번호만 다시 설정됩니다."
-                            : "Ask your instructor for a reset — your records are kept and only the password is set again."}
+                            ? "초기화 요청이 접수되었습니다 — 교수님 확인 후 재등록하면 됩니다 (학습 기록 유지)."
+                            : "Reset request received — after your instructor confirms, register again (records are kept)."}
                     </p>
-                )}
+                ) : (
+                    <p className="mt-1.5 break-keep text-xs leading-[1.75] text-ink-3">
+                        {isKR ? "학번을 입력하고 " : "Enter your ID and "}
+                        <button type="button" onClick={requestReset} disabled={busy} className="font-semibold text-ink-2 underline underline-offset-[3px] transition-colors duration-150 hover:text-ink">
+                            {isKR ? "초기화 요청" : "request a reset"}
+                        </button>
+                        {isKR
+                            ? " — 학습 기록은 유지된 채 비밀번호만 다시 설정됩니다."
+                            : " — your records are kept and only the password is set again."}
+                    </p>
+                ))}
             </div>
 
             <p className="mt-6 break-keep text-[11px] leading-[1.75] text-ink-4">
