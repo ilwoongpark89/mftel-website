@@ -10,7 +10,7 @@ import { SectionHeader, Meta, FigCaption } from "@/components/ui/typo";
 
 /**
  * CALORIMETER §05 TEAM — PI profile header + static student photo grid +
- * single alumni hairline row. Frame-0: all 13 photos are in the server HTML
+ * single alumni hairline row. Frame-0: all member photos are in the server HTML
  * (flip cards / checker backs / easter egg / mobile photo-less accordion
  * deleted). The only entrance motion is the SectionHeader reveal. The pillar
  * taxonomy is surfaced as a mono legend instead of hidden card-back colors.
@@ -42,7 +42,6 @@ const memberPillar: Record<string, PillarKey> = {
     "Chaeyeon Kim": "immersion",
     "Eunbin Park": "smr",
     "Manho Kim": "smr",
-    "Joonhwan Hyun": "tes",
     "Yeongjun Jung": "immersion",
 };
 

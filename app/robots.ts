@@ -7,6 +7,11 @@ import type { MetadataRoute } from "next";
 //   bare /lecture 는 허용(2026-08-08): 사이트 자신의 강의 페이지(소개+로그인) — 마케팅 표면이라 인덱싱 대상.
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: { userAgent: "*", allow: "/", disallow: "/lecture/" },
+    rules: {
+      userAgent: "*",
+      allow: "/",
+      // /admin(접속 통계 콘솔)·/team-dashboard(구 대시보드, 외부 이전) — 공개 UI 미링크 콘솔은 인덱싱 차단
+      disallow: ["/lecture/", "/admin", "/en/admin", "/team-dashboard", "/en/team-dashboard"],
+    },
   };
 }

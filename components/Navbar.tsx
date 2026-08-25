@@ -22,7 +22,6 @@ export default function Navbar() {
     const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
     const { language, setLanguage, t, lp } = useLanguage();
     const pathname = usePathname();
-    const onHome = pathname === "/";
 
     useEffect(() => {
         setPortalTarget(document.body);
