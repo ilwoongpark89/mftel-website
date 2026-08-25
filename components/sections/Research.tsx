@@ -75,7 +75,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
     EN: {
         paradox: {
             title: "The AI Energy Paradox",
-            body: "AI was built to optimize efficiency—yet it is paradoxically becoming one of the largest energy consumers on earth. Training a single LLM costs tens of GWh; each inference draws 10× the power of a conventional search. By 2030, data centers could consume close to 9% of U.S. electricity—roughly 3% of global supply. The root of this challenge is thermal—multi-phase flow heat transfer is the bottleneck at every stage of power generation, storage, and consumption. MFTEL tackles this barrier on three fronts.",
+            body: "AI now drives some of the fastest-growing electricity demand on earth. Training a single LLM costs tens of GWh, and each inference draws roughly 10× the power of a conventional search. By 2030, data centers could consume close to 9% of U.S. electricity, about 3% of global supply. The bottleneck behind this demand is heat: multiphase heat transfer limits every stage of power generation, storage, and consumption. MFTEL works on this problem in three research fields.",
         },
         activitiesLabel: "MFTEL Research Activities",
         metricSr: "Metric",
@@ -100,7 +100,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
                 { value: "30+yr", label: "Plant lifetime" },
                 { value: "↓$/kWh", label: "Cost reduction" },
             ],
-            why: "Intermittency of renewables is the greatest challenge for data center operations. Carnot batteries enable large-scale, long-duration storage compared to Li-ion, and can repurpose existing power plant infrastructure—achieving both economic viability and scalability.",
+            why: "Intermittency of renewables is the greatest challenge for data center operations. Carnot batteries enable large-scale, long-duration storage compared to Li-ion, and can repurpose existing power plant infrastructure, achieving both economic viability and scalability.",
             activities: [
                 {
                     title: "Direct-Contact Latent Heat Storage System",
@@ -158,12 +158,12 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
                 {
                     title: "Metal Foam-Enhanced Boiling Heat Transfer",
                     desc: "Systematically characterizing the effects of sub-millimeter copper foam pore size, thickness, and orientation on boiling heat transfer. Experimentally demonstrated that metal foam application increases critical heat flux (CHF) by up to 3×.",
-                    tag: "PUB. #1–#4",
+                    tag: "PUB. #20, #21, #23",
                 },
                 {
                     title: "CHF Dependence on Surface Orientation",
                     desc: "Analyzing the influence of surface orientation and bubble dynamics on critical heat flux over silicon and SiO₂ surfaces. Building predictive CHF modeling foundations essential for immersion cooling system design.",
-                    tag: "PUB. #2",
+                    tag: "PUB. #22",
                 },
                 {
                     title: "Gas-Liquid Flow Path Separation Patent",
@@ -179,7 +179,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
             title: "Small Modular Reactors",
             subtitle: "Sustainable Power Generation",
             description:
-                "SMRs offer compact, reliable baseload power for hyperscale data centers. Microsoft (835 MW), Google (500 MW), and Meta (1 GW) demand concentrated power that renewables alone cannot supply—three compact SMRs vs. 4,175 hectares of solar panels.",
+                "SMRs offer compact, reliable baseload power for hyperscale data centers. Microsoft (835 MW), Google (500 MW), and Meta (1 GW) demand concentrated power that renewables alone cannot supply: three compact SMRs vs. 4,175 hectares of solar panels.",
             stat: { value: "500 MW+", label: "per campus" },
             sourcesLabel: "Complementary Energy Sources",
             sources: [
@@ -195,7 +195,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
                 { title: "Cogeneration", desc: "Simultaneous electricity and direct heat utilization" },
             ],
             demandLabel: "Big Tech Data Center Power Demand",
-            why: "Multi-phase flow physics is at the heart of SMR design. Two-phase flow in helical coil steam generators, natural circulation stability, and condensation heat transfer in containment during accidents—all are core competencies of MFTEL.",
+            why: "Multiphase flow physics is at the heart of SMR design. Two-phase flow in helical coil steam generators, natural circulation stability, and condensation heat transfer in containment during accidents are all core competencies of MFTEL.",
             activities: [
                 {
                     title: "Core Safety Validation for Multiple-Failure Accidents",
@@ -204,18 +204,18 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
                 },
                 {
                     title: "Next-Gen SMR Safety Enhancement Design",
-                    desc: "Global human resources training project for securing key design technologies for next-generation SMR safety. Training specialists in passive safety systems, helical steam generator thermal-hydraulics, and containment cooling—all SMR-specific multi-phase flow phenomena.",
+                    desc: "Global human resources training project for securing key design technologies for next-generation SMR safety. Training specialists in passive safety systems, helical steam generator thermal-hydraulics, and containment cooling, all SMR-specific multiphase flow phenomena.",
                     tag: "KETEP, 2024–2025",
                 },
                 {
                     title: "Containment Condensation Heat Transfer",
                     desc: "Characterizing the effect of noncondensable gases on condensation heat transfer in steam-air mixtures. Experimentally analyzed heat transfer degradation mechanisms by light noncondensable gas (hydrogen) and gas stratification phenomena.",
-                    tag: "PUB. #5, #8, #12",
+                    tag: "PUB. #12, #16, #19",
                 },
                 {
                     title: "External Reactor Vessel Cooling (ERVC)",
                     desc: "Numerically evaluating thermal-hydraulic characteristics of ERVC in high-power reactors. Developed CFD-aided natural circulation flow rate estimation to quantitatively assess ERVC coolability limits.",
-                    tag: "PUB. #7, #9",
+                    tag: "PUB. #15, #17",
                 },
             ],
             fig: "FIG. 2.3 — SMR & FLOW STABILITY RESEARCH",
@@ -251,7 +251,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
     KR: {
         paradox: {
             title: "AI 에너지 패러독스",
-            body: "AI는 효율을 위해 탄생했지만, 역설적이게도 지구상 최대 에너지 소비원 중 하나가 되어가고 있습니다. LLM 하나를 학습시키는 데만 수십 GWh가 들고, 추론 한 건은 기존 검색의 10배에 달하는 전력을 소비합니다. 2030년까지 데이터센터는 미국 전력의 9% 가까이, 전 세계 전력의 약 3%를 소비할 전망입니다. 이 문제의 본질은 열(熱)입니다. 전력의 생산·저장·소비 전 단계에서 다상유동 열전달이 핵심 병목이며, MFTEL은 세 연구 분야로 이 장벽에 도전합니다.",
+            body: "AI 데이터센터의 전력 수요가 빠르게 늘고 있습니다. LLM 하나를 학습시키는 데만 수십 GWh가 들고, 추론 한 건은 기존 검색의 약 10배에 달하는 전력을 소비합니다. 2030년까지 데이터센터는 미국 전력의 9% 가까이, 전 세계 전력의 약 3%를 소비할 전망입니다. 이 수요의 병목이 열입니다. 전력의 생산·저장·소비 전 단계에서 다상유동 열전달이 성능을 제한하며, MFTEL은 세 연구 분야에서 이 문제를 연구합니다.",
         },
         activitiesLabel: "MFTEL 연구 활동",
         metricSr: "지표",
@@ -280,7 +280,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
             activities: [
                 {
                     title: "직접접촉 잠열 축열 시스템 개발",
-                    desc: "상변화물질(PCM)과 열매체의 직접접촉을 통해 기존 간접 방식 대비 열전달 효율을 크게 높입니다. 충전/방전 시 PCM의 용융·응고 과정에서의 다상유동 현상을 실험적으로 규명합니다.",
+                    desc: "상변화물질(PCM)과 열매체의 직접접촉으로 기존 간접 방식 대비 열전달 효율을 크게 높입니다. 충전/방전 시 PCM이 녹고 굳는 과정의 다상유동 현상을 실험적으로 규명합니다.",
                     tag: "NRF, 2023–2025",
                 },
                 {
@@ -290,7 +290,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
                 },
                 {
                     title: "지속가능 에너지 프로세스 혁신",
-                    desc: "열에너지 저장을 포함한 디지털 기반 에너지 프로세스 혁신 융합 대학원 프로그램을 통해 차세대 열저장 기술 인력을 양성합니다.",
+                    desc: "열에너지 저장을 포함한 디지털 기반 에너지 프로세스 혁신 융합 대학원 프로그램에서 차세대 열저장 기술 인력을 양성합니다.",
                     tag: "KETEP, 2023–2027",
                 },
                 {
@@ -307,7 +307,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
             title: "AI 반도체 냉각",
             subtitle: "냉각 에너지 소비 절감",
             description:
-                "이상(二相) 이머전 쿨링은 기존 공냉 인프라를 대체하여 냉각 에너지를 최대 90% 절감합니다. 절연 유체와의 직접 접촉으로 칩 밀도를 높이고, 프로세서 단에서의 열적 병목을 제거합니다.",
+                "이상 이머전 쿨링은 기존 공냉 인프라를 대체하여 냉각 에너지를 최대 90% 절감합니다. 절연 유체와의 직접 접촉으로 칩 밀도를 높이고, 프로세서 단의 열 병목을 제거합니다.",
             stat: { value: "~90%", label: "냉각 에너지 절감" },
             processLabel: "작동 원리",
             steps: [
@@ -324,11 +324,11 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
                 { label: "칩 열유속 한계", air: "~10 W/cm²", immersion: "~200 W/cm²" },
                 { label: "서버 밀도", air: "6–8 kW/rack", immersion: "50–100 kW/rack" },
             ],
-            why: "AI 가속기(GPU, TPU)의 열설계전력(TDP)이 700W를 넘어서면서 공냉만으로는 냉각이 불가능합니다. 이상(二相) 비등 열전달은 같은 면적에서 공냉 대비 20배 이상의 열을 처리하며, 데이터센터의 전력 효율(PUE)을 1.0에 근접시킵니다.",
+            why: "AI 가속기(GPU, TPU)의 열설계전력(TDP)이 700W를 넘어서면서 공냉만으로는 냉각이 불가능합니다. 이상 비등 열전달은 같은 면적에서 공냉 대비 20배 이상의 열을 처리하며, 데이터센터의 전력 효율(PUE)을 1.0에 근접시킵니다.",
             activities: [
                 {
                     title: "전기차 배터리 절연유체 비등 냉각",
-                    desc: "절연 유체의 비등 열전달을 이용한 전기차 배터리 냉각 기초 연구. 기존 수냉 방식 대비 냉각 성능을 크게 개선하고, 배터리 팩 레벨에서의 온도 균일성을 확보합니다.",
+                    desc: "절연 유체의 비등 열전달을 이용한 전기차 배터리 냉각 기초 연구. 기존 수냉 방식 대비 냉각 성능을 크게 개선하고, 배터리 팩 수준의 온도 균일성을 확보합니다.",
                     tag: "인하대, 2025",
                 },
                 {
@@ -371,7 +371,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
                 { title: "열병합 가능", desc: "전기 생산과 동시에 열에너지를 직접 활용" },
             ],
             demandLabel: "빅테크 데이터센터 전력 수요",
-            why: "SMR은 다상유동 물리학이 핵심입니다. 헬리컬 코일 증기발생기 내부의 이상(二相) 유동, 자연순환 냉각계통의 단상/이상 유동 안정성, 사고 시 격납용기 내 응축 열전달 등이 MFTEL의 핵심 연구역량과 직결됩니다.",
+            why: "SMR은 다상유동 물리학이 핵심입니다. 헬리컬 코일 증기발생기 내부의 이상 유동, 자연순환 냉각계통의 단상/이상 유동 안정성, 사고 시 격납용기 내 응축 열전달 등이 MFTEL의 핵심 연구역량과 직결됩니다.",
             activities: [
                 {
                     title: "노심 안전성 검증 및 다중고장 사고 대응",

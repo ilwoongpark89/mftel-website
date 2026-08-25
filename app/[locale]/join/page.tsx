@@ -6,7 +6,7 @@ import Footer from "@/components/sections/Footer";
 export const metadata: Metadata = {
     title: "Join Us | MFTEL",
     description:
-        "MFTEL looks for people who know immersion and failure. MS/PhD, undergraduate researchers, postdocs — it starts with one email.",
+        "MFTEL looks for people who know immersion and failure. MS/PhD, undergraduate researchers, postdocs: it starts with one email.",
 };
 
 export default function JoinPage() {

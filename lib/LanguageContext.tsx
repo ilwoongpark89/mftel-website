@@ -20,7 +20,6 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 const translations: Record<Language, Record<string, string>> = {
     EN: {
         // Navbar
-        "nav.about": "About",
         "nav.news": "News",
         "nav.team": "Team",
         "nav.joinUs": "Join Us",
@@ -29,14 +28,13 @@ const translations: Record<Language, Record<string, string>> = {
         "nav.projects": "Projects",
         "nav.gallery": "Gallery",
         "nav.lecture": "Lecture",
-        "nav.contact": "Contact",
 
         // Hero
         "hero.line1": "Engineering a",
         "hero.line2a": "Sustainable",
         "hero.line2b": "Energy",
         "hero.line3": "Future",
-        "hero.description": "Multiphase Flow and Thermal Engineering Laboratory (MFTEL) at Inha University advances thermal science through thermal energy storage, AI semiconductor cooling, and reactor safety research.",
+        "hero.description": "Multiphase Flow and Thermal Engineering Laboratory (MFTEL) at Inha University works on thermal energy storage, AI semiconductor cooling, and small modular reactor safety.",
         "hero.kicker": "Inha University · Multiphase Flow & Thermal Engineering Lab",
         "hero.join": "Join Our Lab",
         "hero.research": "Explore Research",
@@ -44,32 +42,27 @@ const translations: Record<Language, Record<string, string>> = {
         "hero.stat.projects": "Funded Projects",
         "hero.stat.patents": "Patents · Granted + Filed",
         "hero.stat.partners": "Collaborators",
-        "hero.fig": "FIG. 1 — Temperature field · Pool boiling, two heat sources",
 
         // Home story (v3)
         "home.numbers.label": "Our Record",
-        "home.numbers.title": "A record we are building — together",
+        "home.numbers.title": "A record we build together",
         "home.numbers.sub": "Every paper, project, and patent here was written with our students. The next line is yours.",
         "home.research.label": "Research",
-        "home.research.title": "Three fronts against the thermal bottleneck",
+        "home.research.title": "Three research fields, one thermal bottleneck",
         "home.pubs.label": "Publications",
         "home.pubs.title": "Published where it matters",
         "home.pubs.cta": "All publications",
         "home.people.label": "People",
         "home.people.cta": "Meet the team",
         "home.partners.label": "Global Network",
-        "home.scroll": "Scroll",
 
         // About
-        "about.label": "About Us",
-        "about.title": "Pioneering Thermal Engineering",
-        "about.description": "MFTEL focuses on solving critical energy challenges through advanced research in multiphase flow and heat transfer.",
         "about.tes.title": "TES and Carnot Battery",
         "about.tes.description": "Developing high-efficiency thermal energy storage systems and Carnot batteries for sustainable grid stability.",
         "about.thermal.title": "AI Semiconductor Cooling",
         "about.thermal.description": "Two-phase immersion cooling technology that reduces cooling energy by up to 90% for data centers and high-performance computing systems.",
         "about.smr.title": "Small Modular Reactor",
-        "about.smr.description": "Enhancing the safety and efficiency of Small Modular Reactors through advanced thermal-hydraulic analysis.",
+        "about.smr.description": "Enhancing the safety and efficiency of small modular reactors with thermal-hydraulic analysis.",
 
         // News
         "news.label": "News",
@@ -110,28 +103,15 @@ const translations: Record<Language, Record<string, string>> = {
         "contact.label": "Join Us",
         "contact.title1": "Shape the Future of",
         "contact.title2": "Thermal Engineering",
-        "contact.description": "We are actively recruiting passionate M.S./Ph.D. students, postdocs, and researchers who want to push the boundaries of multiphase flow and heat transfer research.",
-        "contact.benefit1.title": "World-Class Research",
-        "contact.benefit1.description": "Publish in top-tier journals and present at international conferences",
-        "contact.benefit2.title": "Global Network",
-        "contact.benefit2.description": "Collaborate with NTNU (Norway), HZDR (Germany), UPC (Spain), and more",
-        "contact.benefit3.title": "Promising Career",
-        "contact.benefit3.description": "Our alumni are building careers at leading institutions like KHNP and beyond",
-        "contact.benefit4.title": "Grow Your Way",
-        "contact.benefit4.description": "We trust you to lead your research and planning",
-        "contact.cta": "Ready to start your research journey?",
+        "contact.description": "We are recruiting M.S./Ph.D. students, postdocs, and researchers in multiphase flow and heat transfer.",
         "contact.apply": "Apply Now",
         "contact.emailCopied": "Email copied to clipboard!",
 
         // Footer
-        "footer.label": "Contact",
-        "footer.title": "Let's Collaborate",
-        "footer.description": "We are always open to new research opportunities, collaborations, and talented students.",
         "footer.copyright": "© {year} MFTEL, Inha University. All rights reserved.",
     },
     KR: {
         // Navbar
-        "nav.about": "소개",
         "nav.news": "소식",
         "nav.team": "구성원",
         "nav.joinUs": "연구실 모집",
@@ -140,14 +120,13 @@ const translations: Record<Language, Record<string, string>> = {
         "nav.projects": "과제",
         "nav.gallery": "갤러리",
         "nav.lecture": "강의",
-        "nav.contact": "오시는 길",
 
         // Hero
         "hero.line1": "지속가능한",
         "hero.line2a": "에너지",
         "hero.line2b": "미래를",
         "hero.line3": "설계하다",
-        "hero.description": "인하대학교 다상유동열공학연구실(MFTEL)은 열에너지 저장, AI 반도체 냉각, 소형모듈원자로 안전 연구를 통해 열공학의 미래를 만들어갑니다.",
+        "hero.description": "인하대학교 다상유동열공학연구실(MFTEL)은 열에너지 저장, AI 반도체 냉각, 소형모듈원자로 안전을 연구합니다.",
         "hero.kicker": "인하대학교 다상유동열공학연구실 · MFTEL",
         "hero.join": "연구실 지원",
         "hero.research": "연구 분야 보기",
@@ -155,32 +134,27 @@ const translations: Record<Language, Record<string, string>> = {
         "hero.stat.projects": "연구 과제",
         "hero.stat.patents": "특허 등록·출원",
         "hero.stat.partners": "협력 기관",
-        "hero.fig": "FIG. 1 — 온도장 · 풀비등, 두 열원",
 
         // Home story (v3)
         "home.numbers.label": "쌓아온 기록",
         "home.numbers.title": "함께 쌓아가는 기록",
         "home.numbers.sub": "이 숫자들은 전부 학생들과 함께 쓴 기록입니다. 다음 줄은 여러분의 몫입니다.",
         "home.research.label": "연구 분야",
-        "home.research.title": "열의 한계를 넘는 세 가지 연구",
+        "home.research.title": "열 병목을 푸는 세 가지 연구",
         "home.pubs.label": "논문",
-        "home.pubs.title": "최고 학술지에 기록을 남깁니다",
+        "home.pubs.title": "주요 국제 학술지에 게재합니다",
         "home.pubs.cta": "논문 전체 보기",
         "home.people.label": "구성원",
         "home.people.cta": "팀 전체 보기",
         "home.partners.label": "협력 네트워크",
-        "home.scroll": "스크롤",
 
         // About
-        "about.label": "연구실 소개",
-        "about.title": "열공학, 그 다음을 연구합니다",
-        "about.description": "MFTEL은 다상유동과 열전달 연구를 통해 에너지 분야의 핵심 문제를 해결합니다.",
         "about.tes.title": "열에너지 저장",
         "about.tes.description": "고효율 열에너지 저장 시스템과 카르노 배터리로 안정적인 전력망 구축에 기여합니다.",
         "about.thermal.title": "AI 반도체 냉각",
-        "about.thermal.description": "이상(二相) 이머전 쿨링 기술로 데이터센터 및 고성능 컴퓨팅 시스템의 냉각 에너지를 최대 90% 절감합니다.",
+        "about.thermal.description": "이상 이머전 쿨링 기술로 데이터센터 및 고성능 컴퓨팅 시스템의 냉각 에너지를 최대 90% 절감합니다.",
         "about.smr.title": "소형모듈원자로",
-        "about.smr.description": "열수력 해석을 통해 소형모듈원자로(SMR)의 안전성과 효율을 높입니다.",
+        "about.smr.description": "열수력 해석으로 소형모듈원자로(SMR)의 안전성과 효율을 높입니다.",
 
         // News
         "news.label": "소식",
@@ -222,22 +196,10 @@ const translations: Record<Language, Record<string, string>> = {
         "contact.title1": "MFTEL과",
         "contact.title2": "함께 성장하세요",
         "contact.description": "몰입을 아는 석·박사 과정생, 박사후연구원, 연구원을 모집합니다. 다상유동과 열전달 연구에 관심 있는 분들의 지원을 기다립니다.",
-        "contact.benefit1.title": "최고 수준의 연구",
-        "contact.benefit1.description": "SCI급 학술지 게재, 국제학회 발표 기회",
-        "contact.benefit2.title": "해외 연구 네트워크",
-        "contact.benefit2.description": "NTNU, HZDR, UPC 등 해외 유수 기관과 협력",
-        "contact.benefit3.title": "탄탄한 커리어",
-        "contact.benefit3.description": "한수원 등 주요 기관에서 활약하는 졸업생 배출",
-        "contact.benefit4.title": "자율적인 연구 환경",
-        "contact.benefit4.description": "본인의 연구를 주도적으로 이끌어갈 수 있는 환경",
-        "contact.cta": "MFTEL에서 연구를 시작하세요",
         "contact.apply": "지원 문의",
         "contact.emailCopied": "이메일 주소가 복사되었습니다!",
 
         // Footer
-        "footer.label": "오시는 길",
-        "footer.title": "연락처",
-        "footer.description": "연구 협력, 대학원 진학 등 문의사항이 있으시면 연락 주세요.",
         "footer.copyright": "© {year} MFTEL, 인하대학교. All rights reserved.",
     },
 };

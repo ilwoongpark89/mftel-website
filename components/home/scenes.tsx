@@ -391,8 +391,8 @@ function SceneJoin() {
                     )}
                 >
                     {isKR
-                        ? "정답을 빨리 맞히는 사람보다, 물어야 할 것을 새로 찾아내는 사람을 찾습니다."
-                        : "We look for those who find what to ask — not those who answer fastest."}
+                        ? "물어야 할 것을 새로 찾아내는 사람을 찾습니다."
+                        : "We look for people who find what to ask."}
                 </p>
                 <div className="mt-10 flex flex-col items-center gap-4">
                     {/* 클릭 = 메일앱 실행 ❌ — 주소 표시 + 클립보드 복사 */}

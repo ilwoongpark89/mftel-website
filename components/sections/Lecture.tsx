@@ -63,9 +63,9 @@ function EntryForm({ isKR }: { isKR: boolean }) {
         }
     }
     function authErr(e: string | undefined, fallback: string): string {
-        if (e === "rate_limited") return isKR ? "요청이 많습니다. 잠시 후 다시." : "Too many requests — try again shortly.";
+        if (e === "rate_limited") return isKR ? "요청이 많습니다. 잠시 후 다시 시도하세요." : "Too many requests. Try again shortly.";
         if (e === "server" || e === "server_unconfigured")
-            return isKR ? "일시적 오류입니다. 잠시 후 다시." : "Temporary error — try again shortly.";
+            return isKR ? "일시적 오류입니다. 잠시 후 다시 시도하세요." : "Temporary error. Try again shortly.";
         return fallback;
     }
 
@@ -113,7 +113,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
         setBusy(false);
         if (j.ok) location.href = HOME_URL;
         else setErr(j.error === "already"
-            ? (isKR ? "이미 등록된 학번입니다. 다시 로그인해 주세요." : "Already registered — please sign in.")
+            ? (isKR ? "이미 등록된 학번입니다. 다시 로그인해 주세요." : "Already registered. Please sign in.")
             : j.error === "bad_class"
                 ? (isKR ? "반 코드가 올바르지 않습니다." : "Incorrect class code.")
                 : authErr(j.error, isKR ? "등록 실패." : "Registration failed."));
@@ -127,7 +127,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
         const j = await post("reset_request");
         setBusy(false);
         if (j && j.ok) { setErr(""); setResetSent(true); }
-        else setErr(authErr(j && j.error, isKR ? "요청 전송 실패 — 잠시 후 다시." : "Request failed — try again shortly."));
+        else setErr(authErr(j && j.error, isKR ? "요청을 보내지 못했습니다. 잠시 후 다시 시도하세요." : "Request failed. Try again shortly."));
     }
 
     // DELETE clears both platform cookies; re-render re-reads the cookie store → guest form returns.
@@ -226,7 +226,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
             <div className="mt-3">
                 {resetSent ? (
                     <p className="break-keep text-xs leading-[1.7] text-ink-2">
-                        {isKR ? "초기화 요청 접수 — 교수님 확인 후 재등록하면 됩니다." : "Reset requested — register again after your instructor confirms."}
+                        {isKR ? "초기화 요청이 접수되었습니다. 교수님 확인 후 다시 등록하면 됩니다." : "Reset requested. Register again after your instructor confirms."}
                     </p>
                 ) : forgot ? (
                     <p className="break-keep text-xs leading-[1.7] text-ink-3">
@@ -234,7 +234,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
                         <button type="button" onClick={requestReset} disabled={busy} className="font-semibold text-ink-2 underline underline-offset-[3px] transition-colors duration-150 hover:text-ink">
                             {isKR ? "초기화 요청" : "request a reset"}
                         </button>
-                        {isKR ? " — 기록은 유지됩니다." : " — your records are kept."}
+                        {isKR ? "을 누르세요. 기록은 유지됩니다." : ". Your records are kept."}
                     </p>
                 ) : (
                     <button type="button" onClick={() => setForgot(true)} className={linkCls}>
@@ -267,8 +267,8 @@ export default function Lecture() {
                     sub={
                         <span className="break-keep [overflow-wrap:break-word] [text-wrap:pretty]">
                             {isKR
-                                ? "학번 하나로 수강 중인 수업이 모두 열립니다. 처음이면 그 자리에서 비밀번호를 만듭니다."
-                                : "One student ID opens all of your courses. First time? Set a password on the spot."}
+                                ? "학번 하나로 수강 중인 수업이 모두 열립니다."
+                                : "One student ID opens all of your courses."}
                         </span>
                     }
                     isKorean={isKR}

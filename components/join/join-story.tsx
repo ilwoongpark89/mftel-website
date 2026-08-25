@@ -62,7 +62,7 @@ function EmailCopy({ labelIdle }: { labelIdle: string }) {
 }
 
 export default function JoinStory() {
-    const { language, lp } = useLanguage();
+    const { language } = useLanguage();
     const isKR = language === "KR";
 
     const SEEK = isKR
@@ -70,34 +70,34 @@ export default function JoinStory() {
               {
                   index: "01",
                   title: "질문을 새로 만드는 사람",
-                  desc: "주어진 문제를 한 번 더 의심하고, 당연해 보이는 물음을 다시 정의하는 사람. 답을 빨리 맞히는 것보다 물어야 할 것을 찾아내는 쪽이, 우리에게는 훨씬 중요합니다.",
+                  desc: "주어진 문제를 한 번 더 의심하고, 당연해 보이는 물음을 다시 세워 보는 사람. 우리는 그 힘을 가장 높이 삽니다.",
               },
               {
                   index: "02",
                   title: "깨지고도 다시 돌아오는 사람",
-                  desc: "실패를 당연한 과정으로 받아들이고, 수없이 깨지고도 같은 문제 앞에 다시 서는 사람. 새로운 것은 늘 그 반복의 끝에서 나왔습니다.",
+                  desc: "실패를 당연한 과정으로 받아들이고, 수없이 깨지고도 같은 문제 앞에 다시 서는 사람. 이 연구실의 새로운 결과는 대부분 그 반복 끝에 나왔습니다.",
               },
               {
                   index: "03",
                   title: "몰입을 아는 사람",
-                  desc: "시간 가는 줄 모르고 무언가에 빠져 본 사람. 연구가 아니어도 좋습니다. 팀으로 승부를 겨뤄 본 사람이라면, 우리와 더 빨리 통할 겁니다.",
+                  desc: "시간 가는 줄 모르고 무언가에 빠져 본 사람. 연구가 아니어도 좋습니다. 팀으로 승부를 겨뤄 본 사람이라면 우리와 더 빨리 통할 겁니다.",
               },
           ]
         : [
               {
                   index: "01",
                   title: "People who invent questions",
-                  desc: "Those who doubt the given problem once more and redefine what everyone takes for granted. Finding what to ask matters far more to us than answering fast.",
+                  desc: "Those who doubt the given problem once more and redefine what everyone takes for granted. That is the ability we value most.",
               },
               {
                   index: "02",
                   title: "People who come back after being broken",
-                  desc: "Those who treat failure as the natural path and return to the same problem after being broken by it — that is where the new comes from.",
+                  desc: "Those who treat failure as part of the process and come back to the same problem. Most new results in this lab arrived at the end of that repetition.",
               },
               {
                   index: "03",
                   title: "People who know immersion",
-                  desc: "Those who have lost track of time inside something. It does not have to be research — those who have competed as a team tend to click with us faster.",
+                  desc: "Those who have lost track of time inside something. It does not have to be research. If you have competed as part of a team, you will click with us faster.",
               },
           ];
 
@@ -105,29 +105,29 @@ export default function JoinStory() {
         ? [
               {
                   title: "시간을 세지 않습니다",
-                  desc: "몇 시에 왔는지보다, 무엇이 쌓였는지를 봅니다. 우리는 결과와 기록으로 말합니다.",
+                  desc: "출근 시각 대신 쌓인 결과와 기록을 봅니다.",
               },
               {
-                  title: "몰입은 자리에서 나오지 않습니다",
-                  desc: "깊이 빠져들 수만 있다면, 그곳이 어디든 연구실입니다.",
+                  title: "어디서든 몰입하면 됩니다",
+                  desc: "깊이 빠져들 수 있는 곳이면 어디든 연구실로 칩니다.",
               },
               {
                   title: "약속은 하나입니다",
-                  desc: "연구의 모든 과정을 우리가 직접 만든 AI 연구 기록 시스템에 남깁니다. 그 기록이 곧 연구실의 역사가 됩니다.",
+                  desc: "연구의 모든 과정을 우리가 직접 만든 AI 연구 기록 시스템에 남깁니다.",
               },
           ]
         : [
               {
                   title: "We don't count hours",
-                  desc: "What accumulates matters more than when you arrived. We speak in results and records.",
+                  desc: "We look at what has accumulated: results and records.",
               },
               {
-                  title: "Immersion doesn't come from a desk",
-                  desc: "If you can go deep, wherever you are is the lab.",
+                  title: "Go deep, wherever you are",
+                  desc: "Any place you can go deep counts as the lab.",
               },
               {
                   title: "One promise",
-                  desc: "Every step of research accumulates in the AI research-record system we built ourselves. The record becomes the lab's history.",
+                  desc: "Every step of research goes into the AI research-record system we built ourselves.",
               },
           ];
 
@@ -135,12 +135,12 @@ export default function JoinStory() {
         ? [
               {
                   title: "석사 · 박사 · 석박사통합",
-                  desc: "연구실의 중심입니다. 세 연구 분야 — 열에너지 저장, AI 반도체 냉각, SMR 안전 — 안에서 자신만의 질문을 찾아갑니다. 입학 전형은 인하대학교 일반대학원 일정을 따르며, 마감 두세 달 전에는 미리 연락해 주시길 권합니다.",
+                  desc: "연구실의 중심입니다. 세 연구 분야(열에너지 저장, AI 반도체 냉각, SMR 안전) 안에서 자신만의 질문을 찾아갑니다. 입학 전형은 인하대학교 일반대학원 일정을 따르며, 마감 두세 달 전에는 미리 연락해 주시길 권합니다.",
                   meta: { label: "모집요강 ↗", href: GRAD_URL },
               },
               {
-                  title: "학부연구생 — 상시 모집",
-                  desc: "3~4학년이라면 방학 때 집중해도, 학기 중에 병행해도 좋습니다. 잡무가 아니라 실험 데이터 처리, 적외선 이미지 분석 같은 실제 연구를 맡습니다. 대학원 진학의 가장 자연스러운 출발점입니다.",
+                  title: "학부연구생 · 상시 모집",
+                  desc: "3~4학년이라면 방학 때 집중해도, 학기 중에 병행해도 좋습니다. 잡무는 맡기지 않습니다. 실험 데이터 처리, 적외선 이미지 분석 같은 실제 연구를 맡습니다. 대학원 진학의 가장 자연스러운 출발점입니다.",
               },
               {
                   title: "박사후연구원",
@@ -148,18 +148,18 @@ export default function JoinStory() {
               },
               {
                   title: "International Students",
-                  desc: "국적은 상관없습니다. 영어로 연락 주셔도 좋습니다 — we welcome international applicants.",
+                  desc: "국적은 상관없습니다. 영어로 연락 주셔도 좋습니다.",
               },
           ]
         : [
               {
                   title: "MS · PhD · Integrated",
-                  desc: "The core of the lab. You will find your own question within our three fronts (thermal energy storage · AI semiconductor cooling · SMR safety). Admissions follow the Inha graduate-school cycle; we recommend contacting us 2–3 months before the deadline.",
+                  desc: "The core of the lab. You will find your own question within our three research fields (thermal energy storage · AI semiconductor cooling · SMR safety). Admissions follow the Inha graduate-school cycle; we recommend contacting us 2–3 months before the deadline.",
                   meta: { label: "Admissions ↗", href: GRAD_URL },
               },
               {
-                  title: "Undergraduate Researchers — always open",
-                  desc: "3rd–4th year students, full-time over breaks or part-time during semesters. You take on real tasks — experimental data processing, infrared (IR) image analysis. The most natural path into the graduate program.",
+                  title: "Undergraduate Researchers · always open",
+                  desc: "3rd–4th year students, full-time over breaks or part-time during semesters. We do not hand you chores: you take on real research such as experimental data processing and infrared (IR) image analysis. The most natural path into the graduate program.",
               },
               {
                   title: "Postdoctoral Researchers",
@@ -167,29 +167,29 @@ export default function JoinStory() {
               },
               {
                   title: "International Students",
-                  desc: "We welcome international applicants — feel free to reach out in English.",
+                  desc: "We welcome international applicants. Feel free to reach out in English.",
               },
           ];
 
     const MAIL_SPEC = isKR
         ? {
               heading: "지원은 이메일 한 통으로 시작합니다",
-              sub: "성적표도, 화려한 스펙도 필요하지 않습니다. 두 가지면 충분합니다.",
+              sub: "성적표나 수상 목록은 필요 없습니다. 두 가지면 충분합니다.",
               items: [
                   { n: "①", text: "가장 깊이 몰입했던 경험 한 단락. 연구가 아니어도 좋습니다." },
                   { n: "②", text: "우리 연구를 둘러보다 떠오른 질문 하나." },
-                  { n: "+", text: "학위과정 지원자라면, 관심 있는 연구 분야도 함께 적어 주세요 — 열에너지 저장, AI 반도체 냉각, SMR 안전." },
+                  { n: "+", text: "학위과정 지원자라면 관심 있는 연구 분야(열에너지 저장, AI 반도체 냉각, SMR 안전)도 함께 적어 주세요." },
               ],
               promise: "받은 메일에는 일주일 안에 반드시 답장합니다.",
               cta: "이메일 주소 복사",
           }
         : {
               heading: "Applying starts with one email",
-              sub: "No transcript, no spec sheet. Two things are enough.",
+              sub: "You do not need a transcript or a list of awards. Two things are enough.",
               items: [
                   { n: "①", text: "One paragraph on the deepest immersion you have experienced. It does not have to be research." },
                   { n: "②", text: "One question that came to you while looking through our research." },
-                  { n: "+", text: "Degree applicants — add the field you are drawn to: thermal energy storage, AI semiconductor cooling, or SMR safety." },
+                  { n: "+", text: "If you are applying for a degree program, add the field you are interested in: thermal energy storage, AI semiconductor cooling, or SMR safety." },
               ],
               promise: "We reply to every email within a week.",
               cta: "Copy email address",
@@ -203,11 +203,11 @@ export default function JoinStory() {
               },
               {
                   q: "출신 학교나 전공이 중요한가요?",
-                  a: "보지 않습니다. 어디에서 왔는지보다, 무엇에 몰입해 봤고 무엇을 묻고 싶은지가 중요합니다.",
+                  a: "보지 않습니다. 무엇에 몰입해 봤고 무엇을 묻고 싶은지, 그 둘만 봅니다.",
               },
               {
                   q: "연구 주제는 어떻게 정하나요?",
-                  a: "세 연구 분야 안에서 시작하되, 정해진 주제를 받아 가는 것이 아니라 자신의 질문을 함께 만들어 갑니다.",
+                  a: "세 연구 분야 안에서 시작합니다. 주제를 배정받는 대신, 자신의 질문을 지도교수와 함께 만들어 갑니다.",
               },
               {
                   q: "연구실 분위기는 어떤가요?",
@@ -229,11 +229,11 @@ export default function JoinStory() {
               },
               {
                   q: "Does my school or major matter?",
-                  a: "We don't look at where you came from. The two things in the email above — your immersion and your question — are enough.",
+                  a: "We do not look at where you came from. We read the two things in the email above: your immersion and your question.",
               },
               {
                   q: "How are research topics decided?",
-                  a: "You start within our three fronts, but you don't receive a topic — we define your question together.",
+                  a: "You start within one of the three research fields. Instead of receiving an assigned topic, you define your question together with the advisor.",
               },
               {
                   q: "What is lab life like?",
@@ -245,7 +245,7 @@ export default function JoinStory() {
               },
               {
                   q: "What do undergraduate researchers do?",
-                  a: "Real research tasks — experimental data processing, image analysis — with poster and co-authorship opportunities as results accumulate.",
+                  a: "Real research tasks such as experimental data processing and image analysis. As results accumulate, they lead to conference posters and co-authorship.",
               },
           ];
 
@@ -273,7 +273,7 @@ export default function JoinStory() {
                     <p className={cn("mt-7 max-w-xl", lead(isKR))}>
                         {isKR
                             ? "MFTEL은 몰입과 실패를 아는 사람을 찾습니다. 석사든 박사든 학부연구생이든, 시작은 이메일 한 통입니다."
-                            : "MFTEL looks for people who know immersion and failure. MS, PhD, or undergraduate — it starts with one email."}
+                            : "MFTEL looks for people who know immersion and failure. Whether MS, PhD, or undergraduate, it starts with one email."}
                     </p>
                 </div>
             </Scene>
@@ -334,7 +334,7 @@ export default function JoinStory() {
             {/* tracks */}
             <Scene full={false}>
                 <Reveal>
-                    <Label>{isKR ? "함께 걷는 길" : "Ways to Join"}</Label>
+                    <Label>{isKR ? "모집 구분" : "Ways to Join"}</Label>
                 </Reveal>
                 <Reveal as="ul" className="reveal-stagger mt-10 border-t border-white/8">
                     {TRACKS.map((tr) => (
