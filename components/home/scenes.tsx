@@ -384,16 +384,6 @@ function SceneJoin() {
                     {t("contact.title1")} <span className="text-ember-400">{t("contact.title2")}</span>
                 </h2>
                 <p className={cn("mx-auto mt-7 max-w-xl", lead(isKR))}>{t("contact.description")}</p>
-                <p
-                    className={cn(
-                        "mx-auto mt-6 max-w-xl break-keep text-[16px] text-stone-400",
-                        isKR ? "leading-[1.8]" : "leading-[1.65]"
-                    )}
-                >
-                    {isKR
-                        ? "물어야 할 것을 새로 찾아내는 사람을 찾습니다."
-                        : "We look for people who find what to ask."}
-                </p>
                 <div className="mt-10 flex flex-col items-center gap-4">
                     {/* 클릭 = 메일앱 실행 ❌ — 주소 표시 + 클립보드 복사 */}
                     <button
@@ -420,7 +410,7 @@ function SceneJoin() {
                             copied ? "text-ember-400" : "text-stone-400"
                         )}
                     >
-                        {copied ? t("contact.emailCopied") : "Inha Univ. 2N687"}
+                        {copied ? t("contact.emailCopied") : isKR ? "인하대학교 2N687" : "Inha University 2N687"}
                     </p>
                     <Link
                         href={lp("/join")}
@@ -450,7 +440,7 @@ export default function HomeStory() {
             <ScenePubs />
             <ScenePeople />
             <ScenePartners />
-            {/* the record sits last — a bridge into Join: "다음 줄은 당신의 몫" */}
+            {/* the record scene sits last, directly before Join */}
             <SceneNumbers />
             <SceneJoin />
         </div>

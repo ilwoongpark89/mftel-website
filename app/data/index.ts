@@ -64,20 +64,20 @@ export const registeredPatentCount = patents.filter((p) => p.status === "registe
 export const filedPatentCount = patents.filter((p) => p.status === "filed").length;
 
 export const projects = [
-  { year: "2026 ~ 2027", title: "New-industry global human-resources training program for developing a Korean-style energy island based on wind power", sponsor: "KETEP" },
+  { year: "2026 ~ 2027", title: "Development of a Korean-style Energy Island Based on Wind Power — New Industry Global HR Development Program", sponsor: "KETEP" },
   { year: "2026 ~ 2027", title: "Development of an integrated superheated-steam production system incorporating a molten-salt thermal energy storage system, and an optimal operation strategy", sponsor: "Hyundai Engineering & Construction" },
   { year: "2026", title: "Development of regulatory verification technology for full-lifecycle safety review of light-water SMRs", sponsor: "SMR Regulation Research Foundation" },
   { year: "2025 ~ 2026", title: "Research on improving the cooling performance of the HiMSEN engine pre-combustion chamber", sponsor: "HD Hyundai Heavy Industries" },
   { year: "2025", title: "Development of Thermal Energy Storage", sponsor: "Laboratory-Specialized Startup Leading University, Ministry of Science and ICT" },
   { year: "2025", title: "Basic Research on Electric Vehicle Battery Cooling Using Insulating Fluid Boiling Heat Transfer", sponsor: "Inha University" },
   { year: "2025 ~ 2028", title: "Synergy for Safe and Sustainable Ocean in Norway and Korea (SONoKo)", sponsor: "UTFORSK, Direktoratet for høyere utdanning og kompetanse (HK-dir), Norway" },
-  { year: "2024 ~ 2025", title: "Global human-resources training program to secure key design technologies for next-generation SMR safety enhancement", sponsor: "KETEP" },
+  { year: "2024 ~ 2025", title: "Global human resources training project to secure major design technologies for next-generation SMR safety enhancement", sponsor: "KETEP" },
   { year: "2024", title: "Development of a yard exhaust pipe explosion pressure prediction model", sponsor: "HD Hyundai Heavy Industries" },
   { year: "2023 ~ 2027", title: "Digital-Based Sustainable Energy Process Innovation Convergence Graduate School", sponsor: "KETEP" },
   { year: "2023 ~ 2025", title: "Development of direct contact latent heat storage system", sponsor: "National Research Foundation of Korea" },
   { year: "2023 ~ 2025", title: "Identification of two-phase flow instabilities in a multi-channel system", sponsor: "National Research Foundation of Korea" },
   { year: "2023", title: "Control of wettability and enhancement of phase-change heat transfer by microstructures", sponsor: "ROK-Nordic R&D Cooperation Program, National Research Foundation of Korea" },
-  { year: "2022 ~ 2029", title: "Validation of core safety issues in response to strengthened technical criteria and development of technology to improve core safety in multiple-failure accidents", sponsor: "National Research Foundation of Korea" },
+  { year: "2022 ~ 2029", title: "Validation of core safety issues in response to strengthening technical criteria and development of technology to improve core safety in multiple failure accident", sponsor: "National Research Foundation of Korea" },
   { year: "2018 ~ 2021", title: "Improvement of wall boiling model based on boiling experiment with a controlled surface in microscale", sponsor: "National Research Foundation of Korea" },
 ];
 

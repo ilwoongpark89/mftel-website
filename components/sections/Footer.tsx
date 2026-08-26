@@ -97,7 +97,7 @@ export default function Footer() {
                                 allowFullScreen
                                 loading="lazy"
                                 referrerPolicy="no-referrer-when-downgrade"
-                                title="MFTEL Location — Inha University"
+                                title="MFTEL location, Inha University"
                             />
                         </div>
                         <p className="mt-2.5 text-[13px]">

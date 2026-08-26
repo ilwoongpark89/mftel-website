@@ -45,12 +45,12 @@ const translations: Record<Language, Record<string, string>> = {
 
         // Home story (v3)
         "home.numbers.label": "Our Record",
-        "home.numbers.title": "A record we build together",
-        "home.numbers.sub": "Every paper, project, and patent here was written with our students. The next line is yours.",
+        "home.numbers.title": "MFTEL in numbers",
+        "home.numbers.sub": "Every paper, project, and patent here was made with our students.",
         "home.research.label": "Research",
-        "home.research.title": "Three research fields, one thermal bottleneck",
+        "home.research.title": "We study heat",
         "home.pubs.label": "Publications",
-        "home.pubs.title": "Published where it matters",
+        "home.pubs.title": "Published in international journals",
         "home.pubs.cta": "All publications",
         "home.people.label": "People",
         "home.people.cta": "Meet the team",
@@ -86,7 +86,7 @@ const translations: Record<Language, Record<string, string>> = {
         // Publications
         "publications.label": "Our Work",
         "publications.title": "Publications",
-        "publications.count": "We have published {count} papers in top-tier journals.",
+        "publications.count": "We have published {count} papers in international journals.",
         "publications.showLess": "Show Less",
         "publications.viewAll": "View All Publications ({count})",
 
@@ -101,8 +101,8 @@ const translations: Record<Language, Record<string, string>> = {
 
         // Contact (Join Us)
         "contact.label": "Join Us",
-        "contact.title1": "Shape the Future of",
-        "contact.title2": "Thermal Engineering",
+        "contact.title1": "Grow With",
+        "contact.title2": "MFTEL",
         "contact.description": "We are recruiting M.S./Ph.D. students, postdocs, and researchers in multiphase flow and heat transfer.",
         "contact.apply": "Apply Now",
         "contact.emailCopied": "Email copied to clipboard!",
@@ -114,7 +114,7 @@ const translations: Record<Language, Record<string, string>> = {
         // Navbar
         "nav.news": "소식",
         "nav.team": "구성원",
-        "nav.joinUs": "연구실 모집",
+        "nav.joinUs": "모집 안내",
         "nav.research": "연구",
         "nav.publications": "논문",
         "nav.projects": "과제",
@@ -123,12 +123,12 @@ const translations: Record<Language, Record<string, string>> = {
 
         // Hero
         "hero.line1": "지속가능한",
-        "hero.line2a": "에너지",
+        "hero.line2a": "에너지의",
         "hero.line2b": "미래를",
         "hero.line3": "설계하다",
         "hero.description": "인하대학교 다상유동열공학연구실(MFTEL)은 열에너지 저장, AI 반도체 냉각, 소형모듈원자로 안전을 연구합니다.",
         "hero.kicker": "인하대학교 다상유동열공학연구실 · MFTEL",
-        "hero.join": "연구실 지원",
+        "hero.join": "지원하기",
         "hero.research": "연구 분야 보기",
         "hero.stat.publications": "국제 학술 논문",
         "hero.stat.projects": "연구 과제",
@@ -136,11 +136,11 @@ const translations: Record<Language, Record<string, string>> = {
         "hero.stat.partners": "협력 기관",
 
         // Home story (v3)
-        "home.numbers.label": "쌓아온 기록",
-        "home.numbers.title": "함께 쌓아가는 기록",
-        "home.numbers.sub": "이 숫자들은 전부 학생들과 함께 쓴 기록입니다. 다음 줄은 여러분의 몫입니다.",
+        "home.numbers.label": "연구 성과",
+        "home.numbers.title": "숫자로 보는 MFTEL",
+        "home.numbers.sub": "논문·과제·특허 모두 학생들과 함께 만들었습니다.",
         "home.research.label": "연구 분야",
-        "home.research.title": "열 병목을 푸는 세 가지 연구",
+        "home.research.title": "우리는 열을 연구합니다",
         "home.pubs.label": "논문",
         "home.pubs.title": "주요 국제 학술지에 게재합니다",
         "home.pubs.cta": "논문 전체 보기",
@@ -150,9 +150,9 @@ const translations: Record<Language, Record<string, string>> = {
 
         // About
         "about.tes.title": "열에너지 저장",
-        "about.tes.description": "고효율 열에너지 저장 시스템과 카르노 배터리로 안정적인 전력망 구축에 기여합니다.",
+        "about.tes.description": "고효율 열에너지 저장 시스템과 카르노 배터리로 전력망 안정화에 기여합니다.",
         "about.thermal.title": "AI 반도체 냉각",
-        "about.thermal.description": "이상 이머전 쿨링 기술로 데이터센터 및 고성능 컴퓨팅 시스템의 냉각 에너지를 최대 90% 절감합니다.",
+        "about.thermal.description": "2상 액침 냉각 기술로 데이터센터와 고성능 컴퓨팅 시스템의 냉각 에너지를 최대 90% 절감합니다.",
         "about.smr.title": "소형모듈원자로",
         "about.smr.description": "열수력 해석으로 소형모듈원자로(SMR)의 안전성과 효율을 높입니다.",
 
@@ -192,10 +192,10 @@ const translations: Record<Language, Record<string, string>> = {
         "gallery.title": "연구실 일상",
 
         // Contact (Join Us)
-        "contact.label": "연구실 모집",
+        "contact.label": "모집 안내",
         "contact.title1": "MFTEL과",
         "contact.title2": "함께 성장하세요",
-        "contact.description": "몰입을 아는 석·박사 과정생, 박사후연구원, 연구원을 모집합니다. 다상유동과 열전달 연구에 관심 있는 분들의 지원을 기다립니다.",
+        "contact.description": "석·박사과정 학생, 박사후연구원, 연구원을 모집합니다. 다상유동과 열전달 연구에 관심 있는 분들의 지원을 기다립니다.",
         "contact.apply": "지원 문의",
         "contact.emailCopied": "이메일 주소가 복사되었습니다!",
 

@@ -70,7 +70,7 @@ export default function JoinStory() {
               {
                   index: "01",
                   title: "질문을 새로 만드는 사람",
-                  desc: "주어진 문제를 한 번 더 의심하고, 당연해 보이는 물음을 다시 세워 보는 사람. 우리는 그 힘을 가장 높이 삽니다.",
+                  desc: "주어진 문제를 한 번 더 의심하고, 당연해 보이는 물음을 다시 정의해 보는 사람. 우리는 그 힘을 가장 높이 삽니다.",
               },
               {
                   index: "02",
@@ -86,17 +86,17 @@ export default function JoinStory() {
         : [
               {
                   index: "01",
-                  title: "People who invent questions",
+                  title: "People who ask new questions",
                   desc: "Those who doubt the given problem once more and redefine what everyone takes for granted. That is the ability we value most.",
               },
               {
                   index: "02",
-                  title: "People who come back after being broken",
+                  title: "People who keep coming back after failure",
                   desc: "Those who treat failure as part of the process and come back to the same problem. Most new results in this lab arrived at the end of that repetition.",
               },
               {
                   index: "03",
-                  title: "People who know immersion",
+                  title: "People who know deep focus",
                   desc: "Those who have lost track of time inside something. It does not have to be research. If you have competed as part of a team, you will click with us faster.",
               },
           ];
@@ -109,7 +109,7 @@ export default function JoinStory() {
               },
               {
                   title: "어디서든 몰입하면 됩니다",
-                  desc: "깊이 빠져들 수 있는 곳이면 어디든 연구실로 칩니다.",
+                  desc: "깊이 빠져들 수 있다면 어디서 일하든 상관없습니다.",
               },
               {
                   title: "약속은 하나입니다",
@@ -123,7 +123,7 @@ export default function JoinStory() {
               },
               {
                   title: "Go deep, wherever you are",
-                  desc: "Any place you can go deep counts as the lab.",
+                  desc: "If you can go deep, it does not matter where you work.",
               },
               {
                   title: "One promise",
@@ -211,11 +211,11 @@ export default function JoinStory() {
               },
               {
                   q: "연구실 분위기는 어떤가요?",
-                  a: "결과와 기록으로 말하는 곳입니다. 위의 '일하는 방식' 세 문장이 사실상 전부입니다.",
+                  a: "연구 결과와 기록으로 평가합니다. 위의 '일하는 방식' 세 가지가 사실상 전부입니다.",
               },
               {
                   q: "영어가 부족해도 괜찮나요?",
-                  a: "논문은 영어로 쓰지만, 쓰면서 함께 배웁니다. 노르웨이 NTNU, 독일 HZDR, 스페인 UPC와의 교류가 자연스러운 훈련이 됩니다.",
+                  a: "논문은 영어로 쓰지만, 쓰면서 함께 배웁니다. NTNU·HZDR·UPC와 교류하면서 영어로 쓰고 발표할 기회가 많습니다.",
               },
               {
                   q: "학부연구생은 무엇을 하나요?",
@@ -241,7 +241,7 @@ export default function JoinStory() {
               },
               {
                   q: "What if my English isn't strong?",
-                  a: "Papers are written in English, and you learn by writing them. Exchanges with NTNU, HZDR, and UPC are natural training.",
+                  a: "Papers are written in English, and you learn by writing them. Exchanges with NTNU, HZDR, and UPC give you many chances to write and present in English.",
               },
               {
                   q: "What do undergraduate researchers do?",
@@ -256,7 +256,7 @@ export default function JoinStory() {
             {/* opening — the distilled vision */}
             <Scene className="min-h-[72svh]">
                 <div className="cal-rise max-w-3xl">
-                    <Label className="mb-6">{isKR ? "연구실 모집" : "Join Us"}</Label>
+                    <Label className="mb-6">{isKR ? "모집 안내" : "Join Us"}</Label>
                     <h1 className={display(isKR)}>
                         {isKR ? (
                             <>
@@ -273,7 +273,7 @@ export default function JoinStory() {
                     <p className={cn("mt-7 max-w-xl", lead(isKR))}>
                         {isKR
                             ? "MFTEL은 몰입과 실패를 아는 사람을 찾습니다. 석사든 박사든 학부연구생이든, 시작은 이메일 한 통입니다."
-                            : "MFTEL looks for people who know immersion and failure. Whether MS, PhD, or undergraduate, it starts with one email."}
+                            : "MFTEL looks for people who know deep focus and failure. Whether MS, PhD, or undergraduate, it starts with one email."}
                     </p>
                 </div>
             </Scene>

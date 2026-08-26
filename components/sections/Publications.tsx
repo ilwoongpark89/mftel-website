@@ -23,7 +23,7 @@ const CATEGORY_LABELS: Record<string, { en: string; kr: string }> = {
     condensation: { en: "Condensation", kr: "응축" },
     smr: { en: "SMR", kr: "SMR" },
     tes: { en: "Thermal Energy Storage", kr: "열에너지 저장" },
-    wettability: { en: "Wettability", kr: "표면 젖음 특성" },
+    wettability: { en: "Wettability", kr: "젖음성" },
 };
 
 const VISIBLE_DEFAULT = 8;
@@ -285,7 +285,7 @@ export default function Publications({
                                                 const n = d ? citations?.byDoi[d] : undefined;
                                                 return n ? (
                                                     <Meta className="text-xs">
-                                                        {isKR ? `인용 ${n}` : `Cited by ${n}`}
+                                                        {isKR ? `피인용 ${n}` : `Cited by ${n}`}
                                                     </Meta>
                                                 ) : null;
                                             })()}

@@ -107,7 +107,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
             return;
         }
         if (pw.length < 8) { setErr(isKR ? "비밀번호는 8자 이상." : "Password must be 8+ characters."); return; }
-        if (!cls.trim()) { setErr(isKR ? "반 코드를 입력하세요 (교수님 공지)." : "Enter the class code (from your instructor)."); return; }
+        if (!cls.trim()) { setErr(isKR ? "반 코드를 입력하세요." : "Enter the class code (from your instructor)."); return; }
         setBusy(true);
         const j = await post("register", { password: pw, classCode: cls.trim() });
         setBusy(false);
@@ -152,7 +152,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
                 </a>
                 {!isProf && (
                     <button type="button" onClick={signOut} disabled={busy} className={`${linkCls} mt-3`}>
-                        {isKR ? "다른 학번으로 입장" : "Use a different ID"}
+                        {isKR ? "다른 학번으로 로그인" : "Use a different ID"}
                     </button>
                 )}
             </div>
@@ -164,7 +164,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
             {confirming && (
                 <p className="mb-5 break-keep text-[13px] leading-[1.7] text-ink-2">
                     <b className="font-semibold text-ember-700">{sid}</b>
-                    {isKR ? " — 첫 등록입니다. 비밀번호와 반 코드를 정하세요." : " — first registration. Set a password and enter your class code."}
+                    {isKR ? " — 첫 등록입니다. 비밀번호를 정하고, 반 코드를 입력하세요." : " — first registration. Set a password and enter your class code."}
                 </p>
             )}
 
@@ -198,14 +198,14 @@ function EntryForm({ isKR }: { isKR: boolean }) {
             </div>
             {confirming && (
                 <div className="mt-4">
-                    <label className={labelCls} htmlFor="mf-entry-cls">{isKR ? "반 코드" : "Class code"}</label>
+                    <label className={labelCls} htmlFor="mf-entry-cls">{isKR ? "반 코드 (교수님 공지)" : "Class code (from your instructor)"}</label>
                     <input
                         id="mf-entry-cls"
                         name="class-code"
                         className={inputCls}
                         value={cls}
                         onChange={(e) => setCls(e.target.value)}
-                        placeholder={isKR ? "교수님 공지" : "From your instructor"}
+                        placeholder="예: HT26-2"
                         autoComplete="off"
                     />
                 </div>
@@ -220,7 +220,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
                     ? (isKR ? "확인 중…" : "Checking…")
                     : confirming
                         ? (isKR ? "등록하고 시작 →" : "Register and start →")
-                        : (isKR ? "입장 →" : "Enter →")}
+                        : (isKR ? "로그인 →" : "Sign in →")}
             </button>
 
             <div className="mt-3">
@@ -230,11 +230,11 @@ function EntryForm({ isKR }: { isKR: boolean }) {
                     </p>
                 ) : forgot ? (
                     <p className="break-keep text-xs leading-[1.7] text-ink-3">
-                        {isKR ? "학번 입력 후 " : "Enter your ID, then "}
+                        {isKR ? "학번을 입력한 뒤 " : "Enter your ID, then "}
                         <button type="button" onClick={requestReset} disabled={busy} className="font-semibold text-ink-2 underline underline-offset-[3px] transition-colors duration-150 hover:text-ink">
                             {isKR ? "초기화 요청" : "request a reset"}
                         </button>
-                        {isKR ? "을 누르세요. 기록은 유지됩니다." : ". Your records are kept."}
+                        {isKR ? "을 누르세요. 기록은 그대로 남습니다." : ". Your records are kept."}
                     </p>
                 ) : (
                     <button type="button" onClick={() => setForgot(true)} className={linkCls}>
@@ -246,7 +246,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
             {/* 고지 = 의미 단위 2줄 고정 — 폭에 밀린 우연 줄바꿈("입장 시/동의로") 대신 내용/동의 문장으로 나눔 */}
             <p className="mt-8 break-keep border-t border-hairline pt-4 text-[11px] leading-[1.7] text-ink-4">
                 <span className="block">{isKR ? "수집: 학번·답안·접속 기록 · 담당 교수만 열람 · 학기 종료 후 파기" : "Collected: ID, answers, access logs · instructor-only · destroyed after term"}</span>
-                <span className="block">{isKR ? "입장 시 동의로 간주합니다." : "Entering implies consent."}</span>
+                <span className="block">{isKR ? "로그인 시 위 수집·이용에 동의한 것으로 간주합니다." : "By signing in, you agree to the collection above."}</span>
             </p>
         </form>
     );
@@ -263,12 +263,12 @@ export default function Lecture() {
                 <SectionHeader
                     index="08"
                     kicker={isKR ? "강의" : "Lecture"}
-                    title={isKR ? "강의실 입장" : "Classroom Entry"}
+                    title={isKR ? "수업 로그인" : "Course Login"}
                     sub={
                         <span className="break-keep [overflow-wrap:break-word] [text-wrap:pretty]">
                             {isKR
-                                ? "학번 하나로 수강 중인 수업이 모두 열립니다."
-                                : "One student ID opens all of your courses."}
+                                ? "학번으로 로그인하면 수강 중인 수업의 자료를 볼 수 있습니다."
+                                : "Sign in with your student ID to see your course materials."}
                         </span>
                     }
                     isKorean={isKR}

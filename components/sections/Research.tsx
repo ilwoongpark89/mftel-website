@@ -75,7 +75,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
     EN: {
         paradox: {
             title: "The AI Energy Paradox",
-            body: "AI now drives some of the fastest-growing electricity demand on earth. Training a single LLM costs tens of GWh, and each inference draws roughly 10× the power of a conventional search. By 2030, data centers could consume close to 9% of U.S. electricity, about 3% of global supply. The bottleneck behind this demand is heat: multiphase heat transfer limits every stage of power generation, storage, and consumption. MFTEL works on this problem in three research fields.",
+            body: "AI now drives some of the fastest-growing electricity demand on earth. Training a single LLM costs tens of GWh, and each inference draws roughly 10× the power of a conventional search. By 2030, data centers could consume close to 9% of U.S. electricity, about 3% of global supply. In the end, the problem is heat: multiphase heat transfer sets the limit at every stage of generating, storing, and using power. MFTEL studies this problem in three research fields.",
         },
         activitiesLabel: "MFTEL Research Activities",
         metricSr: "Metric",
@@ -104,7 +104,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
             activities: [
                 {
                     title: "Direct-Contact Latent Heat Storage System",
-                    desc: "Dramatically improving heat transfer efficiency over indirect methods through direct contact between PCM and heat transfer fluid. Experimentally characterizing multi-phase flow phenomena during PCM melting and solidification in charge/discharge cycles.",
+                    desc: "Significantly improving heat transfer efficiency over indirect methods through direct contact between PCM and heat transfer fluid. Experimentally characterizing multi-phase flow phenomena during PCM melting and solidification in charge/discharge cycles.",
                     tag: "NRF, 2023–2025",
                 },
                 {
@@ -152,7 +152,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
             activities: [
                 {
                     title: "EV Battery Immersion Cooling via Boiling",
-                    desc: "Fundamental research on electric vehicle battery cooling using insulating fluid boiling heat transfer. Dramatically improving cooling performance over conventional water-cooling while ensuring temperature uniformity at the battery pack level.",
+                    desc: "Fundamental research on electric vehicle battery cooling using insulating fluid boiling heat transfer. Significantly improving cooling performance over conventional water-cooling while ensuring temperature uniformity at the battery pack level.",
                     tag: "INHA UNIV., 2025",
                 },
                 {
@@ -251,14 +251,14 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
     KR: {
         paradox: {
             title: "AI 에너지 패러독스",
-            body: "AI 데이터센터의 전력 수요가 빠르게 늘고 있습니다. LLM 하나를 학습시키는 데만 수십 GWh가 들고, 추론 한 건은 기존 검색의 약 10배에 달하는 전력을 소비합니다. 2030년까지 데이터센터는 미국 전력의 9% 가까이, 전 세계 전력의 약 3%를 소비할 전망입니다. 이 수요의 병목이 열입니다. 전력의 생산·저장·소비 전 단계에서 다상유동 열전달이 성능을 제한하며, MFTEL은 세 연구 분야에서 이 문제를 연구합니다.",
+            body: "AI 데이터센터의 전력 수요가 빠르게 늘고 있습니다. LLM 하나를 학습시키는 데만 수십 GWh가 들고, 추론 한 건은 기존 검색의 약 10배에 달하는 전력을 소비합니다. 2030년까지 데이터센터는 미국 전력의 9% 가까이, 전 세계 전력의 약 3%를 소비할 전망입니다. 결국 문제는 열입니다. 전력을 만들고 저장하고 쓰는 모든 단계에서 다상유동 열전달이 성능을 결정하며, MFTEL은 세 연구 분야에서 이 문제를 연구합니다.",
         },
         activitiesLabel: "MFTEL 연구 활동",
         metricSr: "지표",
         tes: {
             kicker: "열에너지 저장",
             title: "TES & 카르노 배터리",
-            subtitle: "열에너지 저장을 통한 전력망 안정화",
+            subtitle: "전력망 안정화를 위한 열에너지 저장",
             description:
                 "열에너지 저장 기술은 간헐적인 재생에너지 공급과 데이터센터의 상시 전력 수요 사이의 격차를 해소합니다. 잉여 에너지를 열로 저장하고 필요 시 전기로 변환하여 화석연료 없이 전력망 안정성을 보장합니다.",
             stat: { value: "24/7", label: "안정적 공급" },
@@ -307,24 +307,24 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
             title: "AI 반도체 냉각",
             subtitle: "냉각 에너지 소비 절감",
             description:
-                "이상 이머전 쿨링은 기존 공냉 인프라를 대체하여 냉각 에너지를 최대 90% 절감합니다. 절연 유체와의 직접 접촉으로 칩 밀도를 높이고, 프로세서 단의 열 병목을 제거합니다.",
+                "2상 액침 냉각은 서버를 절연 유체에 직접 담가 식히는 기술입니다. 기존 공냉 인프라를 대체해 냉각 에너지를 최대 90% 절감하고, 칩을 더 촘촘히 배치할 수 있습니다.",
             stat: { value: "~90%", label: "냉각 에너지 절감" },
             processLabel: "작동 원리",
             steps: [
                 { label: "절연 유체 침지", sub: "서버를 절연 유체에 직접 침지해 열을 전달" },
-                { label: "이상 비등 열전달", sub: "유체가 끓으면서 잠열로 대량의 열을 흡수" },
+                { label: "비등 열전달", sub: "유체가 끓으면서 잠열로 대량의 열을 흡수" },
                 { label: "응축 & 순환", sub: "증기가 응축되어 유체가 자연 순환" },
             ],
-            comparisonLabel: "공냉 vs 이머전 쿨링",
+            comparisonLabel: "공냉 vs 액침 냉각",
             colAir: "공냉",
-            colImmersion: "이머전",
+            colImmersion: "액침",
             comparison: [
                 { label: "에너지 효율 (PUE)", air: "1.3 – 1.5", immersion: "1.02 – 1.05" },
                 { label: "냉각 에너지 비중", air: "30 – 40%", immersion: "2 – 5%" },
                 { label: "칩 열유속 한계", air: "~10 W/cm²", immersion: "~200 W/cm²" },
                 { label: "서버 밀도", air: "6–8 kW/rack", immersion: "50–100 kW/rack" },
             ],
-            why: "AI 가속기(GPU, TPU)의 열설계전력(TDP)이 700W를 넘어서면서 공냉만으로는 냉각이 불가능합니다. 이상 비등 열전달은 같은 면적에서 공냉 대비 20배 이상의 열을 처리하며, 데이터센터의 전력 효율(PUE)을 1.0에 근접시킵니다.",
+            why: "AI 가속기(GPU, TPU)의 열설계전력(TDP)이 700W를 넘어서면서 공냉만으로는 냉각이 불가능합니다. 비등 열전달은 같은 면적에서 공냉 대비 20배 이상의 열을 처리하며, 데이터센터의 전력 효율(PUE)을 1.0에 근접시킵니다.",
             activities: [
                 {
                     title: "전기차 배터리 절연유체 비등 냉각",
@@ -338,17 +338,17 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
                 },
                 {
                     title: "표면 방향별 임계열유속 의존성",
-                    desc: "실리콘 및 이산화실리콘 표면에서 표면 방향과 기포 동역학이 임계열유속에 미치는 영향을 분석. 이머전 쿨링 시스템 설계에 필수적인 CHF 예측 모델링 기반을 구축합니다.",
+                    desc: "실리콘 및 이산화실리콘 표면에서 표면 방향과 기포 동역학이 임계열유속에 미치는 영향을 분석. 액침 냉각 시스템 설계에 필수적인 CHF 예측 모델링 기반을 구축합니다.",
                     tag: "논문 #2",
                 },
                 {
-                    title: "기-액 유로 분리 이머전 쿨링 특허",
-                    desc: "비등 시 발생하는 기체와 액체의 유로를 물리적으로 분리하여 열전달 성능을 극대화하는 배터리 이머전 쿨링 시스템 특허 기술. 기포 간섭을 방지하여 안정적인 냉각을 보장합니다.",
+                    title: "기-액 유로 분리 액침 냉각 특허",
+                    desc: "비등 시 발생하는 기체와 액체의 유로를 물리적으로 분리하여 열전달 성능을 극대화하는 배터리 액침 냉각 시스템 특허 기술. 기포 간섭을 방지하여 안정적인 냉각을 보장합니다.",
                     tag: "특허 10-2855737",
                 },
             ],
-            fig: "FIG. 2.2 — 비등 열전달 · 이머전 쿨링 연구",
-            figAlt: "비등 열전달 및 이머전 쿨링 연구",
+            fig: "FIG. 2.2 — 비등 열전달 · 액침 냉각 연구",
+            figAlt: "비등 열전달 및 액침 냉각 연구",
         },
         smr: {
             kicker: "소형모듈원자로",
@@ -371,7 +371,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
                 { title: "열병합 가능", desc: "전기 생산과 동시에 열에너지를 직접 활용" },
             ],
             demandLabel: "빅테크 데이터센터 전력 수요",
-            why: "SMR은 다상유동 물리학이 핵심입니다. 헬리컬 코일 증기발생기 내부의 이상 유동, 자연순환 냉각계통의 단상/이상 유동 안정성, 사고 시 격납용기 내 응축 열전달 등이 MFTEL의 핵심 연구역량과 직결됩니다.",
+            why: "SMR은 다상유동 물리학이 핵심입니다. 헬리컬 코일 증기발생기 내부의 이상유동, 자연순환 냉각계통의 유동 안정성, 사고 시 격납용기 내 응축 열전달 등이 MFTEL의 핵심 연구역량과 직결됩니다.",
             activities: [
                 {
                     title: "노심 안전성 검증 및 다중고장 사고 대응",
@@ -406,7 +406,7 @@ const CONTENT: Record<"EN" | "KR", ResearchContent> = {
             "열적 마진 시험",
             "절연유체",
             "Leidenfrost 효과",
-            "표면 젖음 특성",
+            "젖음성",
             "응축",
         ],
         computationalLabel: "전산 해석",

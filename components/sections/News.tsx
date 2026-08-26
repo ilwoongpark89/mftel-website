@@ -231,7 +231,7 @@ const ANNOUNCEMENT: Announcement = {
                 },
                 {
                     text: {
-                        EN: "A SCIE-class paper Accept within 1 year after dispatch is required. Failure may require partial or full return of the support.",
+                        EN: "A paper must be accepted in an SCIE-indexed journal within one year of the dispatch. Otherwise, part or all of the support must be returned.",
                         KR: "파견 후 1년 안에 SCIE급 논문 게재 확정(Accept)이 필수임. 조건을 만족하지 못할 경우 지원 경비의 일부 또는 전액을 반환해야 함",
                     },
                 },
@@ -248,7 +248,7 @@ const ANNOUNCEMENT: Announcement = {
             items: [
                 {
                     text: {
-                        EN: "Inha University, Department of Mechanical Engineering — Prof. Il Woong Park",
+                        EN: "Prof. Il Woong Park, Department of Mechanical Engineering, Inha University",
                         KR: "인하대학교 기계공학과 박일웅 교수",
                     },
                 },
@@ -282,7 +282,7 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
         date: "2026-06-24",
         title: {
             EN: "Frontiers in Thermal-Hydraulics",
-            KR: "트론헤임 열수력 워크숍",
+            KR: "NTNU 국제 열수력 워크숍",
         },
         description: {
             EN: "Prof. Il Woong Park held an international thermal-hydraulics workshop at NTNU in Trondheim, together with Carlos Dorao and Hyung Ju Kim. Researchers and graduate students from Norway, Korea, and India came for two days of talks on multiphase flow and nuclear safety.",
@@ -644,7 +644,7 @@ function AnnouncementRow({
                 </span>
                 <span className="min-w-0 flex-1">
                     <Meta className="font-medium text-ink-3">
-                        {isKR ? "CALL — 모집공고" : "CALL — ANNOUNCEMENT"}
+                        {isKR ? "모집공고" : "CALL"}
                     </Meta>
                     <span className="mt-0.5 line-clamp-2 break-keep text-[15px] font-semibold leading-snug text-ink md:text-base">
                         {ANNOUNCEMENT.title[language]}
@@ -686,7 +686,7 @@ function AnnouncementRow({
                                 <Meta className="text-sm font-medium text-ink-3">
                                     {isKR ? "마감" : "DEADLINE"} · {formatDate(ANNOUNCEMENT.deadline, language)}{" "}
                                     {ANNOUNCEMENT.deadlineTime}
-                                    {closed ? (isKR ? " · 접수 마감됨" : " · Applications closed") : null}
+                                    
                                 </Meta>
                             </div>
 

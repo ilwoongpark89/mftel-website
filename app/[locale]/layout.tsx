@@ -11,7 +11,7 @@ export const dynamicParams = false;
 
 export const metadata: Metadata = {
   title: "MFTEL | Inha University",
-  description: "Multiphase Flow and Thermal Engineering Laboratory at Inha University. Advancing thermal science through thermal energy storage, AI semiconductor cooling, and reactor safety research.",
+  description: "Multiphase Flow and Thermal Engineering Laboratory (MFTEL) at Inha University. Research on thermal energy storage, AI semiconductor cooling, and small modular reactor safety.",
   metadataBase: new URL('https://mftel.vercel.app'),
   keywords: [
     "MFTEL", "Inha University", "multiphase flow", "thermal engineering",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "MFTEL - Engineering a Sustainable Energy Future",
-    description: "Multiphase Flow and Thermal Engineering Laboratory at Inha University. Advancing thermal science through thermal energy storage, AI semiconductor cooling, and reactor safety research.",
+    description: "Multiphase Flow and Thermal Engineering Laboratory (MFTEL) at Inha University. Research on thermal energy storage, AI semiconductor cooling, and small modular reactor safety.",
     url: 'https://mftel.vercel.app',
     siteName: 'MFTEL',
     locale: 'ko_KR',

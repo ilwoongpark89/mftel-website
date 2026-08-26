@@ -79,7 +79,7 @@ export default function Navbar() {
                     d ? "border-white/15" : "border-hairline"
                 )}
                 role="group"
-                aria-label="Language"
+                aria-label={language === "KR" ? "언어 선택" : "Language"}
             >
                 {(["EN", "KR"] as const).map((lang) => (
                     <button
@@ -184,7 +184,7 @@ export default function Navbar() {
                             "relative z-[60] -mr-2 flex h-11 w-11 items-center justify-center transition-colors duration-200 lg:hidden",
                             isOpen ? "text-paper" : dk ? "text-paper" : "text-ink"
                         )}
-                        aria-label="Toggle menu"
+                        aria-label={language === "KR" ? "메뉴 열기/닫기" : "Toggle menu"}
                         aria-expanded={isOpen}
                     >
                         {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
