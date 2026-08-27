@@ -56,7 +56,7 @@ const pillarCount = (key: PillarKey) =>
 
 const educationCareerEN = [
     "Assistant Professor, Inha University (2022 ~)",
-    "Research Assistant Professor, Seoul National University (2022)",
+    "Research Professor, Seoul National University (2022)",
     "Research Professor, Jeju National University (2018 ~ 2021)",
     "Ph.D., Norwegian University of Science and Technology (2014 ~ 2018)",
     "M.S., Seoul National University (2011 ~ 2013)",
@@ -65,7 +65,7 @@ const educationCareerEN = [
 
 const educationCareerKR = [
     "인하대학교 기계공학과 조교수 (2022 ~)",
-    "서울대학교 연구조교수 (2022)",
+    "서울대학교 연구교수 (2022)",
     "제주대학교 연구교수 (2018 ~ 2021)",
     "노르웨이과학기술대학교 공학박사 (2014 ~ 2018)",
     "서울대학교 공학석사 (2011 ~ 2013)",

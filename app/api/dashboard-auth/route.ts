@@ -179,7 +179,10 @@ export async function POST(request: NextRequest) {
         // --- resetPassword (admin) ---
         if (action === 'resetPassword') {
             const { adminPassword, targetUser } = body as { adminPassword: string; targetUser: string; action: string };
-            if (adminPassword !== (process.env.DASHBOARD_ADMIN_PASSWORD || '1009')) {
+            if (!process.env.DASHBOARD_ADMIN_PASSWORD) {
+                return NextResponse.json({ error: '관리자 기능이 비활성화되어 있습니다 (DASHBOARD_ADMIN_PASSWORD 미설정)' }, { status: 503 });
+            }
+            if (adminPassword !== process.env.DASHBOARD_ADMIN_PASSWORD) {
                 return NextResponse.json({ error: '관리자 비밀번호가 틀렸습니다' }, { status: 401 });
             }
             if (!targetUser) {

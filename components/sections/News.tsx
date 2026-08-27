@@ -324,10 +324,10 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
     },
     {
         date: "2025-11-17",
-        title: { EN: "Buildersgate CEO Visited Inha University", KR: "빌더스게이트 대표님 특강" },
+        title: { EN: "Bluepill CEO Visited Inha University", KR: "블루필 대표님 특강" },
         description: {
-            EN: "CEO Kwang Ho Park of Buildersgate visited Inha University and presented the future of coding using vibe coding.",
-            KR: "빌더스게이트 박광호 대표님이 인하대를 방문하여 '바이브 코딩으로 보는 코딩의 미래'를 주제로 특강을 진행해주셨습니다.",
+            EN: "CEO Kwang Ho Park of Bluepill visited Inha University and presented the future of coding using vibe coding.",
+            KR: "블루필 박광호 대표님이 인하대를 방문하여 '바이브 코딩으로 보는 코딩의 미래'를 주제로 특강을 진행해주셨습니다.",
         },
         images: ["/images/news/251117-vibe-coding-ceo-visit.jpeg", "/images/news/251117-vibe-coding-ceo-visit-2.png"],
     },

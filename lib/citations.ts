@@ -45,4 +45,3 @@ export async function getCitations(): Promise<{
     }
 }
 
-export { bareDoi };

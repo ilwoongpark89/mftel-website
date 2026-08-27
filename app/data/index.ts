@@ -60,9 +60,6 @@ export const patents: {
   { title: "Rock and rock–sand mixture thermal energy storage with direct steam generation via quenching and boiling", titleKR: "급랭과 비등 현상을 활용한 직접 증기 생산 기술을 적용한 암석/암석-모래 혼합물 열에너지 저장 시스템", status: "filed", appNumber: "10-2025-0000644", appDate: "2025-01-03" },
 ];
 
-export const registeredPatentCount = patents.filter((p) => p.status === "registered").length;
-export const filedPatentCount = patents.filter((p) => p.status === "filed").length;
-
 export const projects = [
   { year: "2026 ~ 2027", title: "Development of a Korean-style Energy Island Based on Wind Power — New Industry Global HR Development Program", sponsor: "KETEP" },
   { year: "2026 ~ 2027", title: "Development of an integrated superheated-steam production system incorporating a molten-salt thermal energy storage system, and an optimal operation strategy", sponsor: "Hyundai Engineering & Construction" },
@@ -106,14 +103,6 @@ export const teamMembers: {
 
 export const alumni = [
   { name: "Yun Seok Choi", nameKR: "최윤석", year: "2025 M.S.", yearKR: "2025 석사", position: "Korea Hydro and Nuclear Power (KHNP) Central Research Institute", positionKR: "한국수력원자력 중앙연구원" }
-];
-
-export const researchAreas = [
-  { title: "Boiling Heat Transfer", image: "Boiling Heat Transfer Experiement.png" },
-  { title: "Flow Instability", image: "Flow instability Experiement.png" },
-  { title: "Leidenfrost Effect", image: "Leidenfrost Experiement.png" },
-  { title: "Multi-Scale Simulation", image: "Multi-Scale and Multi-D simulation.png" },
-  { title: "Thermal Energy Storage", image: "Thermal Energy Storage.png" }
 ];
 
 export const galleryImages: {

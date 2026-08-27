@@ -29,9 +29,13 @@ const PREFIX = 'mftel:dashboard:';
 const BACKUP_PREFIX = 'mftel:backup:';
 const ALL_KEYS = ["announcements","papers","experiments","todos","conferences","lectures","patents","vacations","schedule","timetable","reports","teams","dailyTargets","philosophy","resources","ideas","analyses","chatPosts","customEmojis","statusMessages","equipmentList","personalMemos","personalFiles","piChat","teamMemos","labChat","labBoard","labFiles","meetings","analysisToolList","paperTagList","members","dispatches","experimentLogs","analysisLogs","experimentLogCategories","analysisLogCategories","aiBotChat","aiBotBoard","casualChat","menuConfig"];
 
-export async function GET() {
+export async function GET(req: Request) {
+    // CRON_SECRET 이 설정돼 있으면 Vercel cron 의 Bearer 헤더를 검증한다 (미설정 시 종전 동작)
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret && req.headers.get("authorization") !== `Bearer ${cronSecret}`) {
+        return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
     try {
-        // Check authorization via cron secret (optional - for Vercel cron)
         // Read all sections
         const results = await Promise.all(ALL_KEYS.map(k => getKey(`${PREFIX}${k}`)));
         const snapshot: Record<string, unknown> = {};

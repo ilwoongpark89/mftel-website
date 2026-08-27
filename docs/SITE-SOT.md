@@ -46,5 +46,15 @@
 - 빌더스게이트 표기 — 원본 파일명은 «blue pill»: **사실 확인은 사용자 몫**, 보류
 - sponsor «SMR Regulation Research Foundation» — 공식 영문명 미확인: 보류
 
+### 사용자 판정 (2026-08-27 — P0, 코퍼스·원본보다 우선)
+- 서울대 경력 = **«연구교수 / Research Professor»로 확정** («연구교수라고 써도 됨» — 원본 RTF «Research Assistant Professor»보다 사용자 판정 우선. 사실 원장 §1 의 정정 기록은 이 판정으로 대체)
+- 특강 소속 = **«블루필»로 확정** («블루필 대표님 해도 상관없다» — News 제목·본문·EN 반영)
+
+### 대시보드 절제 (2026-08-27 — «누더기 싹다 개선» 지시)
+- 실측: `/team-dashboard` → 307 → mftel-db.vercel.app (별개 Vercel 프로젝트·자체 배포). 로컬 트리는 `/en/team-dashboard` 로만 누수(200).
+- 절제: UI 트리 `app/[locale]/team-dashboard/`(33파일·1.6만 줄) + `public/sw.js`·`manifest.json`·`icon-512` + 전 페이지 head 의 manifest 링크 + tiptap·katex 의존성 12종. `/en/team-dashboard` 도 리다이렉트로 봉합. **복원 = git revert (이 커밋 하나)**.
+- 보존: `/api/dashboard*`·`/api/push*`·`/api/cron-backup` 와 vercel.json 크론 — 공유 Upstash Redis(`mftel:dashboard:*`)의 일일 백업이 라이브 데이터(mftel-db)의 백업일 가능성이 있어 유지. 확실해지면 별도 결정.
+- 보안: cron-backup 에 CRON_SECRET 가드(env 설정 시 작동 — **Vercel 에 CRON_SECRET 추가 권장**) · dashboard-admin 인증 fail-close(DASHBOARD_ADMIN_PASSWORD 미설정 시 503 — 종전엔 '1009' 폴백이 실효 비밀번호) · `/api/analytics` 는 'mftel2024admin' 폴백 유지(admin 콘솔 잠금 방지 — **ANALYTICS_PASSWORD env 설정 권장**).
+
 ### 게이트 보강 (탐지 회피 적발분)
 JSX `{" "}` 분절로 CONTRAST 미탐 · trim()으로 선두 « — » 미탐 · 40자 미만 EN 라벨 미탐 → `tools/copy-gate.mjs` 수정. BANNED-KR 에 «[를을] 통한», BANNED-EN 에 top-tier·shape the future 추가.
