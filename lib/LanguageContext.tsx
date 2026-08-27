@@ -126,7 +126,7 @@ const translations: Record<Language, Record<string, string>> = {
         "hero.line2a": "에너지의",
         "hero.line2b": "미래를",
         "hero.line3": "설계하다",
-        "hero.description": "인하대학교 다상유동열공학연구실(MFTEL)은 열에너지 저장, AI 반도체 냉각, 소형모듈원자로 안전을 연구합니다.",
+        "hero.description": "인하대학교 다상유동열공학연구실(MFTEL)은 열에너지 저장, AI 반도체 냉각, 소형모듈원자로 안전을 연구합니다.",
         "hero.kicker": "인하대학교 다상유동열공학연구실 · MFTEL",
         "hero.join": "지원하기",
         "hero.research": "연구 분야 보기",
@@ -149,10 +149,10 @@ const translations: Record<Language, Record<string, string>> = {
         "home.partners.label": "협력 네트워크",
 
         // About
-        "about.tes.title": "열에너지 저장",
-        "about.tes.description": "고효율 열에너지 저장 시스템과 카르노 배터리로 전력망 안정화에 기여합니다.",
-        "about.thermal.title": "AI 반도체 냉각",
-        "about.thermal.description": "2상 액침 냉각 기술로 데이터센터와 고성능 컴퓨팅 시스템의 냉각 에너지를 최대 90% 절감합니다.",
+        "about.tes.title": "열에너지 저장",
+        "about.tes.description": "고효율 열에너지 저장 시스템과 카르노 배터리로 전력망 안정화에 기여합니다.",
+        "about.thermal.title": "AI 반도체 냉각",
+        "about.thermal.description": "2상 액침 냉각 기술로 데이터센터와 고성능 컴퓨팅 시스템의 냉각 에너지를 최대 90% 절감합니다.",
         "about.smr.title": "소형모듈원자로",
         "about.smr.description": "열수력 해석으로 소형모듈원자로(SMR)의 안전성과 효율을 높입니다.",
 

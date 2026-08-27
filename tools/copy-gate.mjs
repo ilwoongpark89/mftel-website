@@ -37,6 +37,9 @@ const BANNED_KR = section("BANNED-KR").map((p) => new RegExp(p));
 const BANNED_EN = section("BANNED-EN").map((p) => new RegExp(p, "i"));
 const CONTRAST_KR = section("CONTRAST-KR \\(파일당 ≤1\\)").map((p) => new RegExp(p, "g"));
 const ALLOW = section("ALLOW \\(원문 제목·인용 — 이 부분 문자열을 포함하면 검사 면제\\. NRC 5\\.1\\.1-21 인용 강등과 동형\\)");
+// BIND-KR: 묶음 어구가 일반 공백(U+0020)으로 노출 문자열에 있으면 위반 — NBSP(U+00A0) 결속 요구.
+//   app/data 는 원문 제목(특허·과제)이라 제외.
+const BIND_KR = section("BIND-KR \\(묶음 어구 — 노출 문자열에 일반 공백으로 있으면 위반, NBSP 로 결속\\. app/data 의 원문 제목은 제외\\)");
 
 // ── 문자열 리터럴 + JSX 텍스트 추출 ────────────────────────────────────────
 function extractStrings(src) {
@@ -81,6 +84,11 @@ for (const file of files) {
         // EN 산문 em-dash — 선두 구분자(문두 «— »)와 FIG.·PUB. 캡션·짧은 라벨은 제외
         if (!/[가-힣]/.test(s) && s.length > 25 && s.indexOf("—") > 3 && !/^(FIG\.|PUB\.)/.test(s)) {
             console.log(`✗ [EMDASH-EN] ${rel}\n    "${s.slice(0, 90)}"`); fails++;
+        }
+        // W8 묶음 어구 — 일반 공백으로 노출되면 위반 (app/data 원문 제목 제외)
+        if (!rel.startsWith("app/data")) {
+            for (const term of BIND_KR)
+                if (s.includes(term)) { console.log(`✗ [BIND-KR «${term}» 미결속] ${rel}\n    「${s.slice(0, 90)}」`); fails++; }
         }
     }
     if (contrastCount > 1) { console.log(`✗ [CONTRAST>1 (${contrastCount}회)] ${rel}`); fails++; }

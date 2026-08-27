@@ -46,8 +46,8 @@ const memberPillar: Record<string, PillarKey> = {
 };
 
 const PILLARS: { key: PillarKey; icon: typeof Flame; label: string; labelKR: string }[] = [
-    { key: "tes", icon: Flame, label: "TES", labelKR: "열에너지 저장" },
-    { key: "immersion", icon: Droplets, label: "AI SEMICONDUCTOR COOLING", labelKR: "AI 반도체 냉각" },
+    { key: "tes", icon: Flame, label: "TES", labelKR: "열에너지 저장" },
+    { key: "immersion", icon: Droplets, label: "AI SEMICONDUCTOR COOLING", labelKR: "AI 반도체 냉각" },
     { key: "smr", icon: Atom, label: "SMR", labelKR: "소형모듈원자로" },
 ];
 

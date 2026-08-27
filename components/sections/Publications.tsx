@@ -22,7 +22,7 @@ const CATEGORY_LABELS: Record<string, { en: string; kr: string }> = {
     boiling: { en: "Boiling", kr: "비등" },
     condensation: { en: "Condensation", kr: "응축" },
     smr: { en: "SMR", kr: "SMR" },
-    tes: { en: "Thermal Energy Storage", kr: "열에너지 저장" },
+    tes: { en: "Thermal Energy Storage", kr: "열에너지 저장" },
     wettability: { en: "Wettability", kr: "젖음성" },
 };
 
