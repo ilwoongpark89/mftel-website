@@ -249,7 +249,7 @@ const ANNOUNCEMENT: Announcement = {
                 {
                     text: {
                         EN: "Prof. Il Woong Park, Department of Mechanical Engineering, Inha University",
-                        KR: "인하대학교 기계공학과 박일웅 교수",
+                        KR: "인하대학교 기계공학과 박일웅 교수",
                     },
                 },
                 {
@@ -286,7 +286,7 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
         },
         description: {
             EN: "Prof. Il Woong Park held an international thermal-hydraulics workshop at NTNU in Trondheim, together with Carlos Dorao and Hyung Ju Kim. Researchers and graduate students from Norway, Korea, and India came for two days of talks on multiphase flow and nuclear safety.",
-            KR: "MFTEL이 NTNU의 Carlos Dorao, Hyung Ju Kim 교수님과 함께 노르웨이 트론헤임에서 국제 열수력 워크숍을 열었습니다. 노르웨이와 한국, 인도에서 온 연구자와 대학원생들이 모여 이틀간 다상유동과 원자력 안전을 주제로 발표하고 토론했습니다.",
+            KR: "MFTEL이 NTNU의 Carlos Dorao, Hyung Ju Kim 교수님과 함께 노르웨이 트론헤임에서 국제 열수력 워크숍을 열었습니다. 노르웨이와 한국, 인도에서 온 연구자와 대학원생들이 모여 이틀간 다상유동과 원자력 안전을 주제로 발표하고 토론했습니다.",
         },
         images: [
             "/images/news/260624-th-workshop-trondheim-1.jpeg",
@@ -300,7 +300,7 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
         title: { EN: "Visiting Researchers at Th2FLAB", KR: "NTNU Th2FLAB 방문연구 시작" },
         description: {
             EN: "Sung Jin Kim, Hyeon Geun Shin, and Sang Min Song will stay at NTNU for a year to conduct collaborative research with Professor Carlos Dorao. It was a hard-working weekend!",
-            KR: "김성진, 신현근, 송상민 학생이 Carlos Dorao 교수님과 공동연구를 위해 NTNU에서 1년간 방문연구를 시작합니다. 주말임에도 Carlos 교수님께서 실험장치 세팅을 도와주셨습니다!",
+            KR: "김성진, 신현근, 송상민 학생이 Carlos Dorao 교수님과 공동연구를 위해 NTNU에서 1년간 방문연구를 시작합니다. 주말임에도 Carlos 교수님께서 실험장치 세팅을 도와주셨습니다!",
         },
         images: ["/images/news/250125-hard-work-ntnu-2.jpg", "/images/news/250125-hard-work-ntnu-1.jpg"],
     },
@@ -318,16 +318,16 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
         title: { EN: "Th2FLAB Professors Visited MFTEL", KR: "NTNU Th2FLAB 교수진 MFTEL 방문" },
         description: {
             EN: "Professors Carlos Alberto Dorao and Maria Fernandino of NTNU's Thermal Two-Phase Flow Laboratory (Th2FLAB) visited MFTEL at Inha University, Korea, for research collaboration and academic exchange.",
-            KR: "노르웨이 NTNU Th2FLAB의 Carlos Alberto Dorao 교수님과 Maria Fernandino 교수님이 인하대학교 MFTEL을 방문하여 공동연구 및 학술교류를 진행하였습니다.",
+            KR: "노르웨이 NTNU Th2FLAB의 Carlos Alberto Dorao 교수님과 Maria Fernandino 교수님이 인하대학교 MFTEL을 방문하여 공동연구 및 학술교류를 진행하였습니다.",
         },
         images: ["/images/news/251219-carlos-maria-visit-1.jpeg", "/images/news/251219-carlos-maria-visit-2.jpeg"],
     },
     {
         date: "2025-11-17",
-        title: { EN: "Bluepill CEO Visited Inha University", KR: "블루필 대표님 특강" },
+        title: { EN: "Bluepill CEO Visited Inha University", KR: "블루필 대표님 특강" },
         description: {
             EN: "CEO Kwang Ho Park of Bluepill visited Inha University and presented the future of coding using vibe coding.",
-            KR: "블루필 박광호 대표님이 인하대를 방문하여 '바이브 코딩으로 보는 코딩의 미래'를 주제로 특강을 진행해주셨습니다.",
+            KR: "블루필 박광호 대표님이 인하대를 방문하여 '바이브 코딩으로 보는 코딩의 미래'를 주제로 특강을 진행해주셨습니다.",
         },
         images: ["/images/news/251117-vibe-coding-ceo-visit.jpeg", "/images/news/251117-vibe-coding-ceo-visit-2.png"],
     },
@@ -345,7 +345,7 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
         title: { EN: "NURETH-21", KR: "NURETH-21 국제학회" },
         description: {
             EN: "MFTEL participated in NURETH-21 with NTNU Th2FLAB members: Prof. Carlos Dorao, Th2FLAB alumni Dr. Julio Pacio, and PhD student Karim.",
-            KR: "MFTEL이 NTNU Th2FLAB과 함께 NURETH-21에 참가하였습니다. Carlos Dorao 교수님, Th2FLAB 졸업생 Julio Pacio 박사님, 박사과정 Karim과 함께했습니다.",
+            KR: "MFTEL이 NTNU Th2FLAB과 함께 NURETH-21에 참가하였습니다. Carlos Dorao 교수님, Th2FLAB 졸업생 Julio Pacio 박사님, 박사과정 Karim과 함께했습니다.",
         },
         images: ["/images/news/250903-nureth.jpeg"],
     },
@@ -363,7 +363,7 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
         title: { EN: "UTFORSK Visit to NTNU", KR: "UTFORSK - MFTEL 전원 NTNU 방문" },
         description: {
             EN: "The entire MFTEL team from Inha University visited Associate Professor Hyung Ju Kim's lab at NTNU through the UTFORSK program.",
-            KR: "인하대학교 MFTEL 연구실 전원이 UTFORSK 프로그램으로 NTNU를 방문하여 Hyung Ju Kim 교수님 연구실을 찾았습니다.",
+            KR: "인하대학교 MFTEL 연구실 전원이 UTFORSK 프로그램으로 NTNU를 방문하여 Hyung Ju Kim 교수님 연구실을 찾았습니다.",
         },
         images: ["/images/news/250811-utforsk-ntnu.jpeg", "/images/news/250811-utforsk-ntnu-visiting.jpeg"],
     },

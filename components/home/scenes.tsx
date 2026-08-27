@@ -279,7 +279,7 @@ function ScenePeople() {
                         />
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-coal/90 to-transparent px-4 pb-3 pt-10">
                             <p className="text-[15px] font-semibold text-paper">
-                                {isKR ? "박일웅 교수" : "Prof. Il Woong Park"}
+                                {isKR ? "박일웅 교수" : "Prof. Il Woong Park"}
                             </p>
                             <p className="text-[13px] text-stone-400">{t("team.pi")}</p>
                         </div>
@@ -410,7 +410,7 @@ function SceneJoin() {
                             copied ? "text-ember-400" : "text-stone-400"
                         )}
                     >
-                        {copied ? t("contact.emailCopied") : isKR ? "인하대학교 2N687" : "Inha University 2N687"}
+                        {copied ? t("contact.emailCopied") : isKR ? "인하대학교 2N687" : "Inha University 2N687"}
                     </p>
                     <Link
                         href={lp("/join")}

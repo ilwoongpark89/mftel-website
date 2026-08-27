@@ -56,5 +56,11 @@
 - 보존: `/api/dashboard*`·`/api/push*`·`/api/cron-backup` 와 vercel.json 크론 — 공유 Upstash Redis(`mftel:dashboard:*`)의 일일 백업이 라이브 데이터(mftel-db)의 백업일 가능성이 있어 유지. 확실해지면 별도 결정.
 - 보안: cron-backup 에 CRON_SECRET 가드(env 설정 시 작동 — **Vercel 에 CRON_SECRET 추가 권장**) · dashboard-admin 인증 fail-close(DASHBOARD_ADMIN_PASSWORD 미설정 시 503 — 종전엔 '1009' 폴백이 실효 비밀번호) · `/api/analytics` 는 'mftel2024admin' 폴백 유지(admin 콘솔 잠금 방지 — **ANALYTICS_PASSWORD env 설정 권장**).
 
+### W8 묶음 어구 전수조사 (2026-08-27 — «전수조사 안해도 됨?» 지적으로 손 목록 6종을 census 도출로 대체)
+- 전 표면 국문 노출 문자열의 인접쌍 전수: A 영문·숫자+한글 124종 · B 한글+영문·숫자 59종 · D 이름+호칭 17종 · E 한글 2어절 684종.
+- 판정: **채택 27종**(BIND-KR 절이 정본 — 분야명·굳은 기술 용어·이름+호칭·수치+단위) / 기각 사유: 일반 명사구(냉각 에너지·노심 안전성),
+  문장 경계 노이즈, 15자 이상 과결속(인하대학교 다상유동열공학연구실 — 모바일 넘침 위험), 국가+기관 병렬(독일 HZDR), 내부 콘솔(admin).
+- 적용 76곳(NBSP). 신규 용어는 BIND-KR 에 추가하면 게이트가 전 표면에 강제한다.
+
 ### 게이트 보강 (탐지 회피 적발분)
 JSX `{" "}` 분절로 CONTRAST 미탐 · trim()으로 선두 « — » 미탐 · 40자 미만 EN 라벨 미탐 → `tools/copy-gate.mjs` 수정. BANNED-KR 에 «[를을] 통한», BANNED-EN 에 top-tier·shape the future 추가.

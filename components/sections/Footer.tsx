@@ -13,7 +13,7 @@ const MAP_EMBED_SRC =
     "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3166.5!2d126.6544!3d37.4507!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x357b78a27fba4c35%3A0x6e1b9e7b2e8b1c2a!2sInha%20University!5e0!3m2!1sen!2skr!4v1700000000000!5m2!1sen!2skr";
 
 const CONTACT = {
-    addressKR: "인천 미추홀구 인하로 100, 인하대학교 2N687",
+    addressKR: "인천 미추홀구 인하로 100, 인하대학교 2N687",
     addressEN: "Inha University 2N687, 100 Inha-ro, Michuhol-gu, Incheon 22212, Korea",
     tel: "+82-32-860-7335",
     email: "ilwoongpark@inha.ac.kr",

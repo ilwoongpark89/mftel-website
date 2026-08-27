@@ -133,7 +133,7 @@ export default function Team() {
 
     const educationCareer = isKR ? educationCareerKR : educationCareerEN;
     const professionalActivities = isKR ? professionalActivitiesKR : professionalActivitiesEN;
-    const professorName = isKR ? "박일웅 교수" : "Prof. Il Woong Park";
+    const professorName = isKR ? "박일웅 교수" : "Prof. Il Woong Park";
     const professorTitle = isKR
         ? "인하대학교 기계공학과 조교수"
         : "Assistant Professor · Mechanical Engineering, Inha University";

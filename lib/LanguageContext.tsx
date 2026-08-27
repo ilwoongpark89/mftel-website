@@ -152,7 +152,7 @@ const translations: Record<Language, Record<string, string>> = {
         "about.tes.title": "열에너지 저장",
         "about.tes.description": "고효율 열에너지 저장 시스템과 카르노 배터리로 전력망 안정화에 기여합니다.",
         "about.thermal.title": "AI 반도체 냉각",
-        "about.thermal.description": "2상 액침 냉각 기술로 데이터센터와 고성능 컴퓨팅 시스템의 냉각 에너지를 최대 90% 절감합니다.",
+        "about.thermal.description": "2상 액침 냉각 기술로 데이터센터와 고성능 컴퓨팅 시스템의 냉각 에너지를 최대 90% 절감합니다.",
         "about.smr.title": "소형모듈원자로",
         "about.smr.description": "열수력 해석으로 소형모듈원자로(SMR)의 안전성과 효율을 높입니다.",
 
