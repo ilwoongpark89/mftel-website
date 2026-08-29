@@ -284,12 +284,12 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
     {
         date: "2026-08-25",
         title: {
-            EN: "Top Prize in the Energy HRD Program",
-            KR: "2026 에너지인력양성사업 최우수상",
+            EN: "Minister's Award for Sung Jin Kim",
+            KR: "김성진 학생 기후에너지환경부 장관상 수상",
         },
         description: {
-            EN: "Sung Jin Kim received the top prize in the Outstanding Talent category of the 2026 Energy Human Resources Development Program, sponsored by the Ministry of Climate, Energy and Environment and administered by the Korea Institute of Energy Technology Evaluation and Planning (KETEP). The certificate was issued by the Minister of Climate, Energy and Environment.",
-            KR: "기후에너지환경부가 주최하고 한국에너지기술평가원이 주관한 2026년 에너지인력양성사업에서 김성진 학생이 우수인재 부문 최우수상을 받았습니다. 상장은 기후에너지환경부장관이 수여하였습니다.",
+            EN: "Sung Jin Kim won the top prize in the Outstanding Talent category of the 2026 Energy Human Resources Development Program and received the Minister's Award from the Ministry of Climate, Energy and Environment. Congratulations!",
+            KR: "김성진 학생이 2026년 에너지인력양성사업 우수인재 부문에서 최우수상인 기후에너지환경부 장관상을 받았습니다. 축하합니다!",
         },
         images: ["/images/news/260825-sungjin-kim-energy-hrd-award.jpeg"],
         imageLayout: "document",
