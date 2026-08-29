@@ -15,7 +15,7 @@
 | 특허 18건 | `app/data/index.ts` patents — **titleKR = 공식 출원 국문 자구(어휘 승계 1순위)** | 예: «배터리 액침 냉각»·«피동응축 열교환기» |
 | 과제 15건 | `app/data/index.ts` projects — 영문 제목의 원본은 `site-originals/Projects.rtf`(교수 저작) | 원본과 다르게 개작하지 않는다 |
 | 구성원 | `app/data/index.ts` teamMembers(11명)·alumni — 교수 경력의 원본은 `site-originals/Professor.rtf` | 서울대 직급 = Research **Assistant** Professor (2026-08-26 원본 대조로 정정) |
-| 소식 | `components/sections/News.tsx` — 사진 원본 `site-originals/news/`(파일명이 1차 기록) | 공고(ANNOUNCEMENT)는 공고 원문 성격 — 문체 규칙보다 원문 보존 우선 |
+| 소식 | `components/sections/News.tsx` — 사진 원본 `site-originals/news/`(파일명이 1차 기록). 2026-08-25 수상 항목의 사실 원본 = 상장 제816호 사본 `site-originals/news/260825 sungjin kim best award … cert no 816.jpeg` | 공고(ANNOUNCEMENT)는 공고 원문 성격 — 문체 규칙보다 원문 보존 우선 |
 | 강의 플랫폼 | /lecture = 로그인 입구. 학번+비밀번호(첫 등록 시 비밀번호 설정+반 코드), 교수 콘솔 /lecture/admin | 흐름 자구의 원본: `~/claude/MFTEL/lecture/app/onboarding/OnboardingForm.tsx` |
 | 협력 기관 | `app/data/index.ts` collaborators | NTNU·HZDR·UPC 등 |
 
@@ -64,3 +64,15 @@
 
 ### 게이트 보강 (탐지 회피 적발분)
 JSX `{" "}` 분절로 CONTRAST 미탐 · trim()으로 선두 « — » 미탐 · 40자 미만 EN 라벨 미탐 → `tools/copy-gate.mjs` 수정. BANNED-KR 에 «[를을] 통한», BANNED-EN 에 top-tier·shape the future 추가.
+
+### 소식 추가 — 김성진 최우수상, 2026년 에너지인력양성사업 (2026-08-29 게재)
+- 사실 범위 = 상장 제816호 자구만: 최우수상(우수인재 부문) · 수상자 인하대학교 김성진 · 주최 기후에너지환경부 · 주관 한국에너지기술평가원 · 「2026년 에너지인력양성사업」 · 2026-08-25 · 수여자 기후에너지환경부장관. 연구 주제·NTNU 방문연구·수상 사유의 구체 내용은 상장에 없으므로 쓰지 않았다.
+- 판정(초안 3종 × 검사 3렌즈 파견 후 메인 루프 결정, 기록 `~/claude/MFTEL/dispatch/2026-08-29-website-news-sungjin-award/`):
+  «장관상» 표기 **미채택**(상장에 자구 없음 — «상장은 기후에너지환경부장관이 수여하였습니다» 로 자구 안에서 서술) ·
+  «최우수상을 수상하였습니다» → **«받았습니다»**(NRC 5.1.2-25 겹말) · 관형절 주어 2개가 주어 뒤에 끼는 주격 3연속을 피해 부사구 선행(«…사업에서 김성진 학생이 …») ·
+  KR 제목은 코퍼스 관습(사건명형 명사구, 이름은 설명문에) 승계 · 겹낫표는 활동 항목 문체 전례가 없어 본문에서 제외(원문 인용이 아닌 서술이므로) ·
+  EN 등급명 «Best Award» **기각**(영어에서 Best 는 대상 명사를 요구하는 비관용 표현, 코퍼스 «Best Paper Award» 는 별개) → **«top prize»**(2단 체계 미확인이라 Grand/First Prize 보류) ·
+  EN 사업명 = **«Energy Human Resources Development Program»**(KETEP 사업의 논문 사사 통용 자구; 제목은 «Energy HRD Program» 약기) · 주최/주관 = **sponsored by / administered by**(host·organize 는 행사용 동사, 코퍼스 63행 «Sponsored by the Ministry» 승계) ·
+  기관 영문 = Ministry of Climate, Energy and Environment(코퍼스 63행) · Korea Institute of Energy Technology Evaluation and Planning (KETEP)(공식 영문명, 사이트 첫 도입).
+- 표시: `imageLayout: "document"` 신설 — 세로 문서를 자르지 않고 1:√2 틀·object-contain 으로 표시(grid 3:2 crop·feature 사진 hero 는 상장에 부적합). 렌더 확인: KO·EN × 1400·1150·390(에뮬레이션) + 라이트박스 열림·ESC 닫힘, 가로 넘침 0.
+- 보류: 「우수인재 부문」 공식 영문·2026년 시상 등급 체계(대상 유무)는 KETEP 공고로 확인되면 등급 역어 재검토.
