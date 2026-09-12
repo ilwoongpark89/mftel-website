@@ -1,15 +1,15 @@
 "use client";
 
 import Band from "@/components/ui/band";
-import { Kicker, Meta, FigCaption, SectionHeader } from "@/components/ui/typo";
+import { Kicker, Meta, SectionHeader } from "@/components/ui/typo";
 import { projects, patents } from "@/app/data";
 import { useLanguage } from "@/lib/LanguageContext";
 
 /**
- * CALORIMETER 04 — PROJECTS & IP. Funding Gantt as the hero artifact
- * (pure CSS bars derived from the grant year ranges — ember-600 active,
- * hairline-2 completed), an editorial grants table sorted active-first,
- * and a patents (intellectual property) sub-block. Frame-0 doctrine:
+ * CALORIMETER 04 — PROJECTS & IP. One plain list of grants (period, status,
+ * title, sponsor), active-first then most recent. No chart: the period text
+ * already says what a bar would.
+ * Patents (intellectual property) follow as a sub-block. Frame-0 doctrine:
  * zero animation, zero state, every row in the server HTML.
  */
 
@@ -31,20 +31,32 @@ const grants = projects
 
 const MIN_YEAR = Math.min(...grants.map((g) => g.start));
 const MAX_YEAR = Math.max(...grants.map((g) => g.end));
-const SPAN = MAX_YEAR - MIN_YEAR + 1;
-const YEARS = Array.from({ length: SPAN }, (_, i) => MIN_YEAR + i);
-
-const pct = (v: number) => ((v - MIN_YEAR) / SPAN) * 100;
-const TODAY_PCT =
-    CURRENT_YEAR >= MIN_YEAR && CURRENT_YEAR <= MAX_YEAR ? pct(CURRENT_YEAR + 0.5) : null;
 
 const rangeLabel = (g: { start: number; end: number }) =>
     g.start === g.end ? `${g.start}` : `${g.start}–${g.end}`;
 
+/** 지원기관 한글 표기 — 영문 원문(교수 저작)은 데이터에 그대로 두고 표시만 바꾼다. */
+const SPONSOR_KR: Record<string, string> = {
+    KETEP: "한국에너지기술평가원(KETEP)",
+    "Hyundai Engineering & Construction": "현대건설",
+    "SMR Regulation Research Foundation": "SMR 규제연구재단",
+    "HD Hyundai Heavy Industries": "HD현대중공업",
+    "Laboratory-Specialized Startup Leading University, Ministry of Science and ICT":
+        "과학기술정보통신부 실험실 특화형 창업선도대학 사업",
+    "Inha University": "인하대학교",
+    "UTFORSK, Direktoratet for høyere utdanning og kompetanse (HK-dir), Norway":
+        "노르웨이 고등교육·역량국(HK-dir) UTFORSK 프로그램",
+    "National Research Foundation of Korea": "한국연구재단",
+    "ROK-Nordic R&D Cooperation Program, National Research Foundation of Korea":
+        "한국연구재단 한–북유럽 연구협력 프로그램",
+};
+
+
 export default function Projects() {
     const { t, language } = useLanguage();
     const isKR = language === "KR";
-    const activeLabel = isKR ? "진행 중" : "ACTIVE";
+    const activeCount = grants.filter((g) => g.active).length;
+    const doneCount = grants.length - activeCount;
 
     return (
         <Band id="projects" surface="paper">
@@ -52,111 +64,48 @@ export default function Projects() {
                 index="04"
                 kicker={t("projects.label")}
                 title={t("projects.title")}
+                sub={
+                    isKR
+                        ? `${MIN_YEAR}년부터 지금까지 수행한 과제입니다. 진행 중 ${activeCount}건, 완료 ${doneCount}건.`
+                        : `Funded projects since ${MIN_YEAR}. ${activeCount} active, ${doneCount} completed.`
+                }
                 isKorean={isKR}
             />
 
-            {/* FIG. 04 — funding Gantt, data-derived pure CSS bars */}
-            <figure className="rounded-lg border border-hairline bg-white p-4 md:p-6">
-                <FigCaption>
-                    FIG. 04 — {isKR ? "연구 과제 기간" : "FUNDED PROJECTS"} · {MIN_YEAR}–{MAX_YEAR}
-                </FigCaption>
-
-                <div aria-hidden className="relative mt-4">
-                    {/* year gridlines + dashed today marker */}
-                    <div className="absolute inset-0">
-                        {YEARS.map((y) => (
-                            <span
-                                key={y}
-                                className="absolute inset-y-0 w-px bg-hairline"
-                                style={{ left: `${pct(y)}%` }}
-                            />
-                        ))}
-                        <span className="absolute inset-y-0 right-0 w-px bg-hairline" />
-                        {TODAY_PCT !== null && (
-                            <span
-                                className="absolute inset-y-0 w-px border-l border-dashed border-ink-3/50"
-                                style={{ left: `${TODAY_PCT}%` }}
-                            />
-                        )}
-                    </div>
-
-                    {/* mono year axis */}
-                    <div className="relative h-5">
-                        {YEARS.map((y, i) => (
-                            <span
-                                key={y}
-                                className={`absolute top-0 pl-1 ${i % 2 ? "hidden md:block" : ""}`}
-                                style={{ left: `${pct(y)}%` }}
-                            >
-                                <Meta className="text-[11px]">{y}</Meta>
-                            </span>
-                        ))}
-                    </div>
-
-                    {/* bars — 8px tall, same order as the table below */}
-                    <div className="mt-2 space-y-1.5 pb-1">
-                        {grants.map((g) => (
-                            <div key={g.title} className="relative h-2">
-                                <span
-                                    title={`${g.title} (${g.year})`}
-                                    className={`absolute inset-y-0 rounded-sm ${
-                                        g.active ? "bg-ember-600" : "bg-hairline-2"
-                                    }`}
-                                    style={{
-                                        left: `${pct(g.start)}%`,
-                                        width: `${((g.end - g.start + 1) / SPAN) * 100}%`,
-                                    }}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* legend */}
-                <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-hairline pt-3">
-                    <span className="inline-flex items-center gap-2">
-                        <span aria-hidden className="h-2 w-6 rounded-sm bg-ember-600" />
-                        <Meta className="text-xs uppercase tracking-[0.08em]">{activeLabel}</Meta>
-                    </span>
-                    <span className="inline-flex items-center gap-2">
-                        <span aria-hidden className="h-2 w-6 rounded-sm bg-hairline-2" />
-                        <Meta className="text-xs uppercase tracking-[0.08em]">
-                            {isKR ? "완료" : "COMPLETED"}
-                        </Meta>
-                    </span>
-                </div>
-            </figure>
-
-            {/* grants table — active first, titles wrap free */}
-            <div className="mt-10 md:mt-12">
-                <div className="hidden rounded-t-lg bg-well px-5 py-2.5 md:grid md:grid-cols-[120px_1fr] md:gap-x-8">
-                    <Meta className="text-right text-xs uppercase tracking-[0.08em]">
-                        {isKR ? "기간" : "Years"}
-                    </Meta>
-                    <Meta className="text-xs uppercase tracking-[0.08em]">
-                        {isKR ? "과제명 · 지원기관" : "Project · Sponsor"}
-                    </Meta>
-                </div>
+            {/* grants — active first, then most recent */}
+            <div className="mt-2">
                 <ul className="border-b border-hairline">
                     {grants.map((g) => (
                         <li
                             key={g.title}
-                            className="border-t border-hairline py-4 md:grid md:grid-cols-[120px_1fr] md:gap-x-8 md:px-5"
+                            className="border-t border-hairline py-4 md:py-5"
                         >
-                            <div className="flex items-baseline gap-3 md:flex-col md:items-end md:gap-0.5">
-                                <Meta>{rangeLabel(g)}</Meta>
-                                {g.active && (
-                                    <Meta className="text-xs font-medium text-ember-700">
-                                        {activeLabel}
-                                    </Meta>
-                                )}
-                            </div>
-                            <div className="mt-1.5 md:mt-0">
-                                <p className="break-keep text-[15px] font-medium leading-snug text-ink md:text-base">
-                                    {g.title}
+                            <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                    <Meta>{rangeLabel(g)}</Meta>
+                                    {g.active ? (
+                                        <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-ember-700">
+                                            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-ember-600" />
+                                            {isKR ? "진행 중" : "Active"}
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-ink-3">
+                                            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-ink-4" />
+                                            {isKR ? "완료" : "Completed"}
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="mt-1.5 break-keep text-[15px] font-medium leading-snug text-ink md:text-base">
+                                    {isKR ? g.titleKR : g.title}
                                 </p>
-                                <Meta className="mt-1 block text-xs leading-normal">{g.sponsor}</Meta>
+                                {isKR ? (
+                                    <p className="mt-1 break-keep text-[13px] leading-snug text-ink-3">{g.title}</p>
+                                ) : null}
+                                <Meta className="mt-1.5 block text-xs leading-normal text-ink-3">
+                                    {isKR ? (SPONSOR_KR[g.sponsor] ?? g.sponsor) : g.sponsor}
+                                </Meta>
                             </div>
+
                         </li>
                     ))}
                 </ul>
@@ -184,15 +133,15 @@ export default function Projects() {
                             </p>
                             <span className="flex shrink-0 items-baseline gap-3">
                                 {p.status === "registered" ? (
-                                    <span className="text-[12px] font-semibold uppercase tracking-[0.1em] text-ember-700">
+                                    <span className="inline-block w-20 text-right text-[12px] font-semibold uppercase tracking-[0.1em] text-ember-700">
                                         {isKR ? "등록" : "Registered"}
                                     </span>
                                 ) : (
-                                    <span className="text-[12px] font-semibold uppercase tracking-[0.1em] text-ink-3">
+                                    <span className="inline-block w-20 text-right text-[12px] font-semibold uppercase tracking-[0.1em] text-ink-3">
                                         {isKR ? "출원" : "Filed"}
                                     </span>
                                 )}
-                                <Meta>
+                                <Meta className="inline-block min-w-[17ch] tabular-nums">
                                     {p.status === "registered" && p.regNumber && p.regDate
                                         ? `KR ${p.regNumber} · ${p.regDate.slice(0, 7).replace("-", ".")}`
                                         : `KR ${p.appNumber} · ${p.appDate.slice(0, 7).replace("-", ".")}`}

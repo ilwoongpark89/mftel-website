@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { ChevronDown, X } from "lucide-react";
 import Band from "@/components/ui/band";
-import { SectionHeader, Meta, FigCaption } from "@/components/ui/typo";
+import { SectionHeader, Meta } from "@/components/ui/typo";
 import { useLanguage, type Language } from "@/lib/LanguageContext";
 
 /**
@@ -302,7 +302,7 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
         },
         description: {
             EN: "Prof. Il Woong Park held an international thermal-hydraulics workshop at NTNU in Trondheim, together with Carlos Dorao and Hyung Ju Kim. Researchers and graduate students from Norway, Korea, and India came for two days of talks on multiphase flow and nuclear safety.",
-            KR: "MFTEL이 NTNU의 Carlos Dorao, Hyung Ju Kim 교수님과 함께 노르웨이 트론헤임에서 국제 열수력 워크숍을 열었습니다. 노르웨이와 한국, 인도에서 온 연구자와 대학원생들이 모여 이틀간 다상유동과 원자력 안전을 주제로 발표하고 토론했습니다.",
+            KR: "연구실이 NTNU의 Carlos Dorao, Hyung Ju Kim 교수와 함께 노르웨이 트론헤임에서 국제 열수력 워크숍을 열었습니다. 노르웨이와 한국, 인도에서 온 연구자와 대학원생들이 모여 이틀간 다상유동과 원자력 안전을 주제로 발표하고 토론했습니다.",
         },
         images: [
             "/images/news/260624-th-workshop-trondheim-1.jpeg",
@@ -316,7 +316,7 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
         title: { EN: "Visiting Researchers at Th2FLAB", KR: "NTNU Th2FLAB 방문연구 시작" },
         description: {
             EN: "Sung Jin Kim, Hyeon Geun Shin, and Sang Min Song will stay at NTNU for a year to conduct collaborative research with Professor Carlos Dorao. It was a hard-working weekend!",
-            KR: "김성진, 신현근, 송상민 학생이 Carlos Dorao 교수님과 공동연구를 위해 NTNU에서 1년간 방문연구를 시작합니다. 주말임에도 Carlos 교수님께서 실험장치 세팅을 도와주셨습니다!",
+            KR: "김성진, 신현근, 송상민 학생이 Carlos Dorao 교수와 공동연구를 위해 NTNU에서 1년간 방문연구를 시작합니다. 주말인데도 Dorao 교수가 실험장치 설치를 도와주었습니다.",
         },
         images: ["/images/news/250125-hard-work-ntnu-2.jpg", "/images/news/250125-hard-work-ntnu-1.jpg"],
     },
@@ -325,7 +325,7 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
         title: { EN: "EPT Day 2026", KR: "EPT Day 2026" },
         description: {
             EN: "Prof. Il Woong Park participated in EPT Day 2026 and presented his latest research on multiphase flow and thermal engineering.",
-            KR: "MFTEL이 EPT Day 2026에 참가하여 다상유동 및 열공학 분야 최신 연구 성과를 소개하였습니다.",
+            KR: "박일웅 교수가 노르웨이 NTNU 에너지공정공학과(Department of Energy and Process Engineering, EPT)의 학과 행사 EPT Day 2026에서 강연했습니다.",
         },
         images: ["/images/news/ept-day-2026-1.jpg", "/images/news/ept-day-2026-2.png"],
     },
@@ -334,34 +334,34 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
         title: { EN: "Th2FLAB Professors Visited MFTEL", KR: "NTNU Th2FLAB 교수진 MFTEL 방문" },
         description: {
             EN: "Professors Carlos Alberto Dorao and Maria Fernandino of NTNU's Thermal Two-Phase Flow Laboratory (Th2FLAB) visited MFTEL at Inha University, Korea, for research collaboration and academic exchange.",
-            KR: "노르웨이 NTNU Th2FLAB의 Carlos Alberto Dorao 교수님과 Maria Fernandino 교수님이 인하대학교 MFTEL을 방문하여 공동연구 및 학술교류를 진행하였습니다.",
+            KR: "노르웨이 NTNU Th2FLAB의 Carlos Alberto Dorao 교수와 Maria Fernandino 교수가 연구실을 방문해 공동연구와 학술교류를 논의했습니다.",
         },
         images: ["/images/news/251219-carlos-maria-visit-1.jpeg", "/images/news/251219-carlos-maria-visit-2.jpeg"],
     },
     {
         date: "2025-11-17",
-        title: { EN: "Bluepill CEO Visited Inha University", KR: "블루필 대표님 특강" },
+        title: { EN: "Bluepill CEO Visited Inha University", KR: "블루필 박광호 대표 특강" },
         description: {
             EN: "CEO Kwang Ho Park of Bluepill visited Inha University and presented the future of coding using vibe coding.",
-            KR: "블루필 박광호 대표님이 인하대를 방문하여 '바이브 코딩으로 보는 코딩의 미래'를 주제로 특강을 진행해주셨습니다.",
+            KR: "블루필 박광호 대표가 인하대학교를 방문해 '바이브 코딩으로 보는 코딩의 미래'를 주제로 특강을 했습니다.",
         },
         images: ["/images/news/251117-vibe-coding-ceo-visit.jpeg", "/images/news/251117-vibe-coding-ceo-visit-2.png"],
     },
     {
         date: "2025-10-21",
-        title: { EN: "UTFORSK 2024 at Inha University", KR: "UTFORSK - NTNU 학생들 인하대 방문" },
+        title: { EN: "UTFORSK 2024 at Inha University", KR: "UTFORSK 프로그램으로 NTNU 학생들이 인하대 방문" },
         description: {
             EN: "NTNU students visited Inha University through the UTFORSK program.",
-            KR: "UTFORSK 프로그램으로 NTNU 학생들이 인하대학교를 방문하였습니다.",
+            KR: "UTFORSK 프로그램으로 NTNU 학생들이 인하대학교를 방문했습니다.",
         },
         images: ["/images/news/251021-visiting-inha-utforsk-2.png", "/images/news/251021-visiting-inha-utforsk-1.jpeg"],
     },
     {
         date: "2025-09-03",
-        title: { EN: "NURETH-21", KR: "NURETH-21 국제학회" },
+        title: { EN: "NURETH-21", KR: "NURETH-21 학회 참가" },
         description: {
             EN: "MFTEL participated in NURETH-21 with NTNU Th2FLAB members: Prof. Carlos Dorao, Th2FLAB alumni Dr. Julio Pacio, and PhD student Karim.",
-            KR: "MFTEL이 NTNU Th2FLAB과 함께 NURETH-21에 참가하였습니다. Carlos Dorao 교수님, Th2FLAB 졸업생 Julio Pacio 박사님, 박사과정 Karim과 함께했습니다.",
+            KR: "연구실이 NTNU Th2FLAB과 함께 NURETH-21 학회에 참가했습니다. Carlos Dorao 교수, Th2FLAB 졸업생 Julio Pacio 박사, 박사과정 Karim과 함께했습니다.",
         },
         images: ["/images/news/250903-nureth.jpeg"],
     },
@@ -370,25 +370,25 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
         title: { EN: "MFTEL Visited Th2FLAB", KR: "NTNU Th2FLAB 방문" },
         description: {
             EN: "MFTEL visited Th2FLAB to discuss future collaboration on multiphase flow research.",
-            KR: "다상유동 공동연구 논의를 위해 노르웨이 NTNU의 Th2FLAB을 방문하였습니다.",
+            KR: "다상유동 공동연구를 논의하기 위해 노르웨이 NTNU의 Th2FLAB을 방문했습니다.",
         },
         images: ["/images/news/250814-visiting-ntnu-1.jpeg", "/images/news/250814-visiting-ntnu-2.jpeg"],
     },
     {
         date: "2025-08-11",
-        title: { EN: "UTFORSK Visit to NTNU", KR: "UTFORSK - MFTEL 전원 NTNU 방문" },
+        title: { EN: "UTFORSK Visit to NTNU", KR: "UTFORSK 프로그램으로 연구실 전원 NTNU 방문" },
         description: {
             EN: "The entire MFTEL team from Inha University visited Associate Professor Hyung Ju Kim's lab at NTNU through the UTFORSK program.",
-            KR: "인하대학교 MFTEL 연구실 전원이 UTFORSK 프로그램으로 NTNU를 방문하여 Hyung Ju Kim 교수님 연구실을 찾았습니다.",
+            KR: "연구실 전원이 UTFORSK 프로그램으로 NTNU를 방문해 Hyung Ju Kim 교수 연구실을 찾았습니다.",
         },
         images: ["/images/news/250811-utforsk-ntnu.jpeg", "/images/news/250811-utforsk-ntnu-visiting.jpeg"],
     },
     {
         date: "2025-05-11",
-        title: { EN: "11th WORTH in China", KR: "WORTH-11 학회 (중국)" },
+        title: { EN: "11th WORTH in China", KR: "제11회 WORTH 학회 발표 (중국)" },
         description: {
             EN: "Hyeon Geun Shin presented research findings at the 11th WORTH conference in China.",
-            KR: "신현근 학생이 중국에서 열린 제11회 WORTH 학회에서 연구 결과를 발표하였습니다.",
+            KR: "신현근 학생이 중국에서 열린 제11회 WORTH 학회에서 연구 결과를 발표했습니다.",
         },
         images: ["/images/news/250505-hyeongeun-shin-worth.jpg"],
     },
@@ -397,13 +397,11 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
         title: { EN: "Visiting Research at HZDR and UPC", KR: "독일 HZDR, 스페인 UPC 방문연구" },
         description: {
             EN: "Hyun Jin Yong conducted visiting research at HZDR, Germany, and Kyeong Ju Ko at UPC, Spain.",
-            KR: "용현진 학생은 독일 HZDR에서, 고경주 학생은 스페인 UPC에서 방문연구를 수행하였습니다.",
+            KR: "용현진 학생은 독일 HZDR에서, 고경주 학생은 스페인 UPC에서 방문연구를 했습니다.",
         },
         images: ["/images/news/250309-hyunjin-yong-hzdr.jpg", "/images/news/250309-kyeongju-ko-upc.jpg"],
     },
 ];
-
-const INITIAL_ROWS = 5;
 
 /**
  * Unified, date-sorted news stream: activity items + the (closed) CALL
@@ -429,25 +427,41 @@ function formatDate(iso: string, language: Language): string {
     return `${EN_MONTHS[m - 1]} ${d}, ${y}`;
 }
 
-interface LightboxImage {
-    src: string;
+interface LightboxState {
+    images: string[];
+    index: number;
     alt: string;
 }
 
-function Lightbox({ image, language, onClose }: { image: LightboxImage; language: Language; onClose: () => void }) {
+function Lightbox({
+    state,
+    language,
+    onClose,
+    onIndex,
+}: {
+    state: LightboxState;
+    language: Language;
+    onClose: () => void;
+    onIndex: (i: number) => void;
+}) {
+    const { images, index, alt } = state;
+    const n = images.length;
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") onClose();
+            if (n > 1 && e.key === "ArrowRight") onIndex((index + 1) % n);
+            if (n > 1 && e.key === "ArrowLeft") onIndex((index - 1 + n) % n);
         };
         window.addEventListener("keydown", onKeyDown);
         return () => window.removeEventListener("keydown", onKeyDown);
-    }, [onClose]);
+    }, [index, n, onClose, onIndex]);
+    const navBtn = "absolute top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-xl text-paper transition-colors duration-150 hover:bg-white/20";
 
     return (
         <div
             role="dialog"
             aria-modal="true"
-            aria-label={image.alt}
+            aria-label={alt}
             className="fixed inset-0 z-50 flex items-center justify-center bg-coal/90 p-4 md:p-10"
             onClick={onClose}
         >
@@ -459,19 +473,81 @@ function Lightbox({ image, language, onClose }: { image: LightboxImage; language
             >
                 <X className="h-6 w-6" />
             </button>
+            {n > 1 ? (
+                <button
+                    type="button"
+                    aria-label={language === "KR" ? "이전 사진" : "Previous image"}
+                    className={`${navBtn} left-3`}
+                    onClick={(e) => { e.stopPropagation(); onIndex((index - 1 + n) % n); }}
+                >
+                    ‹
+                </button>
+            ) : null}
             <div
                 className="relative h-full max-h-[82vh] w-full max-w-4xl"
                 onClick={(e) => e.stopPropagation()}
             >
                 <Image
-                    src={image.src}
-                    alt={image.alt}
+                    src={images[index]}
+                    alt={`${alt} ${index + 1}`}
                     fill
                     sizes="(max-width: 768px) 100vw, 896px"
                     className="object-contain"
                 />
             </div>
+            {n > 1 ? (
+                <button
+                    type="button"
+                    aria-label={language === "KR" ? "다음 사진" : "Next image"}
+                    className={`${navBtn} right-3`}
+                    onClick={(e) => { e.stopPropagation(); onIndex((index + 1) % n); }}
+                >
+                    ›
+                </button>
+            ) : null}
+            {n > 1 ? (
+                <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-paper/80 tabular-nums">
+                    {index + 1} / {n}
+                </p>
+            ) : null}
         </div>
+    );
+}
+
+/** 모든 소식이 같은 틀 — 3:2 액자 하나. 사진은 채우고(cover), 상장·포스터 같은 문서는 온전히(contain). 여러 장이면 «+N» 뒤 라이트박스로 넘긴다. */
+function MediaFrame({
+    images,
+    alt,
+    contain,
+    language,
+    onOpen,
+}: {
+    images: string[];
+    alt: string;
+    contain: boolean;
+    language: Language;
+    onOpen: (s: LightboxState) => void;
+}) {
+    return (
+        <button
+            type="button"
+            aria-label={language === "KR" ? "이미지 크게 보기" : "Enlarge image"}
+            onClick={() => onOpen({ images, index: 0, alt })}
+            className="relative block aspect-[3/2] w-full overflow-hidden rounded-lg border border-hairline bg-well transition-colors duration-150 hover:border-hairline-2"
+        >
+            <Image
+                src={images[0]}
+                alt={`${alt} 1`}
+                fill
+                sizes="(max-width: 768px) 100vw, 400px"
+                className={contain ? "object-contain p-3" : "object-cover"}
+            />
+            {images.length > 1 ? (
+                <span className="absolute bottom-2 right-2 rounded-md bg-coal/80 px-2 py-0.5 text-[12px] font-medium text-paper tabular-nums">
+                    +{images.length - 1}
+                </span>
+            ) : null}
+        </button>
     );
 }
 
@@ -479,230 +555,85 @@ function ActivityRow({
     item,
     language,
     onImageOpen,
-    defaultExpanded = false,
 }: {
     item: ActivityItem;
     language: Language;
-    onImageOpen: (image: LightboxImage) => void;
-    defaultExpanded?: boolean;
+    onImageOpen: (s: LightboxState) => void;
 }) {
-    const [expanded, setExpanded] = useState(defaultExpanded);
     const isKR = language === "KR";
-    const panelId = `news-activity-${item.date}`;
-
+    const alt = item.title[language];
     return (
-        <div>
-            <button
-                type="button"
-                aria-expanded={expanded}
-                aria-controls={panelId}
-                onClick={() => setExpanded((v) => !v)}
-                className="flex w-full items-center gap-4 px-4 py-4 text-left transition-colors duration-150 hover:bg-well md:px-5"
-            >
-                {/* thumbnail — kept on mobile */}
-                <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-hairline bg-well">
-                    <Image src={item.images[0]} alt="" fill sizes="48px" className="object-cover" />
-                </span>
-                {/* date — left column on desktop */}
-                <span className="hidden w-28 shrink-0 md:block">
-                    <Meta className="whitespace-nowrap">{formatDate(item.date, language)}</Meta>
-                </span>
-                <span className="min-w-0 flex-1">
-                    <span className="line-clamp-2 break-keep text-[15px] font-semibold leading-snug text-ink md:text-base">
-                        {item.title[language]}
-                    </span>
-                    {/* date — below title on mobile */}
-                    <span className="mt-1 block md:hidden">
-                        <Meta className="whitespace-nowrap">{formatDate(item.date, language)}</Meta>
-                    </span>
-                </span>
-                <ChevronDown
-                    aria-hidden
-                    className={`h-4 w-4 shrink-0 text-ink-3 transition-transform duration-150 ${expanded ? "rotate-180" : ""}`}
-                />
-            </button>
-
-            {/* CSS-only accordion: content always in server HTML */}
-            <div
-                id={panelId}
-                className={`grid transition-[grid-template-rows] duration-[250ms] ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
-            >
-                <div className="min-h-0 overflow-hidden">
-                    <div className="flex gap-4 px-4 pb-5 md:px-5">
-                        {/* spacers mirror the row geometry — alignment by construction */}
-                        <span aria-hidden className="hidden w-12 shrink-0 md:block" />
-                        <span aria-hidden className="hidden w-28 shrink-0 md:block" />
-                        <div className="min-w-0 flex-1">
-                            <p
-                                className={`whitespace-pre-line text-sm text-ink-2 md:text-[15px] ${isKR ? "leading-[1.75]" : "leading-relaxed"}`}
-                            >
-                                {item.description[language]}
-                            </p>
-                            {item.imageLayout === "feature" ? (
-                                <div className="mt-4">
-                                    <div className="grid gap-3 md:grid-cols-[3.3fr_1fr] md:items-start md:gap-4">
-                                        {/* the moment — group photo, full and uncropped */}
-                                        <button
-                                            type="button"
-                                            aria-label={language === "KR" ? "이미지 크게 보기" : "Enlarge image"}
-                                            onClick={() =>
-                                                onImageOpen({
-                                                    src: item.images[0],
-                                                    alt: `${item.title[language]} 1`,
-                                                })
-                                            }
-                                            className="relative block aspect-[1280/1216] w-full overflow-hidden rounded-lg border border-hairline bg-well transition-colors duration-150 hover:border-hairline-2"
-                                        >
-                                            <Image
-                                                src={item.images[0]}
-                                                alt={`${item.title[language]} 1`}
-                                                fill
-                                                sizes="(max-width: 768px) 100vw, 640px"
-                                                className="object-cover"
-                                            />
-                                        </button>
-                                        {/* official material — posters, secondary column (stacked beside the photo) */}
-                                        {item.images.length > 1 ? (
-                                            <div>
-                                                <div className="grid grid-cols-2 gap-3 md:grid-cols-1">
-                                                    {item.images.slice(1).map((src, i) => (
-                                                        <button
-                                                            key={src}
-                                                            type="button"
-                                                            aria-label={
-                                                                language === "KR"
-                                                                    ? "이미지 크게 보기"
-                                                                    : "Enlarge image"
-                                                            }
-                                                            onClick={() =>
-                                                                onImageOpen({
-                                                                    src,
-                                                                    alt: `${item.title[language]} ${i + 2}`,
-                                                                })
-                                                            }
-                                                            className="relative block aspect-[800/1194] overflow-hidden rounded-lg border border-hairline bg-white transition-colors duration-150 hover:border-hairline-2"
-                                                        >
-                                                            <Image
-                                                                src={src}
-                                                                alt={`${item.title[language]} ${i + 2}`}
-                                                                fill
-                                                                sizes="(max-width: 768px) 50vw, 200px"
-                                                                className="object-cover"
-                                                            />
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ) : null}
-                                    </div>
-                                </div>
-                            ) : item.imageLayout === "document" ? (
-                                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                                    {item.images.map((src, i) => (
-                                        <button
-                                            key={src}
-                                            type="button"
-                                            aria-label={language === "KR" ? "이미지 크게 보기" : "Enlarge image"}
-                                            onClick={() =>
-                                                onImageOpen({ src, alt: `${item.title[language]} ${i + 1}` })
-                                            }
-                                            /* A-series paper ratio (1:√2) — a certificate or letter fits whole */
-                                            className="relative block aspect-[1/1.414] overflow-hidden rounded-lg border border-hairline bg-white transition-colors duration-150 hover:border-hairline-2"
-                                        >
-                                            <Image
-                                                src={src}
-                                                alt={`${item.title[language]} ${i + 1}`}
-                                                fill
-                                                sizes="(max-width: 640px) 50vw, 300px"
-                                                className="object-contain"
-                                            />
-                                        </button>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                    {item.images.map((src, i) => (
-                                        <button
-                                            key={src}
-                                            type="button"
-                                            aria-label={language === "KR" ? "이미지 크게 보기" : "Enlarge image"}
-                                            onClick={() =>
-                                                onImageOpen({ src, alt: `${item.title[language]} ${i + 1}` })
-                                            }
-                                            className="relative aspect-[3/2] overflow-hidden rounded-lg border border-hairline bg-well transition-colors duration-150 hover:border-hairline-2"
-                                        >
-                                            <Image
-                                                src={src}
-                                                alt={`${item.title[language]} ${i + 1}`}
-                                                fill
-                                                sizes="(max-width: 768px) 100vw, 400px"
-                                                className="object-cover"
-                                            />
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
+        <article className="grid gap-5 py-7 md:grid-cols-[1fr_400px] md:gap-10">
+            <div className="min-w-0">
+                <Meta className="whitespace-nowrap">{formatDate(item.date, language)}</Meta>
+                <h3 className="mt-1.5 break-keep text-[17px] font-semibold leading-snug text-ink md:text-lg">
+                    {alt}
+                </h3>
+                <p
+                    className={`mt-2 whitespace-pre-line break-keep text-sm text-ink-2 md:text-[15px] ${isKR ? "leading-[1.75]" : "leading-relaxed"}`}
+                >
+                    {item.description[language]}
+                </p>
             </div>
-        </div>
+            <MediaFrame
+                images={item.images}
+                alt={alt}
+                contain={item.imageLayout === "document"}
+                language={language}
+                onOpen={onImageOpen}
+            />
+        </article>
     );
 }
 
 function AnnouncementRow({
     language,
     onImageOpen,
-    defaultExpanded = false,
 }: {
     language: Language;
-    onImageOpen: (image: LightboxImage) => void;
-    defaultExpanded?: boolean;
+    onImageOpen: (s: LightboxState) => void;
 }) {
-    const [expanded, setExpanded] = useState(defaultExpanded);
+    const [expanded, setExpanded] = useState(false);
     const isKR = language === "KR";
     const panelId = "news-call-detail";
     const closed = ANNOUNCEMENT.closed;
 
     return (
         <div>
-            <button
-                type="button"
-                aria-expanded={expanded}
-                aria-controls={panelId}
-                onClick={() => setExpanded((v) => !v)}
-                className="flex w-full items-center gap-4 px-4 py-4 text-left transition-colors duration-150 hover:bg-well md:px-5"
-            >
-                {/* poster thumbnail — kept on mobile */}
-                <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-hairline bg-well">
-                    <Image src={ANNOUNCEMENT.image} alt="" fill sizes="48px" className="object-cover" />
-                </span>
-                {/* date — left column on desktop */}
-                <span className="hidden w-28 shrink-0 md:block">
-                    <Meta className="whitespace-nowrap">{formatDate(ANNOUNCEMENT.date, language)}</Meta>
-                </span>
-                <span className="min-w-0 flex-1">
-                    <Meta className="font-medium text-ink-3">
-                        {isKR ? "모집공고" : "CALL"}
-                    </Meta>
-                    <span className="mt-0.5 line-clamp-2 break-keep text-[15px] font-semibold leading-snug text-ink md:text-base">
-                        {ANNOUNCEMENT.title[language]}
-                    </span>
-                    {/* date — below title on mobile */}
-                    <span className="mt-1 block md:hidden">
-                        <Meta className="whitespace-nowrap">{formatDate(ANNOUNCEMENT.date, language)}</Meta>
-                    </span>
-                </span>
-                {closed ? (
-                    <span className="hidden shrink-0 items-center rounded-full border border-hairline-2 bg-white px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-ink-3 sm:inline-flex">
-                        {isKR ? "마감" : "Closed"}
-                    </span>
-                ) : null}
-                <ChevronDown
-                    aria-hidden
-                    className={`h-4 w-4 shrink-0 text-ink-3 transition-transform duration-150 ${expanded ? "rotate-180" : ""}`}
-                />
-            </button>
+            <div className="grid gap-5 py-7 md:grid-cols-[1fr_400px] md:gap-10">
+            <div className="min-w-0">
+                <Meta className="whitespace-nowrap">
+                    {formatDate(ANNOUNCEMENT.date, language)} · {isKR ? "모집공고" : "Call"}
+                    {closed ? (isKR ? " · 마감" : " · Closed") : ""}
+                </Meta>
+                <h3 className="mt-1.5 break-keep text-[17px] font-semibold leading-snug text-ink md:text-lg">
+                    {ANNOUNCEMENT.title[language]}
+                </h3>
+                <p className={`mt-2 break-keep text-sm text-ink-2 md:text-[15px] ${isKR ? "leading-[1.75]" : "leading-relaxed"}`}>
+                    {ANNOUNCEMENT.intro[language]}
+                </p>
+                <button
+                    type="button"
+                    aria-expanded={expanded}
+                    aria-controls={panelId}
+                    onClick={() => setExpanded((v) => !v)}
+                    className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-ember-700 transition-colors duration-150 hover:text-ember-800"
+                >
+                    {expanded ? (isKR ? "공고 접기" : "Hide details") : (isKR ? "공고 전문 보기" : "Full announcement")}
+                    <ChevronDown
+                        aria-hidden
+                        className={`h-4 w-4 transition-transform duration-150 ${expanded ? "rotate-180" : ""}`}
+                    />
+                </button>
+            </div>
+            <MediaFrame
+                images={[ANNOUNCEMENT.image]}
+                alt={ANNOUNCEMENT.title[language]}
+                contain
+                language={language}
+                onOpen={onImageOpen}
+            />
+            </div>
 
             {/* full announcement — structured, CSS-only accordion (content always in server HTML) */}
             <div
@@ -710,18 +641,9 @@ function AnnouncementRow({
                 className={`grid transition-[grid-template-rows] duration-[250ms] ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
             >
                 <div className="min-h-0 overflow-hidden">
-                    <div className="flex gap-4 px-4 pb-6 md:px-5">
-                        {/* spacers mirror the row geometry — alignment by construction */}
-                        <span aria-hidden className="hidden w-12 shrink-0 md:block" />
-                        <span aria-hidden className="hidden w-28 shrink-0 md:block" />
+                    <div className="flex gap-4 pb-7">
                         <div className="min-w-0 flex-1">
-                            <p
-                                className={`max-w-3xl text-sm text-ink-2 md:text-[15px] ${isKR ? "leading-[1.75]" : "leading-relaxed"}`}
-                            >
-                                {ANNOUNCEMENT.intro[language]}
-                            </p>
-
-                            <div className="mt-4">
+                            <div>
                                 <Meta className="text-sm font-medium text-ink-3">
                                     {isKR ? "마감" : "DEADLINE"} · {formatDate(ANNOUNCEMENT.deadline, language)}{" "}
                                     {ANNOUNCEMENT.deadlineTime}
@@ -729,8 +651,8 @@ function AnnouncementRow({
                                 </Meta>
                             </div>
 
-                            <div className="mt-6 grid gap-8 md:grid-cols-3">
-                                <div className="grid content-start gap-6 sm:grid-cols-2 md:col-span-2">
+                            <div className="mt-6">
+                                <div className="grid content-start gap-6 sm:grid-cols-2">
                                     {ANNOUNCEMENT.sections.map((sec, sIdx) => (
                                         <section key={sec.heading.EN}>
                                             <h4 className="break-keep text-sm font-semibold text-ink">
@@ -768,32 +690,6 @@ function AnnouncementRow({
                                         </section>
                                     ))}
                                 </div>
-                                <figure className="md:col-span-1">
-                                    <button
-                                        type="button"
-                                        aria-label={language === "KR" ? "이미지 크게 보기" : "Enlarge image"}
-                                        onClick={() =>
-                                            onImageOpen({
-                                                src: ANNOUNCEMENT.image,
-                                                alt: ANNOUNCEMENT.title[language],
-                                            })
-                                        }
-                                        className="block w-full overflow-hidden rounded-lg border border-hairline bg-white transition-colors duration-150 hover:border-hairline-2"
-                                    >
-                                        <span className="relative block aspect-[1686/1186]">
-                                            <Image
-                                                src={ANNOUNCEMENT.image}
-                                                alt={ANNOUNCEMENT.title[language]}
-                                                fill
-                                                sizes="(max-width: 768px) 100vw, 360px"
-                                                className="object-contain"
-                                            />
-                                        </span>
-                                    </button>
-                                    <FigCaption className="mt-2">
-                                        {isKR ? "모집공고 포스터" : "CALL POSTER"} — {ANNOUNCEMENT.projectNo}
-                                    </FigCaption>
-                                </figure>
                             </div>
                         </div>
                     </div>
@@ -806,29 +702,16 @@ function AnnouncementRow({
 export default function News() {
     const { t, language } = useLanguage();
     const isKR = language === "KR";
-    const [showAll, setShowAll] = useState(false);
-    const [lightbox, setLightbox] = useState<LightboxImage | null>(null);
+    const [lightbox, setLightbox] = useState<LightboxState | null>(null);
 
-    const firstEntries = NEWS_ENTRIES.slice(0, INITIAL_ROWS);
-    const restEntries = NEWS_ENTRIES.slice(INITIAL_ROWS);
-    const moreId = "news-more-rows";
-
-    // Newest entry (global index 0) renders expanded by default.
-    const renderEntry = (entry: NewsEntry, globalIndex: number) =>
-        entry.kind === "announcement" ? (
-            <AnnouncementRow
-                language={language}
-                onImageOpen={setLightbox}
-                defaultExpanded={globalIndex === 0}
-            />
-        ) : (
-            <ActivityRow
-                item={entry.item}
-                language={language}
-                onImageOpen={setLightbox}
-                defaultExpanded={globalIndex === 0}
-            />
-        );
+    // 연도별 묶음 — 논문 페이지와 같은 연도 레일. 접힘 없이 전부 펼쳐 보인다.
+    const yearGroups: { year: string; entries: NewsEntry[] }[] = [];
+    for (const entry of NEWS_ENTRIES) {
+        const year = entry.date.slice(0, 4);
+        const last = yearGroups[yearGroups.length - 1];
+        if (last && last.year === year) last.entries.push(entry);
+        else yearGroups.push({ year, entries: [entry] });
+    }
 
     return (
         <Band id="news" surface="white">
@@ -840,57 +723,40 @@ export default function News() {
                 isKorean={isKR}
             />
 
-            {/* unified, date-sorted news stream */}
-            <div className="overflow-hidden rounded-lg border border-hairline bg-white">
-                <ul>
-                    {firstEntries.map((entry, i) => (
-                        <li key={`${entry.kind}-${entry.date}`} className={i > 0 ? "border-t border-hairline" : ""}>
-                            {renderEntry(entry, i)}
-                        </li>
-                    ))}
-                </ul>
-
-                {restEntries.length > 0 ? (
-                    <>
-                        <div
-                            id={moreId}
-                            className={`grid transition-[grid-template-rows] duration-[250ms] ${showAll ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
-                        >
-                            <div className="min-h-0 overflow-hidden">
-                                <ul>
-                                    {restEntries.map((entry, i) => (
-                                        <li key={`${entry.kind}-${entry.date}`} className="border-t border-hairline">
-                                            {renderEntry(entry, INITIAL_ROWS + i)}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
+            <div className="mt-2">
+                {yearGroups.map(({ year, entries }) => (
+                    <div
+                        key={year}
+                        className="grid border-t border-hairline py-5 md:grid-cols-[96px_1fr] md:gap-6 md:py-6"
+                    >
+                        <div className="pb-2 md:pb-0">
+                            <p className="text-2xl font-semibold leading-none tracking-tight text-ink-4 tabular-nums md:sticky md:top-24">
+                                {year}
+                            </p>
                         </div>
-                        <button
-                            type="button"
-                            aria-expanded={showAll}
-                            aria-controls={moreId}
-                            onClick={() => setShowAll((v) => !v)}
-                            className="flex h-12 w-full items-center justify-center gap-2 border-t border-hairline text-sm font-medium text-ink-2 transition-colors duration-150 hover:bg-well hover:text-ink"
-                        >
-                            {showAll
-                                ? isKR
-                                    ? "접기"
-                                    : "Show Less"
-                                : isKR
-                                  ? `전체 보기 (${restEntries.length})`
-                                  : `View All (${restEntries.length})`}
-                            <ChevronDown
-                                aria-hidden
-                                className={`h-4 w-4 text-ink-3 transition-transform duration-150 ${showAll ? "rotate-180" : ""}`}
-                            />
-                        </button>
-                    </>
-                ) : null}
+                        <ul className="divide-y divide-hairline md:-mt-2">
+                            {entries.map((entry) => (
+                                <li key={`${entry.kind}-${entry.date}`}>
+                                    {entry.kind === "announcement" ? (
+                                        <AnnouncementRow language={language} onImageOpen={setLightbox} />
+                                    ) : (
+                                        <ActivityRow item={entry.item} language={language} onImageOpen={setLightbox} />
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                ))}
+                <div aria-hidden className="border-t border-hairline" />
             </div>
 
             {lightbox ? (
-                <Lightbox image={lightbox} language={language} onClose={() => setLightbox(null)} />
+                <Lightbox
+                    state={lightbox}
+                    language={language}
+                    onClose={() => setLightbox(null)}
+                    onIndex={(i) => setLightbox((st) => (st ? { ...st, index: i } : st))}
+                />
             ) : null}
         </Band>
     );

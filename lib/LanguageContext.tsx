@@ -113,7 +113,7 @@ const translations: Record<Language, Record<string, string>> = {
     KR: {
         // Navbar
         "nav.news": "소식",
-        "nav.team": "구성원",
+        "nav.team": "팀",
         "nav.joinUs": "모집 안내",
         "nav.research": "연구",
         "nav.publications": "논문",
@@ -128,25 +128,25 @@ const translations: Record<Language, Record<string, string>> = {
         "hero.line3": "설계하다",
         "hero.description": "인하대학교 다상유동열공학연구실(MFTEL)은 열에너지 저장, AI 반도체 냉각, 소형모듈원자로 안전을 연구합니다.",
         "hero.kicker": "인하대학교 다상유동열공학연구실 · MFTEL",
-        "hero.join": "지원하기",
+        "hero.join": "모집 안내",
         "hero.research": "연구 분야 보기",
-        "hero.stat.publications": "국제 학술 논문",
+        "hero.stat.publications": "국제 학술지 논문",
         "hero.stat.projects": "연구 과제",
         "hero.stat.patents": "특허 등록·출원",
         "hero.stat.partners": "협력 기관",
 
         // Home story (v3)
-        "home.numbers.label": "연구 성과",
-        "home.numbers.title": "숫자로 보는 MFTEL",
-        "home.numbers.sub": "논문·과제·특허 모두 학생들과 함께 만들었습니다.",
+        "home.numbers.label": "연구 실적",
+        "home.numbers.title": "지금까지의 기록",
+        "home.numbers.sub": "논문, 과제, 특허 모두 학생들과 함께 이룬 결과입니다.",
         "home.research.label": "연구 분야",
-        "home.research.title": "우리는 열을 연구합니다",
+        "home.research.title": "열에너지를 만들고, 저장하고, 쓰는 모든 과정을 연구합니다",
         "home.pubs.label": "논문",
-        "home.pubs.title": "주요 국제 학술지에 게재합니다",
+        "home.pubs.title": "대표 논문",
         "home.pubs.cta": "논문 전체 보기",
-        "home.people.label": "구성원",
+        "home.people.label": "팀",
         "home.people.cta": "팀 전체 보기",
-        "home.partners.label": "협력 네트워크",
+        "home.partners.label": "협력 기관",
 
         // About
         "about.tes.title": "열에너지 저장",
@@ -159,11 +159,11 @@ const translations: Record<Language, Record<string, string>> = {
         // News
         "news.label": "소식",
         "news.title": "연구실 소식",
-        "news.description": "MFTEL의 연구 활동과 소식을 전합니다.",
+        "news.description": "연구실의 활동과 소식을 전합니다.",
 
         // Team
-        "team.label": "구성원",
-        "team.title": "함께하는 사람들",
+        "team.label": "팀",
+        "team.title": "MFTEL 팀",
         "team.pi": "지도교수",
         "team.education": "학력 및 경력",
         "team.activities": "학술 활동",
@@ -193,11 +193,11 @@ const translations: Record<Language, Record<string, string>> = {
 
         // Contact (Join Us)
         "contact.label": "모집 안내",
-        "contact.title1": "MFTEL과",
-        "contact.title2": "함께 성장하세요",
-        "contact.description": "석·박사과정 학생, 박사후연구원, 연구원을 모집합니다. 다상유동과 열전달 연구에 관심 있는 분들의 지원을 기다립니다.",
-        "contact.apply": "지원 문의",
-        "contact.emailCopied": "이메일 주소가 복사되었습니다!",
+        "contact.title1": "함께 연구할",
+        "contact.title2": "사람을 찾습니다",
+        "contact.description": "석사·박사과정 학생, 박사후연구원, 연구원을 모집합니다. 다상유동과 열전달에 관심이 있으면 이메일로 연락해 주세요.",
+        "contact.apply": "이메일 주소 복사",
+        "contact.emailCopied": "이메일 주소를 복사했습니다",
 
         // Footer
         "footer.copyright": "© {year} MFTEL, 인하대학교. All rights reserved.",

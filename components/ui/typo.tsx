@@ -23,7 +23,7 @@ export function Kicker({
         <div className={cn("flex items-center gap-4", className)}>
             <p
                 className={cn(
-                    "min-w-0 font-mono text-xs font-medium uppercase tracking-[0.12em]",
+                    "min-w-0 font-mono text-xs font-medium uppercase tracking-[0.06em]",
                     dark ? "text-ember-400" : "text-ember-700"
                 )}
             >

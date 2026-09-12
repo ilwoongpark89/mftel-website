@@ -29,7 +29,7 @@ function SceneHero() {
     const { t, language, lp } = useLanguage();
     const isKR = language === "KR";
     return (
-        <section id="home" data-nav-dark className="relative isolate flex min-h-[100svh] items-center overflow-hidden">
+        <section id="home" data-nav-dark className="relative isolate flex min-h-[min(100svh,880px)] items-center overflow-hidden py-24">
             <div
                 aria-hidden
                 className="absolute inset-0 -z-10"
@@ -39,6 +39,8 @@ function SceneHero() {
                 }}
             />
             <HeroCanvas className="absolute inset-0 -z-10 h-full w-full" />
+            {/* 하단 페이드 — 글로우가 섹션 경계에서 계단으로 끊기지 않게 바탕색으로 녹인다 */}
+            <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-b from-transparent to-coal" />
 
             <div className="mx-auto w-full max-w-[1120px] px-6 md:px-8">
                 <div className="cal-rise max-w-3xl">
@@ -46,25 +48,25 @@ function SceneHero() {
                     <h1 className={display(isKR)}>
                         {t("hero.line1")}
                         <br className="hidden md:inline" />{" "}
-                        <span className="whitespace-nowrap bg-gradient-to-r from-ember-300 to-ember-500 bg-clip-text text-transparent max-md:whitespace-normal">
+                        <span className={cn("whitespace-nowrap bg-gradient-to-r from-ember-300 to-ember-500 bg-clip-text text-transparent", !isKR && "max-md:whitespace-normal")}>
                             {t("hero.line2a")} {t("hero.line2b")}
                         </span>{" "}
                         {t("hero.line3")}
                     </h1>
                     <p className={cn("mt-7 max-w-xl", lead(isKR))}>{t("hero.description")}</p>
                     <div className="mt-10 flex flex-wrap gap-3">
-                        <a
-                            href={`#${JOIN_ID}`}
-                            className="glow-ember inline-flex h-13 items-center rounded-full bg-ember-600 px-8 text-[16px] font-semibold text-white transition-colors duration-150 hover:bg-ember-500"
-                        >
-                            {t("hero.join")}
-                        </a>
                         <Link
                             href={lp("/research")}
-                            className="inline-flex h-13 items-center rounded-full border border-white/15 px-8 text-[16px] font-medium text-paper transition-colors duration-150 hover:border-white/35 hover:bg-white/5"
+                            className="glow-ember inline-flex h-13 items-center rounded-full bg-ember-500 px-8 text-[16px] font-semibold text-coal transition-colors duration-150 hover:bg-ember-400"
                         >
                             {t("hero.research")}
                         </Link>
+                        <a
+                            href={`#${JOIN_ID}`}
+                            className="inline-flex h-13 items-center rounded-full border border-white/15 px-8 text-[16px] font-medium text-paper transition-colors duration-150 hover:border-white/35 hover:bg-white/5"
+                        >
+                            {t("hero.join")}
+                        </a>
                     </div>
                 </div>
             </div>
@@ -108,7 +110,7 @@ function SceneNumbers() {
                         <div className="text-[56px] font-bold leading-none tracking-[-0.03em] text-paper tabular-nums md:text-[72px]">
                             <CountUp to={s.value} />
                         </div>
-                        <p className="mt-4 text-[13px] font-semibold uppercase tracking-[0.18em] text-stone-400">
+                        <p className="mt-4 text-[13px] font-semibold uppercase tracking-[0.04em] text-stone-400">
                             {s.label}
                         </p>
                     </div>
@@ -156,7 +158,7 @@ function SceneResearch() {
                                 </span>
                                 <span
                                     className={cn(
-                                        "mt-2.5 block max-w-2xl text-[16px] text-stone-400",
+                                        "mt-2.5 block max-w-2xl break-keep text-[16px] text-stone-400",
                                         isKR ? "leading-[1.7]" : "leading-[1.6]"
                                     )}
                                 >
@@ -165,7 +167,7 @@ function SceneResearch() {
                             </span>
                             <span
                                 aria-hidden
-                                className="col-span-1 text-right text-[20px] text-stone-600 transition-all duration-150 group-hover:translate-x-1 group-hover:text-ember-400 max-md:hidden"
+                                className="col-span-1 text-right text-[20px] text-stone-400 transition-all duration-150 group-hover:translate-x-1 group-hover:text-ember-400 max-md:hidden"
                             >
                                 →
                             </span>
@@ -212,12 +214,12 @@ function ScenePubs() {
                                 <span>{pub.year}</span>
                                 {pub.special ? (
                                     <span className="text-[13px] font-semibold uppercase tracking-[0.14em] text-ember-400">
-                                        {pub.special.includes("Cover") ? "Cover Article" : pub.special}
+                                        {pub.special.includes("Cover") ? (isKR ? "표지 논문" : "Cover Article") : pub.special}
                                     </span>
                                 ) : null}
                                 <span
                                     aria-hidden
-                                    className="text-stone-600 transition-colors duration-150 group-hover:text-ember-400"
+                                    className="text-stone-400 transition-colors duration-150 group-hover:text-ember-400"
                                 >
                                     ↗
                                 </span>
@@ -262,7 +264,7 @@ function ScenePeople() {
                 <Label>{t("home.people.label")}</Label>
                 <h2 className={cn("mt-5", title(isKR))}>{t("team.title")}</h2>
             </Reveal>
-            <Reveal className="reveal-stagger mt-14 grid grid-cols-2 gap-3 sm:grid-cols-3 md:mt-20 md:grid-cols-6 md:gap-4">
+            <Reveal className="reveal-stagger mt-14 grid grid-cols-3 gap-3 md:mt-20 md:grid-cols-6 md:gap-4">
                 {/* PI tile — double size anchors the grid */}
                 <Link
                     href={lp("/team")}
@@ -292,6 +294,14 @@ function ScenePeople() {
                         className="group overflow-hidden rounded-xl border border-white/8"
                     >
                         <div className="relative aspect-[3/4] w-full">
+                            {m.noPhoto ? (
+                                <div
+                                    aria-hidden
+                                    className="flex h-full w-full items-center justify-center bg-white/[0.04] text-[40px] font-semibold text-stone-600"
+                                >
+                                    {m.nameKR.slice(0, 1)}
+                                </div>
+                            ) : (
                             <Image
                                 src={`/images/${m.name}.jpg`}
                                 alt={isKR ? m.nameKR : m.name}
@@ -310,6 +320,7 @@ function ScenePeople() {
                                         : undefined
                                 }
                             />
+                            )}
                             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-coal/90 to-transparent px-3 pb-2.5 pt-8">
                                 <p className="break-keep text-[13px] font-medium leading-snug text-paper">
                                     {isKR ? m.nameKR : m.name}
@@ -318,14 +329,15 @@ function ScenePeople() {
                         </div>
                     </Link>
                 ))}
-            </Reveal>
-            <Reveal className="mt-10">
+                {/* 마지막 칸 = 전체 보기 타일 — 격자를 채우면서 버튼 역할 */}
                 <Link
                     href={lp("/team")}
-                    className="inline-flex h-12 items-center gap-2 rounded-full border border-white/15 px-7 text-[15px] font-medium text-paper transition-colors duration-150 hover:border-white/35 hover:bg-white/5"
+                    className="group flex aspect-[3/4] w-full flex-col justify-end rounded-xl border border-white/15 px-3 pb-3 pt-6 transition-colors duration-150 hover:border-white/35 hover:bg-white/5"
                 >
-                    {t("home.people.cta")}
-                    <span aria-hidden className="text-stone-500">
+                    <span className="break-keep text-[14px] font-medium leading-snug text-paper">
+                        {t("home.people.cta")}
+                    </span>
+                    <span aria-hidden className="mt-1 text-stone-500">
                         →
                     </span>
                 </Link>
@@ -377,7 +389,7 @@ function SceneJoin() {
     };
 
     return (
-        <Scene id={JOIN_ID} center className="min-h-[100svh]">
+        <Scene id={JOIN_ID} center>
             <Reveal>
                 <Label>{t("contact.label")}</Label>
                 <h2 className={cn("mx-auto mt-6 max-w-3xl", display(isKR))}>
@@ -389,7 +401,7 @@ function SceneJoin() {
                     <button
                         type="button"
                         onClick={copyEmail}
-                        className="glow-ember inline-flex h-13 items-center gap-2.5 rounded-full bg-ember-600 px-9 text-[16px] font-semibold text-white transition-colors duration-150 hover:bg-ember-500"
+                        className="glow-ember inline-flex h-13 items-center gap-2.5 rounded-full bg-ember-500 px-9 text-[16px] font-semibold text-coal transition-colors duration-150 hover:bg-ember-400"
                     >
                         {copied ? (
                             <>
@@ -416,7 +428,7 @@ function SceneJoin() {
                         href={lp("/join")}
                         className="mt-2 inline-flex h-11 items-center gap-2 text-[15px] font-medium text-stone-300 transition-colors duration-150 hover:text-paper"
                     >
-                        {isKR ? "지원 안내 전체 보기" : "Full application guide"}
+                        {isKR ? "모집 안내 자세히 보기" : "Full application guide"}
                         <span aria-hidden className="text-stone-500">
                             →
                         </span>

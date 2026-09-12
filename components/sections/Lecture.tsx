@@ -141,7 +141,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
     if (sessionSid) {
         const isProf = sessionSid === "__prof__";
         return (
-            <div className="w-full max-w-sm">
+            <div className="w-full">
                 <p className="break-keep text-[15px] font-semibold text-ink">
                     {isProf
                         ? (isKR ? "교수자로 로그인되어 있습니다." : "Signed in as instructor.")
@@ -160,7 +160,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
     }
 
     return (
-        <form onSubmit={submit} className="w-full max-w-sm">
+        <form onSubmit={submit} className="w-full">
             {confirming && (
                 <p className="mb-5 break-keep text-[13px] leading-[1.7] text-ink-2">
                     <b className="font-semibold text-ember-700">{sid}</b>
@@ -244,9 +244,9 @@ function EntryForm({ isKR }: { isKR: boolean }) {
             </div>
 
             {/* 고지 = 의미 단위 2줄 고정 — 폭에 밀린 우연 줄바꿈("입장 시/동의로") 대신 내용/동의 문장으로 나눔 */}
-            <p className="mt-8 break-keep border-t border-hairline pt-4 text-[11px] leading-[1.7] text-ink-4">
-                <span className="block">{isKR ? "수집: 학번·답안·접속 기록 · 담당 교수만 열람 · 학기 종료 후 파기" : "Collected: ID, answers, access logs · instructor-only · destroyed after term"}</span>
-                <span className="block">{isKR ? "로그인 시 위 수집·이용에 동의한 것으로 간주합니다." : "By signing in, you agree to the collection above."}</span>
+            <p className="mt-8 break-keep border-t border-hairline pt-4 text-xs leading-[1.7] text-ink-3">
+                <span className="block">{isKR ? "수집 항목은 학번, 답안, 접속 기록이며 담당 교수만 열람하고 학기가 끝나면 파기합니다." : "Collected: ID, answers, access logs · instructor-only · destroyed after term"}</span>
+                <span className="block">{isKR ? "로그인하면 위 수집과 이용에 동의한 것으로 봅니다." : "By signing in, you agree to the collection above."}</span>
             </p>
         </form>
     );
@@ -259,7 +259,7 @@ export default function Lecture() {
     return (
         <Band id="lecture" surface="white">
             {/* 좌 = 페이지의 목소리(사이트 헤더 문법 — kicker·title 은 타 섹션처럼 서로 다른 단어), 우 = 정석 로그인 컬럼 */}
-            <div className="grid items-start gap-10 md:grid-cols-[1fr_24rem] md:gap-20">
+            <div className="grid items-center gap-10 md:grid-cols-[1fr_26rem] md:gap-16">
                 <SectionHeader
                     index="08"
                     kicker={isKR ? "강의" : "Lecture"}

@@ -43,7 +43,7 @@ export default function Footer() {
 
                         <nav
                             aria-label={isKR ? "사이트맵" : "Sitemap"}
-                            className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2.5"
+                            className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2.5"
                         >
                             {SITEMAP.map((s) => {
                                 const scls = "text-sm text-stone-400 transition-colors duration-150 hover:text-paper";
@@ -58,7 +58,7 @@ export default function Footer() {
                                 href="https://mftel-db.vercel.app"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-sm text-stone-500 transition-colors duration-150 hover:text-paper"
+                                className="text-sm text-stone-400 transition-colors duration-150 hover:text-paper"
                             >
                                 Lab DB ↗
                             </a>
@@ -105,7 +105,7 @@ export default function Footer() {
                                 href="https://maps.google.com/?q=Inha+University"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-stone-500 transition-colors duration-150 hover:text-paper"
+                                className="text-stone-400 transition-colors duration-150 hover:text-paper"
                             >
                                 Google Maps ↗
                             </a>
@@ -116,7 +116,7 @@ export default function Footer() {
                                 href="https://map.naver.com/p/search/인하대학교"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-stone-500 transition-colors duration-150 hover:text-paper"
+                                className="text-stone-400 transition-colors duration-150 hover:text-paper"
                             >
                                 {isKR ? "네이버 지도 ↗" : "Naver Map ↗"}
                             </a>
@@ -125,7 +125,7 @@ export default function Footer() {
                 </div>
 
                 <div className="mt-10 border-t border-white/10 pt-5">
-                    <p className="text-[13px] text-stone-500">
+                    <p className="text-[13px] text-stone-400">
                         {t("footer.copyright").replace("{year}", String(new Date().getFullYear()))}
                     </p>
                 </div>

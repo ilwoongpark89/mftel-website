@@ -77,3 +77,18 @@ JSX `{" "}` 분절로 CONTRAST 미탐 · trim()으로 선두 « — » 미탐 ·
 - 표시: `imageLayout: "document"` 신설 — 세로 문서를 자르지 않고 1:√2 틀·object-contain 으로 표시(grid 3:2 crop·feature 사진 hero 는 상장에 부적합). 렌더 확인: KO·EN × 1400·1150·390(에뮬레이션) + 라이트박스 열림·ESC 닫힘, 가로 넘침 0.
 - 보류: 「우수인재 부문」 공식 영문·2026년 시상 등급 체계(대상 유무)는 KETEP 공고로 확인되면 등급 역어 재검토.
 - **사용자 판정 (2026-08-29, P0)**: ① «장관상 수상» 채택(«워딩이 좀 더 강한데» — 수여자가 장관이므로 사실 범위 안, 위 «미채택» 판정을 대체) ② 첫 문안에 대한 지적 «전체적으로 AI 말투 냄새가 너무 난다» → 기존 소식 문장(«신현근 학생이 …발표하였습니다»·«도와주셨습니다!»)의 결로 재작성. 제거한 AI 문형: 주어 앞 33자 관형절(기관명 2개를 주어 앞에 매단 영어식 분사구), «상장은 …이 수여하였습니다»(행정 기록투 화제 문장), EN by-피동·분사구 3단(sponsored by … and administered by …). 확정: KR «김성진 학생이 2026년 에너지인력양성사업 우수인재 부문에서 최우수상인 기후에너지환경부 장관상을 받았습니다. 축하합니다!» / EN «Sung Jin Kim won the top prize in the Outstanding Talent category of the 2026 Energy Human Resources Development Program and received the Minister's Award from the Ministry of Climate, Energy and Environment. Congratulations!». 검사: kotone 슬롭 자질 17종 적중 0 · copy-gate PASS. 주최·주관 기관명은 본문에서 빼고 상장 이미지가 보여준다(W7).
+
+### 현행 배포본 개선 — 문안 전량·비율·팀·소식 (2026-09-13, 브랜치 refresh/copy-and-proportions)
+
+발주자 판정: 재설계 시안(v1~v4) 전부 기각 → «현행 배포본을 유지하고 문장을 싹 다 고치고 비율·글씨 크기·여백을 잡는다». 기록 = `~/claude/MFTEL/dispatch/2026-09-02-website-frontend-audit/`(LEDGER.md · input-refresh.md 원장 · result/refresh/compare.html).
+
+- 문체: «우리»→«저희/연구실», 명사형 종결·구호형 제목 제거, «-하였습니다»→«-했습니다», 호칭 «교수님·대표님·박사님»→«교수·대표·박사»(BIND-KR 5항목 개정). 사전 KR 16·홈 1·모집 29·연구 55·소식 16·강의 2·갤러리 11(한글 제목·날짜 신설).
+- 사실 정정: EPT Day 2026 = «박일웅 교수가 NTNU 에너지공정공학과(Department of Energy and Process Engineering, EPT)의 학과 행사에서 강연» (연구실 발표 아님 — 발주자 정정).
+- 과제: 영문 제목은 교수 저작(Projects.rtf) 그대로, **한글 제목 15건은 번역(titleKR) — 공식 과제명과 대조 필요**. 지원기관 한글 표기 맵 = `components/sections/Projects.tsx` SPONSOR_KR. 간트 차트 제거(발주자: «필요 없다»).
+- 팀: 라벨 «구성원»→«팀», 제목 «MFTEL 팀». 임성연·양성민 석사과정 추가(연구 주제 미정 → 빈 값이면 태그 숨김). 학위별 묶음은 발주자 기각 → 단일 격자.
+- 소식: 접이식 → 연도 레일 펼침, 항목마다 «텍스트 + 3:2 액자 1개» 동일 틀(사진 cover·문서 contain·«+N»·다중 라이트박스). 공고문 본문은 원문 유지.
+- 논문: 27편 전부 표시, 구성원·졸업생·교수 이름 진하게, 태그 «표지 논문»·«많이 본 논문», 권=연도 중복 제거.
+- 연구: 리드 «AI 에너지 패러독스» 섹션 머리로, 그림은 본문 폭 유지+클릭 확대, 지표 «↓» 타일 제거, KO 캡션 «그림 2.x».
+- 레이아웃: 씬 svh 최소높이 제거·히어로 ≤880·구성원 격자 6열+«전체 보기» 타일·라벨/키커 자간 축소·컨테이너 1120 통일·Band 상단 여백 24·EN 태그라인 2xl·모바일 시트 닫기 버튼·nav 다크 판정 ≤64·CTA ember-500+coal·:focus-visible·푸터 링크 간격/색.
+- 회귀 수정: `usePathname` 이 프록시 재작성 경로(/ko/*)를 돌려줘 KO 갤러리 활성 밑줄 누락 → Navbar 경로 정규화.
+- 보류(발주자 몫): 갤러리 원본 저화질 3장(WORTH-10·GPPS 홍콩·부산), 두 학생 연구 주제·분야.

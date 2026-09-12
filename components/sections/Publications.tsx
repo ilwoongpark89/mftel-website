@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Search } from "lucide-react";
 import Band from "@/components/ui/band";
 import { Meta, SectionHeader } from "@/components/ui/typo";
-import { publications, teamMembers } from "@/app/data";
+import { publications, teamMembers, alumni } from "@/app/data";
 import { useLanguage } from "@/lib/LanguageContext";
 
 type Publication = (typeof publications)[number];
@@ -26,19 +26,37 @@ const CATEGORY_LABELS: Record<string, { en: string; kr: string }> = {
     wettability: { en: "Wettability", kr: "젖음성" },
 };
 
-const VISIBLE_DEFAULT = 8;
+/** 연구실 구성원·졸업생 이름은 저자 목록에서 진하게 — 표기 차이(Hyun Jin ↔ Hyunjin)는 공백 무시로 맞춘다. */
+const MEMBER_KEYS = new Set(
+    [
+        ...teamMembers.flatMap((m) => [m.name, ...(m.aliases ?? [])]),
+        ...alumni.map((a) => a.name),
+        "Il Woong Park",
+    ].map((n) => n.toLowerCase().replace(/\s+/g, ""))
+);
+const renderAuthors = (authors: string) =>
+    authors.split(",").map((raw, i, arr) => {
+        const name = raw.trim();
+        const key = name.replace(/\*$/, "").toLowerCase().replace(/\s+/g, "");
+        const member = MEMBER_KEYS.has(key);
+        return (
+            <span key={i}>
+                <span className={member ? "whitespace-nowrap font-medium text-ink" : "whitespace-nowrap"}>{name}</span>
+                {i < arr.length - 1 ? ", " : ""}
+            </span>
+        );
+    });
 
 /** `special` exists only on some data entries — safe union access. */
 const specialOf = (pub: Publication): string | undefined =>
     "special" in pub ? pub.special : undefined;
 
 /** "239, 116852, 2026" → "239 · 116852 · 2026" (vol · article/pages · year). */
-const detailsLine = (details: string) =>
-    details
-        .split(",")
-        .map((part) => part.trim())
-        .filter(Boolean)
-        .join(" · ");
+const detailsLine = (details: string, year?: string) => {
+    const parts = details.split(",").map((part) => part.trim()).filter(Boolean);
+    // 권 번호가 연도와 같은 학술지(IJER 등)는 «2025 · … · 2025» 로 보이므로 앞의 중복만 뺀다
+    return parts.filter((part, i) => !(year && part === year && i < parts.length - 1)).join(" · ");
+};
 
 export default function Publications({
     citations,
@@ -52,15 +70,11 @@ export default function Publications({
     const [activeCategory, setActiveCategory] = useState("all");
     const [selectedYear, setSelectedYear] = useState("all");
     const [search, setSearch] = useState("");
-    const [showAll, setShowAll] = useState(false);
 
     // deep link from team cards: /publications?q=<member name> pre-fills search
     useEffect(() => {
         const q = new URLSearchParams(window.location.search).get("q");
-        if (q) {
-            setSearch(q);
-            setShowAll(true);
-        }
+        if (q) setSearch(q);
     }, []);
 
     const totalPubs = publications.length;
@@ -102,7 +116,7 @@ export default function Publications({
         });
     }, [activeCategory, selectedYear, search]);
 
-    const displayedPubs = showAll ? filteredPubs : filteredPubs.slice(0, VISIBLE_DEFAULT);
+    const displayedPubs = filteredPubs;
 
     /** Data is ordered newest-first, so consecutive grouping preserves year order. */
     const yearGroups = useMemo(() => {
@@ -147,8 +161,8 @@ export default function Publications({
                         {citations && citations.total > 0 ? (
                             <span className="mt-1 block text-sm text-ink-3">
                                 {isKR
-                                    ? `총 피인용 ${citations.total.toLocaleString()}회 · 출처 OpenAlex`
-                                    : `${citations.total.toLocaleString()} total citations · source: OpenAlex`}
+                                    ? `피인용 ${citations.total.toLocaleString()}회 (OpenAlex 기준)`
+                                    : `${citations.total.toLocaleString()} citations (OpenAlex)`}
                             </span>
                         ) : null}
                     </>
@@ -219,7 +233,7 @@ export default function Publications({
                             type="text"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            placeholder={isKR ? "제목·저자 검색..." : "Search title or author..."}
+                            placeholder={isKR ? "제목이나 저자로 검색" : "Search title or author"}
                             aria-label={isKR ? "논문 검색" : "Search publications"}
                             className="h-11 w-full rounded-lg border border-hairline bg-white pl-9 pr-3 text-sm text-ink placeholder:text-ink-4 transition-colors duration-150 hover:border-hairline-2 focus:border-hairline-2 focus:outline-none md:h-9"
                         />
@@ -250,7 +264,7 @@ export default function Publications({
                         className="grid border-t border-hairline py-5 md:grid-cols-[96px_1fr] md:gap-6 md:py-6"
                     >
                         <div className="pb-2 md:pb-0">
-                            <p className="text-2xl font-semibold leading-none tracking-tight text-hairline-2 tabular-nums md:sticky md:top-24">
+                            <p className="text-2xl font-semibold leading-none tracking-tight text-ink-3 tabular-nums md:sticky md:top-24">
                                 {year}
                             </p>
                         </div>
@@ -268,18 +282,18 @@ export default function Publications({
                                             href={pub.link}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="break-keep text-base font-semibold leading-snug text-ink transition-colors duration-150 hover:text-ember-700"
+                                            className="break-keep text-base font-semibold leading-snug text-ink transition-colors duration-150 hover:text-ember-700 [text-wrap:pretty]"
                                         >
                                             {pub.title}
                                         </a>
                                         <p className="mt-1.5 text-sm leading-relaxed text-ink-3">
-                                            {pub.authors}
+                                            {renderAuthors(pub.authors)}
                                         </p>
                                         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
                                             <span className="text-sm font-medium text-ink">
                                                 {pub.journal}
                                             </span>
-                                            <Meta>{detailsLine(pub.details)}</Meta>
+                                            <Meta>{detailsLine(pub.details, pub.year)}</Meta>
                                             {(() => {
                                                 const d = pub.link.match(/doi\.org\/(.+)$/i)?.[1]?.toLowerCase();
                                                 const n = d ? citations?.byDoi[d] : undefined;
@@ -299,7 +313,7 @@ export default function Publications({
                                                         className="inline-flex items-center rounded-md border border-ember-200 bg-ember-50 px-1.5 py-0.5"
                                                     >
                                                         <Meta className="text-[11px] uppercase tracking-[0.08em] text-ember-700">
-                                                            {tag}
+                                                            {isKR ? (/cover/i.test(tag) ? "표지 논문" : /top viewed/i.test(tag) ? "많이 본 논문" : tag) : tag}
                                                         </Meta>
                                                     </span>
                                                 ))}
@@ -340,20 +354,6 @@ export default function Publications({
                 )}
             </div>
 
-            {filteredPubs.length > VISIBLE_DEFAULT && (
-                <div className="mt-8">
-                    <button
-                        type="button"
-                        onClick={() => setShowAll(!showAll)}
-                        aria-expanded={showAll}
-                        className="inline-flex h-11 items-center rounded-lg border border-hairline-2 px-5 text-sm font-medium text-ink transition-colors duration-150 hover:border-ink-4 hover:bg-well"
-                    >
-                        {showAll
-                            ? t("publications.showLess")
-                            : t("publications.viewAll").replace("{count}", String(filteredPubs.length))}
-                    </button>
-                </div>
-            )}
         </Band>
     );
 }

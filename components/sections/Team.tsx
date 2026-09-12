@@ -154,7 +154,7 @@ export default function Team() {
                 </h3>
 
                 <div className="mt-6 flex flex-col gap-8 md:mt-8 md:flex-row md:gap-12">
-                    <figure className="w-full max-w-[280px] shrink-0">
+                    <figure className="w-full shrink-0 sm:max-w-[280px]">
                         <div className="relative aspect-[3/4] overflow-hidden rounded-lg border border-hairline bg-well">
                             <Image
                                 src="/images/Professor_Il Woong Park.png"
@@ -237,28 +237,39 @@ export default function Team() {
                                 className="flex flex-col overflow-hidden rounded-lg border border-hairline bg-white"
                             >
                                 <div className="relative aspect-[3/4] bg-well">
-                                    <Image
-                                        src={`/images/${member.name}.jpg`}
-                                        alt={primaryName}
-                                        fill
-                                        sizes="(max-width: 768px) 50vw, 25vw"
-                                        className="object-cover"
-                                    />
+                                    {member.noPhoto ? (
+                                        <div
+                                            aria-hidden
+                                            className="flex h-full w-full items-center justify-center text-[44px] font-semibold text-ink-4"
+                                        >
+                                            {member.nameKR.slice(0, 1)}
+                                        </div>
+                                    ) : (
+                                        <Image
+                                            src={`/images/${member.name}.jpg`}
+                                            alt={primaryName}
+                                            fill
+                                            sizes="(max-width: 768px) 50vw, 25vw"
+                                            className="object-cover"
+                                        />
+                                    )}
                                 </div>
-                                <div className="flex flex-1 flex-col border-t border-hairline p-4">
+                                <div className="flex min-h-[128px] flex-1 flex-col border-t border-hairline p-4">
                                     <FigCaption>{degree}</FigCaption>
                                     <h4 className="mt-1.5 break-keep text-[15px] font-semibold leading-[1.4] text-ink">
                                         {primaryName}{" "}
-                                        <span className="font-normal text-ink-3">
+                                        <span className="block font-normal text-ink-3 sm:inline">
                                             {secondaryName}
                                         </span>
                                     </h4>
-                                    <p className="mt-1 break-keep text-xs leading-[1.6] text-ink-3">
-                                        {research
-                                            .split(",")
-                                            .map((r) => `#${r.trim()}`)
-                                            .join(" ")}
-                                    </p>
+                                    {research ? (
+                                        <p className="mt-1 break-keep text-xs leading-[1.6] text-ink-3">
+                                            {research
+                                                .split(",")
+                                                .map((r) => `#${r.trim()}`)
+                                                .join(" ")}
+                                        </p>
+                                    ) : null}
                                     {pubCount > 0 ? (
                                         // 멤버 이름이 검색어로 채워진 논문 목록으로 이동
                                         <Link

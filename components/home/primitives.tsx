@@ -25,7 +25,7 @@ export function Scene({
             data-nav-dark
             className={cn(
                 "relative z-[1] flex",
-                full ? "min-h-[80svh] items-center py-20" : "py-16 md:py-24",
+                full ? "py-24 md:py-32" : "py-16 md:py-24",
                 className
             )}
         >
@@ -40,7 +40,7 @@ export function Label({ children, className }: { children: React.ReactNode; clas
     return (
         <p
             className={cn(
-                "text-[13px] font-semibold uppercase tracking-[0.18em] text-ember-400",
+                "text-[13px] font-semibold uppercase tracking-[0.04em] text-ember-400",
                 className
             )}
         >

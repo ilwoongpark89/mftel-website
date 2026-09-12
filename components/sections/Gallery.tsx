@@ -57,7 +57,7 @@ export default function Gallery() {
                     >
                         <div
                             className={`relative w-full ${
-                                item.span === 2 ? "aspect-[2/1] md:aspect-[8/3]" : "aspect-[4/3]"
+                                item.span === 2 ? "aspect-[2/1] md:aspect-[349/128]" : "aspect-[4/3]"
                             }`}
                         >
                             <Image
@@ -69,14 +69,14 @@ export default function Gallery() {
                                         ? "(max-width: 768px) 100vw, 50vw"
                                         : "(max-width: 768px) 50vw, 33vw"
                                 }
-                                className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                                className={`object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04] ${item.span === 2 ? "object-[50%_70%]" : ""}`}
                             />
                         </div>
                         {/* caption bar — always visible, below the photo */}
-                        <div className="flex-1 border-t border-white/10 px-3 py-2.5 md:px-4 md:py-3">
-                            <p className="text-[13px] font-medium leading-snug text-paper">{item.title}</p>
-                            <Meta dark className="mt-1 block text-[11px]">
-                                {item.date}
+                        <div className="flex flex-1 flex-col border-t border-white/10 px-3 py-2.5 md:px-4 md:py-3">
+                            <p className="break-keep text-[13px] font-medium leading-snug text-paper">{language === "KR" ? item.titleKR : item.title}</p>
+                            <Meta dark className="mt-auto block pt-1 text-[11px]">
+                                {language === "KR" ? item.dateKR : item.date}
                             </Meta>
                         </div>
                     </button>
@@ -111,9 +111,9 @@ export default function Gallery() {
                             />
                         </div>
                         <figcaption className="mt-4 text-center">
-                            <p className="text-base font-medium text-paper">{open.title}</p>
+                            <p className="text-base font-medium text-paper">{language === "KR" ? open.titleKR : open.title}</p>
                             <Meta dark className="mt-1 block">
-                                {open.date}
+                                {language === "KR" ? open.dateKR : open.date}
                             </Meta>
                         </figcaption>
                     </figure>

@@ -25,7 +25,7 @@ export default function Band({
             id={id}
             data-nav-dark={surface === "coal" ? "" : undefined}
             className={cn(
-                compact ? "py-14 md:py-20" : "py-16 md:py-28",
+                compact ? "py-14 md:py-20" : "py-16 md:py-24",
                 surface === "paper" && "bg-paper",
                 surface === "white" && "bg-white",
                 surface === "well" && "bg-well",
@@ -33,7 +33,7 @@ export default function Band({
                 className
             )}
         >
-            <div className={cn("mx-auto max-w-6xl px-6 md:px-8", containerClassName)}>
+            <div className={cn("mx-auto max-w-[1120px] px-6 md:px-8", containerClassName)}>
                 {children}
             </div>
         </section>

@@ -22,6 +22,8 @@ export default function Navbar() {
     const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
     const { language, setLanguage, t, lp } = useLanguage();
     const pathname = usePathname();
+    // 현재 경로 정규화 — 프록시가 /ko/* 로 다시 쓴 경로나 끝 슬래시가 섞여도 같은 페이지로 본다
+    const current = (pathname || "/").replace(/^\/ko(?=\/|$)/, "").replace(/\/+$/, "") || "/";
 
     useEffect(() => {
         setPortalTarget(document.body);
@@ -50,7 +52,7 @@ export default function Navbar() {
             let dark = false;
             document.querySelectorAll("[data-nav-dark]").forEach((el) => {
                 const r = el.getBoundingClientRect();
-                if (r.top < 64 && r.bottom > 0) dark = true;
+                if (r.top <= 64 && r.bottom > 0) dark = true;
             });
             setNavDark(dark);
         };
@@ -132,7 +134,7 @@ export default function Navbar() {
                         </span>
                         <span
                             className={cn(
-                                "hidden text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors duration-200 xl:block",
+                                "hidden text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors duration-200 2xl:block",
                                 dk ? "text-stone-500" : "text-ink-3"
                             )}
                         >
@@ -144,7 +146,7 @@ export default function Navbar() {
                         {NAV_ROUTES.map((r) => {
                             const cls = cn(
                                 "text-sm font-medium underline-offset-[10px] transition-colors duration-150",
-                                pathname === lp(r.href)
+                                current === lp(r.href)
                                     ? dk
                                         ? "text-paper underline decoration-ember-400 decoration-2"
                                         : "text-ink underline decoration-ember-600 decoration-2"
@@ -197,7 +199,18 @@ export default function Navbar() {
                 isOpen &&
                 createPortal(
                     <div className="fixed inset-0 z-50 bg-coal lg:hidden">
-                        <div className="flex h-full flex-col justify-between px-8 pb-10 pt-24">
+                        <div className="flex h-16 items-center justify-between px-6">
+                            <span className="text-lg font-bold tracking-tight text-paper">MFTEL</span>
+                            <button
+                                type="button"
+                                onClick={() => setIsOpen(false)}
+                                className="-mr-2 flex h-11 w-11 items-center justify-center text-paper"
+                                aria-label={language === "KR" ? "메뉴 닫기" : "Close menu"}
+                            >
+                                <X className="h-6 w-6" />
+                            </button>
+                        </div>
+                        <div className="flex h-[calc(100%-4rem)] flex-col justify-between px-8 pb-10 pt-6">
                             <nav className="flex flex-col">
                                 {NAV_ROUTES.map((r, i) => {
                                     const inner = (

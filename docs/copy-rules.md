@@ -106,12 +106,12 @@ SMR 안전
 Leidenfrost 효과
 인하대학교 2N687
 박일웅 교수
-박광호 대표님
-블루필 대표님
-Dorao 교수님
-Fernandino 교수님
-Kim 교수님
-Pacio 박사님
+박광호 대표
+블루필 박광호 대표
+Dorao 교수
+Fernandino 교수
+Kim 교수
+Pacio 박사
 최대 90%
 수십 GWh
 4,175 헥타르
