@@ -54,20 +54,6 @@ function SceneHero() {
                         {t("hero.line3")}
                     </h1>
                     <p className={cn("mt-7 max-w-xl", lead(isKR))}>{t("hero.description")}</p>
-                    <div className="mt-10 flex flex-wrap gap-3">
-                        <Link
-                            href={lp("/research")}
-                            className="glow-ember inline-flex h-13 items-center rounded-full bg-ember-500 px-8 text-[16px] font-semibold text-coal transition-colors duration-150 hover:bg-ember-400"
-                        >
-                            {t("hero.research")}
-                        </Link>
-                        <a
-                            href={`#${JOIN_ID}`}
-                            className="inline-flex h-13 items-center rounded-full border border-white/15 px-8 text-[16px] font-medium text-paper transition-colors duration-150 hover:border-white/35 hover:bg-white/5"
-                        >
-                            {t("hero.join")}
-                        </a>
-                    </div>
                 </div>
             </div>
 
