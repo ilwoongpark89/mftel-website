@@ -67,8 +67,6 @@ export const projects = [
   { year: "2025 ~ 2026", title: "Research on improving the cooling performance of the HiMSEN engine pre-combustion chamber", titleKR: "힘센엔진 예연소실 냉각 성능 개선 연구", sponsor: "HD Hyundai Heavy Industries" },
   { year: "2025", title: "Development of Thermal Energy Storage", titleKR: "열에너지 저장 기술 개발 (실험실 특화형 창업선도대학)", sponsor: "Laboratory-Specialized Startup Leading University, Ministry of Science and ICT" },
   { year: "2025", title: "Basic Research on Electric Vehicle Battery Cooling Using Insulating Fluid Boiling Heat Transfer", titleKR: "절연 유체 비등 열전달을 활용한 전기차 배터리 냉각 기초 연구", sponsor: "Inha University" },
-  { year: "2025 ~ 2026", title: "Development of mechanistic models and validation technology for an optimized integrated analysis framework", titleKR: "최적 통합해석체계 기구학적 모델 및 검증기술개발", sponsor: "National Research Foundation of Korea" },
-  { year: "2025 ~ 2026", title: "Safety assessment for demonstration testing of a cryogenic multi-layer-insulated liquid hydrogen storage vessel", titleKR: "극저온 다중 단열구조 액화수소 저장 용기 실증 실험 안전성 평가", sponsor: "Incheon Technopark" },
   { year: "2024 ~ 2025", title: "Study on linking thermal energy storage systems with the electricity market", titleKR: "열에너지 저장 시스템 전력 시장 연계 연구", sponsor: "Janginui Gonggan Co., Ltd." },
   { year: "2025 ~ 2028", title: "Synergy for Safe and Sustainable Ocean in Norway and Korea (SONoKo)", titleKR: "노르웨이–한국 안전하고 지속가능한 해양 협력(SONoKo)", sponsor: "UTFORSK, Direktoratet for høyere utdanning og kompetanse (HK-dir), Norway" },
   { year: "2024 ~ 2025", title: "Global human resources training project to secure major design technologies for next-generation SMR safety enhancement", titleKR: "차세대 SMR 안전성 강화 핵심설계기술 확보를 위한 글로벌인력양성사업", sponsor: "KETEP" },

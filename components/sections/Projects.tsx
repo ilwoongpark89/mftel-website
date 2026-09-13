@@ -45,7 +45,6 @@ const SPONSOR_KR: Record<string, string> = {
     "UTFORSK, Direktoratet for høyere utdanning og kompetanse (HK-dir), Norway":
         "노르웨이 고등교육·역량국(HK-dir) UTFORSK 프로그램",
     "National Research Foundation of Korea": "한국연구재단",
-    "Incheon Technopark": "인천테크노파크",
     "Janginui Gonggan Co., Ltd.": "주식회사 장인의공간",
     "ROK-Nordic R&D Cooperation Program, National Research Foundation of Korea":
         "한국연구재단 한–북유럽 연구협력 프로그램",
