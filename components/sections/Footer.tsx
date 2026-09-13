@@ -54,14 +54,6 @@ export default function Footer() {
                                     </Link>
                                 );
                             })}
-                            <a
-                                href="https://mftel-db.vercel.app"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm text-stone-400 transition-colors duration-150 hover:text-paper"
-                            >
-                                Lab DB ↗
-                            </a>
                         </nav>
 
                         <div className="mt-7 space-y-1.5 text-sm text-stone-400">

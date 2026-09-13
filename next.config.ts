@@ -9,15 +9,6 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "50mb",
     },
   },
-  async redirects() {
-    return [
-      {
-        source: "/:locale(en)?/team-dashboard",
-        destination: "https://mftel-db.vercel.app",
-        permanent: false, // 307 임시 리다이렉트 (나중에 되돌릴 수 있도록)
-      },
-    ];
-  },
   // 통합 강의 앱(2026-07-12): mftel.vercel.app/lecture/* = 강의 프로젝트(basePath /lecture)로 프록시.
   //   beforeFiles = 파일시스템/로케일 라우팅보다 먼저 가로챔 → 브라우저는 단일 origin(mftel.vercel.app)만 봄
   //   = 쿠키 1개로 전 코스 로그인 성립. 마케팅 사이트(/ /research …)는 무영향.

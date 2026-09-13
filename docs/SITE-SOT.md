@@ -92,3 +92,4 @@ JSX `{" "}` 분절로 CONTRAST 미탐 · trim()으로 선두 « — » 미탐 ·
 - 레이아웃: 씬 svh 최소높이 제거·히어로 ≤880·구성원 격자 6열+«전체 보기» 타일·라벨/키커 자간 축소·컨테이너 1120 통일·Band 상단 여백 24·EN 태그라인 2xl·모바일 시트 닫기 버튼·nav 다크 판정 ≤64·CTA ember-500+coal·:focus-visible·푸터 링크 간격/색.
 - 회귀 수정: `usePathname` 이 프록시 재작성 경로(/ko/*)를 돌려줘 KO 갤러리 활성 밑줄 누락 → Navbar 경로 정규화.
 - 발주자 결정(2026-09-13 2차): 과제 머리글 «2018년부터 지금까지 수행한 과제입니다…» 삭제 · 임성연 = AI 반도체 냉각(immersion) · 양성민 = 열에너지 저장(tes) · 갤러리 저화질 3장(WORTH-10·GPPS 홍콩·부산)은 의도된 처리라 유지.
+- 2026-09-13 발주자: «Lab DB(mftel-db.vercel.app, 구 대시보드) 안 쓴다» → 푸터 «Lab DB ↗» 링크·/team-dashboard 307 리다이렉트·robots 차단 항목 제거. /api/dashboard*·/api/push*·크론 백업은 SITE-SOT 보존 결정대로 유지.

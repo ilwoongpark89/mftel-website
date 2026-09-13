@@ -10,8 +10,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      // /admin(접속 통계 콘솔)·/team-dashboard(구 대시보드, 외부 이전) — 공개 UI 미링크 콘솔은 인덱싱 차단
-      disallow: ["/lecture/", "/admin", "/en/admin", "/team-dashboard", "/en/team-dashboard"],
+      // /admin(접속 통계 콘솔) — 공개 UI 미링크 콘솔은 인덱싱 차단. 구 대시보드(/team-dashboard)는 2026-09-13 폐기
+      disallow: ["/lecture/", "/admin", "/en/admin"],
     },
   };
 }
