@@ -104,7 +104,7 @@ export default function JoinStory() {
         ? {
               heading: "지원은 이메일로 받습니다",
               items: [
-                  { n: "①", text: "인생에서 깊게 몰입한 주제와 경험들. 연구가 아니어도 좋습니다." },
+                  { n: "①", text: "인생에서 깊게 몰입한 주제와 경험들. 연구가 아니어도 좋습니다.", sub: "스포츠, 예체능, 게임 등 오랜 기간 높은 수준의 몰입으로 무엇인가를 이뤄 본 경험이 있으면 우대합니다." },
                   { n: "②", text: "연구실의 연구를 둘러보다 떠오른 질문 하나." },
                   { n: "+", text: "학위과정 지원자는 관심 있는 연구 분야(열에너지 저장, AI 반도체 냉각, SMR 안전)도 함께 적어 주세요." },
               ],
@@ -114,7 +114,7 @@ export default function JoinStory() {
         : {
               heading: "Applying starts with one email",
               items: [
-                  { n: "①", text: "Topics and experiences you have immersed yourself in most deeply. They do not have to be research." },
+                  { n: "①", text: "Topics and experiences you have immersed yourself in most deeply. They do not have to be research.", sub: "Long, high-level immersion that led to a real achievement in sports, the arts, music, or games counts in your favor." },
                   { n: "②", text: "One question that came to you while looking through our research." },
                   { n: "+", text: "If you are applying for a degree program, add the field you are interested in: thermal energy storage, AI semiconductor cooling, or SMR safety." },
               ],
@@ -196,8 +196,15 @@ export default function JoinStory() {
                         {MAIL_SPEC.items.map((it) => (
                             <li key={it.n} className="flex gap-4 rounded-xl border border-white/8 bg-white/[0.03] p-6">
                                 <span className="text-[18px] font-bold text-ember-400">{it.n}</span>
-                                <span className={cn("break-keep text-[16px] text-stone-300", isKR ? "leading-[1.75]" : "leading-[1.6]")}>
-                                    {it.text}
+                                <span className="min-w-0">
+                                    <span className={cn("block break-keep text-[16px] text-stone-300", isKR ? "leading-[1.75]" : "leading-[1.6]")}>
+                                        {it.text}
+                                    </span>
+                                    {"sub" in it && it.sub ? (
+                                        <span className={cn("mt-1.5 block break-keep text-[14px] text-stone-400", isKR ? "leading-[1.7]" : "leading-[1.55]")}>
+                                            {it.sub}
+                                        </span>
+                                    ) : null}
                                 </span>
                             </li>
                         ))}
