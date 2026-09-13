@@ -16,7 +16,6 @@ import { Scene, Label, display, title, lead, AmbientField } from "@/components/h
  */
 
 const EMAIL = "ilwoongpark@inha.ac.kr";
-const GRAD_URL = "https://grad.inha.ac.kr";
 
 function EmailCopy({ labelIdle }: { labelIdle: string }) {
     const { t } = useLanguage();
@@ -101,82 +100,11 @@ export default function JoinStory() {
               },
           ];
 
-    const HOW = isKR
-        ? [
-              {
-                  title: "출근 시간을 정하지 않습니다",
-                  desc: "출근 시각 대신 쌓인 결과와 기록을 봅니다.",
-              },
-              {
-                  title: "장소를 제한하지 않습니다",
-                  desc: "깊이 몰입할 수 있는 곳이면 어디서 연구해도 됩니다.",
-              },
-              {
-                  title: "기록은 반드시 남깁니다",
-                  desc: "연구의 모든 과정을 연구실에서 직접 만든 AI 연구 기록 시스템에 남깁니다.",
-              },
-          ]
-        : [
-              {
-                  title: "We don't count hours",
-                  desc: "We look at what has accumulated: results and records.",
-              },
-              {
-                  title: "Go deep, wherever you are",
-                  desc: "If you can go deep, it does not matter where you work.",
-              },
-              {
-                  title: "One promise",
-                  desc: "Every step of research goes into the AI research-record system we built ourselves.",
-              },
-          ];
-
-    const TRACKS = isKR
-        ? [
-              {
-                  title: "석사 · 박사 · 석박사통합",
-                  desc: "연구실의 중심입니다. 세 연구 분야(열에너지 저장, AI 반도체 냉각, SMR 안전) 안에서 자기 질문을 찾아갑니다. 입학 전형은 인하대학교 일반대학원 일정을 따르며, 마감 두세 달 전에는 미리 연락해 주세요.",
-                  meta: { label: "모집요강 ↗", href: GRAD_URL },
-              },
-              {
-                  title: "학부연구생 · 상시 모집",
-                  desc: "3~4학년이면 방학에 집중해도, 학기 중에 병행해도 됩니다. 잡무는 맡기지 않습니다. 실험 데이터 처리, 적외선 이미지 분석 같은 실제 연구를 맡습니다. 대학원 진학을 준비하기에 좋은 출발점입니다.",
-              },
-              {
-                  title: "박사후연구원",
-                  desc: "진행 중인 과제에 따라 수시로 모집합니다. CV를 첨부해 이메일로 문의해 주세요.",
-              },
-              {
-                  title: "외국인 학생",
-                  desc: "국적은 상관없습니다. 영어로 연락해도 됩니다.",
-              },
-          ]
-        : [
-              {
-                  title: "MS · PhD · Integrated",
-                  desc: "The core of the lab. You will find your own question within our three research fields (thermal energy storage · AI semiconductor cooling · SMR safety). Admissions follow the Inha graduate-school cycle; we recommend contacting us 2–3 months before the deadline.",
-                  meta: { label: "Admissions ↗", href: GRAD_URL },
-              },
-              {
-                  title: "Undergraduate Researchers · always open",
-                  desc: "3rd–4th year students, full-time over breaks or part-time during semesters. We do not hand you chores: you take on real research such as experimental data processing and infrared (IR) image analysis. The most natural path into the graduate program.",
-              },
-              {
-                  title: "Postdoctoral Researchers",
-                  desc: "Openings depend on active projects. Email us with your CV anytime.",
-              },
-              {
-                  title: "International Students",
-                  desc: "We welcome international applicants. Feel free to reach out in English.",
-              },
-          ];
-
     const MAIL_SPEC = isKR
         ? {
               heading: "지원은 이메일로 받습니다",
-              sub: "성적표나 수상 목록은 필요 없습니다. 두 가지만 적어 보내 주세요.",
               items: [
-                  { n: "①", text: "가장 깊이 몰입했던 경험 한 단락. 연구가 아니어도 좋습니다." },
+                  { n: "①", text: "인생에서 깊게 몰입한 주제와 경험들. 연구가 아니어도 좋습니다." },
                   { n: "②", text: "연구실의 연구를 둘러보다 떠오른 질문 하나." },
                   { n: "+", text: "학위과정 지원자는 관심 있는 연구 분야(열에너지 저장, AI 반도체 냉각, SMR 안전)도 함께 적어 주세요." },
               ],
@@ -185,69 +113,14 @@ export default function JoinStory() {
           }
         : {
               heading: "Applying starts with one email",
-              sub: "You do not need a transcript or a list of awards. Two things are enough.",
               items: [
-                  { n: "①", text: "One paragraph on the deepest immersion you have experienced. It does not have to be research." },
+                  { n: "①", text: "Topics and experiences you have immersed yourself in most deeply. They do not have to be research." },
                   { n: "②", text: "One question that came to you while looking through our research." },
                   { n: "+", text: "If you are applying for a degree program, add the field you are interested in: thermal energy storage, AI semiconductor cooling, or SMR safety." },
               ],
               promise: "We reply to every email within a week.",
               cta: "Copy email address",
           };
-
-    const FAQ = isKR
-        ? [
-              {
-                  q: "언제 연락하면 되나요?",
-                  a: "학위과정은 전형 마감 두세 달 전이 좋습니다. 학부연구생은 언제든 환영합니다. 전형 일정은 인하대학교 일반대학원 모집요강에서 확인할 수 있습니다.",
-              },
-              {
-                  q: "출신 학교나 전공이 중요한가요?",
-                  a: "출신 학교와 전공은 보지 않습니다. 무엇에 몰입해 봤고 무엇을 묻고 싶은지, 이 둘만 봅니다.",
-              },
-              {
-                  q: "연구 주제는 어떻게 정하나요?",
-                  a: "세 연구 분야 안에서 시작합니다. 주제를 배정받는 대신 자기 질문을 지도교수와 함께 만들어 갑니다.",
-              },
-              {
-                  q: "연구실 분위기는 어떤가요?",
-                  a: "연구 결과와 기록으로 평가합니다. 규칙은 위의 '일하는 방식' 세 가지가 전부입니다.",
-              },
-              {
-                  q: "영어가 부족해도 괜찮나요?",
-                  a: "논문은 영어로 쓰지만 쓰면서 함께 배웁니다. NTNU, HZDR, UPC와 교류하면서 영어로 쓰고 발표할 기회가 많습니다.",
-              },
-              {
-                  q: "학부연구생은 무엇을 하나요?",
-                  a: "실험 데이터 처리, 이미지 분석 같은 실제 연구를 맡습니다. 결과가 쌓이면 학회 포스터 발표와 공저로 이어집니다.",
-              },
-          ]
-        : [
-              {
-                  q: "When should I reach out?",
-                  a: "For degree programs, 2–3 months before the admissions deadline. Undergraduate researcher positions are always open. See the Inha graduate admissions guide for exact dates.",
-              },
-              {
-                  q: "Does my school or major matter?",
-                  a: "We do not look at where you came from. We read the two things in the email above: your immersion and your question.",
-              },
-              {
-                  q: "How are research topics decided?",
-                  a: "You start within one of the three research fields. Instead of receiving an assigned topic, you define your question together with the advisor.",
-              },
-              {
-                  q: "What is lab life like?",
-                  a: "Results and records. The three sentences under 'How we work' above are effectively the whole rulebook.",
-              },
-              {
-                  q: "What if my English isn't strong?",
-                  a: "Papers are written in English, and you learn by writing them. Exchanges with NTNU, HZDR, and UPC give you many chances to write and present in English.",
-              },
-              {
-                  q: "What do undergraduate researchers do?",
-                  a: "Real research tasks such as experimental data processing and image analysis. As results accumulate, they lead to conference posters and co-authorship.",
-              },
-          ];
 
     return (
         <div className="relative bg-coal">
@@ -312,63 +185,12 @@ export default function JoinStory() {
                 </Reveal>
             </Scene>
 
-            {/* how we work — culture, not policy */}
-            <Scene full={false}>
-                <Reveal>
-                    <Label>{isKR ? "일하는 방식" : "How we work"}</Label>
-                </Reveal>
-                <Reveal className="reveal-stagger mt-10 grid gap-4 md:grid-cols-3">
-                    {HOW.map((c) => (
-                        <div key={c.title} className="rounded-xl border border-white/8 bg-white/[0.03] p-7">
-                            <p className={cn("break-keep text-[19px] font-bold text-paper", isKR ? "leading-[1.4]" : "leading-[1.25]")}>
-                                {c.title}
-                            </p>
-                            <p className={cn("mt-3 break-keep text-[15px] text-stone-400", isKR ? "leading-[1.75]" : "leading-[1.6]")}>
-                                {c.desc}
-                            </p>
-                        </div>
-                    ))}
-                </Reveal>
-            </Scene>
-
-            {/* tracks */}
-            <Scene full={false}>
-                <Reveal>
-                    <Label>{isKR ? "모집 구분" : "Ways to Join"}</Label>
-                </Reveal>
-                <Reveal as="ul" className="reveal-stagger mt-10 border-t border-white/8">
-                    {TRACKS.map((tr) => (
-                        <li key={tr.title} className="border-b border-white/8 px-2 py-8 md:px-4">
-                            <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-1">
-                                <p className={cn("break-keep text-[20px] font-bold text-paper", isKR ? "leading-[1.4]" : "leading-[1.25]")}>
-                                    {tr.title}
-                                </p>
-                                {tr.meta ? (
-                                    <a
-                                        href={tr.meta.href}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-[13px] font-semibold uppercase tracking-[0.1em] text-stone-500 transition-colors duration-150 hover:text-ember-400"
-                                    >
-                                        {tr.meta.label}
-                                    </a>
-                                ) : null}
-                            </div>
-                            <p className={cn("mt-2.5 max-w-3xl break-keep text-[15px] text-stone-400", isKR ? "leading-[1.75]" : "leading-[1.6]")}>
-                                {tr.desc}
-                            </p>
-                        </li>
-                    ))}
-                </Reveal>
-            </Scene>
-
             {/* the contact mail — applying IS the vision */}
             <Scene>
                 <div className="mx-auto max-w-3xl">
                     <Reveal>
                         <Label>{isKR ? "지원 방법" : "How to apply"}</Label>
                         <h2 className={cn("mt-5", title(isKR))}>{MAIL_SPEC.heading}</h2>
-                        <p className={cn("mt-4", lead(isKR))}>{MAIL_SPEC.sub}</p>
                     </Reveal>
                     <Reveal as="ul" className="reveal-stagger mt-9 space-y-5">
                         {MAIL_SPEC.items.map((it) => (
@@ -389,24 +211,6 @@ export default function JoinStory() {
                 </div>
             </Scene>
 
-            {/* FAQ */}
-            <Scene full={false} className="pb-28 md:pb-36">
-                <Reveal>
-                    <Label>FAQ</Label>
-                </Reveal>
-                <Reveal as="ul" className="reveal-stagger mt-10 border-t border-white/8">
-                    {FAQ.map((f) => (
-                        <li key={f.q} className="border-b border-white/8 px-2 py-7 md:px-4">
-                            <p className={cn("break-keep text-[17px] font-bold text-paper", isKR ? "leading-[1.45]" : "leading-[1.3]")}>
-                                {f.q}
-                            </p>
-                            <p className={cn("mt-2.5 max-w-3xl break-keep text-[15px] text-stone-400", isKR ? "leading-[1.75]" : "leading-[1.6]")}>
-                                {f.a}
-                            </p>
-                        </li>
-                    ))}
-                </Reveal>
-            </Scene>
         </div>
     );
 }

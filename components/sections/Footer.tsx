@@ -43,7 +43,7 @@ export default function Footer() {
 
                         <nav
                             aria-label={isKR ? "사이트맵" : "Sitemap"}
-                            className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2.5"
+                            className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-2.5"
                         >
                             {SITEMAP.map((s) => {
                                 const scls = "text-sm text-stone-400 transition-colors duration-150 hover:text-paper";
