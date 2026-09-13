@@ -37,7 +37,7 @@ const rangeLabel = (g: { start: number; end: number }) =>
 const SPONSOR_KR: Record<string, string> = {
     KETEP: "한국에너지기술평가원(KETEP)",
     "Hyundai Engineering & Construction": "현대건설",
-    "SMR Regulation Research Foundation": "SMR 규제연구재단",
+    "SMR Regulation Research Foundation": "소형모듈원자로 규제연구 추진단",
     "HD Hyundai Heavy Industries": "HD현대중공업",
     "Laboratory-Specialized Startup Leading University, Ministry of Science and ICT":
         "과학기술정보통신부 실험실 특화형 창업선도대학 사업",
@@ -45,6 +45,8 @@ const SPONSOR_KR: Record<string, string> = {
     "UTFORSK, Direktoratet for høyere utdanning og kompetanse (HK-dir), Norway":
         "노르웨이 고등교육·역량국(HK-dir) UTFORSK 프로그램",
     "National Research Foundation of Korea": "한국연구재단",
+    "Incheon Technopark": "인천테크노파크",
+    "Janginui Gonggan Co., Ltd.": "주식회사 장인의공간",
     "ROK-Nordic R&D Cooperation Program, National Research Foundation of Korea":
         "한국연구재단 한–북유럽 연구협력 프로그램",
 };

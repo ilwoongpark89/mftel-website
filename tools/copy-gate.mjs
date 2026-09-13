@@ -76,8 +76,10 @@ for (const file of files) {
     let contrastCount = 0;
     for (const s of strings) {
         if (ALLOW.some((a) => s.includes(a))) continue;
-        for (const re of BANNED_KR)
-            if (re.test(s)) { console.log(`✗ [BANNED-KR ${re.source}] ${rel}\n    「${s.slice(0, 90)}」`); fails++; }
+        // BANNED-KR — app/data 의 원문 제목(특허·과제 공식 명칭)은 인용이므로 제외 (2026-09-13)
+        if (!rel.startsWith("app/data"))
+            for (const re of BANNED_KR)
+                if (re.test(s)) { console.log(`✗ [BANNED-KR ${re.source}] ${rel}\n    「${s.slice(0, 90)}」`); fails++; }
         for (const re of BANNED_EN)
             if (re.test(s)) { console.log(`✗ [BANNED-EN ${re.source}] ${rel}\n    "${s.slice(0, 90)}"`); fails++; }
         for (const re of CONTRAST_KR) { const n = (s.match(re) ?? []).length; contrastCount += n; }
