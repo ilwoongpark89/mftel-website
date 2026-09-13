@@ -29,8 +29,6 @@ const grants = projects
     })
     .sort((a, b) => Number(b.active) - Number(a.active) || b.start - a.start || b.end - a.end);
 
-const MIN_YEAR = Math.min(...grants.map((g) => g.start));
-const MAX_YEAR = Math.max(...grants.map((g) => g.end));
 
 const rangeLabel = (g: { start: number; end: number }) =>
     g.start === g.end ? `${g.start}` : `${g.start}–${g.end}`;
@@ -55,8 +53,6 @@ const SPONSOR_KR: Record<string, string> = {
 export default function Projects() {
     const { t, language } = useLanguage();
     const isKR = language === "KR";
-    const activeCount = grants.filter((g) => g.active).length;
-    const doneCount = grants.length - activeCount;
 
     return (
         <Band id="projects" surface="paper">
@@ -64,11 +60,6 @@ export default function Projects() {
                 index="04"
                 kicker={t("projects.label")}
                 title={t("projects.title")}
-                sub={
-                    isKR
-                        ? `${MIN_YEAR}년부터 지금까지 수행한 과제입니다. 진행 중 ${activeCount}건, 완료 ${doneCount}건.`
-                        : `Funded projects since ${MIN_YEAR}. ${activeCount} active, ${doneCount} completed.`
-                }
                 isKorean={isKR}
             />
 

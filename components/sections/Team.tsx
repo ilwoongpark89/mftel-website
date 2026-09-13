@@ -43,6 +43,8 @@ const memberPillar: Record<string, PillarKey> = {
     "Eunbin Park": "smr",
     "Manho Kim": "smr",
     "Yeongjun Jung": "immersion",
+    "Seong Yeon Lim": "immersion",
+    "Seong Min Yang": "tes",
 };
 
 const PILLARS: { key: PillarKey; icon: typeof Flame; label: string; labelKR: string }[] = [
