@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
 import { useLanguage } from "@/lib/LanguageContext";
 import Band from "@/components/ui/band";
 import { SectionHeader } from "@/components/ui/typo";
@@ -426,7 +427,7 @@ function LectureDoor({ isKR }: { isKR: boolean }) {
 }
 
 export default function Lecture() {
-    const { language } = useLanguage();
+    const { language, lp } = useLanguage();
     const isKR = language === "KR";
 
     return (
@@ -450,6 +451,13 @@ export default function Lecture() {
                 <BoardDoor isKR={isKR} />
                 <LectureDoor isKR={isKR} />
             </div>
+            {/* 광고 고지 — 두 문에 함께 해당. 자세한 것은 처리방침으로. */}
+            <p className="mt-6 break-keep text-xs leading-[1.7] text-ink-3">
+                {isKR ? "이 사이트는 구글 애드센스 광고를 싣고, 광고 쿠키가 쓰입니다. " : "This site carries Google AdSense ads and uses advertising cookies. "}
+                <Link href={lp("/privacy")} className="underline underline-offset-[3px] hover:text-ink">
+                    {isKR ? "개인정보 처리방침" : "Privacy policy"}
+                </Link>
+            </p>
         </Band>
     );
 }

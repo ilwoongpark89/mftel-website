@@ -23,6 +23,7 @@ const CONTACT = {
 const SITEMAP = [
     ...NAV_ROUTES,
     { href: "/join", labelKey: "nav.joinUs" },
+    { href: "/privacy", labelKey: "nav.privacy" },
 ];
 
 export default function Footer() {
