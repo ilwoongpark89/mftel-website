@@ -18,6 +18,12 @@ export default function proxy(req: NextRequest) {
         return NextResponse.next();
     }
 
+    // 수업 게시판(2026-09-21): /board 와 그 하위 전부를 로케일 처리에서 제외 → next.config beforeFiles 리라이트가
+    //   게시판 프로젝트(basePath /board)로 프록시. 맨 /board 도 게시판의 첫 화면이라 함께 넘긴다.
+    if (pathname === "/board" || pathname.startsWith("/board/")) {
+        return NextResponse.next();
+    }
+
     // canonicalize: explicit /ko prefix collapses to the bare URL
     if (pathname === "/ko" || pathname.startsWith("/ko/")) {
         const url = req.nextUrl.clone();

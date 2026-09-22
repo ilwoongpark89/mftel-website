@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "../globals.css";
 import Analytics from "@/components/Analytics";
 import { LanguageProvider } from "@/lib/LanguageContext";
+import { adsenseClient } from "@/lib/adsense";
 
 // URL is the language SoT: / (ko, unprefixed via middleware rewrite) and /en.
 export function generateStaticParams() {
@@ -110,6 +111,16 @@ export default async function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        {adsenseClient && (
+          <>
+            <meta name="google-adsense-account" content={adsenseClient} />
+            <script
+              async
+              crossOrigin="anonymous"
+              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClient}`}
+            />
+          </>
+        )}
       </head>
       <body className="font-sans antialiased selection:bg-ember-200/60 selection:text-ember-900">
         <LanguageProvider initialLanguage={language}>

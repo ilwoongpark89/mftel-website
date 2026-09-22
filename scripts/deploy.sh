@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # mftel-website 배포 — 강의 플랫폼(mftel-lecture-unified/scripts/deploy.sh)과 동형의 단일 배포 프로그램 (2026-08-08).
 #   가드: tracked dirty 차단(타 세션 미커밋 작업이 그대로 출하되는 사고 방지) → vercel --prod → 프로덕션 도달 확인.
-#   배포 순서 계약: 강의 앱(basePath /lecture) 먼저 배포 → 본 사이트(프록시) — next.config.ts rewrites 주석 참조.
+#   배포 순서 계약: 강의 앱(basePath /lecture) · 수업 게시판(basePath /board) 먼저 배포 → 본 사이트(프록시) — next.config.ts rewrites 주석 참조.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -22,6 +22,8 @@ for _ in 1 2 3 4 5 6 7 8 9 10; do
   sleep 3
 done
 HOME_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://mftel.vercel.app/)
-echo "reach: /=$HOME_CODE · /lecture=$CODE"
-{ [ "$CODE" = "200" ] && [ "$HOME_CODE" = "200" ]; } || { echo "✗ 프로덕션 도달 실패"; exit 1; }
+# 수업 게시판 프록시(/board) — 게시판(basePath /board)이 먼저 배포돼 있어야 200 이다.
+BOARD_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://mftel.vercel.app/board)
+echo "reach: /=$HOME_CODE · /lecture=$CODE · /board=$BOARD_CODE"
+{ [ "$CODE" = "200" ] && [ "$HOME_CODE" = "200" ] && [ "$BOARD_CODE" = "200" ]; } || { echo "✗ 프로덕션 도달 실패"; exit 1; }
 echo "✓ 사이트 배포 + 도달 확인 완료"
