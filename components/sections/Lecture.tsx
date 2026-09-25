@@ -267,8 +267,10 @@ const doorLabelCls = "font-mono text-xs font-medium uppercase tracking-[0.06em] 
 const doorTitleCls = "mt-3 break-keep text-xl font-semibold tracking-tight text-ink";
 const doorSubCls = "mt-2 break-keep text-sm leading-[1.7] text-ink-2";
 
-// 게시판 문 — 수업을 고르고 입장 코드를 넣으면 그 자리에서 들어간다(오른쪽 학번 로그인과 같은 꼴, 2026-09-22 발주자 지시).
-//   수업 목록은 게시판 자신의 공개 API(/board/api/courses, 입장 코드는 담기지 않는다)에서 읽고,
+// 게시판 문 — 수업을 고르고 반 코드를 넣으면 그 자리에서 들어간다(오른쪽 학번 로그인과 같은 꼴, 2026-09-22 발주자 지시).
+//   ⟦2026-09-25 · 전 시스템 조사 P5⟧ 「교수가 알려 주는 코드」의 이름은 하나다 — 반 코드 / class code.
+//     종전에는 이 화면이 「입장 코드」, 게시판이 「수업 코드」, 강의 앱이 「반 코드」라 한 학생이 세 이름을 만났다.
+//   수업 목록은 게시판 자신의 공개 API(/board/api/courses, 반 코드는 담기지 않는다)에서 읽고,
 //   코드 확인은 게시판의 /board/api/enter 가 한다(같은 주소라 게시판 쿠키가 그대로 심긴다). 목록을 못 읽으면 게시판 첫 화면으로 보내는 단추 하나.
 type BoardCourse = { slug: string; title: string; title_en?: string | null; entry_required: boolean; kind: "gallery" | "ask" };
 const BOARD_COURSES_URL = `${BOARD_URL}/api/courses`;
@@ -300,10 +302,12 @@ function BoardDoor({ isKR }: { isKR: boolean }) {
     const course = courses?.find((c) => c.slug === picked) ?? null;
     const needsCode = !!course && course.entry_required;
 
-    // 게시판으로 건너갈 때 이 화면의 언어를 같이 넘긴다(게시판은 cb_lang 쿠키를 먼저 본다). 안 넘기면 브라우저 언어로 다시 정해져 화면이 바뀐다.
+    // 게시판으로 건너갈 때 이 화면의 언어를 같이 넘긴다. 안 넘기면 브라우저 언어로 다시 정해져 화면이 바뀐다.
+    // ⟦2026-09-25 · 전 시스템 조사 P6⟧ 쿠키 이름은 플랫폼 전체에 하나다 — lect_lang(강의 셸·덱 엔진 넷·게시판과 같은 값).
+    //   종전 이름 cb_lang 은 게시판만 알았고 경로도 /board 안이라, 같은 주소의 강의 앱은 그 선택을 볼 수 없었다.
     function go(slug: string) {
         try {
-            document.cookie = `cb_lang=${isKR ? "ko" : "en"}; path=${BOARD_URL}; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+            document.cookie = `lect_lang=${isKR ? "ko" : "en"}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
         } catch { /* 쿠키가 막힌 환경 — 게시판이 브라우저 언어로 정한다 */ }
         setBusy(false); // 뒤로 가기로 이 화면이 되살아나도(bfcache) 단추가 잠겨 있지 않게, 옮기기 전에 푼다.
         location.href = `${BOARD_URL}/${slug}`;
@@ -349,7 +353,7 @@ function BoardDoor({ isKR }: { isKR: boolean }) {
     return (
         <div className={doorCls}>
             <p className={doorLabelCls}>{isKR ? "수업 게시판" : "Class board"}</p>
-            <h3 className={doorTitleCls}>{isKR ? "입장 코드로 들어가기" : "Enter with the class code"}</h3>
+            <h3 className={doorTitleCls}>{isKR ? "반 코드로 들어가기" : "Enter with the class code"}</h3>
             <p className={doorSubCls}>
                 {isKR
                     ? "수업 시간에 교수님이 낸 질문에 답하고, 만든 결과물을 올려 함께 봅니다."
@@ -383,7 +387,7 @@ function BoardDoor({ isKR }: { isKR: boolean }) {
                     </fieldset>
                     {(!course || needsCode) && (
                         <div className="mt-4">
-                            <label className={labelCls} htmlFor="mf-board-code">{isKR ? "입장 코드" : "Entry code"}</label>
+                            <label className={labelCls} htmlFor="mf-board-code">{isKR ? "반 코드" : "Class code"}</label>
                             <input
                                 id="mf-board-code"
                                 name="entry-code"
@@ -407,7 +411,7 @@ function BoardDoor({ isKR }: { isKR: boolean }) {
                 <div className="mt-auto pt-6">
                     <a href={BOARD_URL} className={ctaCls}>{isKR ? "게시판 열기 →" : "Open the board →"}</a>
                     <p className="mt-3 break-keep text-xs leading-[1.7] text-ink-3">
-                        {isKR ? "입장 코드는 수업 중에 교수님이 알려 줍니다." : "Your instructor gives out the entry code in class."}
+                        {isKR ? "반 코드는 수업 중에 교수님이 알려 줍니다." : "Your instructor gives out the class code in class."}
                     </p>
                 </div>
             )}
@@ -444,8 +448,8 @@ export default function Lecture() {
                 sub={
                     <span className="break-keep [overflow-wrap:break-word] [text-wrap:pretty]">
                         {isKR
-                            ? "수업 중 게시판은 입장 코드로, 강의 자료는 학번으로 들어갑니다."
-                            : "The class board opens with an entry code; course materials open with your student ID."}
+                            ? "수업 중 게시판은 반 코드로, 강의 자료는 학번으로 들어갑니다."
+                            : "The class board opens with a class code; course materials open with your student ID."}
                     </span>
                 }
                 isKorean={isKR}
