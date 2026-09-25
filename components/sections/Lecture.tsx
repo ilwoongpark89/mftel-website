@@ -27,6 +27,48 @@ const ADMIN_URL = "/lecture/admin";
 const BOARD_URL = "/board";
 const SID_RE = /^[A-Za-z0-9-]{4,32}$/;
 
+// 비밀번호 최소 길이. 값의 소유자는 서버다 — 강의 앱 `app/lib/courses.ts:110`(PW_MIN = 8)이 정하고
+//   `app/api/auth/route.ts:72-74` 가 그 범위를 벗어난 값을 `bad_field`(field: password)로 되돌린다.
+//   이 상수는 그 왕복을 한 번 줄이는 선검증일 뿐이고 마지막 심판은 서버다(값이 갈리면 서버가 이긴다).
+//   ⟦2026-09-25 · 총괄 판정 3⟧ 종전에는 이 숫자가 화면 세 곳에 리터럴로 흩어져 있었다 — 검증 · 오류 문장 · 칸 이름표.
+const PW_MIN = 8;
+
+// ⟦2026-09-25 · 총괄 판정 1⟧ 오류 사전. 이 폼이 부르는 두 소켓의 오류 이름은 **강의 앱의 사전 하나**에서 온다
+//   (`app/contracts/errors.ts` 의 ERROR_CODES 25 · HTTP 상태도 같은 파일 ERROR_STATUS 가 정한다).
+//   종전에는 이 화면이 `"already"`·`"bad_class"` 라는 **사전에 없는 이름**을 봤다. 어느 분기에도 걸리지 않아
+//   반 코드를 틀린 학생이 「반 코드가 올바르지 않습니다」 대신 「등록 실패.」를 보았다(조사 D17 옆에서 실측).
+//   아래는 두 소켓이 실제로 내는 이름 전량이다(2026-09-25 실측 · 줄번호는 강의 앱 저장소):
+//     · `/lecture/api/auth`(app/api/auth/route.ts) — server_unconfigured:27 · bad_json:31 · bad_field:35,73 ·
+//       rate_limited:47,59 · server:51,60,67,103 · bad_class_code:81 · already_registered:84 ·
+//       not_registered:93 · bad_login:96 · bad_type:101
+//     · `/lecture/admin/api`(app/admin/api/route.ts · op=login) — server_unconfigured:545 · rate_limited:552 ·
+//       bad_login:556. 틀린 관리자 비밀번호도 `bad_login` 이다. `unauthorized`:569 는 세션이 필요한 op 의 것이라
+//       이 폼에서는 나오지 않지만 사전에 있는 이름이므로 문장을 함께 둔다.
+//   이름은 이 표에만 적는다 — 호출 자리에는 오류 이름 리터럴이 없다.
+const AUTH_ERROR_MESSAGES: Record<string, { KR: string; EN: string }> = {
+    bad_class_code: { KR: "반 코드가 올바르지 않습니다.", EN: "That class code is not right." },
+    already_registered: { KR: "이미 등록된 학번입니다. 비밀번호로 로그인하십시오.", EN: "This student number is already registered. Please sign in with your password." },
+    not_registered: { KR: "등록되지 않은 학번입니다.", EN: "This student number is not registered." },
+    bad_login: { KR: "비밀번호가 올바르지 않습니다. 다시 적어 주십시오.", EN: "That password is not right. Please type it again." },
+    bad_field: { KR: "입력값을 확인해 주십시오.", EN: "Please check what you typed." },
+    rate_limited: { KR: "요청이 많습니다. 잠시 기다린 뒤 다시 시도해 주십시오.", EN: "Too many requests. Please wait a moment and try again." },
+    unauthorized: { KR: "로그인이 필요합니다. 다시 로그인해 주십시오.", EN: "You need to sign in. Please sign in again." },
+    server: { KR: "일시적 오류입니다. 잠시 후 다시 시도해 주십시오.", EN: "A temporary error. Please try again in a moment." },
+    server_unconfigured: { KR: "일시적 오류입니다. 잠시 후 다시 시도해 주십시오.", EN: "A temporary error. Please try again in a moment." },
+    bad_json: { KR: "처리하지 못했습니다. 잠시 후 다시 시도해 주십시오.", EN: "We could not process that. Please try again in a moment." },
+    bad_type: { KR: "처리하지 못했습니다. 잠시 후 다시 시도해 주십시오.", EN: "We could not process that. Please try again in a moment." },
+};
+// 사전 밖 이름(서버에 새 오류가 먼저 생긴 경우)과 이름 없는 실패의 문장.
+const AUTH_FALLBACK = { KR: "처리하지 못했습니다. 잠시 후 다시 시도해 주십시오.", EN: "We could not process that. Please try again in a moment." };
+// 단계에 더 맞는 문장이 있는 자리 둘(앱 온보딩과 같은 모양 — OnboardingForm.tsx 의 authErr(j.error, 단계 문장)).
+const STATUS_STEP_FALLBACK = { KR: "학번을 확인하지 못했습니다. 잠시 후 다시 눌러 주십시오.", EN: "We could not check your student number. Please press it again in a moment." };
+const RESET_STEP_FALLBACK = { KR: "요청을 보내지 못했습니다. 잠시 후 다시 시도해 주십시오.", EN: "We could not send the request. Please try again in a moment." };
+
+function authMessage(code: string | undefined, isKR: boolean, stepFallback?: { KR: string; EN: string }): string {
+    const m = (code ? AUTH_ERROR_MESSAGES[code] : undefined) ?? stepFallback ?? AUTH_FALLBACK;
+    return isKR ? m.KR : m.EN;
+}
+
 // Session detect — lect_sid is the platform's non-httpOnly display cookie.
 //   External store: server snapshot = "" (SSR renders the guest form frame-0,
 //   a signed-in browser swaps to the doorway on hydration).
@@ -69,12 +111,6 @@ function EntryForm({ isKR }: { isKR: boolean }) {
             return { ok: false, error: "server" };
         }
     }
-    function authErr(e: string | undefined, fallback: string): string {
-        if (e === "rate_limited") return isKR ? "요청이 많습니다. 잠시 후 다시 시도하세요." : "Too many requests. Try again shortly.";
-        if (e === "server" || e === "server_unconfigured")
-            return isKR ? "일시적 오류입니다. 잠시 후 다시 시도하세요." : "Temporary error. Try again shortly.";
-        return fallback;
-    }
 
     async function submit(e: React.FormEvent) {
         e.preventDefault();
@@ -96,34 +132,30 @@ function EntryForm({ isKR }: { isKR: boolean }) {
             } catch { j = { ok: false, error: "server" }; }
             setBusy(false);
             if (j && j.ok) { location.href = ADMIN_URL; return; }
-            setErr(authErr(j && j.error, isKR ? "관리자 비밀번호가 올바르지 않습니다." : "Incorrect admin password."));
+            setErr(authMessage(j && j.error, isKR));
             return;
         }
         if (!SID_RE.test(sid)) { setErr(isKR ? "학번을 확인해 주세요 (4–32자)." : "Check the student ID (4–32 chars)."); return; }
         if (!confirming) {
             setBusy(true);
             const s = await post("status");
-            if (!s.ok) { setBusy(false); setErr(authErr(s.error, isKR ? "학번 형식을 확인하세요." : "Check the student ID.")); return; }
+            // ⟦2026-09-25 · 총괄 판정 2⟧ 종전 폴백은 「학번 형식을 확인하세요.」였다 — 한 줄 위 SID_RE 를 이미 통과했으므로
+            //   원인을 잘못 지목했다(학생은 맞는 학번을 고치려 든다). 앱 온보딩이 같은 자리에서 쓰는 문장으로 맞춘다.
+            if (!s.ok) { setBusy(false); setErr(authMessage(s.error, isKR, STATUS_STEP_FALLBACK)); return; }
             if (!s.claimed) { setBusy(false); setConfirming(true); return; }
             const j = await post("login", { password: pw });
             setBusy(false);
             if (j.ok) location.href = HOME_URL;
-            else setErr(j.error === "bad_login"
-                ? (isKR ? "비밀번호가 올바르지 않습니다." : "Incorrect password.")
-                : authErr(j.error, isKR ? "로그인 실패." : "Sign-in failed."));
+            else setErr(authMessage(j.error, isKR));
             return;
         }
-        if (pw.length < 8) { setErr(isKR ? "비밀번호는 8자 이상." : "Password must be 8+ characters."); return; }
+        if (pw.length < PW_MIN) { setErr(isKR ? `비밀번호는 ${PW_MIN} 자 이상이어야 합니다. 더 길게 적어 주십시오.` : `A password must be at least ${PW_MIN} characters. Please make it longer.`); return; }
         if (!cls.trim()) { setErr(isKR ? "반 코드를 입력하세요." : "Enter the class code (from your instructor)."); return; }
         setBusy(true);
         const j = await post("register", { password: pw, classCode: cls.trim() });
         setBusy(false);
         if (j.ok) location.href = HOME_URL;
-        else setErr(j.error === "already"
-            ? (isKR ? "이미 등록된 학번입니다. 다시 로그인해 주세요." : "Already registered. Please sign in.")
-            : j.error === "bad_class"
-                ? (isKR ? "반 코드가 올바르지 않습니다." : "Incorrect class code.")
-                : authErr(j.error, isKR ? "등록 실패." : "Registration failed."));
+        else setErr(authMessage(j.error, isKR));
     }
 
     // P3-1: 비밀번호 초기화 요청 — 앱 안 큐 적재 (교수 콘솔 홈 배지). ok 일 때만 접수 표시 (거짓 접수 방지).
@@ -134,7 +166,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
         const j = await post("reset_request");
         setBusy(false);
         if (j && j.ok) { setErr(""); setResetSent(true); }
-        else setErr(authErr(j && j.error, isKR ? "요청을 보내지 못했습니다. 잠시 후 다시 시도하세요." : "Request failed. Try again shortly."));
+        else setErr(authMessage(j && j.error, isKR, RESET_STEP_FALLBACK));
     }
 
     // DELETE clears both platform cookies; re-render re-reads the cookie store → guest form returns.
@@ -190,7 +222,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
             </div>
             <div className="mt-4">
                 <label className={labelCls} htmlFor="mf-entry-pw">
-                    {confirming ? (isKR ? "비밀번호 설정 (8자 이상)" : "Set password (8+ chars)") : (isKR ? "비밀번호" : "Password")}
+                    {confirming ? (isKR ? `비밀번호 설정 (${PW_MIN}자 이상)` : `Set password (${PW_MIN}+ chars)`) : (isKR ? "비밀번호" : "Password")}
                 </label>
                 <input
                     id="mf-entry-pw"
