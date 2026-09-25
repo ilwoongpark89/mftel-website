@@ -16,6 +16,10 @@ import { SectionHeader } from "@/components/ui/typo";
  * auth contract (status → login|register, same-origin via beforeFiles proxy).
  */
 
+// ⟦2026-09-25 · 전 시스템 조사 P2⟧ 아래 두 폼(강의 로그인 · 게시판 문)은 `method="post"` + 이 주소를 `action` 으로 갖는다.
+//   `method`·`action` 이 없는 폼의 기본은 **GET + 지금 주소**다. 이 페이지는 정적으로 미리 그려져 캐시에서 나가므로
+//   (프로덕션 실측 `x-nextjs-prerender: 1`) 리액트가 붙기 전에 Enter 를 누를 창이 넓었고, 그때 비밀번호와 반 코드가
+//   `?password=…`·`?code=…` 로 주소·히스토리·Referer·접속 로그에 남았다. method="post" 가 그 누출을 닫는다.
 const AUTH_URL = "/lecture/api/auth";
 const HOME_URL = "/lecture/home";
 const ADMIN_URL = "/lecture/admin";
@@ -163,7 +167,7 @@ function EntryForm({ isKR }: { isKR: boolean }) {
     }
 
     return (
-        <form onSubmit={submit} className="flex w-full flex-1 flex-col">
+        <form onSubmit={submit} method="post" action={AUTH_URL} className="flex w-full flex-1 flex-col">
             {confirming && (
                 <p className="mb-5 break-keep text-[13px] leading-[1.7] text-ink-2">
                     <b className="font-semibold text-ember-700">{sid}</b>
@@ -352,7 +356,7 @@ function BoardDoor({ isKR }: { isKR: boolean }) {
                     : "Answer the questions posed in class and post your work for everyone to see."}
             </p>
             {courses && courses.length > 0 ? (
-                <form onSubmit={submit} className="mt-6 flex flex-1 flex-col">
+                <form onSubmit={submit} method="post" action={BOARD_ENTER_URL} className="mt-6 flex flex-1 flex-col">
                     <fieldset className="m-0 min-w-0 border-0 p-0">
                         <legend className={labelCls}>{isKR ? "수업" : "Course"}</legend>
                         <div className="grid gap-2">
