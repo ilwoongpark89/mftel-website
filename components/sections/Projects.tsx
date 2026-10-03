@@ -61,6 +61,7 @@ export default function Projects() {
                 index="04"
                 kicker={t("projects.label")}
                 title={t("projects.title")}
+                sub={isKR ? "연구 과제와 특허를 통해 기술 개발과 산학 협력의 흐름을 살펴봅니다." : "Research projects and patents document our technology development and collaborations."}
                 isKorean={isKR}
             />
 
@@ -70,10 +71,10 @@ export default function Projects() {
                     {grants.map((g) => (
                         <li
                             key={g.title}
-                            className="border-t border-hairline py-4 md:py-5"
+                            className="border-t border-hairline py-5 md:py-6"
                         >
-                            <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <div className="min-w-0 md:grid md:grid-cols-[140px_1fr] md:gap-6">
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 md:flex-col md:items-start md:justify-start md:gap-y-2">
                                     <Meta>{rangeLabel(g)}</Meta>
                                     {g.active ? (
                                         <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-ember-700">
@@ -87,7 +88,7 @@ export default function Projects() {
                                         </span>
                                     )}
                                 </div>
-                                <p className="mt-1.5 break-keep text-[15px] font-medium leading-snug text-ink md:text-base">
+                                <div><p className="mt-2 break-keep text-[15px] font-medium leading-[1.6] text-ink md:mt-0 md:text-base">
                                     {isKR ? g.titleKR : g.title}
                                 </p>
                                 {isKR ? (
@@ -95,7 +96,7 @@ export default function Projects() {
                                 ) : null}
                                 <Meta className="mt-1.5 block text-xs leading-normal text-ink-3">
                                     {isKR ? (SPONSOR_KR[g.sponsor] ?? g.sponsor) : g.sponsor}
-                                </Meta>
+                                </Meta></div>
                             </div>
 
                         </li>
@@ -104,7 +105,7 @@ export default function Projects() {
             </div>
 
             {/* 04.B — intellectual property (인하대 IPMS 동기: 등록 + 출원) */}
-            <div className="mt-16 md:mt-24">
+            <div className="mt-12 md:mt-16">
                 <Kicker index="04.B">{isKR ? "지식재산권" : "Intellectual Property"}</Kicker>
                 <h3 className="mt-5 break-keep text-2xl font-semibold tracking-tight text-ink">
                     {t("projects.patents")}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -15,25 +15,39 @@ import { NAV_ROUTES } from "@/lib/sections";
  * under the 64px bar via a deterministic rect check per scroll frame
  * (IntersectionObserver edge-touch/jump-scroll cases are spec traps).
  */
-export default function Navbar() {
+export default function Navbar({ tone = "light" }: { tone?: "light" | "dark" }) {
+    const pathname = usePathname();
+    const menuRef = useRef<HTMLDivElement>(null);
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
-    const [navDark, setNavDark] = useState(true);
-    const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+    const [navDark, setNavDark] = useState(false);
     const { language, setLanguage, t, lp } = useLanguage();
-    const pathname = usePathname();
     // 현재 경로 정규화 — 프록시가 /ko/* 로 다시 쓴 경로나 끝 슬래시가 섞여도 같은 페이지로 본다
     const current = (pathname || "/").replace(/^\/ko(?=\/|$)/, "").replace(/\/+$/, "") || "/";
 
+    // Keep the sheet scrollable on short screens and return keyboard focus on close.
     useEffect(() => {
-        setPortalTarget(document.body);
-    }, []);
-
-    // lock body scroll while the mobile sheet is open
-    useEffect(() => {
-        document.body.style.overflow = isOpen ? "hidden" : "";
+        if (!isOpen) return;
+        const previous = document.activeElement as HTMLElement | null;
+        const oldOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        const focusable = () => Array.from(menuRef.current?.querySelectorAll<HTMLElement>("a[href], button") ?? []);
+        focusable()[0]?.focus({ preventScroll: true });
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === "Escape") { event.preventDefault(); setIsOpen(false); }
+            if (event.key !== "Tab") return;
+            const items = focusable(), first = items[0], last = items[items.length - 1];
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+        };
+        const onResize = () => { if (window.innerWidth >= 1024) setIsOpen(false); };
+        window.addEventListener("keydown", onKey);
+        window.addEventListener("resize", onResize);
         return () => {
-            document.body.style.overflow = "";
+            document.body.style.overflow = oldOverflow;
+            window.removeEventListener("keydown", onKey);
+            window.removeEventListener("resize", onResize);
+            if (previous?.isConnected) previous.focus({ preventScroll: true });
         };
     }, [isOpen]);
 
@@ -69,7 +83,7 @@ export default function Navbar() {
         };
     }, [pathname]);
 
-    const dk = navDark && !isOpen;
+    const dk = (tone === "dark" || navDark) && !isOpen;
     const joinHref = lp("/join");
 
     const langToggle = (forceDark?: boolean) => {
@@ -86,7 +100,7 @@ export default function Navbar() {
                 {(["EN", "KR"] as const).map((lang) => (
                     <button
                         key={lang}
-                        onClick={() => setLanguage(lang)}
+                        onClick={() => { setLanguage(lang); setIsOpen(false); }}
                         aria-pressed={language === lang}
                         className={cn(
                             "rounded-full px-2.5 py-0.5 transition-colors duration-150",
@@ -116,14 +130,14 @@ export default function Navbar() {
                         : dk
                           ? scrolled
                               ? "border-b border-white/10 bg-coal/80 backdrop-blur-md"
-                              : "border-b border-transparent bg-transparent"
+                              : "border-b border-transparent bg-coal/90"
                           : scrolled
                             ? "border-b border-hairline bg-paper/90 backdrop-blur-md"
                             : "border-b border-transparent bg-paper/90 backdrop-blur-md"
                 )}
             >
                 <div className="mx-auto flex h-16 max-w-[1120px] items-center justify-between px-6 md:px-8">
-                    <Link href={lp("/")} className="flex items-baseline gap-3">
+                    <Link href={lp("/")} className="flex shrink-0 items-baseline">
                         <span
                             className={cn(
                                 "text-lg font-bold tracking-tight transition-colors duration-200",
@@ -132,20 +146,12 @@ export default function Navbar() {
                         >
                             MFTEL
                         </span>
-                        <span
-                            className={cn(
-                                "hidden text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors duration-200 2xl:block",
-                                dk ? "text-stone-500" : "text-ink-3"
-                            )}
-                        >
-                            Multiphase Flow &amp; Thermal Engineering Lab
-                        </span>
                     </Link>
 
-                    <div className="hidden items-center gap-7 lg:flex">
+                    <div className="hidden items-center gap-5 lg:flex xl:gap-7">
                         {NAV_ROUTES.map((r) => {
                             const cls = cn(
-                                "text-sm font-medium underline-offset-[10px] transition-colors duration-150",
+                                "whitespace-nowrap text-sm font-medium underline-offset-[10px] transition-colors duration-150",
                                 current === lp(r.href)
                                     ? dk
                                         ? "text-paper underline decoration-ember-400 decoration-2"
@@ -157,19 +163,19 @@ export default function Navbar() {
                             // /lecture 특례 제거(2026-08-08): bare /lecture 는 이제 사이트 자신의 강의 페이지 —
                             //   전 항목이 같은 로케일 <Link> 문법. 플랫폼 프록시는 /lecture/{home,…} 하위만.
                             return (
-                                <Link key={r.href} href={lp(r.href)} className={cls}>
+                                <Link key={r.href} href={lp(r.href)} aria-current={current === lp(r.href) ? "page" : undefined} className={cls}>
                                     {t(r.labelKey)}
                                 </Link>
                             );
                         })}
                     </div>
 
-                    <div className="hidden items-center gap-3 lg:flex">
+                    <div className="hidden shrink-0 items-center gap-3 lg:flex">
                         {langToggle()}
-                        <a
+                        <Link
                             href={joinHref}
                             className={cn(
-                                "inline-flex h-9 items-center rounded-full px-4.5 text-sm font-semibold transition-colors duration-150",
+                                "inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-full px-4.5 text-sm font-semibold transition-colors duration-150",
                                 // ghost on dark — the hero's filled CTA stays the only solid ember per viewport
                                 dk
                                     ? "border border-ember-500/50 text-ember-300 hover:border-ember-400 hover:bg-ember-600/10"
@@ -177,7 +183,7 @@ export default function Navbar() {
                             )}
                         >
                             {t("nav.joinUs")}
-                        </a>
+                        </Link>
                     </div>
 
                     <button
@@ -188,6 +194,7 @@ export default function Navbar() {
                         )}
                         aria-label={language === "KR" ? "메뉴 열기/닫기" : "Toggle menu"}
                         aria-expanded={isOpen}
+                        aria-controls="mobile-navigation"
                     >
                         {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                     </button>
@@ -195,11 +202,10 @@ export default function Navbar() {
             </nav>
 
             {/* mobile full-screen sheet — coal, matching the story */}
-            {portalTarget &&
-                isOpen &&
+            {isOpen &&
                 createPortal(
-                    <div className="fixed inset-0 z-50 bg-coal lg:hidden">
-                        <div className="flex h-16 items-center justify-between px-6">
+                    <div ref={menuRef} id="mobile-navigation" role="dialog" aria-modal="true" aria-label={language === "KR" ? "전체 메뉴" : "Navigation"} className="fixed inset-0 z-50 flex flex-col bg-coal lg:hidden">
+                        <div className="flex h-16 shrink-0 items-center justify-between px-6">
                             <span className="text-lg font-bold tracking-tight text-paper">MFTEL</span>
                             <button
                                 type="button"
@@ -210,7 +216,7 @@ export default function Navbar() {
                                 <X className="h-6 w-6" />
                             </button>
                         </div>
-                        <div className="flex h-[calc(100%-4rem)] flex-col justify-between px-8 pb-10 pt-6">
+                        <div className="flex min-h-0 flex-1 flex-col gap-8 overflow-y-auto overscroll-contain px-8 pb-8 pt-4">
                             <nav className="flex flex-col">
                                 {NAV_ROUTES.map((r, i) => {
                                     const inner = (
@@ -226,12 +232,12 @@ export default function Navbar() {
                                     const mcls = "flex items-baseline gap-4 border-b border-white/10 py-4";
                                     // /lecture 특례 제거(2026-08-08) — 데스크톱과 동일, 전 항목 로케일 <Link>.
                                     return (
-                                        <Link key={r.href} href={lp(r.href)} onClick={() => setIsOpen(false)} className={mcls}>
+                                        <Link key={r.href} href={lp(r.href)} aria-current={current === lp(r.href) ? "page" : undefined} onClick={() => setIsOpen(false)} className={mcls}>
                                             {inner}
                                         </Link>
                                     );
                                 })}
-                                <a
+                                <Link
                                     href={joinHref}
                                     onClick={() => setIsOpen(false)}
                                     className="flex items-baseline gap-4 border-b border-white/10 py-4"
@@ -242,12 +248,12 @@ export default function Navbar() {
                                     <span className="text-2xl font-bold tracking-tight text-ember-400">
                                         {t("nav.joinUs")}
                                     </span>
-                                </a>
+                                </Link>
                             </nav>
                             {langToggle(true)}
                         </div>
                     </div>,
-                    portalTarget
+                    document.body
                 )}
         </>
     );

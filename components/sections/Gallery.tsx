@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { X } from "lucide-react";
+import { useDialogFocus } from "@/components/ui/use-dialog-focus";
 import Band from "@/components/ui/band";
 import Reveal from "@/components/ui/reveal";
 import { Meta, SectionHeader } from "@/components/ui/typo";
@@ -17,6 +18,7 @@ import { useLanguage } from "@/lib/LanguageContext";
 export default function Gallery() {
     const { t, language } = useLanguage();
     const [selected, setSelected] = useState<number | null>(null);
+    const dialogRef = useDialogFocus(selected !== null);
 
     // Esc to close + scroll lock while the lightbox is open
     useEffect(() => {
@@ -25,67 +27,49 @@ export default function Gallery() {
             if (e.key === "Escape") setSelected(null);
         };
         window.addEventListener("keydown", onKey);
-        document.body.style.overflow = "hidden";
         return () => {
             window.removeEventListener("keydown", onKey);
-            document.body.style.overflow = "";
         };
     }, [selected]);
 
     const open = selected !== null ? galleryImages[selected] : null;
+    const years = [...new Set(galleryImages.map(item => item.sortDate.slice(0, 4)))];
 
     return (
-        <Band id="gallery" surface="coal">
+        <Band id="gallery" surface="paper">
             <SectionHeader
                 index="07"
                 kicker={t("gallery.label")}
                 title={t("gallery.title")}
-                dark
+                sub={language === "KR" ? "학회 발표와 국제 교류, 연구실의 일상을 기록합니다." : "Conference presentations, international exchanges, and everyday life in the lab."}
                 isKorean={language === "KR"}
             />
 
-            {/* bento — 2-col mobile / 3-col desktop; dense flow backfills span-2 holes */}
-            <Reveal className="reveal-stagger grid grid-flow-dense grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
-                {galleryImages.map((item, i) => (
-                    <button
-                        key={item.image}
-                        type="button"
-                        onClick={() => setSelected(i)}
-                        className={`group flex flex-col overflow-hidden rounded-lg border border-white/10 bg-coal-raised text-left transition-colors duration-150 hover:border-white/25 ${
-                            item.span === 2 ? "col-span-2" : ""
-                        }`}
-                    >
-                        <div
-                            className={`relative w-full ${
-                                item.span === 2 ? "aspect-[2/1] md:aspect-[349/128]" : "aspect-[4/3]"
-                            }`}
-                        >
-                            <Image
-                                src={`/images/${item.image}`}
-                                alt={item.title}
-                                fill
-                                sizes={
-                                    item.span === 2
-                                        ? "(max-width: 768px) 100vw, 50vw"
-                                        : "(max-width: 768px) 50vw, 33vw"
-                                }
-                                className={`object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04] ${item.span === 2 ? "object-[50%_70%]" : ""}`}
-                            />
-                        </div>
-                        {/* caption bar — always visible, below the photo */}
-                        <div className="flex flex-1 flex-col border-t border-white/10 px-3 py-2.5 md:px-4 md:py-3">
-                            <p className="break-keep text-[13px] font-medium leading-snug text-paper">{language === "KR" ? item.titleKR : item.title}</p>
-                            <Meta dark className="mt-auto block pt-1 text-[11px]">
-                                {language === "KR" ? item.dateKR : item.date}
-                            </Meta>
-                        </div>
-                    </button>
-                ))}
-            </Reveal>
+            <div className="gallery-years">
+                {years.map((year, yearIndex) => <section key={year} aria-labelledby={`gallery-year-${year}`}>
+                    <h3 id={`gallery-year-${year}`} className="mb-4 flex items-center gap-4 text-base font-semibold text-ink-2">{year}<span className="h-px flex-1 bg-hairline" /></h3>
+                    <Reveal className={`gallery-grid ${yearIndex > 0 ? "gallery-archive" : "gallery-recent"}`}>
+                        {galleryImages.filter(item => item.sortDate.startsWith(year)).map(item => <button
+                            key={item.image} type="button" onClick={() => setSelected(galleryImages.indexOf(item))}
+                            className={`gallery-card group ${item.span === 2 ? "gallery-wide" : ""}`}>
+                            <div className="gallery-photo">
+                                <Image src={`/images/${item.image}`} alt={language === "KR" ? item.titleKR : item.title} fill
+                                    sizes={yearIndex === 0 ? "(max-width: 767px) 100vw, 50vw" : "(max-width: 767px) 112px, 33vw"}
+                                    className={`object-cover ${item.span === 2 ? "object-[50%_70%]" : ""}`} />
+                            </div>
+                            <div className="gallery-caption">
+                                <p className="break-keep text-[15px] font-medium leading-[1.55] text-ink">{language === "KR" ? item.titleKR : item.title}</p>
+                                <Meta className="mt-1 block text-xs">{language === "KR" ? item.dateKR : item.date}</Meta>
+                            </div>
+                        </button>)}
+                    </Reveal>
+                </section>)}
+            </div>
 
             {/* lightbox — Esc + click-outside close, caption anchored to the image */}
             {open ? (
                 <div
+                    ref={dialogRef}
                     role="dialog"
                     aria-modal="true"
                     aria-label={open.title}
@@ -100,7 +84,7 @@ export default function Gallery() {
                     >
                         <X className="h-7 w-7" />
                     </button>
-                    <figure className="w-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
+                    <figure className="max-h-[calc(100dvh-2rem)] w-full max-w-4xl overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                         <div className="relative h-[60vh] md:h-[72vh]">
                             <Image
                                 src={`/images/${open.image}`}

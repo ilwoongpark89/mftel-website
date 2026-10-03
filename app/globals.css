@@ -189,15 +189,9 @@
 /* ── CALORIMETER motion ──
    Frame-0 doctrine: content is server-rendered visible; motion is additive.
    .reveal-pending is added by JS only for below-fold header blocks. */
-.reveal-pending {
-  opacity: 0;
-  transform: translateY(20px);
-}
-.reveal-in {
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 0.7s var(--ease-expo), transform 0.7s var(--ease-expo);
-}
+.reveal-pending { opacity: 1; transform: none; }
+.reveal-in { opacity: 1; transform: none; animation: editorialReveal .4s ease-out; }
+@keyframes editorialReveal { from { opacity: .65; } to { opacity: 1; } }
 @keyframes calRise {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
@@ -207,19 +201,11 @@
 .cal-rise-3 { animation: calRise 0.45s var(--ease-expo) 280ms both; }
 
 /* staggered child reveal — apply alongside <Reveal> (grids, card rows) */
-.reveal-stagger.reveal-pending > * { opacity: 0; transform: translateY(20px); }
-.reveal-stagger.reveal-in > * {
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 0.7s var(--ease-expo), transform 0.7s var(--ease-expo);
-}
-.reveal-stagger.reveal-in > *:nth-child(2) { transition-delay: 80ms; }
-.reveal-stagger.reveal-in > *:nth-child(3) { transition-delay: 160ms; }
-.reveal-stagger.reveal-in > *:nth-child(4) { transition-delay: 240ms; }
-.reveal-stagger.reveal-in > *:nth-child(5) { transition-delay: 320ms; }
-.reveal-stagger.reveal-in > *:nth-child(6) { transition-delay: 400ms; }
-.reveal-stagger.reveal-in > *:nth-child(7) { transition-delay: 480ms; }
-.reveal-stagger.reveal-in > *:nth-child(n+8) { transition-delay: 560ms; }
+.reveal-stagger.reveal-pending > * { opacity: 1; transform: none; }
+.reveal-stagger.reveal-in { animation: none; }
+.reveal-stagger.reveal-in > * { animation: editorialReveal .4s ease-out; }
+.reveal-stagger.reveal-in > *:nth-child(2) { animation-delay: 40ms; }
+.reveal-stagger.reveal-in > *:nth-child(n+3) { animation-delay: 80ms; }
 
 /* one static ember glow for the single primary CTA — no pulsing */
 .glow-ember { box-shadow: 0 0 32px rgba(234, 88, 12, 0.38); }
@@ -233,10 +219,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .reveal-pending { opacity: 1; transform: none; }
-  .reveal-in { transition: none; }
+  .reveal-in { transition: none; animation: none; }
   .cal-rise, .cal-rise-2, .cal-rise-3 { animation: none; }
   .reveal-stagger.reveal-pending > * { opacity: 1; transform: none; }
-  .reveal-stagger.reveal-in > * { transition: none; }
+  .reveal-stagger.reveal-in > * { transition: none; animation: none; }
   .cal-nudge { animation: none; }
 }
 
@@ -352,3 +338,60 @@
 .animate-slide-up {
   animation: slideUp 0.25s ease-out;
 }
+
+/* Research uses the same width, type hierarchy, and rules as the archives. */
+.research-overview{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);align-items:center;gap:40px;margin-top:24px}
+.research-overview figure{min-width:0;background:#fff;padding:12px 16px}
+.research-overview figcaption{font-size:12px;line-height:1.6;color:var(--color-ink-3);padding-top:8px;text-align:center}
+/* Native image files replace CSS crops of entire slides. */
+.research-evidence{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 20px;margin-top:20px}
+.research-evidence figure{min-width:0}
+.research-evidence-image{height:205px;background:#fff;padding:12px}
+.research-evidence figcaption{padding-top:12px;font-size:15px;font-weight:500;color:var(--color-ink)}
+.research-evidence figcaption p{margin-top:4px;font-size:13px;font-weight:400;line-height:1.65;color:var(--color-ink-3);word-break:keep-all}
+.evidence-group + .evidence-group{margin-top:24px;padding-top:24px;border-top:1px solid var(--color-hairline)}
+.evidence-smr .research-evidence{grid-template-columns:repeat(2,minmax(0,1fr))}
+.evidence-smr .research-evidence-image{height:240px}
+@media(max-width:767px){.research-overview{grid-template-columns:1fr;gap:20px}.research-evidence{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 14px}.research-evidence-image{height:180px;padding:8px}.research-evidence figcaption{font-size:14px}.evidence-tes .research-evidence{grid-template-columns:1fr}.evidence-tes .research-evidence figure{display:grid;grid-template-columns:100px minmax(0,1fr);gap:14px;align-items:center}.evidence-tes .research-evidence-image{height:140px}.evidence-tes .research-evidence figure:not([data-evidence-kind="apparatus"]){display:block}.evidence-tes .research-evidence figure:not([data-evidence-kind="apparatus"]) .research-evidence-image{height:auto;max-height:225px;aspect-ratio:1.5}.research-evidence .evidence-wide,.evidence-smr figure{grid-column:1/-1}.evidence-smr .research-evidence-image{height:auto;aspect-ratio:1.5}}
+
+
+.research-experience{padding:0 16px 8px;min-width:0}.research-experience iframe{display:block;width:100%;border:0;background:transparent;color-scheme:dark;overflow:hidden}@media(max-width:767px){.research-experience{padding:0 0 8px}}
+
+/* Reserve the scrollbar gutter while sheets and image viewers lock the body. */
+html{scrollbar-gutter:stable;scroll-padding-top:80px}
+
+/* Research follows one reading order: premise, evidence, system context, projects. */
+.research-chapter { scroll-margin-top: 20px; }
+.research-premise h4 { max-width: 22em; font-size: 21px; line-height: 1.55; font-weight: 600; letter-spacing: -.025em; word-break: keep-all; text-wrap: balance; color: var(--color-ink); }
+.research-premise p { max-width: 38em; }
+.research-evidence-section { padding: 24px; border: 1px solid var(--color-hairline); background: var(--color-well); }
+.research-evidence-section .research-evidence { margin-top: 20px; padding-top: 0; border-top: 0; }
+.research-activities { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 36px; }
+@media (max-width: 767px) {
+ .research-premise h4 { font-size: 19px; }
+ .research-evidence-section { padding: 18px 14px; }
+ .research-activities { grid-template-columns: 1fr; }
+}
+
+.research-source-note{margin-top:24px;padding:16px 0;border-top:1px solid var(--color-hairline);font-size:14px;line-height:1.7;color:var(--color-ink-3);max-width:70ch;word-break:keep-all}.research-source-note a,.research-references a{color:var(--color-ember-700);text-underline-offset:4px}.research-source-note a{display:inline-flex;align-items:center;min-height:44px}.research-references{display:flex;flex-wrap:wrap;gap:0 24px;font-size:14px;margin-top:8px}.research-references a{display:inline-flex;align-items:center;min-height:44px}.research-references a:hover,.research-source-note a:hover{text-decoration:underline}
+
+.gallery-years{display:grid;gap:32px}.gallery-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}.gallery-recent{grid-template-columns:repeat(2,minmax(0,1fr))}.gallery-card{min-width:0;overflow:hidden;border:1px solid var(--color-hairline);border-radius:8px;text-align:left;background:#fff;transition:border-color .15s}.gallery-card:hover{border-color:var(--color-hairline-2)}.gallery-photo{position:relative;aspect-ratio:4/3}.gallery-recent .gallery-photo{aspect-ratio:4/3}.gallery-caption{padding:14px 16px}.gallery-wide{grid-column:span 2}.gallery-wide .gallery-photo{aspect-ratio:2.35}
+@media(max-width:767px){.gallery-grid{grid-template-columns:1fr;gap:14px}.gallery-wide{grid-column:auto}.gallery-archive .gallery-card{display:grid;grid-template-columns:112px minmax(0,1fr);align-items:center}.gallery-archive .gallery-photo{aspect-ratio:auto;height:100%;min-height:116px}.gallery-archive .gallery-caption{padding:12px}.gallery-archive .gallery-caption p{font-size:14px}.gallery-archive .gallery-caption .font-mono{font-size:12px}.gallery-years{gap:28px}}
+
+@media(min-width:768px){.evidence-tes .research-evidence{grid-template-columns:repeat(2,minmax(0,1fr))}.evidence-tes .research-evidence-image{height:210px}}
+
+.research-overview-pair{display:block}.research-overview-pair .research-premise{max-width:800px;margin-bottom:24px}.research-topic-pair{display:grid;grid-template-columns:1fr 1fr;gap:24px}.research-topic-pair figure{padding:12px 16px 18px;display:flex;flex-direction:column}.research-topic-pair figure img{aspect-ratio:1.5;object-fit:contain}.research-topic-pair figcaption{text-align:left;border-top:1px solid #eeeee8;margin-top:14px;padding-top:12px;line-height:1.7}.research-topic-pair figcaption strong{display:block;font-size:14px;font-weight:550;color:var(--color-ink)}.research-topic-pair figcaption span{display:block;font-size:13px;margin-top:4px}@media(max-width:767px){.research-topic-pair{grid-template-columns:1fr;gap:18px}.research-overview-pair .research-premise{margin-bottom:20px}.research-topic-pair figure{padding:10px 12px 14px}}
+
+/* The original landing text remains the layout anchor. */
+.hero-composition{position:relative}.hero-illustration{position:absolute;width:360px;right:-48px;top:50%;transform:translateY(-42%);pointer-events:none}
+.energy-landscape{position:relative;margin:0}.quiet-energy svg{display:block;width:100%;height:auto;overflow:visible}
+.quiet-flow{animation:quiet-flow 6s linear infinite}.quiet-rotor{transform-origin:214px 119px;animation:quiet-rotor 24s linear infinite}.quiet-led{animation:quiet-led 6s ease-in-out infinite}.quiet-led-1{animation-delay:-2s}.quiet-led-2{animation-delay:-4s}
+.quiet-energy[data-running=false] *{animation-play-state:paused}
+@keyframes quiet-flow{to{stroke-dashoffset:-72}}@keyframes quiet-rotor{to{transform:rotate(360deg)}}@keyframes quiet-led{0%,100%{opacity:.35}50%{opacity:.8}}
+.motion-access{position:absolute;right:8px;bottom:0;width:32px;height:32px;border-radius:50%;background:#111820b3;color:#a2aab0;font-size:12px;cursor:pointer;opacity:0;pointer-events:auto}.motion-access:focus-visible{opacity:1;outline:1px solid #9ab4c1;outline-offset:2px}
+@media(min-width:1200px) and (max-width:1399px){.hero-illustration{right:-24px;width:300px}}
+@media(max-width:1199px){.hero-illustration{top:calc(100% + 18px);right:32px;width:240px;transform:none}}
+@media(max-width:767px){.hero-illustration{right:24px;width:180px;top:calc(100% + 12px)}}
+@media(prefers-reduced-motion:reduce){.quiet-energy *{animation:none!important}.motion-access{display:none}}
+
+.quiet-bubble{animation:quiet-bubble 3.6s ease-out infinite}.quiet-bubble-1{animation-delay:-1.2s}.quiet-bubble-2{animation-delay:-2.4s}@keyframes quiet-bubble{0%{transform:translateY(0);opacity:0}20%{opacity:.6}100%{transform:translateY(-8px);opacity:0}}

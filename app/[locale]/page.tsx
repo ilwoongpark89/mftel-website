@@ -11,7 +11,7 @@ const Footer = dynamic(() => import("@/components/sections/Footer"));
 export default function Home() {
   return (
     <main className="min-h-screen bg-coal">
-      <Navbar />
+      <Navbar tone="dark" />
       <HomeStory />
       <Footer />
     </main>

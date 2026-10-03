@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 /**
  * CALORIMETER section shell. One rhythm for every public-site band:
  * paper (default) / well (recessed) / coal (dark — Gallery, Join Us, Footer only).
- * Container: max-w-6xl + single gutter. Padding: py-16 md:py-28 unless compact.
+ * Container: max-w-6xl + single gutter. Padding: py-12 md:py-16 unless compact.
  */
 export default function Band({
     id,
@@ -25,7 +25,7 @@ export default function Band({
             id={id}
             data-nav-dark={surface === "coal" ? "" : undefined}
             className={cn(
-                compact ? "py-14 md:py-20" : "py-16 md:py-24",
+                compact ? "py-10 md:py-12" : "py-12 md:py-16",
                 surface === "paper" && "bg-paper",
                 surface === "white" && "bg-white",
                 surface === "well" && "bg-well",

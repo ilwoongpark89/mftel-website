@@ -107,13 +107,13 @@ export function SectionHeader({
     className?: string;
 }) {
     return (
-        <Reveal className={cn("mb-8 md:mb-12", className)}>
+        <Reveal className={cn("mb-6 md:mb-8", className)}>
             <Kicker index={index} dark={dark}>
                 {kicker}
             </Kicker>
             <h2
                 className={cn(
-                    "mt-4 text-3xl font-semibold tracking-tight md:text-[40px]",
+                    "mt-4 break-keep text-3xl font-semibold tracking-tight [text-wrap:balance] md:text-[40px]",
                     isKorean ? "leading-[1.3]" : "leading-[1.15]",
                     dark ? "text-paper" : "text-ink"
                 )}
@@ -121,7 +121,7 @@ export function SectionHeader({
                 {title}
             </h2>
             {sub ? (
-                <p className={cn("mt-3 max-w-2xl text-lg", dark ? "text-ink-4" : "text-ink-2")}>
+                <p className={cn("mt-3 max-w-3xl break-keep text-base leading-[1.75] md:text-lg", dark ? "text-ink-4" : "text-ink-2")}>
                     {sub}
                 </p>
             ) : null}

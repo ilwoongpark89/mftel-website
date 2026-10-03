@@ -9,8 +9,9 @@ import { publications, projects, patents, collaborators, collaboratorCount, team
 import { JOIN_ID } from "@/lib/sections";
 import { cn } from "@/lib/utils";
 import Reveal from "@/components/ui/reveal";
-import CountUp from "@/components/ui/count-up";
 import HeroCanvas from "@/components/sections/HeroCanvas";
+import EnergyLandscape from "@/components/home/energy-landscape";
+import ResearchExperience from "@/components/home/research-experiences";
 import { Scene, Label, display, title, lead, AmbientField } from "@/components/home/primitives";
 
 /**
@@ -19,17 +20,17 @@ import { Scene, Label, display, title, lead, AmbientField } from "@/components/h
  *   surface  : coal only (no alternation)
  *   type     : Pretendard only · 5 sizes (display/title/lead/body/label)
  *   color    : paper / stone-300 / stone-500 + ember-400 text · ember-600 fill
- *   motion   : one reveal pattern + the hero bubble field. Nothing else moves.
+ *   motion   : restrained reveals, a bubble field, and three viewport-aware research studies.
  * One idea per screen. Archives live on routes, not here.
  */
 
 /* ── S1 hero ───────────────────────────────────────────────────────────── */
 
 function SceneHero() {
-    const { t, language, lp } = useLanguage();
+    const { t, language } = useLanguage();
     const isKR = language === "KR";
     return (
-        <section id="home" data-nav-dark className="relative isolate flex min-h-[min(100svh,880px)] items-center overflow-hidden py-24">
+        <section id="home" data-nav-dark className="relative isolate flex min-h-[100svh] items-center overflow-hidden py-20">
             <div
                 aria-hidden
                 className="absolute inset-0 -z-10"
@@ -42,8 +43,8 @@ function SceneHero() {
             {/* 하단 페이드 — 글로우가 섹션 경계에서 계단으로 끊기지 않게 바탕색으로 녹인다 */}
             <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-b from-transparent to-coal" />
 
-            <div className="mx-auto w-full max-w-[1120px] px-6 md:px-8">
-                <div className="cal-rise max-w-3xl">
+            <div className="hero-composition mx-auto w-full max-w-[1120px] px-6 md:px-8">
+                <div className="hero-copy cal-rise max-w-3xl">
                     <Label className="mb-6">{t("hero.kicker")}</Label>
                     <h1 className={display(isKR)}>
                         {t("hero.line1")}
@@ -55,6 +56,7 @@ function SceneHero() {
                     </h1>
                     <p className={cn("mt-7 max-w-xl", lead(isKR))}>{t("hero.description")}</p>
                 </div>
+                <div className="hero-illustration"><EnergyLandscape isKR={isKR} /></div>
             </div>
 
             {/* scroll cue */}
@@ -90,11 +92,11 @@ function SceneNumbers() {
                 <h2 className={cn("mt-5", title(isKR))}>{t("home.numbers.title")}</h2>
                 <p className={cn("mt-4 max-w-xl", lead(isKR))}>{t("home.numbers.sub")}</p>
             </Reveal>
-            <Reveal className="reveal-stagger mt-14 grid grid-cols-2 gap-y-12 border-t border-white/8 pt-12 md:mt-20 md:grid-cols-4">
+            <Reveal className="reveal-stagger mt-8 grid grid-cols-2 gap-y-8 border-t border-white/8 pt-8 md:mt-10 md:grid-cols-4">
                 {stats.map((s) => (
                     <div key={s.label}>
-                        <div className="text-[56px] font-bold leading-none tracking-[-0.03em] text-paper tabular-nums md:text-[72px]">
-                            <CountUp to={s.value} />
+                        <div className="text-[30px] font-semibold leading-none tracking-[-0.03em] text-paper tabular-nums md:text-[36px]">
+                            {s.value}
                         </div>
                         <p className="mt-4 text-[13px] font-semibold uppercase tracking-[0.04em] text-stone-400">
                             {s.label}
@@ -113,9 +115,9 @@ function SceneResearch() {
     const isKR = language === "KR";
     // 수치는 설명문 안에서만 — 근거 없는 대형 숫자 금지 (상세 근거는 /research)
     const rows = [
-        { index: "01", title: t("about.tes.title"), desc: t("about.tes.description") },
-        { index: "02", title: t("about.thermal.title"), desc: t("about.thermal.description") },
-        { index: "03", title: t("about.smr.title"), desc: t("about.smr.description") },
+        { kind: "tes" as const, index: "01", title: t("about.tes.title"), desc: isKR ? "다양한 열저장 시스템을 위한 축열·방열 솔루션" : "Charging and discharging solutions for thermal storage systems" },
+        { kind: "cooling" as const, index: "02", title: t("about.thermal.title"), desc: isKR ? "데이터센터와 고성능 반도체를 위한 비등 냉각" : "Boiling cooling for data centres and high-performance chips" },
+        { kind: "smr" as const, index: "03", title: t("about.smr.title"), desc: isKR ? "원자로 계통의 열수력 안전과 이상유동 안정성" : "Thermal-hydraulic safety and two-phase flow stability in reactor systems" },
     ];
     return (
         <Scene>
@@ -123,20 +125,20 @@ function SceneResearch() {
                 <Label>{t("home.research.label")}</Label>
                 <h2 className={cn("mt-5 max-w-2xl", title(isKR))}>{t("home.research.title")}</h2>
             </Reveal>
-            <Reveal as="ul" className="reveal-stagger mt-14 border-t border-white/8 md:mt-20">
+            <Reveal as="ul" className="reveal-stagger mt-8 border-t border-white/8 md:mt-10">
                 {rows.map((row) => (
                     <li key={row.index} className="border-b border-white/8">
                         <Link
-                            href={lp("/research")}
-                            className="group grid grid-cols-12 items-center gap-x-4 rounded-xl px-2 py-9 transition-colors duration-150 hover:bg-white/[0.04] md:px-4 md:py-11"
+                            href={`${lp("/research")}#${row.kind}`}
+                            className="group grid grid-cols-12 items-center gap-x-4 rounded-xl px-2 py-6 transition-colors duration-150 hover:bg-white/[0.04] md:px-4 md:py-7"
                         >
-                            <span className="col-span-12 mb-3 text-[15px] font-semibold text-ember-400 md:col-span-1 md:mb-0">
+                            <span className="col-span-12 mb-3 text-[12px] font-medium text-stone-500 md:col-span-1 md:mb-0">
                                 {row.index}
                             </span>
                             <span className="col-span-11 md:col-span-10">
                                 <span
                                     className={cn(
-                                        "block break-keep text-[24px] font-bold tracking-[-0.02em] text-paper md:text-[28px]",
+                                        "block break-keep text-[22px] font-semibold tracking-[-0.02em] text-paper md:text-[24px]",
                                         isKR ? "leading-[1.35]" : "leading-[1.2]"
                                     )}
                                 >
@@ -144,7 +146,7 @@ function SceneResearch() {
                                 </span>
                                 <span
                                     className={cn(
-                                        "mt-2.5 block max-w-2xl break-keep text-[16px] text-stone-400",
+                                        "mt-2 block max-w-2xl break-keep text-[15px] text-stone-400",
                                         isKR ? "leading-[1.7]" : "leading-[1.6]"
                                     )}
                                 >
@@ -158,6 +160,7 @@ function SceneResearch() {
                                 →
                             </span>
                         </Link>
+                        <ResearchExperience kind={row.kind} />
                     </li>
                 ))}
             </Reveal>
@@ -180,7 +183,7 @@ function ScenePubs() {
                 <Label>{t("home.pubs.label")}</Label>
                 <h2 className={cn("mt-5", title(isKR))}>{t("home.pubs.title")}</h2>
             </Reveal>
-            <Reveal as="ul" className="reveal-stagger mt-12 border-t border-white/8 md:mt-16">
+            <Reveal as="ul" className="reveal-stagger mt-8 border-t border-white/8 md:mt-10">
                 {featured.map((pub) => (
                     <li key={pub.number} className="border-b border-white/8">
                         <a
@@ -250,7 +253,7 @@ function ScenePeople() {
                 <Label>{t("home.people.label")}</Label>
                 <h2 className={cn("mt-5", title(isKR))}>{t("team.title")}</h2>
             </Reveal>
-            <Reveal className="reveal-stagger mt-14 grid grid-cols-3 gap-3 md:mt-20 md:grid-cols-6 md:gap-4">
+            <Reveal className="reveal-stagger mt-8 grid grid-cols-3 gap-3 md:mt-10 md:grid-cols-6 md:gap-4">
                 {/* PI tile — double size anchors the grid */}
                 <Link
                     href={lp("/team")}

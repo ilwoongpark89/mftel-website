@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { ChevronDown, X } from "lucide-react";
+import { useDialogFocus } from "@/components/ui/use-dialog-focus";
 import Band from "@/components/ui/band";
 import { SectionHeader, Meta } from "@/components/ui/typo";
 import { useLanguage, type Language } from "@/lib/LanguageContext";
@@ -444,6 +445,7 @@ function Lightbox({
     onClose: () => void;
     onIndex: (i: number) => void;
 }) {
+    const dialogRef = useDialogFocus(true);
     const { images, index, alt } = state;
     const n = images.length;
     useEffect(() => {
@@ -459,6 +461,7 @@ function Lightbox({
 
     return (
         <div
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-label={alt}

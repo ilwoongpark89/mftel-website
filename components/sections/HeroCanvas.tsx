@@ -26,12 +26,13 @@ export default function HeroCanvas({ className }: { className?: string }) {
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
         let raf = 0;
         let running = false;
+        let inView = false;
         let W = 0;
         let H = 0;
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -108,7 +109,7 @@ export default function HeroCanvas({ className }: { className?: string }) {
         };
 
         const start = () => {
-            if (running) return;
+            if (running || !inView || document.hidden || motion.matches) return;
             running = true;
             last = performance.now();
             raf = requestAnimationFrame(tick);
@@ -118,16 +119,25 @@ export default function HeroCanvas({ className }: { className?: string }) {
             cancelAnimationFrame(raf);
         };
 
-        const io = new IntersectionObserver(([e]) => (e.isIntersecting ? start() : stop()), {
+        const io = new IntersectionObserver(([e]) => {
+            inView = e.isIntersecting;
+            if (inView) start(); else stop();
+        }, {
             threshold: 0.05,
         });
         io.observe(canvas);
-        const onVis = () => (document.hidden ? stop() : start());
+        const onVis = () => (document.hidden || !inView || motion.matches ? stop() : start());
+        const onMotion = () => {
+            onVis();
+            if (motion.matches) ctx.clearRect(0, 0, W, H);
+        };
+        motion.addEventListener("change", onMotion);
         document.addEventListener("visibilitychange", onVis);
         window.addEventListener("resize", resize);
 
         return () => {
             stop();
+            motion.removeEventListener("change", onMotion);
             io.disconnect();
             document.removeEventListener("visibilitychange", onVis);
             window.removeEventListener("resize", resize);

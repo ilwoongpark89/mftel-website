@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function JoinPage() {
     return (
         <main className="min-h-screen bg-coal">
-            <Navbar />
+            <Navbar tone="dark" />
             <div className="pt-16">
                 <JoinStory />
             </div>

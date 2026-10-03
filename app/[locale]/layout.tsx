@@ -97,7 +97,7 @@ export default async function RootLayout({
   const { locale } = await params;
   const language = locale === "en" ? ("EN" as const) : ("KR" as const);
   return (
-    <html lang={locale === "en" ? "en" : "ko"} className="scroll-smooth">
+    <html lang={locale === "en" ? "en" : "ko"}>
       <head>
         <meta name="format-detection" content="telephone=no" />
         <meta name="theme-color" content="#0C0A09" />

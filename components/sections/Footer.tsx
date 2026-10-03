@@ -6,11 +6,8 @@ import { NAV_ROUTES } from "@/lib/sections";
 
 /**
  * v3 footer — compact, quiet close. No heading block, no icons, one address
- * line per locale, sitemap as a single wrapped row, dark-graded map.
+ * line per locale, sitemap as a single wrapped row, direct map links.
  */
-
-const MAP_EMBED_SRC =
-    "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3166.5!2d126.6544!3d37.4507!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x357b78a27fba4c35%3A0x6e1b9e7b2e8b1c2a!2sInha%20University!5e0!3m2!1sen!2skr!4v1700000000000!5m2!1sen!2skr";
 
 const CONTACT = {
     addressKR: "인천 미추홀구 인하로 100, 인하대학교 2N687",
@@ -58,7 +55,6 @@ export default function Footer() {
                         </nav>
 
                         <div className="mt-7 space-y-1.5 text-sm text-stone-400">
-                            <p className="break-keep">{isKR ? CONTACT.addressKR : CONTACT.addressEN}</p>
                             <p>
                                 <a
                                     href={`tel:${CONTACT.tel}`}
@@ -80,25 +76,14 @@ export default function Footer() {
                     </div>
 
                     <div className="md:col-span-5">
-                        <div className="aspect-[16/9] overflow-hidden rounded-xl border border-white/10">
-                            <iframe
-                                src={MAP_EMBED_SRC}
-                                className="h-full w-full border-0"
-                                style={{
-                                    filter: "invert(0.92) hue-rotate(180deg) brightness(0.9) contrast(0.88)",
-                                }}
-                                allowFullScreen
-                                loading="lazy"
-                                referrerPolicy="no-referrer-when-downgrade"
-                                title="MFTEL location, Inha University"
-                            />
-                        </div>
+                        <p className="text-sm font-semibold text-paper">{isKR ? "찾아오시는 길" : "Visit the lab"}</p>
+                        <p className="mt-3 max-w-sm break-keep text-sm leading-relaxed text-stone-400">{isKR ? CONTACT.addressKR : CONTACT.addressEN}</p>
                         <p className="mt-2.5 text-[13px]">
                             <a
                                 href="https://maps.google.com/?q=Inha+University"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-stone-400 transition-colors duration-150 hover:text-paper"
+                                className="inline-flex min-h-11 items-center text-stone-400 transition-colors duration-150 hover:text-paper"
                             >
                                 Google Maps ↗
                             </a>
@@ -109,7 +94,7 @@ export default function Footer() {
                                 href="https://map.naver.com/p/search/인하대학교"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-stone-400 transition-colors duration-150 hover:text-paper"
+                                className="inline-flex min-h-11 items-center text-stone-400 transition-colors duration-150 hover:text-paper"
                             >
                                 {isKR ? "네이버 지도 ↗" : "Naver Map ↗"}
                             </a>

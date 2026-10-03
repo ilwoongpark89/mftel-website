@@ -32,6 +32,7 @@ const MEMBER_KEYS = new Set(
         ...teamMembers.flatMap((m) => [m.name, ...(m.aliases ?? [])]),
         ...alumni.map((a) => a.name),
         "Il Woong Park",
+        "Il-Woong Park",
     ].map((n) => n.toLowerCase().replace(/\s+/g, ""))
 );
 const renderAuthors = (authors: string) =>

@@ -25,7 +25,7 @@ export function Scene({
             data-nav-dark
             className={cn(
                 "relative z-[1] flex",
-                full ? "py-24 md:py-32" : "py-16 md:py-24",
+                full ? "py-10 md:py-14" : "py-8 md:py-10",
                 className
             )}
         >
@@ -57,7 +57,7 @@ export const display = (isKR: boolean) =>
 
 export const title = (isKR: boolean) =>
     cn(
-        "break-keep text-[30px] font-bold tracking-[-0.02em] text-paper [text-wrap:balance] md:text-[42px]",
+        "break-keep text-[30px] font-bold tracking-[-0.02em] text-paper [text-wrap:balance] md:text-[40px]",
         isKR ? "leading-[1.3]" : "leading-[1.12]"
     );
 

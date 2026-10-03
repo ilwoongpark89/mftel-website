@@ -135,6 +135,15 @@ const nextConfig: NextConfig = {
         source: "/:path((?!lecture/|board(?:/|$)).*)",
         headers: SECURITY_HEADERS(process.env.NODE_ENV !== "production"),
       },
+      // Only the three local research illustrations may be embedded by this site.
+      {
+        source: "/experiences/:scene(tes|cooling|smr).html",
+        headers: SECURITY_HEADERS(process.env.NODE_ENV !== "production").map(header =>
+          header.key === "Content-Security-Policy"
+            ? { ...header, value: header.value.replace("frame-ancestors 'none'", "frame-ancestors 'self'") }
+            : header.key === "X-Frame-Options" ? { ...header, value: "SAMEORIGIN" } : header
+        ),
+      },
     ];
   },
   // 통합 강의 앱(2026-07-12): mftel.vercel.app/lecture/* = 강의 프로젝트(basePath /lecture)로 프록시.

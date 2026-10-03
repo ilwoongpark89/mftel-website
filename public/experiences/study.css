@@ -1,0 +1,12 @@
+:root{color-scheme:dark;color:#c6c9cc;background:transparent;font-family:"Pretendard Variable","Apple SD Gothic Neo",sans-serif}
+*{box-sizing:border-box}body{margin:0;-webkit-font-smoothing:antialiased}
+/* Two views, one caption and one animation lifecycle. */
+.study{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:36px;align-items:center;padding:0 16px 22px}.scene{position:relative;min-width:0}.viewport{aspect-ratio:50/17;position:relative}canvas{width:100%;height:100%;display:block;touch-action:auto}
+.story{padding:0}.story p{font-size:14px;line-height:1.85;color:#afb0b2;margin:0;word-break:keep-all;text-wrap:pretty;max-width:36ch}
+.pause{position:absolute;right:8px;bottom:8px;background:#111820b3;border:0;border-radius:50%;width:32px;height:32px;color:#a2aab0;font:inherit;font-size:12px;cursor:pointer;opacity:0;transition:opacity .15s}.pause:focus-visible{opacity:1;outline:1px solid #9ab4c1;outline-offset:2px}
+@media(max-width:800px){.study{gap:24px;padding-inline:8px;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}}
+@media(max-width:620px){.study{display:block;padding:0 8px 20px}.scene{margin:0 0 16px;max-width:440px}.story{padding:0 2px}.story p{line-height:1.8;max-width:48ch}}
+
+.single-figure .study{display:block;padding:0}.single-figure .story{display:none}.single-figure .scene{margin:0;max-width:none}.single-figure .viewport{aspect-ratio:3/2}.single-figure .pause{bottom:12px;right:12px}
+
+html.light-figure{color-scheme:light;background:#fff}.light-figure body{background:#fff}

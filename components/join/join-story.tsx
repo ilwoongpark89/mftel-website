@@ -5,7 +5,7 @@ import { Mail, Check } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
 import Reveal from "@/components/ui/reveal";
-import { Scene, Label, display, title, lead, AmbientField } from "@/components/home/primitives";
+import { Scene, Label, title, lead, AmbientField } from "@/components/home/primitives";
 
 /**
  * /join — the recruiting experience. The vision is never posted; it is
@@ -127,19 +127,19 @@ export default function JoinStory() {
             <AmbientField />
 
             {/* opening — the distilled vision */}
-            <Scene>
+            <Scene className="pt-12 pb-6 md:pt-16 md:pb-8">
                 <div className="cal-rise max-w-3xl">
                     <Label className="mb-6">{isKR ? "모집 안내" : "Join Us"}</Label>
-                    <h1 className={display(isKR)}>
+                    <h1 className={title(isKR)}>
                         {isKR ? (
                             <>
                                 답을 빨리 맞히는 사람보다{" "}
-                                <span className="text-ember-400">물어야 할 것을 찾아내는 사람</span>
+                                <span className="block text-ember-400">물어야 할 것을 찾아내는 사람</span>
                             </>
                         ) : (
                             <>
                                 Not the fastest to answer —{" "}
-                                <span className="text-ember-400">the one who finds what to ask</span>
+                                <span className="block text-ember-400">the one who finds what to ask</span>
                             </>
                         )}
                     </h1>
@@ -152,13 +152,13 @@ export default function JoinStory() {
             </Scene>
 
             {/* who we look for */}
-            <Scene full={false}>
+            <Scene full={false} className="py-6 md:py-8">
                 <Reveal>
                     <Label>{isKR ? "이런 사람을 찾습니다" : "Who we look for"}</Label>
                 </Reveal>
-                <Reveal as="ul" className="reveal-stagger mt-10 border-t border-white/8">
+                <Reveal as="ul" className="reveal-stagger mt-6 md:mt-8 border-t border-white/8">
                     {SEEK.map((row) => (
-                        <li key={row.index} className="grid grid-cols-12 gap-x-4 border-b border-white/8 px-2 py-9 md:px-4 md:py-10">
+                        <li key={row.index} className="grid grid-cols-12 gap-x-4 border-b border-white/8 px-2 py-6 md:px-4 md:py-8">
                             <span className="col-span-12 mb-3 text-[15px] font-semibold text-ember-400 md:col-span-1 md:mb-0">
                                 {row.index}
                             </span>
@@ -186,8 +186,8 @@ export default function JoinStory() {
             </Scene>
 
             {/* the contact mail — applying IS the vision */}
-            <Scene>
-                <div className="mx-auto max-w-3xl">
+            <Scene className="pt-6 md:pt-8">
+                <div className="max-w-3xl">
                     <Reveal>
                         <Label>{isKR ? "지원 방법" : "How to apply"}</Label>
                         <h2 className={cn("mt-5", title(isKR))}>{MAIL_SPEC.heading}</h2>

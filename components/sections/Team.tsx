@@ -146,6 +146,7 @@ export default function Team() {
                 index="05"
                 kicker={t("team.label")}
                 title={t("team.title")}
+                sub={isKR ? "다상유동과 열전달을 연구하는 MFTEL의 구성원을 소개합니다." : "Meet the people studying multiphase flow and heat transfer at MFTEL."}
                 isKorean={isKR}
             />
 
@@ -156,13 +157,13 @@ export default function Team() {
                 </h3>
 
                 <div className="mt-6 flex flex-col gap-8 md:mt-8 md:flex-row md:gap-12">
-                    <figure className="w-full shrink-0 sm:max-w-[280px]">
+                    <figure className="w-[180px] shrink-0 md:w-[280px]">
                         <div className="relative aspect-[3/4] overflow-hidden rounded-lg border border-hairline bg-well">
                             <Image
                                 src="/images/Professor_Il Woong Park.png"
                                 alt={professorName}
                                 fill
-                                sizes="(max-width: 768px) 80vw, 280px"
+                                sizes="(max-width: 768px) 180px, 280px"
                                 className="object-cover"
                             />
                         </div>
@@ -197,7 +198,7 @@ export default function Team() {
             </div>
 
             {/* ── Graduate Students ────────────────────────────────────── */}
-            <div className="mt-14 border-t border-hairline pt-8 md:mt-20 md:pt-10">
+            <div className="mt-10 border-t border-hairline pt-6 md:mt-14 md:pt-8">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3">
                     <h3 className="break-keep text-xl font-semibold tracking-tight text-ink md:text-2xl">
                         {t("team.students")}{" "}
@@ -295,7 +296,7 @@ export default function Team() {
             </div>
 
             {/* ── Alumni — single hairline row, destination is the signal ─ */}
-            <div className="mt-14 border-t border-hairline pt-8 md:mt-20 md:pt-10">
+            <div className="mt-10 border-t border-hairline pt-6 md:mt-14 md:pt-8">
                 <h3 className="break-keep text-xl font-semibold tracking-tight text-ink md:text-2xl">
                     {t("team.alumni")}
                 </h3>
