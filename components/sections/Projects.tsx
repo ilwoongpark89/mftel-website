@@ -73,8 +73,8 @@ export default function Projects() {
                             key={g.title}
                             className="border-t border-hairline py-5 md:py-6"
                         >
-                            <div className="min-w-0 md:grid md:grid-cols-[140px_1fr] md:gap-6">
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 md:flex-col md:items-start md:justify-start md:gap-y-2">
+                            <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                                     <Meta>{rangeLabel(g)}</Meta>
                                     {g.active ? (
                                         <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-ember-700">
@@ -88,7 +88,7 @@ export default function Projects() {
                                         </span>
                                     )}
                                 </div>
-                                <div><p className="mt-2 break-keep text-[15px] font-medium leading-[1.6] text-ink md:mt-0 md:text-base">
+                                <div><p className="mt-2 break-keep text-[15px] font-medium leading-[1.6] text-ink md:text-base">
                                     {isKR ? g.titleKR : g.title}
                                 </p>
                                 {isKR ? (

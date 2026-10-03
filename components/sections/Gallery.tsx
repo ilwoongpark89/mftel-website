@@ -5,6 +5,7 @@ import Image from "next/image";
 import { X } from "lucide-react";
 import { useDialogFocus } from "@/components/ui/use-dialog-focus";
 import Band from "@/components/ui/band";
+import ArchiveYear from "@/components/ui/archive-year";
 import Reveal from "@/components/ui/reveal";
 import { Meta, SectionHeader } from "@/components/ui/typo";
 import { galleryImages } from "@/app/data";
@@ -45,16 +46,15 @@ export default function Gallery() {
                 isKorean={language === "KR"}
             />
 
-            <div className="gallery-years">
-                {years.map((year, yearIndex) => <section key={year} aria-labelledby={`gallery-year-${year}`}>
-                    <h3 id={`gallery-year-${year}`} className="mb-4 flex items-center gap-4 text-base font-semibold text-ink-2">{year}<span className="h-px flex-1 bg-hairline" /></h3>
+            <div className="archive-years">
+                {years.map((year, yearIndex) => <ArchiveYear key={year} year={year} id={`gallery-year-${year}`}>
                     <Reveal className={`gallery-grid ${yearIndex > 0 ? "gallery-archive" : "gallery-recent"}`}>
                         {galleryImages.filter(item => item.sortDate.startsWith(year)).map(item => <button
                             key={item.image} type="button" onClick={() => setSelected(galleryImages.indexOf(item))}
-                            className={`gallery-card group ${item.span === 2 ? "gallery-wide" : ""}`}>
+                            className="gallery-card group">
                             <div className="gallery-photo">
                                 <Image src={`/images/${item.image}`} alt={language === "KR" ? item.titleKR : item.title} fill
-                                    sizes={yearIndex === 0 ? "(max-width: 767px) 100vw, 50vw" : "(max-width: 767px) 112px, 33vw"}
+                                    sizes={yearIndex === 0 ? "(max-width: 767px) 100vw, 50vw" : "(max-width: 767px) 112px, 160px"}
                                     className={`object-cover ${item.span === 2 ? "object-[50%_70%]" : ""}`} />
                             </div>
                             <div className="gallery-caption">
@@ -63,7 +63,7 @@ export default function Gallery() {
                             </div>
                         </button>)}
                     </Reveal>
-                </section>)}
+                </ArchiveYear>)}
             </div>
 
             {/* lightbox — Esc + click-outside close, caption anchored to the image */}

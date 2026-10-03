@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Search } from "lucide-react";
 import Band from "@/components/ui/band";
+import ArchiveYear from "@/components/ui/archive-year";
 import { Meta, SectionHeader } from "@/components/ui/typo";
 import { publications, teamMembers, alumni } from "@/app/data";
 import { useLanguage } from "@/lib/LanguageContext";
@@ -11,7 +12,7 @@ type Publication = (typeof publications)[number];
 
 /**
  * CALORIMETER 03 — PUBLICATIONS. Year-grouped single-column citation list
- * (year rail left, hairline-separated entries). Frame-0: the default list
+ * (shared year headings, hairline-separated entries). Frame-0: the default list
  * is fully present in server HTML; filters are additive client state.
  * Pills are DERIVED from data with counts — a dead pill (e.g. the old TES
  * pill with 0 entries) is representation-impossible.
@@ -258,17 +259,9 @@ export default function Publications({
             </div>
 
             {/* year-grouped citation list — frame-0, no entrance animation */}
-            <div className="mt-8 md:mt-10">
+            <div className="archive-years mt-8">
                 {yearGroups.map(({ year, items }) => (
-                    <div
-                        key={year}
-                        className="archive-year-group"
-                    >
-                        <div className="archive-year-label">
-                            <p className="text-2xl font-semibold leading-none tracking-tight text-ink-3 tabular-nums md:sticky md:top-24">
-                                {year}
-                            </p>
-                        </div>
+                    <ArchiveYear key={year} year={year} id={`publications-year-${year}`}>
                         <ul className="divide-y divide-hairline">
                             {items.map((pub) => {
                                 const special = specialOf(pub);
@@ -336,7 +329,7 @@ export default function Publications({
                                 );
                             })}
                         </ul>
-                    </div>
+                    </ArchiveYear>
                 ))}
 
                 {filteredPubs.length === 0 ? (

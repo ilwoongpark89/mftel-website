@@ -5,6 +5,7 @@ import Image from "next/image";
 import { ChevronDown, X } from "lucide-react";
 import { useDialogFocus } from "@/components/ui/use-dialog-focus";
 import Band from "@/components/ui/band";
+import ArchiveYear from "@/components/ui/archive-year";
 import { SectionHeader, Meta } from "@/components/ui/typo";
 import { useLanguage, type Language } from "@/lib/LanguageContext";
 
@@ -718,13 +719,9 @@ export default function News() {
                 isKorean={isKR}
             />
 
-            <div className="mt-2">
+            <div className="archive-years">
                 {yearGroups.map(({ year, entries }) => (
-                    <div
-                        key={year}
-                        className="news-year-group"
-                    >
-                        <h3 className="news-year-heading">{year}</h3>
+                    <ArchiveYear key={year} year={year} id={`news-year-${year}`}>
                         <ul className="news-year-entries divide-y divide-hairline">
                             {entries.map((entry) => (
                                 <li key={`${entry.kind}-${entry.date}`}>
@@ -736,9 +733,8 @@ export default function News() {
                                 </li>
                             ))}
                         </ul>
-                    </div>
+                    </ArchiveYear>
                 ))}
-                <div aria-hidden className="mt-6 border-t border-hairline" />
             </div>
 
             {lightbox ? (
