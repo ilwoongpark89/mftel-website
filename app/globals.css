@@ -395,3 +395,11 @@ html{scrollbar-gutter:stable;scroll-padding-top:80px}
 @media(prefers-reduced-motion:reduce){.quiet-energy *{animation:none!important}.motion-access{display:none}}
 
 .quiet-bubble{animation:quiet-bubble 3.6s ease-out infinite}.quiet-bubble-1{animation-delay:-1.2s}.quiet-bubble-2{animation-delay:-2.4s}@keyframes quiet-bubble{0%{transform:translateY(0);opacity:0}20%{opacity:.6}100%{transform:translateY(-8px);opacity:0}}
+
+/* Archive labels and their first entries share one spacing model. */
+.archive-year-group{display:grid;gap:16px;border-top:1px solid var(--color-hairline);padding:24px 0}
+.archive-year-label{min-width:0}
+.news-year-entries>li:first-child .news-entry{padding-top:0}
+.news-year-entries>li:last-child .news-entry{padding-bottom:0}
+.research-topic-pair figcaption{word-break:keep-all;overflow-wrap:anywhere}
+@media(min-width:768px){.archive-year-group{grid-template-columns:80px minmax(0,1fr);column-gap:24px;row-gap:0}}

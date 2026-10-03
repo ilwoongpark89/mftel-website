@@ -156,7 +156,7 @@ export default function Team() {
                     {t("team.pi")}
                 </h3>
 
-                <div className="mt-6 flex flex-col gap-8 md:mt-8 md:flex-row md:gap-12">
+                <div className="mt-6 flex flex-col gap-6 md:mt-8 md:flex-row md:gap-12">
                     <figure className="w-[180px] shrink-0 md:w-[280px]">
                         <div className="relative aspect-[3/4] overflow-hidden rounded-lg border border-hairline bg-well">
                             <Image

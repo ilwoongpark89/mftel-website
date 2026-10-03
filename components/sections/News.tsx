@@ -566,7 +566,7 @@ function ActivityRow({
     const isKR = language === "KR";
     const alt = item.title[language];
     return (
-        <article className="grid gap-5 py-7 md:grid-cols-[1fr_400px] md:gap-10">
+        <article className="news-entry grid gap-5 py-6 md:grid-cols-[minmax(0,1fr)_minmax(0,42%)] md:gap-6 lg:gap-10">
             <div className="min-w-0">
                 <Meta className="whitespace-nowrap">{formatDate(item.date, language)}</Meta>
                 <h3 className="mt-1.5 break-keep text-[17px] font-semibold leading-snug text-ink md:text-lg">
@@ -603,7 +603,7 @@ function AnnouncementRow({
 
     return (
         <div>
-            <div className="grid gap-5 py-7 md:grid-cols-[1fr_400px] md:gap-10">
+            <div className="news-entry grid gap-5 py-6 md:grid-cols-[minmax(0,1fr)_minmax(0,42%)] md:gap-6 lg:gap-10">
             <div className="min-w-0">
                 <Meta className="whitespace-nowrap">
                     {formatDate(ANNOUNCEMENT.date, language)} · {isKR ? "모집공고" : "Call"}
@@ -730,14 +730,14 @@ export default function News() {
                 {yearGroups.map(({ year, entries }) => (
                     <div
                         key={year}
-                        className="grid border-t border-hairline py-5 md:grid-cols-[96px_1fr] md:gap-6 md:py-6"
+                        className="archive-year-group"
                     >
-                        <div className="pb-2 md:pb-0">
-                            <p className="text-2xl font-semibold leading-none tracking-tight text-ink-4 tabular-nums md:sticky md:top-24">
+                        <div className="archive-year-label">
+                            <p className="text-2xl font-semibold leading-none tracking-tight text-ink-3 tabular-nums md:sticky md:top-24">
                                 {year}
                             </p>
                         </div>
-                        <ul className="divide-y divide-hairline md:-mt-2">
+                        <ul className="news-year-entries divide-y divide-hairline">
                             {entries.map((entry) => (
                                 <li key={`${entry.kind}-${entry.date}`}>
                                     {entry.kind === "announcement" ? (

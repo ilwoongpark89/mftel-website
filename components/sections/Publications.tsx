@@ -262,9 +262,9 @@ export default function Publications({
                 {yearGroups.map(({ year, items }) => (
                     <div
                         key={year}
-                        className="grid border-t border-hairline py-5 md:grid-cols-[96px_1fr] md:gap-6 md:py-6"
+                        className="archive-year-group"
                     >
-                        <div className="pb-2 md:pb-0">
+                        <div className="archive-year-label">
                             <p className="text-2xl font-semibold leading-none tracking-tight text-ink-3 tabular-nums md:sticky md:top-24">
                                 {year}
                             </p>
@@ -290,7 +290,8 @@ export default function Publications({
                                         <p className="mt-1.5 text-sm leading-relaxed text-ink-3">
                                             {renderAuthors(pub.authors)}
                                         </p>
-                                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+                                        <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                                            <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
                                             <span className="text-sm font-medium text-ink">
                                                 {pub.journal}
                                             </span>
@@ -318,12 +319,13 @@ export default function Publications({
                                                         </Meta>
                                                     </span>
                                                 ))}
+                                            </div>
                                             <a
                                                 href={pub.link}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 aria-label={`${isDoi ? "DOI" : "PDF"} — ${pub.title}`}
-                                                className="ml-auto inline-flex min-h-11 items-center rounded-lg border border-hairline px-2.5 transition-colors duration-150 hover:border-hairline-2 md:min-h-8"
+                                                className="inline-flex min-h-11 items-center rounded-lg border border-hairline px-2.5 transition-colors duration-150 hover:border-hairline-2 md:min-h-8"
                                             >
                                                 <Meta className="text-xs text-ink-2">
                                                     {isDoi ? "DOI" : "PDF"} ↗
