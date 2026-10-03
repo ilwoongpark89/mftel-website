@@ -140,7 +140,7 @@ export default function Publications({
     return (
         <Band id="publications" surface="white">
             <div className="publication-heading">
-                <SectionHeader kicker={t("publications.label")} title={t("publications.title")} isKorean={isKR} className="mb-0 md:mb-0"
+                <SectionHeader index="03" kicker={t("publications.label")} title={t("publications.title")} isKorean={isKR} className="mb-0 md:mb-0"
                     sub={<span className="publication-summary">{isKR ? `국제 학술지 ${totalPubs}편` : `${totalPubs} journal articles`}{citations && citations.total > 0 ? <span>{isKR ? `피인용 ${citations.total.toLocaleString()}회` : `${citations.total.toLocaleString()} citations`} <span className="text-ink-3">(OpenAlex)</span></span> : null}</span>} />
             </div>
             <div className="publication-tools">
