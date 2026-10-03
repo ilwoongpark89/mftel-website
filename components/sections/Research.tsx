@@ -509,7 +509,6 @@ export default function Research() {
                 index="02"
                 kicker={t("research.label")}
                 title={t("research.title")}
-                sub={isKR ? "열에너지 저장, AI 반도체 냉각, 소형모듈원자로 안전을 연구합니다. 실험과 전산 해석으로 다상유동과 열전달 현상을 규명하고, 시스템의 성능과 안전성을 평가합니다." : "We study thermal energy storage, AI semiconductor cooling, and small modular reactor safety. Experiments and simulation connect multiphase flow and heat transfer to system performance and safety."}
                 isKorean={isKR}
             />
 

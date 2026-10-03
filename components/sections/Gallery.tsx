@@ -42,7 +42,6 @@ export default function Gallery() {
                 index="07"
                 kicker={t("gallery.label")}
                 title={t("gallery.title")}
-                sub={language === "KR" ? "학회 발표와 국제 교류, 연구실의 일상을 기록합니다." : "Conference presentations, international exchanges, and everyday life in the lab."}
                 isKorean={language === "KR"}
             />
 

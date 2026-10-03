@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, Search } from "lucide-react";
+import { Search } from "lucide-react";
+import Link from "next/link";
+import { memberAnchor, memberForAuthor } from "@/lib/member-links";
 import Band from "@/components/ui/band";
 import ArchiveYear from "@/components/ui/archive-year";
 import { Meta, SectionHeader } from "@/components/ui/typo";
-import { publications, teamMembers, alumni } from "@/app/data";
+import { publications, teamMembers } from "@/app/data";
 import { useLanguage } from "@/lib/LanguageContext";
 
 type Publication = (typeof publications)[number];
@@ -22,31 +24,20 @@ type Publication = (typeof publications)[number];
 const CATEGORY_LABELS: Record<string, { en: string; kr: string }> = {
     boiling: { en: "Boiling", kr: "비등" },
     condensation: { en: "Condensation", kr: "응축" },
-    smr: { en: "SMR", kr: "SMR" },
-    tes: { en: "Thermal Energy Storage", kr: "열에너지 저장" },
+    smr: { en: "Nuclear thermal hydraulics", kr: "원자력 열수력" },
+    tes: { en: "Melting & thermal storage", kr: "융해·열저장" },
     wettability: { en: "Wettability", kr: "젖음성" },
 };
 
-/** 연구실 구성원·졸업생 이름은 저자 목록에서 진하게 — 표기 차이(Hyun Jin ↔ Hyunjin)는 공백 무시로 맞춘다. */
-const MEMBER_KEYS = new Set(
-    [
-        ...teamMembers.flatMap((m) => [m.name, ...(m.aliases ?? [])]),
-        ...alumni.map((a) => a.name),
-        "Il Woong Park",
-        "Il-Woong Park",
-    ].map((n) => n.toLowerCase().replace(/\s+/g, ""))
-);
-const renderAuthors = (authors: string) =>
+/** Link only exact known names and recorded romanization aliases. */
+const renderAuthors = (authors: string, lp: (path: string) => string, isKR: boolean) =>
     authors.split(",").map((raw, i, arr) => {
         const name = raw.trim();
-        const key = name.replace(/\*$/, "").toLowerCase().replace(/\s+/g, "");
-        const member = MEMBER_KEYS.has(key);
-        return (
-            <span key={i}>
-                <span className={member ? "whitespace-nowrap font-medium text-ink" : "whitespace-nowrap"}>{name}</span>
-                {i < arr.length - 1 ? ", " : ""}
-            </span>
-        );
+        const member = memberForAuthor(name);
+        return <span key={i}>
+            {member ? <Link className="publication-author whitespace-nowrap font-medium text-ink" href={lp(`/team#${memberAnchor(member.name)}`)} title={isKR ? `${member.nameKR} · 구성원 보기` : `${member.name} · View profile`}>{name}</Link> : <span className="whitespace-nowrap">{name}</span>}
+            {i < arr.length - 1 ? ", " : ""}
+        </span>;
     });
 
 /** `special` exists only on some data entries — safe union access. */
@@ -66,7 +57,7 @@ export default function Publications({
     /** OpenAlex cited-by counts (bare-DOI keyed) — optional, server-fetched */
     citations?: { byDoi: Record<string, number>; total: number };
 }) {
-    const { t, language } = useLanguage();
+    const { t, language, lp } = useLanguage();
     const isKR = language === "KR";
 
     const [activeCategory, setActiveCategory] = useState("all");
@@ -144,124 +135,39 @@ export default function Publications({
         return label ? (isKR ? label.kr : label.en) : key.toUpperCase();
     };
 
-    const pillClass = (active: boolean) =>
-        `inline-flex min-h-11 items-center gap-2 rounded-lg border px-3.5 text-sm font-medium transition-colors duration-150 md:min-h-9 ${
-            active
-                ? "border-ember-200 bg-ember-50 text-ember-700"
-                : "border-hairline bg-white text-ink-2 hover:border-hairline-2"
-        }`;
+    const latestYear = years[0];
+    const recentYears = Array.from({ length: 3 }, (_, i) => String(Number(latestYear) - 2 + i));
+    const yearCount = (year: string) => publications.filter(pub => pub.year === year).length;
+    const maxRecent = Math.max(...recentYears.map(yearCount), 1);
 
     return (
         <Band id="publications" surface="white">
-            <SectionHeader
-                index="03"
-                kicker={t("publications.label")}
-                title={t("publications.title")}
-                sub={
-                    <>
-                        {t("publications.count").replace("{count}", String(totalPubs))}
-                        {citations && citations.total > 0 ? (
-                            <span className="mt-1 block text-sm text-ink-3">
-                                {isKR
-                                    ? `피인용 ${citations.total.toLocaleString()}회 (OpenAlex 기준)`
-                                    : `${citations.total.toLocaleString()} citations (OpenAlex)`}
-                            </span>
-                        ) : null}
-                    </>
-                }
-                isKorean={isKR}
-            />
-
-            {/* filter rail — pills derived from data with counts */}
-            <div className="space-y-4">
-                <div
-                    role="group"
-                    aria-label={isKR ? "분야 필터" : "Filter by category"}
-                    className="flex flex-wrap gap-2"
-                >
-                    <button
-                        type="button"
-                        onClick={() => setActiveCategory("all")}
-                        aria-pressed={activeCategory === "all"}
-                        className={pillClass(activeCategory === "all")}
-                    >
-                        {isKR ? "전체" : "All"}
-                        <Meta className={`text-xs ${activeCategory === "all" ? "text-ember-700" : ""}`}>
-                            {totalPubs}
-                        </Meta>
-                    </button>
-                    {categories.map(([key, count]) => (
-                        <button
-                            key={key}
-                            type="button"
-                            onClick={() => setActiveCategory(key)}
-                            aria-pressed={activeCategory === key}
-                            className={pillClass(activeCategory === key)}
-                        >
-                            {categoryLabel(key)}
-                            <Meta className={`text-xs ${activeCategory === key ? "text-ember-700" : ""}`}>
-                                {count}
-                            </Meta>
-                        </button>
-                    ))}
-                </div>
-
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <div className="relative w-full sm:w-44">
-                        <select
-                            value={selectedYear}
-                            onChange={(e) => setSelectedYear(e.target.value)}
-                            aria-label={isKR ? "연도 필터" : "Filter by year"}
-                            className="h-11 w-full cursor-pointer appearance-none rounded-lg border border-hairline bg-white pl-3 pr-9 text-sm text-ink-2 transition-colors duration-150 hover:border-hairline-2 focus:border-hairline-2 focus:outline-none md:h-9"
-                        >
-                            <option value="all">{isKR ? "전체 연도" : "All Years"}</option>
-                            {years.map((y) => (
-                                <option key={y} value={y}>
-                                    {y}
-                                </option>
-                            ))}
-                        </select>
-                        <ChevronDown
-                            aria-hidden
-                            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-4"
-                        />
-                    </div>
-                    <div className="relative w-full sm:max-w-xs sm:flex-1">
-                        <Search
-                            aria-hidden
-                            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-4"
-                        />
-                        <input
-                            type="text"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder={isKR ? "제목이나 저자로 검색" : "Search title or author"}
-                            aria-label={isKR ? "논문 검색" : "Search publications"}
-                            className="h-11 w-full rounded-lg border border-hairline bg-white pl-9 pr-3 text-sm text-ink placeholder:text-ink-4 transition-colors duration-150 hover:border-hairline-2 focus:border-hairline-2 focus:outline-none md:h-9"
-                        />
-                    </div>
-                    {hasFilters && (
-                        <p className="text-sm text-ink-3">
-                            <span className="tabular-nums">
-                                {filteredPubs.length} / {totalPubs}
-                            </span>{" "}
-                            {isKR ? "편" : "papers"}
-                            <button
-                                type="button"
-                                onClick={clearFilters}
-                                className="ml-3 font-medium text-ember-700 transition-colors duration-150 hover:text-ember-800"
-                            >
-                                {isKR ? "필터 초기화" : "Clear filters"}
-                            </button>
-                        </p>
-                    )}
+            <div className="publication-heading">
+                <SectionHeader kicker={t("publications.label")} title={t("publications.title")} isKorean={isKR} className="mb-0 md:mb-0"
+                    sub={<span className="publication-summary">{isKR ? `국제 학술지 ${totalPubs}편` : `${totalPubs} journal articles`}{citations && citations.total > 0 ? <span>{isKR ? `피인용 ${citations.total.toLocaleString()}회` : `${citations.total.toLocaleString()} citations`} <span className="text-ink-3">(OpenAlex)</span></span> : null}</span>} />
+                <div className="publication-years" aria-label={isKR ? "최근 3년 게재 논문 수" : "Journal articles in the last three years"}>
+                    {recentYears.map(year => <button key={year} type="button" className={year === latestYear ? "is-latest" : ""} aria-pressed={selectedYear === year} aria-label={`${year} · ${yearCount(year)} ${isKR ? "편 보기" : "articles"}`} onClick={() => setSelectedYear(selectedYear === year ? "all" : year)}>
+                        <span>{year}</span><span className="publication-year-track" aria-hidden><span style={{ width: `${yearCount(year) / maxRecent * 100}%` }} /></span><strong>{yearCount(year)}<span>{isKR ? "편" : ""}</span></strong>
+                    </button>)}
                 </div>
             </div>
+            <div className="publication-tools">
+                <select aria-label={isKR ? "주제 필터 (중복 분류)" : "Topic filter (overlapping topics)"} value={activeCategory} onChange={e => setActiveCategory(e.target.value)}>
+                    <option value="all">{isKR ? "모든 주제" : "All topics"}</option>
+                    {categories.map(([key,count]) => <option key={key} value={key}>{categoryLabel(key)} · {count}</option>)}
+                </select>
+                <select aria-label={isKR ? "연도 필터" : "Filter by year"} value={selectedYear} onChange={e => setSelectedYear(e.target.value)}>
+                    <option value="all">{isKR ? "전체 연도" : "All years"}</option>
+                    {years.map(year => <option key={year} value={year}>{year} · {yearCount(year)}</option>)}
+                </select>
+                <label className="publication-search"><Search aria-hidden size={16}/><input aria-label={isKR ? "논문 검색" : "Search publications"} placeholder={isKR ? "제목·저자로 검색" : "Search title or author"} value={search} onChange={e => setSearch(e.target.value)} /></label>
+            </div>
+            {hasFilters ? <div className="publication-filter-state">{activeCategory !== "all" ? <span>{isKR ? "주제 간 중복 포함" : "Topics may overlap"}</span> : null}<span>{isKR ? `${filteredPubs.length}편 / 전체 ${totalPubs}편` : `${filteredPubs.length} of ${totalPubs} articles`}</span><button type="button" onClick={clearFilters}>{isKR ? "필터 초기화" : "Clear filters"}</button></div> : null}
 
             {/* year-grouped citation list — frame-0, no entrance animation */}
             <div className="archive-years mt-8">
                 {yearGroups.map(({ year, items }) => (
-                    <ArchiveYear key={year} year={year} id={`publications-year-${year}`}>
+                    <ArchiveYear key={year} year={year} id={`publications-year-${year}`} current={year === latestYear} count={isKR ? `${items.length}편` : `${items.length} articles`}>
                         <ul className="divide-y divide-hairline">
                             {items.map((pub) => {
                                 const special = specialOf(pub);
@@ -281,7 +187,7 @@ export default function Publications({
                                             {pub.title}
                                         </a>
                                         <p className="mt-1.5 text-sm leading-relaxed text-ink-3">
-                                            {renderAuthors(pub.authors)}
+                                            {renderAuthors(pub.authors, lp, isKR)}
                                         </p>
                                         <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
                                             <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">

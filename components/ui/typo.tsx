@@ -9,7 +9,6 @@ import Reveal from "@/components/ui/reveal";
 
 /** Folio kicker: mono uppercase label sitting ON a full-width hairline rule. */
 export function Kicker({
-    index,
     dark = false,
     className,
     children,
@@ -27,7 +26,6 @@ export function Kicker({
                     dark ? "text-ember-400" : "text-ember-700"
                 )}
             >
-                {index ? `${index} — ` : null}
                 {children}
             </p>
             <span
@@ -90,8 +88,6 @@ export function FigCaption({
  * section bodies never animate in).
  */
 export function SectionHeader({
-    index,
-    kicker,
     title,
     sub,
     dark = false,
@@ -108,12 +104,9 @@ export function SectionHeader({
 }) {
     return (
         <Reveal className={cn("mb-6 md:mb-8", className)}>
-            <Kicker index={index} dark={dark}>
-                {kicker}
-            </Kicker>
             <h2
                 className={cn(
-                    "mt-4 break-keep text-3xl font-semibold tracking-tight [text-wrap:balance] md:text-[40px]",
+                    "break-keep text-3xl font-semibold tracking-tight [text-wrap:balance] md:text-[40px]",
                     isKorean ? "leading-[1.3]" : "leading-[1.15]",
                     dark ? "text-paper" : "text-ink"
                 )}

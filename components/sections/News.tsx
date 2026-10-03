@@ -715,7 +715,6 @@ export default function News() {
                 index="06"
                 kicker={t("news.label")}
                 title={t("news.title")}
-                sub={t("news.description")}
                 isKorean={isKR}
             />
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { memberAnchor } from "@/lib/member-links";
 import Link from "next/link";
 import { Flame, Droplets, Atom } from "lucide-react";
 import { teamMembers, alumni, publications } from "@/app/data";
@@ -146,12 +147,11 @@ export default function Team() {
                 index="05"
                 kicker={t("team.label")}
                 title={t("team.title")}
-                sub={isKR ? "다상유동과 열전달을 연구하는 MFTEL의 구성원을 소개합니다." : "Meet the people studying multiphase flow and heat transfer at MFTEL."}
                 isKorean={isKR}
             />
 
             {/* ── Principal Investigator ───────────────────────────────── */}
-            <div className="border-t border-hairline pt-8 md:pt-10">
+            <div id={memberAnchor("Il Woong Park")} className="member-destination border-t border-hairline pt-8 md:pt-10">
                 <h3 className="break-keep text-xl font-semibold tracking-tight text-ink md:text-2xl">
                     {t("team.pi")}
                 </h3>
@@ -237,7 +237,8 @@ export default function Team() {
                         return (
                             <article
                                 key={member.name}
-                                className="flex flex-col overflow-hidden rounded-lg border border-hairline bg-white"
+                                id={memberAnchor(member.name)}
+                                className="member-destination flex flex-col overflow-hidden rounded-lg border border-hairline bg-white"
                             >
                                 <div className="relative aspect-[3/4] bg-well">
                                     {member.noPhoto ? (
@@ -305,7 +306,8 @@ export default function Team() {
                     {alumni.map((alum) => (
                         <li
                             key={alum.name}
-                            className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-hairline py-5 first:border-t"
+                            id={memberAnchor(alum.name)}
+                            className="member-destination flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-hairline py-5 first:border-t"
                         >
                             <span className="break-keep text-[15px] font-medium text-ink">
                                 {isKR

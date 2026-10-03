@@ -60,8 +60,7 @@ export default function Projects() {
             <SectionHeader
                 index="04"
                 kicker={t("projects.label")}
-                title={t("projects.title")}
-                sub={isKR ? "연구 과제와 특허를 통해 기술 개발과 산학 협력의 흐름을 살펴봅니다." : "Research projects and patents document our technology development and collaborations."}
+                title={isKR ? "연구 과제와 특허" : "Projects and patents"}
                 isKorean={isKR}
             />
 
