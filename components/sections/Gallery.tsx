@@ -5,7 +5,6 @@ import Image from "next/image";
 import { X } from "lucide-react";
 import { useDialogFocus } from "@/components/ui/use-dialog-focus";
 import Band from "@/components/ui/band";
-import ArchiveYear from "@/components/ui/archive-year";
 import Reveal from "@/components/ui/reveal";
 import { Meta, SectionHeader } from "@/components/ui/typo";
 import { galleryImages } from "@/app/data";
@@ -34,7 +33,6 @@ export default function Gallery() {
     }, [selected]);
 
     const open = selected !== null ? galleryImages[selected] : null;
-    const years = [...new Set(galleryImages.map(item => item.sortDate.slice(0, 4)))];
 
     return (
         <Band id="gallery" surface="paper">
@@ -45,15 +43,13 @@ export default function Gallery() {
                 isKorean={language === "KR"}
             />
 
-            <div className="archive-years">
-                {years.map((year, yearIndex) => <ArchiveYear key={year} year={year} id={`gallery-year-${year}`}>
-                    <Reveal className={`gallery-grid ${yearIndex > 0 ? "gallery-archive" : "gallery-recent"}`}>
-                        {galleryImages.filter(item => item.sortDate.startsWith(year)).map(item => <button
+            <Reveal className="gallery-grid">
+                        {galleryImages.map(item => <button
                             key={item.image} type="button" onClick={() => setSelected(galleryImages.indexOf(item))}
                             className="gallery-card group">
                             <div className="gallery-photo">
                                 <Image src={`/images/${item.image}`} alt={language === "KR" ? item.titleKR : item.title} fill
-                                    sizes={yearIndex === 0 ? "(max-width: 767px) 100vw, 50vw" : "(max-width: 767px) 112px, 160px"}
+                                    sizes="(max-width: 639px) calc(100vw - 48px), (max-width: 1023px) calc((100vw - 84px) / 2), 340px"
                                     className={`object-cover ${item.span === 2 ? "object-[50%_70%]" : ""}`} />
                             </div>
                             <div className="gallery-caption">
@@ -61,9 +57,7 @@ export default function Gallery() {
                                 <Meta className="mt-1 block text-xs">{language === "KR" ? item.dateKR : item.date}</Meta>
                             </div>
                         </button>)}
-                    </Reveal>
-                </ArchiveYear>)}
-            </div>
+            </Reveal>
 
             {/* lightbox — Esc + click-outside close, caption anchored to the image */}
             {open ? (

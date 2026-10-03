@@ -136,20 +136,12 @@ export default function Publications({
     };
 
     const latestYear = years[0];
-    const recentYears = Array.from({ length: 3 }, (_, i) => String(Number(latestYear) - 2 + i));
-    const yearCount = (year: string) => publications.filter(pub => pub.year === year).length;
-    const maxRecent = Math.max(...recentYears.map(yearCount), 1);
 
     return (
         <Band id="publications" surface="white">
             <div className="publication-heading">
                 <SectionHeader kicker={t("publications.label")} title={t("publications.title")} isKorean={isKR} className="mb-0 md:mb-0"
                     sub={<span className="publication-summary">{isKR ? `국제 학술지 ${totalPubs}편` : `${totalPubs} journal articles`}{citations && citations.total > 0 ? <span>{isKR ? `피인용 ${citations.total.toLocaleString()}회` : `${citations.total.toLocaleString()} citations`} <span className="text-ink-3">(OpenAlex)</span></span> : null}</span>} />
-                <div className="publication-years" aria-label={isKR ? "최근 3년 게재 논문 수" : "Journal articles in the last three years"}>
-                    {recentYears.map(year => <button key={year} type="button" className={year === latestYear ? "is-latest" : ""} aria-pressed={selectedYear === year} aria-label={`${year} · ${yearCount(year)} ${isKR ? "편 보기" : "articles"}`} onClick={() => setSelectedYear(selectedYear === year ? "all" : year)}>
-                        <span>{year}</span><span className="publication-year-track" aria-hidden><span style={{ width: `${yearCount(year) / maxRecent * 100}%` }} /></span>
-                    </button>)}
-                </div>
             </div>
             <div className="publication-tools">
                 <select aria-label={isKR ? "주제 필터 (중복 분류)" : "Topic filter (overlapping topics)"} value={activeCategory} onChange={e => setActiveCategory(e.target.value)}>
