@@ -126,11 +126,11 @@ export default function Projects() {
                             </p>
                             <span className="flex shrink-0 items-baseline gap-3">
                                 {p.status === "registered" ? (
-                                    <span className="inline-block w-20 text-right text-[12px] font-semibold uppercase tracking-[0.1em] text-ember-700">
+                                    <span className="inline-block md:w-20 md:text-right text-[12px] font-semibold uppercase tracking-[0.1em] text-ember-700">
                                         {isKR ? "등록" : "Registered"}
                                     </span>
                                 ) : (
-                                    <span className="inline-block w-20 text-right text-[12px] font-semibold uppercase tracking-[0.1em] text-ink-3">
+                                    <span className="inline-block md:w-20 md:text-right text-[12px] font-semibold uppercase tracking-[0.1em] text-ink-3">
                                         {isKR ? "출원" : "Filed"}
                                     </span>
                                 )}

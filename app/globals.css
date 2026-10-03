@@ -403,3 +403,12 @@ html{scrollbar-gutter:stable;scroll-padding-top:80px}
 .news-year-entries>li:last-child .news-entry{padding-bottom:0}
 .research-topic-pair figcaption{word-break:keep-all;overflow-wrap:anywhere}
 @media(min-width:768px){.archive-year-group{grid-template-columns:80px minmax(0,1fr);column-gap:24px;row-gap:0}}
+
+/* News is an editorial list: compact year heading, text-led rows, supporting media. */
+.news-year-group+.news-year-group{margin-top:36px}
+.news-year-heading{display:flex;align-items:center;gap:16px;margin-bottom:20px;font-size:16px;line-height:24px;font-weight:600;color:var(--color-ink-2);font-variant-numeric:tabular-nums}
+.news-year-heading::after{content:"";height:1px;background:var(--color-hairline);flex:1}
+.news-entry{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:32px;padding:24px 0;align-items:start}
+.news-entry>div:first-child{max-width:62ch}
+.news-document{background:transparent;border-radius:0}
+@media(max-width:767px){.news-entry{grid-template-columns:minmax(0,1fr);gap:16px}.news-media{max-width:420px}.news-document{width:180px;aspect-ratio:3/4;justify-self:start}.news-year-group+.news-year-group{margin-top:28px}}

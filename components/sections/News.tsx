@@ -8,16 +8,8 @@ import Band from "@/components/ui/band";
 import { SectionHeader, Meta } from "@/components/ui/typo";
 import { useLanguage, type Language } from "@/lib/LanguageContext";
 
-/**
- * CALORIMETER §06 NEWS — one unified, date-sorted stream of rows. Two row
- * types share the same geometry (thumbnail kept on mobile, mono date,
- * full-row <button aria-expanded>, CSS-only 250ms accordion, lightbox):
- * 1) activity rows (description + image grid), 2) the CALL announcement row
- *    (structured h4/dl detail — never a pre-line blob). The newest entry
- *    renders expanded by default. Frame-0: every string + image is in the
- *    server HTML; collapsed content is hidden with grid-rows-[0fr], never
- *    conditionally rendered.
- */
+/** Year-grouped editorial news. Images open in a lightbox; recruitment
+ * details expand in place. Dates inherit the year from each group heading. */
 
 interface Localized {
     EN: string;
@@ -420,12 +412,12 @@ const NEWS_ENTRIES: NewsEntry[] = [
 
 const EN_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-function formatDate(iso: string, language: Language): string {
+function formatDate(iso: string, language: Language, includeYear = true): string {
     const [y, m, d] = iso.split("-").map(Number);
     if (language === "KR") {
-        return `${y}. ${String(m).padStart(2, "0")}. ${String(d).padStart(2, "0")}.`;
+        return `${includeYear ? `${y}. ` : ""}${String(m).padStart(2, "0")}. ${String(d).padStart(2, "0")}.`;
     }
-    return `${EN_MONTHS[m - 1]} ${d}, ${y}`;
+    return `${EN_MONTHS[m - 1]} ${d}${includeYear ? `, ${y}` : ""}`;
 }
 
 interface LightboxState {
@@ -536,14 +528,14 @@ function MediaFrame({
             type="button"
             aria-label={language === "KR" ? "이미지 크게 보기" : "Enlarge image"}
             onClick={() => onOpen({ images, index: 0, alt })}
-            className="relative block aspect-[3/2] w-full overflow-hidden rounded-lg border border-hairline bg-well transition-colors duration-150 hover:border-hairline-2"
+            className={`news-media relative block aspect-[3/2] w-full overflow-hidden rounded-md ${contain ? "news-document" : "bg-well"}`}
         >
             <Image
                 src={images[0]}
                 alt={`${alt} 1`}
                 fill
-                sizes="(max-width: 768px) 100vw, 400px"
-                className={contain ? "object-contain p-3" : "object-cover"}
+                sizes="(max-width: 767px) calc(100vw - 48px), 260px"
+                className={contain ? "object-contain" : "object-cover"}
             />
             {images.length > 1 ? (
                 <span className="absolute bottom-2 right-2 rounded-md bg-coal/80 px-2 py-0.5 text-[12px] font-medium text-paper tabular-nums">
@@ -566,12 +558,12 @@ function ActivityRow({
     const isKR = language === "KR";
     const alt = item.title[language];
     return (
-        <article className="news-entry grid gap-5 py-6 md:grid-cols-[minmax(0,1fr)_minmax(0,42%)] md:gap-6 lg:gap-10">
+        <article className="news-entry">
             <div className="min-w-0">
-                <Meta className="whitespace-nowrap">{formatDate(item.date, language)}</Meta>
-                <h3 className="mt-1.5 break-keep text-[17px] font-semibold leading-snug text-ink md:text-lg">
+                <Meta className="whitespace-nowrap"><time dateTime={item.date}>{formatDate(item.date, language, false)}</time></Meta>
+                <h4 className="mt-1.5 break-keep text-[17px] font-semibold leading-snug text-ink md:text-lg">
                     {alt}
-                </h3>
+                </h4>
                 <p
                     className={`mt-2 whitespace-pre-line break-keep text-sm text-ink-2 md:text-[15px] ${isKR ? "leading-[1.75]" : "leading-relaxed"}`}
                 >
@@ -603,15 +595,15 @@ function AnnouncementRow({
 
     return (
         <div>
-            <div className="news-entry grid gap-5 py-6 md:grid-cols-[minmax(0,1fr)_minmax(0,42%)] md:gap-6 lg:gap-10">
+            <div className="news-entry">
             <div className="min-w-0">
                 <Meta className="whitespace-nowrap">
-                    {formatDate(ANNOUNCEMENT.date, language)} · {isKR ? "모집공고" : "Call"}
+                    <time dateTime={ANNOUNCEMENT.date}>{formatDate(ANNOUNCEMENT.date, language, false)}</time> · {isKR ? "모집공고" : "Call"}
                     {closed ? (isKR ? " · 마감" : " · Closed") : ""}
                 </Meta>
-                <h3 className="mt-1.5 break-keep text-[17px] font-semibold leading-snug text-ink md:text-lg">
+                <h4 className="mt-1.5 break-keep text-[17px] font-semibold leading-snug text-ink md:text-lg">
                     {ANNOUNCEMENT.title[language]}
-                </h3>
+                </h4>
                 <p className={`mt-2 break-keep text-sm text-ink-2 md:text-[15px] ${isKR ? "leading-[1.75]" : "leading-relaxed"}`}>
                     {ANNOUNCEMENT.intro[language]}
                 </p>
@@ -730,13 +722,9 @@ export default function News() {
                 {yearGroups.map(({ year, entries }) => (
                     <div
                         key={year}
-                        className="archive-year-group"
+                        className="news-year-group"
                     >
-                        <div className="archive-year-label">
-                            <p className="text-2xl font-semibold leading-none tracking-tight text-ink-3 tabular-nums md:sticky md:top-24">
-                                {year}
-                            </p>
-                        </div>
+                        <h3 className="news-year-heading">{year}</h3>
                         <ul className="news-year-entries divide-y divide-hairline">
                             {entries.map((entry) => (
                                 <li key={`${entry.kind}-${entry.date}`}>
@@ -750,7 +738,7 @@ export default function News() {
                         </ul>
                     </div>
                 ))}
-                <div aria-hidden className="border-t border-hairline" />
+                <div aria-hidden className="mt-6 border-t border-hairline" />
             </div>
 
             {lightbox ? (
