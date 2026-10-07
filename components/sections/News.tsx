@@ -282,8 +282,8 @@ const ACTIVITY_ITEMS: ActivityItem[] = [
             KR: "UTFORSK 프로그램으로 NTNU 학생들 연구실 방문",
         },
         description: {
-            EN: "NTNU students visited MFTEL through the UTFORSK program. We had meaningful discussions on education and research collaboration.",
-            KR: "NTNU 학생들이 UTFORSK 프로그램으로 연구실을 방문했습니다. 교육과 연구 협력에 대해 의미 있는 논의를 나눴습니다.",
+            EN: "NTNU students visited MFTEL through the UTFORSK program and discussed collaboration in education and research.",
+            KR: "NTNU 학생들이 UTFORSK 프로그램으로 연구실을 방문해 교육과 연구 협력 방안을 논의했습니다.",
         },
         images: ["/images/news/261006-utforsk-ntnu-students-visit.jpeg"],
     },
